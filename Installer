@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
   Install software preferring Chocolatey with Winget fallback, then remove non-English parts of Microsoft 365.
-  Prompts or accepts switches for whether DisplayLink is needed and whether this is a Dell machine.
+  Prompts or accepts switches for whether DisplayLink is needed, whether this is a Dell machine, and whether to install Zoom Outlook plugin.
 
 .PARAMETER ForceWinget
   Skip Chocolatey and use Winget only.
@@ -15,16 +15,16 @@
 .PARAMETER IsDell
   If present, treat this as a Dell machine (non-interactive). If omitted, the script will ask.
 
-.NOTES
-  - Run elevated (the script will relaunch itself as Administrator if not).
-  - Edit $PackageMap to change package IDs or optional prompts if needed.
+.PARAMETER InstallZoomOutlookPlugin
+  If present, attempt to install the Zoom Outlook plugin automatically when Zoom is installed. If omitted, the script will ask.
 #>
 
 param(
     [switch] $ForceWinget,
     [switch] $NoInstallProviders,
     [switch] $DisplayLinkNeeded,
-    [switch] $IsDell
+    [switch] $IsDell,
+    [switch] $InstallZoomOutlookPlugin
 )
 
 Set-StrictMode -Version Latest
@@ -42,6 +42,7 @@ if (-not (Test-IsAdministrator)) {
     if ($NoInstallProviders) { $argsList += "-NoInstallProviders" }
     if ($DisplayLinkNeeded) { $argsList += "-DisplayLinkNeeded" }
     if ($IsDell) { $argsList += "-IsDell" }
+    if ($InstallZoomOutlookPlugin) { $argsList += "-InstallZoomOutlookPlugin" }
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $pwsh = Get-Command pwsh -ErrorAction SilentlyContinue
     if ($pwsh) { $psi.FileName = $pwsh.Source } else { $psi.FileName = (Get-Command powershell).Source }
@@ -116,7 +117,6 @@ function Update-Winget {
 }
 
 # === Package mapping with optional metadata ===
-# Optional metadata for specific packages (Param is the param name used on the script)
 $PackageMap = @{
     "Microsoft Teams" = @{ choco = "microsoft-teams"; winget = "Microsoft.Teams" }
     "Microsoft Office" = @{ choco = $null;                  winget = "Microsoft.Office" }
@@ -160,10 +160,8 @@ foreach ($entry in $PackageMap.GetEnumerator()) {
         $opt = $entry.Value.Optional
         $paramName = $opt.Param
         if ($PSBoundParameters.ContainsKey($paramName)) {
-            # convert switch to boolean (if set it's $true)
             $UserChoices[$paramName] = [bool]$PSBoundParameters[$paramName]
         } else {
-            # Prompt user interactively
             $prompt = $opt.Prompt
             $choice = Ask-YesNo -Question $prompt -DefaultYes $false
             $UserChoices[$paramName] = $choice
@@ -232,6 +230,75 @@ function Install-PackageWithFallback {
     }
 
     return $status
+}
+
+# ---- Zoom Outlook plugin helper ----
+function Get-ZoomOutlookPluginInstalled {
+    # Search uninstall registry entries for typical Zoom Outlook plugin display names
+    $searchPaths = @(
+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
+        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*",
+        "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*"
+    )
+
+    foreach ($p in $searchPaths) {
+        try {
+            $items = Get-ItemProperty -Path $p -ErrorAction SilentlyContinue | Where-Object {
+                $_.DisplayName -and ($_.DisplayName -match "Zoom" -and ($_.DisplayName -match "Outlook" -or $_.DisplayName -match "Plugin" -or $_.DisplayName -match "Add-in"))
+            }
+            if ($items) { return $true }
+        } catch {}
+    }
+    return $false
+}
+
+function Install-ZoomOutlookPlugin {
+    Write-Host "Preparing to install Zoom Outlook plugin..."
+
+    if (Get-ZoomOutlookPluginInstalled) {
+        Write-Host "Zoom Outlook plugin is already installed. Skipping."
+        return $true
+    }
+
+    $installed = $false
+    # Try Chocolatey candidates first if available
+    if ($chocoAvailable) {
+        $chocoCandidates = @("zoomoutlookplugin","zoom-outlook-plugin","zoomplugin","zoomoutlook")
+        foreach ($c in $chocoCandidates) {
+            try {
+                Write-Host "Attempting Chocolatey install candidate: $c"
+                & choco install $c -y --no-progress
+                Start-Sleep -Seconds 2
+                if (Get-ZoomOutlookPluginInstalled) { $installed = $true; break }
+            } catch {
+                Write-Verbose "Chocolatey candidate $c failed: $($_.Exception.Message)"
+            }
+        }
+    }
+
+    # If not installed, try Winget candidates
+    if (-not $installed -and $wingetAvailable) {
+        $wingetCandidates = @("Zoom.OutlookPlugin","Zoom.ZoomOutlook","Zoom.ZoomOutlookPlugin","Zoom.ZoomAddinOutlook")
+        foreach ($id in $wingetCandidates) {
+            try {
+                Write-Host "Attempting Winget install candidate: $id"
+                winget install -e --id $id --accept-source-agreements --accept-package-agreements --silent
+                Start-Sleep -Seconds 2
+                if (Get-ZoomOutlookPluginInstalled) { $installed = $true; break }
+            } catch {
+                Write-Verbose "Winget candidate $id failed: $($_.Exception.Message)"
+            }
+        }
+    }
+
+    if ($installed) {
+        Write-Host "Zoom Outlook plugin installed successfully (detected)."
+        return $true
+    } else {
+        Write-Warning "Could not install Zoom Outlook plugin automatically. Possible reasons: no package exists in Chocolatey/Winget with expected names, or the plugin requires interactive installer. Manual installation instructions:"
+        Write-Host " - Visit https://support.zoom.us and search 'Zoom Plugin for Microsoft Outlook' or 'Zoom Outlook add-in' to download the correct installer for your environment."
+        return $false
+    }
 }
 
 # ---- M365 language removal helpers ----
@@ -360,6 +427,21 @@ foreach ($entry in $PackageMap.GetEnumerator()) {
 
     $result = Install-PackageWithFallback -FriendlyName $name -ChocoId $chocoId -WingetId $wingetId
     $installResults += $result
+
+    # If we just installed Zoom, optionally attempt to install the Zoom Outlook plugin
+    if ($name -eq "Zoom" -and ($result.ChocoSuccess -or $result.WingetSuccess)) {
+        $doPlugin = $false
+        if ($PSBoundParameters.ContainsKey("InstallZoomOutlookPlugin")) {
+            $doPlugin = [bool]$InstallZoomOutlookPlugin
+        } else {
+            $doPlugin = Ask-YesNo -Question "Zoom was installed. Install Zoom Outlook plugin? (Y/N)" -DefaultYes $true
+        }
+        if ($doPlugin) {
+            Install-ZoomOutlookPlugin | Out-Null
+        } else {
+            Write-Host "Skipping Zoom Outlook plugin installation by user choice."
+        }
+    }
 }
 
 # After installing Office products, remove non-English language components you requested.
@@ -383,4 +465,4 @@ foreach ($r in $installResults) {
     if ($r.Error) { Write-Host "  Error: $($r.Error)" -ForegroundColor Yellow }
 }
 
-Write-Host "Software install and M365 language removal steps completed (see warnings above if any)."
+Write-Host "Software install, optional Zoom Outlook plugin attempt, and M365 language removal steps completed (see warnings above if any)."
