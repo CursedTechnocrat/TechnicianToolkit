@@ -1,7 +1,7 @@
 # ================================================================
 #  M.A.G.I.C. - Machine Automated Graphical Ink Configurator
 # ================================================================
-#  Version 1.4
+#  Version 1.5
 # ================================================================
 
 # ===========================
@@ -19,7 +19,18 @@ if (-not $IsAdmin) {
     exit
 }
 
-$ScriptPath  = Split-Path -Parent $MyInvocation.MyCommand.Path
+# ===========================
+# SCRIPT PATH RESOLUTION
+# ===========================
+if ($PSCommandPath) {
+    $ScriptPath = Split-Path -Parent $PSCommandPath
+}
+elseif ($MyInvocation.MyCommand.Path) {
+    $ScriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+}
+else {
+    $ScriptPath = Get-Location
+}
 $ExtractRoot = Join-Path $ScriptPath "ExtractedDrivers"
 $InstalledManufacturers = @()
 
