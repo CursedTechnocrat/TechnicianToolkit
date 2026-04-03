@@ -103,6 +103,9 @@ Scripts may be run independently or in sequence.
 
 ## 📂 Recommended Repository Structure
 
-/PRINT ├─ PRINT.ps1 └─ ExtractedDrivers/
+/PRINT
+├─ PRINT.ps1
+└─ ExtractedDrivers/
 
-/SPARK └─ SPARK.ps1
+/SPARK
+└─ SPARK.ps1
