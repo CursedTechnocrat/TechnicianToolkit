@@ -1,5 +1,5 @@
 # ================================================================
-#  P.R.I.N.T. - Printer Registration & Installation Network Tool
+#  M.A.G.I.C. - Machine Automated Graphical Ink Configurator
 # ================================================================
 #  Version 1.2
 # ================================================================
@@ -21,18 +21,23 @@ $InstalledManufacturers = @()
 # ===========================
 # BANNER
 # ===========================
-function Show-PRINTBanner {
-    Write-Host ""
-    Write-Host "================================================" -ForegroundColor Cyan
-    Write-Host " PRINT v1.2" -ForegroundColor Cyan
-    Write-Host " Printer Registration & Installation Network Tool" -ForegroundColor Cyan
-    Write-Host "================================================" -ForegroundColor Cyan
+function Show-MAGICBanner {
+    Write-Host @"
+  ███╗   ███╗ █████╗  ██████╗ ██╗ ██████╗ 
+  ████╗ ████║██╔══██╗██╔════╝ ██║██╔════╝ 
+  ██╔████╔██║███████║██║  ███╗██║██║      
+  ██║╚██╔╝██║██╔══██║██║   ██║██║██║      
+  ██║ ╚═╝ ██║██║  ██║╚██████╔╝██║╚██████╗ 
+  ╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝ ╚═════╝ 
+"@ -ForegroundColor Cyan
+    Write-Host "    Machine Automated Graphical Ink Configurator" -ForegroundColor Cyan
+    Write-Host "    Printer Registration & Installation Network Tool" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Script Path: $ScriptPath" -ForegroundColor Cyan
     Write-Host ""
 }
 
-Show-PRINTBanner
+Show-MAGICBanner
 
 # ===========================
 # DRIVER PREPARATION PROMPT
@@ -255,7 +260,7 @@ if ($AddPrinter -match '^[Yy]$') {
 # ===========================
 Write-Host ""
 Write-Host "================================================" -ForegroundColor Cyan
-Write-Host " PRINT Completed" -ForegroundColor Cyan
+Write-Host " M.A.G.I.C. Completed" -ForegroundColor Cyan
 Write-Host "================================================" -ForegroundColor Cyan
 Write-Host ""
 
