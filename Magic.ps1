@@ -1,16 +1,21 @@
 # ================================================================
 #  M.A.G.I.C. - Machine Automated Graphical Ink Configurator
 # ================================================================
-#  Version 1.2
+#  Version 1.4
 # ================================================================
 
 # ===========================
-# ADMIN CHECK
+# ADMIN CHECK (AUTO-ELEVATE)
 # ===========================
-if (-not ([Security.Principal.WindowsPrincipal]
+$IsAdmin = ([Security.Principal.WindowsPrincipal] `
     [Security.Principal.WindowsIdentity]::GetCurrent()
-).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)) {
-    Write-Host "ERROR: Administrator rights required." -ForegroundColor Red
+).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+if (-not $IsAdmin) {
+    Write-Host "INFO: Restarting script with administrator privileges..." -ForegroundColor Yellow
+    $PSExe = if ($PSVersionTable.PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
+    Start-Process -FilePath $PSExe `
+        -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" `
+        -Verb RunAs
     exit
 }
 
