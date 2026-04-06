@@ -98,12 +98,18 @@
 
 #>
 
-# U.P.K.E.E.P. - Update Package Keeping Everything Efficiently Prepared
-# Run as Administrator check
+# ─────────────────────────────────────────────────────────────────────────────
+# ADMIN CHECK
+# ─────────────────────────────────────────────────────────────────────────────
+
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsRoleLevel]::Administrator)) {
     Write-Host "This script must be run as Administrator!" -ForegroundColor Red
     exit 1
 }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BANNER DISPLAY
+# ─────────────────────────────────────────────────────────────────────────────
 
 function Show-UpkeepBanner {
     Write-Host @"
@@ -121,7 +127,10 @@ function Show-UpkeepBanner {
     Write-Host ""
 }
 
-# Color Schema Definition
+# ─────────────────────────────────────────────────────────────────────────────
+# COLOR SCHEMA DEFINITION
+# ─────────────────────────────────────────────────────────────────────────────
+
 $ColorSchema = @{
     Header       = 'Cyan'      # Section headers
     Success      = 'Green'     # Successful operations
@@ -132,6 +141,10 @@ $ColorSchema = @{
     Accent       = 'Blue'      # Accent and highlights
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# DISPLAY BANNER
+# ─────────────────────────────────────────────────────────────────────────────
+
 Show-UpkeepBanner
 
 Write-Host ""
@@ -140,7 +153,10 @@ Write-Host "     WINDOWS UPDATE MANAGER" -ForegroundColor $ColorSchema.Header
 Write-Host "========================================" -ForegroundColor $ColorSchema.Header
 Write-Host ""
 
-# Step 1: Disable Sleep
+# ─────────────────────────────────────────────────────────────────────────────
+# STEP 1: DISABLE SLEEP SETTINGS
+# ─────────────────────────────────────────────────────────────────────────────
+
 Write-Host "[1/4] Disabling Sleep Settings..." -ForegroundColor $ColorSchema.Progress
 try {
     powercfg /change standby-timeout-ac 0
@@ -155,7 +171,10 @@ catch {
 
 Write-Host ""
 
-# Step 2: Install PSWindowsUpdate Module
+# ─────────────────────────────────────────────────────────────────────────────
+# STEP 2: INSTALL PSWINDOWSUPDATE MODULE
+# ─────────────────────────────────────────────────────────────────────────────
+
 Write-Host "[2/4] Installing PSWindowsUpdate Module..." -ForegroundColor $ColorSchema.Progress
 try {
     $module = Get-Module -Name PSWindowsUpdate -ListAvailable
@@ -174,8 +193,12 @@ catch {
 }
 
 Write-Host ""
+Write-Host ""
 
-# Step 3: Import PSWindowsUpdate Module
+# ─────────────────────────────────────────────────────────────────────────────
+# STEP 3: IMPORT PSWINDOWSUPDATE MODULE
+# ─────────────────────────────────────────────────────────────────────────────
+
 Write-Host "[3/4] Importing PSWindowsUpdate Module..." -ForegroundColor $ColorSchema.Progress
 try {
     Import-Module -Name PSWindowsUpdate -Force
@@ -188,7 +211,10 @@ catch {
 
 Write-Host ""
 
-# Step 4: Install Windows Updates (without reboot)
+# ─────────────────────────────────────────────────────────────────────────────
+# STEP 4: INSTALL WINDOWS UPDATES
+# ─────────────────────────────────────────────────────────────────────────────
+
 Write-Host "[4/4] Installing Windows Updates..." -ForegroundColor $ColorSchema.Progress
 Write-Host "    This may take several minutes..." -ForegroundColor $ColorSchema.Info
 Write-Host ""
@@ -221,7 +247,10 @@ Write-Host "  UPDATE INSTALLATION COMPLETE" -ForegroundColor $ColorSchema.Header
 Write-Host "========================================" -ForegroundColor $ColorSchema.Header
 Write-Host ""
 
-# Check Reboot Status
+# ─────────────────────────────────────────────────────────────────────────────
+# CHECK REBOOT STATUS
+# ─────────────────────────────────────────────────────────────────────────────
+
 Write-Host "Checking reboot status..." -ForegroundColor $ColorSchema.Progress
 $rebootStatus = Get-WindowsUpdateRebootStatus
 $rebootRequired = $rebootStatus.RebootRequired
@@ -241,7 +270,10 @@ else {
     Write-Host ""
 }
 
-# Reboot Decision - Only prompt if reboot is required
+# ─────────────────────────────────────────────────────────────────────────────
+# REBOOT DECISION - ONLY PROMPT IF REBOOT IS REQUIRED
+# ─────────────────────────────────────────────────────────────────────────────
+
 if ($rebootRequired) {
     Write-Host "The computer is ready to be rebooted." -ForegroundColor $ColorSchema.Warning
     Write-Host ""
@@ -286,6 +318,10 @@ else {
     Write-Host "[+] No reboot action required. System is ready to use." -ForegroundColor $ColorSchema.Success
     Write-Host ""
 }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COMPLETION MESSAGE
+# ─────────────────────────────────────────────────────────────────────────────
 
 Write-Host "========================================" -ForegroundColor $ColorSchema.Header
 Write-Host "  SCRIPT EXECUTION COMPLETED" -ForegroundColor $ColorSchema.Header
