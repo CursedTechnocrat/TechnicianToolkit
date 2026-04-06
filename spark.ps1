@@ -1,6 +1,9 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# S.P.A.R.K - Automated Package Manager (Winget/Chocolatey)
+# Version 6.0 - Rebuilt to resolve errors
+# Version 6.1 - Resolved Syntax errors
+# ─────────────────────────────────────────────────────────────────────────────
 <#
-.VERSION
-    6.0 Rebuilt to resolve errors
 .SYNOPSIS
     S.P.A.R.K - Automated Package Manager (Winget/Chocolatey)
 .DESCRIPTION
@@ -301,7 +304,6 @@ function Install-PackageViaWinget {
         }
         
         $exitCode = $LASTEXITCODE
-
         if ($exitCode -eq 0 -or $exitCode -eq -1978335189) {
             Write-Host "  [+] $PackageId $action successfully via Winget." -ForegroundColor Green
             Write-EventLog -Message "$action $PackageId successfully via Winget." -EventType "Information" -EventId $script:EventIds.PackageInstallSuccess
@@ -322,8 +324,8 @@ function Install-PackageViaWinget {
         }
     }
     catch {
-        Write-Host "  [-] Winget error for $PackageId`: \$_. Will retry with Chocolatey..." -ForegroundColor Red
-        Write-EventLog -Message "Winget error for \$PackageId`: $_" -EventType "Warning" -EventId $script:EventIds.PackageInstallFailed
+        Write-Host "  [-] Winget error for $PackageId : $_. Will retry with Chocolatey..." -ForegroundColor Red
+        Write-EventLog -Message "Winget error for $PackageId : $_" -EventType "Warning" -EventId $script:EventIds.PackageInstallFailed
         return $false
     }
 }
@@ -395,8 +397,8 @@ function Install-PackageViaChocolatey {
         }
     }
     catch {
-        Write-Host "  [-] Chocolatey error for $PackageId`: \$_" -ForegroundColor Red
-        Write-EventLog -Message "Chocolatey error for \$PackageId`: $_" -EventType "Error" -EventId $script:EventIds.PackageInstallFailed
+        Write-Host "  [-] Chocolatey error for $PackageId : $_" -ForegroundColor Red
+        Write-EventLog -Message "Chocolatey error for $PackageId : $_" -EventType "Error" -EventId $script:EventIds.PackageInstallFailed
         $LogArray.Value += [PSCustomObject]@{
             Package   = $OriginalPackageName
             Status    = "Failed"
@@ -605,18 +607,9 @@ if ([string]::IsNullOrWhiteSpace($Mode)) {
         $selection = Read-Host "Enter your choice (1 or 2)"
         
         if ($selection -eq "1") {
-            $Mode = "Install"
+            \$Mode = "Install"
+            $script:OperationMode = "Install"
             break
         }
         elseif ($selection -eq "2") {
-            $Mode = "Upgrade"
-            break
-        }
-        else {
-            Write-Host "Invalid selection. Please enter 1 or 2." -ForegroundColor Red
-        }
-    } while ($true)
-}
-
-Write-Host ""
-Write-Host "
+            \$Mode
