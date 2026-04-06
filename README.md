@@ -1,7 +1,11 @@
-# M.A.G.I.C. & S.P.A.R.K.
+# M.A.G.I.C., S.P.A.R.K. & U.P.K.E.E.P.
 ### IT Deployment and Setup Automation Toolkit
 
-A pair of PowerShell scripts designed to simplify **workstation setup** by automating **printer installation** and **core software deployment**.
+A set of PowerShell scripts designed to simplify **workstation provisioning and maintenance** by automating:
+
+- 🖨️ Printer installation
+- ⚡ Core software deployment
+- 🔄 Windows Update and system maintenance
 
 ---
 
@@ -11,8 +15,9 @@ A pair of PowerShell scripts designed to simplify **workstation setup** by autom
 |------|-------------|
 | **M.A.G.I.C.** | Machine Automated Graphical Ink Configurator |
 | **S.P.A.R.K.** | Software Package & Resource Kit |
+| **U.P.K.E.E.P.** | Update Package Keeping Everything Efficiently Prepared |
 
-Each tool can be used independently or together during workstation provisioning.
+Each tool can be used independently or together during workstation setup and lifecycle management.
 
 ---
 
@@ -44,7 +49,7 @@ M.A.G.I.C. automates printer driver installation and network printer creation us
 
 1. Download printer drivers from the manufacturer  
 2. Place the driver file in the same folder as `MAGIC.ps1`  
-3. Run M.A.G.I.C. as **Administrator**  
+3. Run **M.A.G.I.C.** as **Administrator**  
 4. Install drivers and add network printers  
 
 ---
@@ -59,51 +64,85 @@ S.P.A.R.K automates package manager setup and standard software deployment.
 - Installs and initializes **Winget** and **Chocolatey**
 - Automatically updates package managers
 - Installs predefined core applications
-- Optional software selected interactively
+- Optional software selected via parameters or prompts
 - Silent installs where supported
 - Tracks installation results with timestamps
-- Displays a clear installation summary
+- Exports results to CSV for auditing
+- Writes events to the Windows Event Log
 
 ### 📦 Core Software Installed
 
 *(Default list – easily customizable)*
 
-- Microsoft Teams
 - Microsoft Office
+- Microsoft Edge
 - 7‑Zip
-- Google Chrome
 - Adobe Acrobat Reader
 - Zoom
 
 ### ➕ Optional Software Examples
 
 - Zoom Outlook Plugin
-- DisplayLink Graphics Driver
 - Dell Command Update
+- Dell Command Suite
+
+---
+
+## 🔄 U.P.K.E.E.P.
+### Update Package Keeping Everything Efficiently Prepared
+
+U.P.K.E.E.P. automates **Windows Update detection, installation, and reboot handling** while ensuring the system remains awake and stable during the update process.
+
+### ✨ Features
+
+- Disables system sleep and monitor timeouts during execution
+- Automatically installs and imports the **PSWindowsUpdate** module
+- Scans for available Windows updates *(drivers excluded)*
+- Displays a clear summary of pending updates
+- Installs updates **without forcing an automatic reboot**
+- Detects whether a reboot is required
+- Prompts the technician before rebooting
+- Provides a **30‑second reboot countdown with cancel option**
+- Standardized output aligned with M.A.G.I.C. and S.P.A.R.K.
+
+### ✅ Typical Usage
+
+1. Run `UPKEEP.ps1` as **Administrator**
+2. Allow the script to install and apply Windows updates
+3. Review update results
+4. Reboot immediately or defer when prompted
+
+### ⚠️ Notes
+
+- Internet access is required to download updates and modules
+- Unsaved work should be closed before execution
+- Designed for technician‑initiated maintenance or post‑deployment cleanup
 
 ---
 
 ## 🔁 How They Work Together
 
-M.A.G.I.C. and S.P.A.R.K are designed to complement each other:
+M.A.G.I.C., S.P.A.R.K., and U.P.K.E.E.P. are designed to complement each other across the workstation lifecycle:
 
-1. **S.P.A.R.K** prepares the workstation with core applications  
+1. **S.P.A.R.K.** installs and upgrades core software  
 2. **M.A.G.I.C.** installs printer drivers and configures printers  
-3. Both scripts:
-   - Require Administrator privileges
-   - Are interactive and technician‑friendly
-   - Provide clear success and failure feedback
+3. **U.P.K.E.E.P.** ensures Windows is fully updated and reboot‑clean  
 
-Scripts may be run independently or in sequence.
+All scripts:
+
+- Require **Administrator privileges**
+- Use a **consistent color and banner format**
+- Provide clear success, warning, and error feedback
+- Can be run independently or in sequence
 
 ---
 
 ## ✅ Requirements
 
 - Windows 10 or Windows 11
-- PowerShell 5.1 or later
+- PowerShell **5.1 or later**
 - Administrator privileges
-- Internet access *(required for S.P.A.R.K)*
+- Internet access *(required for S.P.A.R.K. and U.P.K.E.E.P.)*
 
 ---
 
@@ -116,3 +155,6 @@ Scripts may be run independently or in sequence.
 
 /SPARK
 └─ SPARK.ps1
+
+/UPKEEP
+└─ UPKEEP.ps1
