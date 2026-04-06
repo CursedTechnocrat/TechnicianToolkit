@@ -1,8 +1,6 @@
 <#
 .VERSION
-    5.1 - Cleaned-up documentation format
-    5.2 - Added version tracking section
-    5.3 - Standardized Formatting with MAGIC and UPKEEP
+    6.0 Rebuilt to resolve errors
 .SYNOPSIS
     S.P.A.R.K - Automated Package Manager (Winget/Chocolatey)
 .DESCRIPTION
@@ -79,6 +77,7 @@ $script:ChocoInitialized = $false
 $script:OperationMode    = $Mode
 $script:LogPath          = $LogPath
 $script:LogRoot          = $SPARKLogRoot
+$installationLog         = @()
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ADMIN CHECK
@@ -89,45 +88,6 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
     Write-Host "ERROR: This script must be run as Administrator." -ForegroundColor Red
     exit 1
 }
-
-# ─────────────────────────────────────────────────────────────────────────────
-# MODE SELECTION
-# ─────────────────────────────────────────────────────────────────────────────
-
-if ([string]::IsNullOrWhiteSpace($Mode)) {
-    Write-Host ""
-    Write-Host "╔════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║     S.P.A.R.K - Mode Selection         ║" -ForegroundColor Cyan
-    Write-Host "╚════════════════════════════════════════╝" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "Please choose an operation mode:" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "  [1] Install    - Install new software packages" -ForegroundColor Green
-    Write-Host "  [2] Upgrade    - Upgrade existing software to latest versions" -ForegroundColor Cyan
-    Write-Host ""
-    
-    do {
-        $selection = Read-Host "Enter your choice (1 or 2)"
-        
-        if ($selection -eq "1") {
-            $Mode = "Install"
-            break
-        }
-        elseif ($selection -eq "2") {
-            $Mode = "Upgrade"
-            break
-        }
-        else {
-            Write-Host "Invalid selection. Please enter 1 or 2." -ForegroundColor Red
-        }
-    } while ($true)
-}
-
-Write-Host ""
-Write-Host "Mode selected: $Mode" -ForegroundColor Green
-Write-Host ""
-
-$script:OperationMode = $Mode
 
 # ─────────────────────────────────────────────────────────────────────────────
 # FUNCTIONS
@@ -146,30 +106,6 @@ function Show-SparkBanner {
     Write-Host "    Software Package & Resource Kit" -ForegroundColor Yellow
     Write-Host "    Automated Package Manager Setup & Installation" -ForegroundColor Yellow
     Write-Host ""
-}
-
-function Initialize-EventLog {
-    <#
-    .SYNOPSIS
-        Initializes the event log source for S.P.A.R.K if it doesn't already exist.
-        Logs to the standard Application event log to maintain SOC compliance.
-    #>
-    try {
-        $sourceExists = [System.Diagnostics.EventLog]::SourceExists($script:EventLogSource)
-        
-        if (-not $sourceExists) {
-            [System.Diagnostics.EventLog]::CreateEventSource($script:EventLogSource, $script:EventLogName)
-            Write-Host "Event log source '$script:EventLogSource' created in Application log." -ForegroundColor Green
-        }
-        else {
-            Write-Host "Event log source '$script:EventLogSource' already exists." -ForegroundColor Green
-        }
-        return $true
-    }
-    catch {
-        Write-Host "Warning: Could not initialize event log source: $_" -ForegroundColor Yellow
-        return $false
-    }
 }
 
 function Write-EventLog {
@@ -200,6 +136,30 @@ function Write-EventLog {
     }
     catch {
         # Silent fail — don't interrupt script flow if event logging fails
+    }
+}
+
+function Initialize-EventLog {
+    <#
+    .SYNOPSIS
+        Initializes the event log source for S.P.A.R.K if it doesn't already exist.
+        Logs to the standard Application event log to maintain SOC compliance.
+    #>
+    try {
+        $sourceExists = [System.Diagnostics.EventLog]::SourceExists($script:EventLogSource)
+        
+        if (-not $sourceExists) {
+            [System.Diagnostics.EventLog]::CreateEventSource($script:EventLogSource, $script:EventLogName)
+            Write-Host "Event log source '$script:EventLogSource' created in Application log." -ForegroundColor Green
+        }
+        else {
+            Write-Host "Event log source '$script:EventLogSource' already exists." -ForegroundColor Green
+        }
+        return $true
+    }
+    catch {
+        Write-Host "Warning: Could not initialize event log source: $_" -ForegroundColor Yellow
+        return $false
     }
 }
 
@@ -327,7 +287,7 @@ function Install-PackageViaWinget {
         [string]$PackageId,
         [ref]$LogArray
     )
-
+    
     $action = if ($script:OperationMode -eq "Upgrade") { "Upgrading" } else { "Installing" }
     Write-Host "  Attempting Winget: $action $PackageId..." -ForegroundColor Yellow
     Write-EventLog -Message "Attempting to $($action.ToLower()) $PackageId via Winget." -EventType "Information" -EventId $script:EventIds.PackageInstallStart
@@ -508,9 +468,8 @@ function Export-InstallLog {
     try {
         # Verify the directory exists before attempting to write
         if (-not (Test-Path \$script:LogRoot)) {
-            Write-Host "Warning: $script:LogRoot does not exist. Log file cannot be written." -ForegroundColor Yellow
-            Write-EventLog -Message "$script:LogRoot directory not found. CSV log file not written." -EventType "Warning" -EventId \$script:EventIds.LogExportFailed
-            return
+            Write-Host "Warning: \$script:LogRoot does not exist. Creating directory..." -ForegroundColor Yellow
+            New-Item -Path \$script:LogRoot -ItemType Directory -Force | Out-Null
         }
 
         \$InstallLog | Export-Csv -Path \$Path -NoTypeInformation -Append
@@ -602,7 +561,7 @@ function Show-InstallationSummary {
     @{ Winget = "7zip.7zip";                         Chocolatey = "7zip"                  },
     @{ Winget = "Adobe.Acrobat.Reader.64-bit";       Chocolatey = "adobereader"           },
     @{ Winget = "Zoom.Zoom";                         Chocolatey = "zoom"                  },
-    @{ Winget = "Microsoft.Office";                  Chocolatey = "office-deploy"         }
+    @{ Winget = "Microsoft.Office";                  Chocolatey = "office365business"     }
 )
 
 # Optional packages — controlled via script parameters
@@ -616,12 +575,48 @@ function Show-InstallationSummary {
 # MAIN EXECUTION
 # ─────────────────────────────────────────────────────────────────────────────
 
-\$installationLog = @()
-
 Show-SparkBanner
 
 # Initialize event logging
 Initialize-EventLog
-Write-EventLog -Message "S.P.A.R.K started. Mode: \$Mode | Log Path: \$(\$script:LogPath) | Time: \$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -EventType "Information" -EventId \$script:EventIds.ScriptStart
+Write-EventLog -Message "S.P.A.R.K started. Mode: \$Mode | Log Path: \$(\$script:LogPath) | Time: \$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -EventType "Information" -EventId $script:EventIds.ScriptStart
 Write-Host "========================================" -ForegroundColor Magenta
-Write-Host "Initializing
+Write-Host "Initializing S.P.A.R.K..." -ForegroundColor Magenta
+Write-Host "========================================" -ForegroundColor Magenta
+Write-Host ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MODE SELECTION
+# ─────────────────────────────────────────────────────────────────────────────
+
+if ([string]::IsNullOrWhiteSpace($Mode)) {
+    Write-Host ""
+    Write-Host "╔════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║     S.P.A.R.K - Mode Selection         ║" -ForegroundColor Cyan
+    Write-Host "╚════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "Please choose an operation mode:" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  [1] Install    - Install new software packages" -ForegroundColor Green
+    Write-Host "  [2] Upgrade    - Upgrade existing software to latest versions" -ForegroundColor Cyan
+    Write-Host ""
+    
+    do {
+        $selection = Read-Host "Enter your choice (1 or 2)"
+        
+        if ($selection -eq "1") {
+            $Mode = "Install"
+            break
+        }
+        elseif ($selection -eq "2") {
+            $Mode = "Upgrade"
+            break
+        }
+        else {
+            Write-Host "Invalid selection. Please enter 1 or 2." -ForegroundColor Red
+        }
+    } while ($true)
+}
+
+Write-Host ""
+Write-Host "
