@@ -289,15 +289,15 @@ function Install-Package {
             Write-EventLog -Message "Starting package $Action via Winget: $PackageName" -EventType "Information" -EventId $script:EventIds.PackageInstallStart
             
             if ($Action -eq "Install") {
-                & winget install --id $WingetId --exact --silent --accept-source-agreements --accept-package-agreements 2>&1
+                & winget install --id $WingetId --exact --silent --accept-source-agreements --accept-package-agreements 2>&1 | Out-Null
             }
             else {
-                & winget upgrade --id $WingetId --exact --silent --accept-source-agreements --accept-package-agreements 2>&1
+                & winget upgrade --id $WingetId --exact --silent --accept-source-agreements --accept-package-agreements 2>&1 | Out-Null
             }
             
             $exitCode = $LASTEXITCODE
             
-            if ($exitCode -eq 0) {
+            if ($exitCode -eq 0 -or $exitCode -eq 1641 -or $exitCode -eq 3010) {
                 Write-Host " ✓ Success" -ForegroundColor Green
                 $logEntry = @{
                     Timestamp = $timestamp
@@ -328,10 +328,10 @@ function Install-Package {
             Write-EventLog -Message "Falling back to Chocolatey for $PackageName" -EventType "Information" -EventId $script:EventIds.PackageInstallStart
             
             if ($Action -eq "Install") {
-                & choco install $ChocoId -y --no-progress 2>&1
+                & choco install $ChocoId -y --no-progress 2>&1 | Out-Null
             }
             else {
-                & choco upgrade $ChocoId -y --no-progress 2>&1
+                & choco upgrade $ChocoId -y --no-progress 2>&1 | Out-Null
             }
             
             $exitCode = $LASTEXITCODE
@@ -365,6 +365,7 @@ function Install-Package {
         }
         catch {
             Write-Host " ✗ Error: $_" -ForegroundColor Red
+            $errorMsg = $_
             $logEntry = @{
                 Timestamp = $timestamp
                 Package   = $PackageName
@@ -373,7 +374,7 @@ function Install-Package {
                 ExitCode  = -1
             }
             $script:InstallLog += New-Object PSObject -Property $logEntry
-            Write-EventLog -Message "$Action error for $PackageName: $_" -EventType "Error" -EventId $script:EventIds.PackageInstallFailed
+            Write-EventLog -Message "$Action error for $PackageName`: $errorMsg" -EventType "Error" -EventId $script:EventIds.PackageInstallFailed
             return $false
         }
     }
@@ -566,11 +567,9 @@ foreach ($package in $coreSoftware) {
 # Install optional software
 foreach ($package in $optionalSoftware) {
     $paramName = $package.Param
-    if (Get-Variable -Name $paramName -ErrorAction SilentlyContinue) {
-        if ((Get-Variable -Name $paramName).Value) {
-            Install-Package -PackageName $package.Name -WingetId $package.Winget -ChocoId $package.Chocolatey -Action $Mode
-            Start-Sleep -Milliseconds 500
-        }
+    if ((Get-Variable -Name $paramName -ValueOnly -ErrorAction SilentlyContinue) -eq $true) {
+        Install-Package -PackageName $package.Name -WingetId $package.Winget -ChocoId $package.Chocolatey -Action $Mode
+        Start-Sleep -Milliseconds 500
     }
 }
 
