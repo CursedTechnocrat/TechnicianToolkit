@@ -56,13 +56,12 @@ $Colors = @{
 
 function Show-WarpBanner {
     Write-Host @"
-
-  ███████╗██████╗  █████╗ ██████╗ ██╗  ██╗
-  ██╔════╝██╔══██╗██╔══██╗██╔══██╗██║ ██╔╝
-  ███████╗██████╔╝███████║██████╔╝█████╔╝ 
-  ╚════██║██╔═══╝ ██╔══██║██╔══██╗██╔═██╗ 
-  ███████║██║     ██║  ██║██║  ██║██║  ██╗
-  ╚══════╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝
+  ██╗    ██╗     █████╗     ██████╗     ██████╗ 
+  ██║    ██║    ██╔══██╗    ██╔══██╗    ██╔══██╗
+  ██║ █╗ ██║    ███████║    ██████╔╝    ██████╔╝
+  ██║███╗██║    ██╔══██║    ██╔══██╗    ██╔═══╝ 
+  ╚███╔███╔╝    ██║  ██║    ██║  ██║    ██║     
+   ╚══╝╚══╝     ╚═╝  ╚═╝    ╚═╝  ╚═╝    ╚═╝     
 "@ -ForegroundColor $Colors.Accent
     Write-Host "    W.A.R.P. - Winget Application Rollout Platform" -ForegroundColor $Colors.Header
     Write-Host "    Automated Package Manager Setup & Installation" -ForegroundColor $Colors.Header
