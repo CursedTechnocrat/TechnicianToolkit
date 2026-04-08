@@ -10,8 +10,8 @@
     summary reporting.
 
     The script installs core software automatically and supports optional packages
-    via command-line parameters. Perfect for deployment in enterprise environments,
-    RMM tools, and automated workflows.
+    via command-line parameters or interactive prompts. Perfect for deployment in 
+    enterprise environments, RMM tools, and automated workflows.
 
 .PARAMETER InstallZoomOutlookPlugin
     Install the Zoom Outlook Plugin for seamless meeting integration.
@@ -22,33 +22,37 @@
 .PARAMETER InstallDellCommandSuite
     Install Dell Command Suite for comprehensive Dell system management.
 
+.PARAMETER SkipPrompts
+    Skip interactive prompts and only install core packages.
+
 .EXAMPLE
     .\SPARK.ps1
-    Installs all core software packages using Winget.
+    Installs all core software packages and prompts for optional packages.
 
 .EXAMPLE
     .\SPARK.ps1 -InstallZoomOutlookPlugin -InstallDellCommandUpdate
-    Installs core software plus the Zoom Outlook Plugin and Dell Command Update.
+    Installs core software plus specified optional packages.
 
 .EXAMPLE
-    .\SPARK.ps1 -InstallDellCommandSuite
-    Installs core software plus the Dell Command Suite.
+    .\SPARK.ps1 -SkipPrompts
+    Installs only core software without prompting for optional packages.
 
 .NOTES
     Author: Your Organization Name
-    Version: 1.0.0
+    Version: 1.1.0
     Requires: Windows 10+ with Administrator privileges
     Winget will be installed automatically if not present.
 
 .LINK
-    https://github.com/yourusername/SPARK
+    https://github.com/CursedTechnocrat/TechnicianToolkit
 
 #>
 
 param(
     [switch]$InstallZoomOutlookPlugin,
     [switch]$InstallDellCommandUpdate,
-    [switch]$InstallDellCommandSuite
+    [switch]$InstallDellCommandSuite,
+    [switch]$SkipPrompts
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -209,6 +213,84 @@ function Show-SparkBanner {
     Write-Host ""
 }
 
+function Show-OptionalPackageMenu {
+    <#
+    .SYNOPSIS
+        Displays interactive menu for optional packages.
+    .DESCRIPTION
+        Shows user a menu to select optional packages to install.
+    .OUTPUT
+        Returns hashtable with selected optional packages.
+    #>
+    Write-Host "`n" + ("=" * 50) -ForegroundColor Cyan
+    Write-Host "S.P.A.R.K - Optional Packages" -ForegroundColor Cyan
+    Write-Host ("=" * 50) -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "Select optional packages to install:" -ForegroundColor Yellow
+    Write-Host ""
+    
+    $optionalChoices = @(
+        @{ 
+            Name = "Zoom Outlook Plugin"
+            Description = "Seamless meeting integration with Outlook"
+            WingetID = "Zoom.ZoomOutlookPlugin"
+            Selected = $false
+        },
+        @{ 
+            Name = "Dell Command Update"
+            Description = "Dell system management & driver updates"
+            WingetID = "Dell.CommandUpdate"
+            Selected = $false
+        },
+        @{ 
+            Name = "Dell Command Suite"
+            Description = "Comprehensive Dell system management tools"
+            WingetID = "Dell.CommandSuite"
+            Selected = $false
+        }
+    )
+
+    for ($i = 0; $i -lt $optionalChoices.Count; $i++) {
+        Write-Host "  [$($i + 1)] $($optionalChoices[$i].Name)" -ForegroundColor Green
+        Write-Host "      └─ $($optionalChoices[$i].Description)" -ForegroundColor Gray
+    }
+    
+    Write-Host "  [0] Skip optional packages" -ForegroundColor Yellow
+    Write-Host ""
+
+    $selectedPackages = @()
+
+    # Loop for multiple selections
+    while ($true) {
+        $choice = Read-Host "Enter selection (comma-separated for multiple, or 0 to skip)"
+        
+        if ($choice -eq "0") {
+            Write-Host "✓ Skipping optional packages" -ForegroundColor Green
+            break
+        }
+
+        $choices = $choice -split "," | ForEach-Object { $_.Trim() }
+        $allValid = $true
+
+        foreach ($c in $choices) {
+            if ([int]$c -lt 1 -or [int]$c -gt $optionalChoices.Count) {
+                Write-Host "✗ Invalid selection: $c" -ForegroundColor Red
+                $allValid = $false
+                break
+            }
+        }
+
+        if ($allValid) {
+            foreach ($c in $choices) {
+                $selectedPackages += $optionalChoices[[int]$c - 1]
+            }
+            break
+        }
+    }
+
+    return $selectedPackages
+}
+
 function Show-InstallationSummary {
     <#
     .SYNOPSIS
@@ -282,7 +364,7 @@ $coreSoftware = @(
     "Google.Chrome"
 )
 
-# Optional software packages (installed via parameters)
+# Optional software packages (installed via parameters or menu)
 $optionalSoftware = @(
     @{ ParamName = "InstallZoomOutlookPlugin"; Winget = "Zoom.ZoomOutlookPlugin"   },
     @{ ParamName = "InstallDellCommandUpdate"; Winget = "Dell.CommandUpdate"       },
@@ -320,11 +402,33 @@ foreach ($software in $coreSoftware) {
     $wingetList += $software
 }
 
-# Add optional packages if parameters were passed
-foreach ($opt in $optionalSoftware) {
-    $switchValue = (Get-Variable -Name $opt.ParamName -ValueOnly -ErrorAction SilentlyContinue)
-    if ($switchValue -eq $true) {
-        $wingetList += $opt.Winget
+# Handle optional packages - from parameters OR from interactive menu
+$selectedOptional = @()
+
+# Check if any optional parameters were passed
+$hasOptionalParams = $PSBoundParameters.Keys | Where-Object { 
+    $_ -match "^Install" 
+} | Measure-Object | Select-Object -ExpandProperty Count
+
+if ($hasOptionalParams -gt 0) {
+    # Add optional packages from parameters
+    foreach ($opt in $optionalSoftware) {
+        $switchValue = (Get-Variable -Name $opt.ParamName -ValueOnly -ErrorAction SilentlyContinue)
+        if ($switchValue -eq $true) {
+            $wingetList += $opt.Winget
+            $selectedOptional += $opt.Winget
+        }
+    }
+}
+elseif (-not $SkipPrompts) {
+    # Show interactive menu if no parameters passed and not skipping prompts
+    $menuSelection = Show-OptionalPackageMenu
+    
+    if ($menuSelection.Count -gt 0) {
+        foreach ($item in $menuSelection) {
+            $wingetList += $item.WingetID
+            $selectedOptional += $item.Name
+        }
     }
 }
 
@@ -332,6 +436,14 @@ Write-Host "`n" + ("=" * 50) -ForegroundColor Magenta
 Write-Host "S.P.A.R.K - Installation Phase" -ForegroundColor Magenta
 Write-Host ("=" * 50) -ForegroundColor Magenta
 Write-Host ""
+
+if ($selectedOptional.Count -gt 0) {
+    Write-Host "Optional Packages Selected:" -ForegroundColor Cyan
+    foreach ($item in $selectedOptional) {
+        Write-Host "  + $item" -ForegroundColor Cyan
+    }
+    Write-Host ""
+}
 
 Install-Software -WingetPackages $wingetList -LogArray ([ref]$installationLog)
 
