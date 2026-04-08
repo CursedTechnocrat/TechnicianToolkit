@@ -1,2 +1,21 @@
-Q: Is it alright for me to make copies/forks/distributes?
-A: Yes, but please let me know about them. Not for any compliance, but I would love to see what others are doing and help me see where things are missing/broken.
+## ❓ FAQ
+
+### Is it alright for me to make copies/forks/distributes?
+
+Yes, and please let me know about them. Not for any compliance, but I would love to see what others are doing and help me see where things are viewed as missing.
+
+### How often do you update?
+
+Right now pretty regularly. I am still testing the scripts for all the edge cases. Feel free to put issues here: https://github.com/CursedTechnocrat/TechnicianToolkit/issues
+
+### Do you have a KoFi/Patreon?
+
+No, and I don't intend to ever make money off this. For me this is a passion project to help make technician lives easier.
+
+### Why did you start making these?
+
+I wanted some scripts to help automate some of the most boring parts at work and I really dislike a lot of scripts that just give you a "Done" or "Failure" state.
+
+## Disclaimer
+
+These scripts modify system settings and may install updates/software that require a system reboot. **Ensure all unsaved work is backed up before running.** Use at your own risk.
