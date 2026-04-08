@@ -1,6 +1,6 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # S.P.A.R.K - Software Package Auto-Installer
-# v6.4 - Fixed Parsing errors
+# v6.5 - Parsing errors
 # ─────────────────────────────────────────────────────────────────────────────
 
 param(
@@ -113,54 +113,60 @@ function Initialize-Winget {
         return $script:WingetAvailable
     }
 
+    $wingetFound = $false
     try {
         $ver = winget --version 2>&1
         Write-Host "✓ Winget detected - Version: $ver" -ForegroundColor Green
         Write-EventLog -Message "Winget detected. Version: $ver" -EventType "Information" -EventId $script:EventIds.WingetDetected
+        $wingetFound = $true
+    }
+    catch {
+        Write-Host "⚠ Winget not found. Attempting installation from GitHub..." -ForegroundColor Yellow
+        Write-EventLog -Message "Winget not found. Attempting installation." -EventType "Information" -EventId $script:EventIds.WingetInstallAttempt
+    }
+
+    if ($wingetFound) {
+        $script:WingetAvailable = $true
+        $script:WingetInitialized = $true
+        return $true
+    }
+
+    # Try to install Winget from GitHub
+    try {
+        $release = Invoke-RestMethod -Uri "https://api.github.com/repos/microsoft/winget-cli/releases/latest" -UseBasicParsing
+        $msixBundle = $release.assets | Where-Object { $_.name -like "*.msixbundle" } | Select-Object -First 1
+
+        if (-not $msixBundle) {
+            Write-Host "✗ Failed: Could not locate winget MSIX bundle" -ForegroundColor Red
+            Write-EventLog -Message "Failed to locate winget MSIX bundle" -EventType "Error" -EventId $script:EventIds.WingetInstallFailed
+            $script:WingetAvailable = $false
+            $script:WingetInitialized = $true
+            return $false
+        }
+
+        $tmpPath = Join-Path -Path $env:TEMP -ChildPath "winget_install.msixbundle"
+        Write-Host "  Downloading: $($msixBundle.browser_download_url)" -ForegroundColor Cyan
+        Invoke-WebRequest -Uri $msixBundle.browser_download_url -OutFile $tmpPath -UseBasicParsing
+        
+        Write-Host "  Installing MSIX package..." -ForegroundColor Cyan
+        Add-AppxPackage -Path $tmpPath
+        Start-Sleep -Seconds 3
+        Update-EnvironmentPath
+        
+        # Verify installation
+        $ver = winget --version 2>&1
+        Write-Host "✓ Winget installed successfully - Version: $ver" -ForegroundColor Green
+        Write-EventLog -Message "Winget installed successfully. Version: $ver" -EventType "Information" -EventId $script:EventIds.WingetInstallSuccess
         $script:WingetAvailable = $true
         $script:WingetInitialized = $true
         return $true
     }
     catch {
-        Write-Host "⚠ Winget not found. Attempting installation from GitHub..." -ForegroundColor Yellow
-        Write-EventLog -Message "Winget not found. Attempting installation." -EventType "Information" -EventId $script:EventIds.WingetInstallAttempt
-        
-        try {
-            $release = Invoke-RestMethod -Uri "https://api.github.com/repos/microsoft/winget-cli/releases/latest" -UseBasicParsing
-            $msixBundle = $release.assets | Where-Object { $_.name -like "*.msixbundle" } | Select-Object -First 1
-
-            if (-not $msixBundle) {
-                Write-Host "✗ Failed: Could not locate winget MSIX bundle" -ForegroundColor Red
-                Write-EventLog -Message "Failed to locate winget MSIX bundle" -EventType "Error" -EventId $script:EventIds.WingetInstallFailed
-                $script:WingetAvailable = $false
-                $script:WingetInitialized = $true
-                return $false
-            }
-
-            $tmpPath = Join-Path -Path $env:TEMP -ChildPath "winget_install.msixbundle"
-            Write-Host "  Downloading: $($msixBundle.browser_download_url)" -ForegroundColor Cyan
-            Invoke-WebRequest -Uri $msixBundle.browser_download_url -OutFile $tmpPath -UseBasicParsing
-            
-            Write-Host "  Installing MSIX package..." -ForegroundColor Cyan
-            Add-AppxPackage -Path $tmpPath
-            Start-Sleep -Seconds 3
-            Update-EnvironmentPath
-            
-            # Verify installation
-            $ver = winget --version 2>&1
-            Write-Host "✓ Winget installed successfully - Version: $ver" -ForegroundColor Green
-            Write-EventLog -Message "Winget installed successfully. Version: $ver" -EventType "Information" -EventId $script:EventIds.WingetInstallSuccess
-            $script:WingetAvailable = $true
-            $script:WingetInitialized = $true
-            return $true
-        }
-        catch {
-            Write-Host "✗ Winget installation failed: $_" -ForegroundColor Red
-            Write-EventLog -Message "Winget installation failed: $_" -EventType "Error" -EventId $script:EventIds.WingetInstallFailed
-            $script:WingetAvailable = $false
-            $script:WingetInitialized = $true
-            return $false
-        }
+        Write-Host "✗ Winget installation failed: $_" -ForegroundColor Red
+        Write-EventLog -Message "Winget installation failed: $_" -EventType "Error" -EventId $script:EventIds.WingetInstallFailed
+        $script:WingetAvailable = $false
+        $script:WingetInitialized = $true
+        return $false
     }
 }
 
@@ -308,7 +314,7 @@ $coreSoftware = @(
 $optionalSoftware = @(
     @{ Name = "Dell Command Update";      Winget = "Dell.CommandUpdate";                Param = "InstallDellCommandUpdate" },
     @{ Name = "Zoom Outlook Plugin";      Winget = "Zoom.ZoomOutlookPlugin";            Param = "InstallZoomOutlookPlugin" },
-    @{ Name = "Dell Command Suite";       Winget = "Dell.Command";                      Param = "InstallDellCommand" }
+    @{ Name = "Dell Command Suite";       Winget = "Dell.CommandUpdate";                Param = "InstallDellCommand" }
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
