@@ -13,26 +13,26 @@
     via command-line parameters. Perfect for deployment in enterprise environments,
     RMM tools, and automated workflows.
 
-.PARAMETER InstallZoomPlugin
+.PARAMETER InstallZoomOutlookPlugin
     Install the Zoom Outlook Plugin for seamless meeting integration.
-
-.PARAMETER InstallDisplayLink
-    Install the DisplayLink Graphics Driver for external display support.
 
 .PARAMETER InstallDellCommandUpdate
     Install Dell Command Update for Dell system management and updates.
+
+.PARAMETER InstallDellCommandSuite
+    Install Dell Command Suite for comprehensive Dell system management.
 
 .EXAMPLE
     .\SPARK.ps1
     Installs all core software packages using Winget.
 
 .EXAMPLE
-    .\SPARK.ps1 -InstallZoomPlugin -InstallDellCommandUpdate
+    .\SPARK.ps1 -InstallZoomOutlookPlugin -InstallDellCommandUpdate
     Installs core software plus the Zoom Outlook Plugin and Dell Command Update.
 
 .EXAMPLE
-    .\SPARK.ps1 -InstallDisplayLink
-    Installs core software plus the DisplayLink Graphics Driver.
+    .\SPARK.ps1 -InstallDellCommandSuite
+    Installs core software plus the Dell Command Suite.
 
 .NOTES
     Author: Your Organization Name
@@ -46,9 +46,9 @@
 #>
 
 param(
-    [switch]$InstallZoomPlugin,
-    [switch]$InstallDisplayLink,
-    [switch]$InstallDellCommandUpdate
+    [switch]$InstallZoomOutlookPlugin,
+    [switch]$InstallDellCommandUpdate,
+    [switch]$InstallDellCommandSuite
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -277,16 +277,16 @@ $coreSoftware = @(
     "Microsoft.Teams",
     "Microsoft.Office",
     "7zip.7zip",
-    "Google.Chrome",
     "Adobe.Acrobat.Reader.64-bit",
-    "Zoom.Zoom"
+    "Zoom.Zoom",
+    "Google.Chrome"
 )
 
 # Optional software packages (installed via parameters)
 $optionalSoftware = @(
-    @{ ParamName = "InstallZoomPlugin";        Winget = "Zoom.ZoomOutlookPlugin"     },
-    @{ ParamName = "InstallDisplayLink";       Winget = "DisplayLink.GraphicsDriver" },
-    @{ ParamName = "InstallDellCommandUpdate"; Winget = "Dell.CommandUpdate"         }
+    @{ ParamName = "InstallZoomOutlookPlugin"; Winget = "Zoom.ZoomOutlookPlugin"   },
+    @{ ParamName = "InstallDellCommandUpdate"; Winget = "Dell.CommandUpdate"       },
+    @{ ParamName = "InstallDellCommandSuite";  Winget = "Dell.CommandSuite"        }
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
