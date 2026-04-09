@@ -7,13 +7,22 @@
     Mode                     Install, Update, or Both (default: Both)
     SkipOptional             Skip optional software selection prompt
 .EXAMPLE
-    .\W.A.R.P.ps1
-    .\W.A.R.P.ps1 -Mode Install
-    .\W.A.R.P.ps1 -Mode Update -SkipOptional
+    .\warp.ps1
+    .\warp.ps1 -Mode Install
+    .\warp.ps1 -Mode Update -SkipOptional
 .NOTES
     Requires Administrator privileges
     Requires Windows Package Manager (winget) to be installed
 #>
+
+param(
+    [Parameter(Mandatory=$false)]
+    [ValidateSet("Install", "Update", "Both")]
+    [string]$Mode = "Both",
+    
+    [Parameter(Mandatory=$false)]
+    [switch]$SkipOptional
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # W.A.R.P. - Winget Application Rollout Platform
@@ -68,15 +77,9 @@ function Show-WarpBanner {
     Write-Host ""
 }
 
-param(
-    [Parameter(Mandatory=$false)]
-    [ValidateSet("Install", "Update", "Both")]
-    [string]$Mode,  # No default - will be $null if not provided
-    
-    [Parameter(Mandatory=$false)]
-    [switch]$SkipOptional
-)
-
+# ================================================================
+# SOFTWARE LISTS
+# ================================================================
 
 # Define software lists
 $RequiredSoftware = @(
@@ -93,6 +96,10 @@ $OptionalSoftware = @(
     "Mozilla.Firefox",
     "Dell.CommandUpdate"
 )
+
+# ================================================================
+# CREATE LOG DIRECTORY
+# ================================================================
 
 # Create log directory if it doesn't exist
 if (-not (Test-Path $LogDirectory)) {
