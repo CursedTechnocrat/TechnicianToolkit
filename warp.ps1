@@ -19,9 +19,9 @@ param(
     [switch]$SkipOptional
 )
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ===========================
 # CONFIGURATION
-# ─────────────────────────────────────────────────────────────────────────────
+# ===========================
 
 $LogDirectory = "C:\The20dir"
 
@@ -34,24 +34,23 @@ $RequiredSoftware = @(
 )
 
 $OptionalSoftware = @(
-    "geeksforgeeks.geeksforgeeks",
     "Balena.Etcher",
-    "PuTTY.PuTTY"
+    "PuTTY.PuTTY",
+    "Gimp.Gimp"
 )
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ===========================
 # ADMIN CHECK
-# ─────────────────────────────────────────────────────────────────────────────
+# ===========================
 
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Host "ERROR: This script requires Administrator privileges." -ForegroundColor Red
-    Write-Host "Please run PowerShell as Administrator and try again." -ForegroundColor Red
     exit 1
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ===========================
 # COLORS
-# ─────────────────────────────────────────────────────────────────────────────
+# ===========================
 
 $Colors = @{
     Header  = 'Cyan'
@@ -62,35 +61,28 @@ $Colors = @{
     Accent  = 'Blue'
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ===========================
 # BANNER
-# ─────────────────────────────────────────────────────────────────────────────
+# ===========================
 
 function Show-WarpBanner {
-    Write-Host @"
-██╗    ██╗ █████╗ ██████╗ ██████╗
-██║    ██║██╔══██╗██╔══██╗██╔══██╗
-██║ █╗ ██║███████║██████╔╝██████╔╝
-██║███╗██║██╔══██║██╔══██╗██╔═══╝
-╚███╔███╔╝██║  ██║██║  ██║██║
- ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝
-"@ -ForegroundColor $Colors.Accent
-    Write-Host "W.A.R.P. - Winget Application Rollout Platform" -ForegroundColor $Colors.Header
-    Write-Host "Automated Package Manager Setup & Installation" -ForegroundColor $Colors.Header
+    Write-Host ""
+    Write-Host "  W.A.R.P. - Winget Application Rollout Platform" -ForegroundColor $Colors.Accent
+    Write-Host "  Automated Package Manager Setup & Installation" -ForegroundColor $Colors.Header
     Write-Host ""
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ===========================
 # LOGGING SETUP
-# ─────────────────────────────────────────────────────────────────────────────
+# ===========================
 
 if (-not (Test-Path $LogDirectory)) {
     try {
         New-Item -ItemType Directory -Path $LogDirectory -Force | Out-Null
-        Write-Host "✓ Created log directory: $LogDirectory" -ForegroundColor $Colors.Success
+        Write-Host "[OK] Created log directory: $LogDirectory" -ForegroundColor $Colors.Success
     }
     catch {
-        Write-Host "✗ Failed to create log directory" -ForegroundColor $Colors.Error
+        Write-Host "[ERROR] Failed to create log directory" -ForegroundColor $Colors.Error
         exit 1
     }
 }
@@ -112,9 +104,9 @@ Computer: $env:COMPUTERNAME
 $Results = @()
 $ComplianceResults = @()
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ===========================
 # LOGGING FUNCTIONS
-# ─────────────────────────────────────────────────────────────────────────────
+# ===========================
 
 function Write-Log {
     param(
@@ -131,11 +123,11 @@ function Write-Log {
     }
     
     $Symbol = switch ($Level) {
-        "SUCCESS" { "✓" }
-        "WARNING" { "⚠" }
-        "ERROR"   { "✗" }
-        "INFO"    { "•" }
-        default   { "•" }
+        "SUCCESS" { "[+]" }
+        "WARNING" { "[!]" }
+        "ERROR"   { "[X]" }
+        "INFO"    { "[*]" }
+        default   { "[*]" }
     }
     
     $Line = "$Symbol [$((Get-Date).ToString('HH:mm:ss'))] [$Level] $Message"
@@ -164,13 +156,13 @@ function Write-Compliance {
     
     $ComplianceResults += $Entry
     
-    $Line = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')|$($Entry.User)|$($Entry.Computer)|$Package|$Action|$Status|$Version"
-    Add-Content -Path $ComplianceLogPath -Value $Line -Encoding UTF8
+    $LineContent = "$($Entry.Timestamp)|$($Entry.User)|$($Entry.Computer)|$Package|$Action|$Status|$Version"
+    Add-Content -Path $ComplianceLogPath -Value $LineContent -Encoding UTF8
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ===========================
 # CORE FUNCTIONS
-# ─────────────────────────────────────────────────────────────────────────────
+# ===========================
 
 function Test-WingetAvailable {
     try {
@@ -188,11 +180,9 @@ function Get-PackageVersion {
     try {
         $list = & winget list --id $PackageId --exact 2>$null
         if ($list) {
-            # Parse the version from winget output
             $lines = $list -split "`n"
             foreach ($line in $lines) {
                 if ($line -match $PackageId) {
-                    # Extract version - typically format: Name  Id  Version
                     $parts = $line -split '\s+' | Where-Object { $_ }
                     if ($parts.Count -ge 3) {
                         return $parts[-1]
@@ -210,10 +200,8 @@ function Test-PackageInstalledAccurate {
     param([string]$PackageId)
     
     try {
-        # Use exact match to avoid false positives
         $list = & winget list --id $PackageId --exact 2>&1
         
-        # Check if the package ID appears in the output (not just an error)
         if ($list -and $list -match [regex]::Escape($PackageId)) {
             return $true
         }
@@ -234,7 +222,6 @@ function Install-PackageViaWinget {
     Write-Log "Installing $Type: $PackageId" "INFO"
     
     try {
-        # Attempt installation with error suppression
         $installResult = & winget install `
             --id $PackageId `
             --accept-package-agreements `
@@ -242,10 +229,8 @@ function Install-PackageViaWinget {
             --silent `
             2>&1
         
-        # Give it a moment to complete
         Start-Sleep -Seconds 2
         
-        # Verify installation
         if (Test-PackageInstalledAccurate $PackageId) {
             $version = Get-PackageVersion $PackageId
             Write-Log "$PackageId installed successfully (v$version)" "SUCCESS"
@@ -253,7 +238,7 @@ function Install-PackageViaWinget {
             
             return @{
                 Package = $PackageId
-                Status = "✓ Installed"
+                Status = "INSTALLED"
                 Version = $version
                 Type = $Type
             }
@@ -264,7 +249,7 @@ function Install-PackageViaWinget {
             
             return @{
                 Package = $PackageId
-                Status = "✗ Failed"
+                Status = "FAILED"
                 Version = "N/A"
                 Type = $Type
             }
@@ -276,7 +261,7 @@ function Install-PackageViaWinget {
         
         return @{
             Package = $PackageId
-            Status = "✗ Error"
+            Status = "ERROR"
             Version = "N/A"
             Type = $Type
         }
@@ -341,8 +326,8 @@ function Update-AllPackages {
         
         return @{
             Action = "Update"
-            Status = "✓ Completed"
-            Details = $upgradeResult | Select-Object -First 5
+            Status = "COMPLETED"
+            Details = "Updates processed"
         }
     }
     catch {
@@ -351,15 +336,15 @@ function Update-AllPackages {
         
         return @{
             Action = "Update"
-            Status = "✗ Failed"
+            Status = "FAILED"
             Details = $_.Exception.Message
         }
     }
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ===========================
 # MAIN EXECUTION
-# ─────────────────────────────────────────────────────────────────────────────
+# ===========================
 
 Show-WarpBanner
 
@@ -370,16 +355,13 @@ Write-Log "========================================" "INFO"
 
 Write-Compliance "Script" "Start" "Initialized"
 
-# Verify winget is available
 if (-not (Test-WingetAvailable)) {
-    Write-Log "Windows Package Manager (winget) is not available or not installed" "ERROR"
-    Write-Log "Please install winget from: https://github.com/microsoft/winget-cli" "ERROR"
+    Write-Log "Windows Package Manager (winget) is not available" "ERROR"
     exit 1
 }
 
 Write-Log "Windows Package Manager is available" "SUCCESS"
 
-# Install required software
 if ($Mode -in @("Install", "Both")) {
     Write-Host ""
     Write-Log "======= INSTALLING REQUIRED SOFTWARE =======" "INFO"
@@ -389,7 +371,6 @@ if ($Mode -in @("Install", "Both")) {
         $Results += [PSCustomObject]$result
     }
     
-    # Install optional software
     Write-Host ""
     Write-Log "======= OPTIONAL SOFTWARE =======" "INFO"
     
@@ -403,7 +384,6 @@ if ($Mode -in @("Install", "Both")) {
     }
 }
 
-# Run updates
 if ($Mode -in @("Update", "Both")) {
     Write-Host ""
     Write-Log "======= RUNNING PACKAGE UPDATES =======" "INFO"
@@ -412,7 +392,6 @@ if ($Mode -in @("Update", "Both")) {
     $Results += [PSCustomObject]$updateResult
 }
 
-# Summary Report
 Write-Host ""
 Write-Log "========================================" "INFO"
 Write-Log "EXECUTION SUMMARY" "INFO"
@@ -422,11 +401,10 @@ Write-Host ""
 $Results | Format-Table -AutoSize | Out-String | ForEach-Object { Write-Host $_ }
 
 Write-Host ""
-$successCount = @($Results | Where-Object { $_.Status -like "*Installed*" }).Count
-$updateCount = @($Results | Where-Object { $_.Action -eq "Update" }).Count
-$failCount = @($Results | Where-Object { $_.Status -like "*Failed*" -or $_.Status -like "*Error*" }).Count
+$successCount = @($Results | Where-Object { $_.Status -eq "INSTALLED" }).Count
+$failCount = @($Results | Where-Object { $_.Status -like "*FAILED*" -or $_.Status -like "*ERROR*" }).Count
 
-Write-Log "Total operations: $($Results.Count) | Successful: $successCount | Updates: $updateCount | Failed: $failCount" "INFO"
+Write-Log "Total operations: $($Results.Count) | Successful: $successCount | Failed: $failCount" "INFO"
 Write-Log "Installation logs: $LogPath" "SUCCESS"
 Write-Log "Compliance logs: $ComplianceLogPath" "SUCCESS"
 Write-Log "========================================" "INFO"
