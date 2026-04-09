@@ -72,7 +72,9 @@ param(
     [Parameter(Mandatory=$false)]
     [ValidateSet("Install", "Update", "Both")]
     [string]$Mode,  # No default - will be $null if not provided
-    ...
+    
+    [Parameter(Mandatory=$false)]
+    [switch]$SkipOptional
 )
 
 
