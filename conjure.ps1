@@ -1,12 +1,19 @@
 <#
 .SYNOPSIS
-    W.A.R.P. - Winget Application Rollout Platform
+    C.O.N.J.U.R.E. — Centrally Orchestrates Network-Joined Updates, Rollouts & Executables
+    Automated Software Deployment Tool for PowerShell 5.1+
 .DESCRIPTION
     Automated software installation and management
 .NOTES
     Requires Administrator privileges
     Requires Windows Package Manager (winget)
     Compatible with PowerShell 5.1+
+
+    Part of the toolbox alongside:
+    R.U.N.E.P.R.E.S.S.  — Remote Utility for Networked Equipment — Printer Registration, Extraction & Silent Setup
+    R.E.S.T.O.R.A.T.I.O.N. — Renews Every System Through Orderly Rite — Automating The Installation Of New updates
+    O.R.A.C.L.E.        — Observes, Reports & Audits Computer Logs & Environments
+    C.O.V.E.N.A.N.T.    — Configures Onboarding Via Entra — Network, Accounts, Naming & Timezone
 #>
 
 # ===========================
@@ -19,6 +26,9 @@ if ([string]::IsNullOrEmpty($ScriptPath)) {
 }
 
 $ExecutionTime = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+
+# Set console to UTF-8 so Unicode block characters render correctly
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 $RequiredSoftware = @(
     "Microsoft.Teams",
@@ -74,17 +84,17 @@ function Show-Banner {
     Clear-Host
     Write-Host @"
 
-  ██╗    ██╗  █████╗  ██████╗  ██████╗
-  ██║    ██║ ██╔══██╗ ██╔══██╗ ██╔══██╗
-  ██║ █╗ ██║ ███████║ ██████╔╝ ██████╔╝
-  ██║███╗██║ ██╔══██║ ██╔══██╗ ██╔══╝
-  ╚███╔███╔╝ ██║  ██║ ██║  ██║ ██║
-   ╚══╝╚══╝  ╚═╝  ╚═╝ ╚═╝  ╚═╝ ╚═╝
+   ██████╗  ██████╗ ███╗   ██╗     ██╗██╗   ██╗██████╗ ███████╗
+  ██╔════╝ ██╔═══██╗████╗  ██║     ██║██║   ██║██╔══██╗██╔════╝
+  ██║      ██║   ██║██╔██╗ ██║     ██║██║   ██║██████╔╝█████╗
+  ██║      ██║   ██║██║╚██╗██║██   ██║██║   ██║██╔══██╗██╔══╝
+  ╚██████╗ ╚██████╔╝██║ ╚████║╚█████╔╝╚██████╔╝██║  ██║███████╗
+   ╚═════╝  ╚═════╝ ╚═╝  ╚═══╝ ╚════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝
 
 "@ -ForegroundColor Cyan
 
-    Write-Host "    W.A.R.P. - Winget Application Rollout Platform" -ForegroundColor Cyan
-    Write-Host "    Automated software installation and management" -ForegroundColor Cyan
+    Write-Host "    C.O.N.J.U.R.E. — Centrally Orchestrates Network-Joined Updates, Rollouts & Executables" -ForegroundColor Cyan
+    Write-Host "    Automated Software Deployment Tool" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "    Script Location: $ScriptPath" -ForegroundColor Gray
     Write-Host "    Execution Time:  $ExecutionTime" -ForegroundColor Gray
@@ -480,6 +490,6 @@ switch ($operation) {
 # Show summary
 Show-InstallationSummary
 
-Write-Host "[OK] W.A.R.P. Script completed!" -ForegroundColor $Colors.Success
+Write-Host "[OK] C.O.N.J.U.R.E. Script completed!" -ForegroundColor $Colors.Success
 Write-Host ""
 Read-Host "Press Enter to exit"
