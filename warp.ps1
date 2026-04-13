@@ -74,19 +74,20 @@ function Show-Banner {
     Clear-Host
     Write-Host @"
 
-  W   W     A   A     R   R     P   P
-  W   W    A     A    R   R     P   P
-  W W W    A     A    R R       P P
-  W   W    A     A    R   R     P
-  W   W     A   A     R   R     P
-
-  W.A.R.P. - Winget Application Rollout Platform
-  Automated software installation and management
+  ██╗    ██╗  █████╗  ██████╗  ██████╗
+  ██║    ██║ ██╔══██╗ ██╔══██╗ ██╔══██╗
+  ██║ █╗ ██║ ███████║ ██████╔╝ ██████╔╝
+  ██║███╗██║ ██╔══██║ ██╔══██╗ ██╔══╝
+  ╚███╔███╔╝ ██║  ██║ ██║  ██║ ██║
+   ╚══╝╚══╝  ╚═╝  ╚═╝ ╚═╝  ╚═╝ ╚═╝
 
 "@ -ForegroundColor Cyan
 
-    Write-Host "Script Location: $ScriptPath" -ForegroundColor Gray
-    Write-Host "Execution Time:  $ExecutionTime" -ForegroundColor Gray
+    Write-Host "    W.A.R.P. - Winget Application Rollout Platform" -ForegroundColor Cyan
+    Write-Host "    Automated software installation and management" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "    Script Location: $ScriptPath" -ForegroundColor Gray
+    Write-Host "    Execution Time:  $ExecutionTime" -ForegroundColor Gray
     Write-Host ""
 }
 
