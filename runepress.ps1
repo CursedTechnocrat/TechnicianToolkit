@@ -1,5 +1,6 @@
 # ================================================================
-#  M.A.G.I.C. - Machine Automated Graphical Ink Configurator
+#  R.U.N.E.P.R.E.S.S. - Remote Utility for Networked Equipment
+#  Printer Registration, Extraction and Silent Setup
 #  Version: 3.0 (Standardized Release)
 # ================================================================
 #  Purpose: Automated printer driver installation and network
@@ -37,29 +38,31 @@ else {
     $ScriptPath = (Get-Location).Path
 }
 
+# Set console to UTF-8 so Unicode block characters render correctly
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
 # Initialize global variables
 $ExtractRoot     = Join-Path $ScriptPath "ExtractedDrivers"
 $InstallationLog = @()
 
-# ===========================
+# ─────────────────────────────────────────────────────────────────────────────
 # DISPLAY BANNER
-# ===========================
+# ─────────────────────────────────────────────────────────────────────────────
 
 function Show-Banner {
     Clear-Host
     Write-Host @"
 
-  ███╗   ███╗  █████╗   ██████╗  ██╗   ██████╗
-  ████╗ ████║ ██╔══██╗ ██╔════╝  ██║  ██╔════╝
-  ██╔████╔██║ ███████║ ██║  ███╗ ██║  ██║
-  ██║╚██╔╝██║ ██╔══██║ ██║   ██║ ██║  ██║
-  ██║ ╚═╝ ██║ ██║  ██║ ╚██████╔╝ ██║  ╚██████╗
-  ╚═╝     ╚═╝ ╚═╝  ╚═╝  ╚═════╝  ╚═╝   ╚═════╝
+  ██████╗ ██╗   ██╗███╗   ██╗███████╗██████╗ ██████╗ ███████╗███████╗
+  ██╔══██╗██║   ██║████╗  ██║██╔════╝██╔══██╗██╔══██╗██╔════╝██╔════╝
+  ██████╔╝██║   ██║██╔██╗ ██║█████╗  ██████╔╝██████╔╝█████╗  ███████╗
+  ██╔══██╗██║   ██║██║╚██╗██║██╔══╝  ██╔═══╝ ██╔══██╗██╔══╝  ╚════██╗
+  ██║  ██║╚██████╔╝██║ ╚████║███████╗██║     ██║  ██║███████╗███████║
+  ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝╚═╝     ╚═╝  ╚═╝╚══════╝╚══════╝
 
 "@ -ForegroundColor Cyan
-
-    Write-Host "    M.A.G.I.C. - Machine Automated Graphical Ink Configurator" -ForegroundColor Cyan
-    Write-Host "    Printer Registration & Installation Network Tool" -ForegroundColor Cyan
+    Write-Host "    R.U.N.E.P.R.E.S.S. - Remote Utility for Networked Equipment" -ForegroundColor Cyan
+    Write-Host "    Printer Registration, Extraction and Silent Setup" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "    Script Location: $ScriptPath" -ForegroundColor Gray
     Write-Host "    Execution Time:  $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Gray
@@ -71,9 +74,9 @@ function Show-Banner {
 # ===========================
 
 function Show-DriverPrepInstructions {
-    Write-Host "════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "================================================================" -ForegroundColor Cyan
     Write-Host " Step 1: Driver Preparation" -ForegroundColor Cyan
-    Write-Host "════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "================================================================" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Instructions:" -ForegroundColor Yellow
     Write-Host "  1. Download the printer driver from the manufacturer website" -ForegroundColor White
@@ -81,11 +84,11 @@ function Show-DriverPrepInstructions {
     Write-Host "     $ScriptPath" -ForegroundColor Green
     Write-Host ""
     Write-Host "Supported formats:" -ForegroundColor Yellow
-    Write-Host "  • ZIP archives (.zip)" -ForegroundColor White
-    Write-Host "  • Executable installers (.exe)" -ForegroundColor White
-    Write-Host "  • Windows Installer packages (.msi)" -ForegroundColor White
+    Write-Host "  * ZIP archives (.zip)" -ForegroundColor White
+    Write-Host "  * Executable installers (.exe)" -ForegroundColor White
+    Write-Host "  * Windows Installer packages (.msi)" -ForegroundColor White
     Write-Host ""
-    Write-Host "════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "================================================================" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -150,7 +153,7 @@ function Install-ZipDriver {
 
     Write-Host ""
     Write-Host "Processing ZIP: $($ZipFile.Name)" -ForegroundColor Cyan
-    Write-Host "────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+    Write-Host "----------------------------------------------------------------" -ForegroundColor Cyan
 
     # Clean previous extraction
     if (Test-Path $ExtractPath) {
@@ -187,7 +190,7 @@ function Install-ZipDriver {
 
     Write-Host "Found $($InfFiles.Count) INF file(s)." -ForegroundColor Green
 
-    # Select INF — prompt if multiple found
+    # Select INF - prompt if multiple found
     if ($InfFiles.Count -eq 1) {
         $SelectedInf = $InfFiles[0]
     }
@@ -251,7 +254,7 @@ function Install-ExeDriver {
 
     Write-Host ""
     Write-Host "Processing EXE: $($ExeFile.Name)" -ForegroundColor Cyan
-    Write-Host "────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+    Write-Host "----------------------------------------------------------------" -ForegroundColor Cyan
     Write-Host "Running silent installer..." -ForegroundColor Yellow
 
     try {
@@ -279,7 +282,7 @@ function Install-ExeDriver {
     }
     else {
         Write-Host "WARNING: Installer exited with code $($Process.ExitCode)." -ForegroundColor Yellow
-        Write-Host "         Review manually — this may indicate a reboot requirement or vendor-specific code." -ForegroundColor Yellow
+        Write-Host "         Review manually - this may indicate a reboot requirement or vendor-specific code." -ForegroundColor Yellow
         $status = "Warning (exit $($Process.ExitCode))"
     }
 
@@ -305,7 +308,7 @@ function Install-MsiDriver {
 
     Write-Host ""
     Write-Host "Processing MSI: $($MsiFile.Name)" -ForegroundColor Cyan
-    Write-Host "────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+    Write-Host "----------------------------------------------------------------" -ForegroundColor Cyan
     Write-Host "Running silent installer..." -ForegroundColor Yellow
 
     try {
@@ -390,9 +393,9 @@ function Select-InstalledDriver {
 
 function Add-NetworkPrinter {
     Write-Host ""
-    Write-Host "════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "================================================================" -ForegroundColor Cyan
     Write-Host " Step 3: Network Printer Configuration" -ForegroundColor Cyan
-    Write-Host "════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "================================================================" -ForegroundColor Cyan
     Write-Host ""
 
     while ($true) {
@@ -404,7 +407,7 @@ function Add-NetworkPrinter {
 
         # Printer display name
         do {
-            $PrinterName = Read-Host "Printer display name (e.g. 'Office Printer 1')"
+            $PrinterName = Read-Host "Printer display name (e.g. Office Printer 1)"
             if (-not $PrinterName) {
                 Write-Host "ERROR: Name cannot be empty." -ForegroundColor Red
             }
@@ -433,7 +436,7 @@ function Add-NetworkPrinter {
 
             $PortName = "IP_$IPAddress"
 
-            # Create TCP/IP port if it doesn't exist
+            # Create TCP/IP port if it does not exist
             if (Get-PrinterPort -Name $PortName -ErrorAction SilentlyContinue) {
                 Write-Host "Port '$PortName' already exists, reusing." -ForegroundColor Gray
             }
@@ -525,9 +528,9 @@ function Add-NetworkPrinter {
 
 function Show-InstallationSummary {
     Write-Host ""
-    Write-Host "════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "================================================================" -ForegroundColor Cyan
     Write-Host " Installation Summary" -ForegroundColor Cyan
-    Write-Host "════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "================================================================" -ForegroundColor Cyan
     Write-Host ""
 
     if (-not $InstallationLog) {
@@ -552,7 +555,7 @@ function Show-InstallationSummary {
     Write-Host ""
 
     # Export log to CSV
-    $LogPath = Join-Path $ScriptPath "MAGIC_InstallLog_$(Get-Date -Format 'yyyyMMdd_HHmmss').csv"
+    $LogPath = Join-Path $ScriptPath "RUNEPRESS_InstallLog_$(Get-Date -Format 'yyyyMMdd_HHmmss').csv"
     try {
         $InstallationLog | Export-Csv -Path $LogPath -NoTypeInformation -ErrorAction Stop
         Write-Host "Log saved: $LogPath" -ForegroundColor Gray
@@ -592,9 +595,9 @@ Show-Banner
 Show-DriverPrepInstructions
 Wait-ForDriverFile
 
-Write-Host "════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host " Step 2: Driver Installation" -ForegroundColor Cyan
-Write-Host "════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "================================================================" -ForegroundColor Cyan
 
 $DriverFiles = Find-DriverFiles
 
@@ -610,7 +613,7 @@ if (-not $DriverFiles) {
 Write-Host ""
 Write-Host "Found $(@($DriverFiles).Count) driver file(s) to process:" -ForegroundColor Green
 foreach ($file in $DriverFiles) {
-    Write-Host "  • $($file.Name)" -ForegroundColor White
+    Write-Host "  * $($file.Name)" -ForegroundColor White
 }
 
 foreach ($file in $DriverFiles) {
