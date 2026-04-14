@@ -1,11 +1,38 @@
-# ================================================================
-#  R.U.N.E.P.R.E.S.S. - Remote Utility for Networked Equipment
-#  Printer Registration, Extraction and Silent Setup
-#  Version: 3.0 (Standardized Release)
-# ================================================================
-#  Purpose: Automated printer driver installation and network
-#           printer configuration via command-line interface
-# ================================================================
+<#
+.SYNOPSIS
+    R.U.N.E.P.R.E.S.S. — Remote Utility for Networked Equipment — Printer Registration, Extraction & Silent Setup
+    Printer Driver Installation & Configuration Tool for PowerShell 5.1+
+
+.DESCRIPTION
+    Automates printer driver extraction, installation, and network printer
+    configuration via a command-line interface. Supports ZIP, EXE, and MSI
+    driver formats, INF-based installation via pnputil, and TCP/IP or UNC
+    port configuration. Generates a timestamped CSV installation log.
+
+.USAGE
+    PS C:\> .\runepress.ps1      # Must be run as Administrator
+
+.NOTES
+    Version : 3.0
+
+    Tools Available
+    ─────────────────────────────────────────────────────────────────
+    G.R.I.M.O.I.R.E.       — Technician Toolkit hub and central launcher
+    R.U.N.E.P.R.E.S.S.     — Printer driver installation & configuration
+    R.E.S.T.O.R.A.T.I.O.N. — Windows Update management
+    C.O.N.J.U.R.E.         — Software deployment via winget / Chocolatey
+    O.R.A.C.L.E.           — System diagnostics & HTML report generation
+    C.O.V.E.N.A.N.T.       — Machine onboarding & Entra ID domain join
+
+    Color Schema
+    ─────────────────────────────────────────
+    Cyan     Headers and section dividers
+    Magenta  Progress indicators
+    Green    Success messages
+    Yellow   Warnings and cautions
+    Red      Critical errors
+    Gray     Information and details
+#>
 
 # ===========================
 # ADMIN PRIVILEGE CHECK
@@ -456,14 +483,37 @@ function Add-NetworkPrinter {
             $DriverName = Select-InstalledDriver
             if (-not $DriverName) { continue }
 
-            # Add printer
+            # Add printer — try Add-Printer first; if it fails (e.g. device unreachable),
+            # fall back to printui.dll which skips the reachability probe.
             Write-Host "Adding printer '$PrinterName'..." -ForegroundColor Yellow
+            $printerAdded = $false
             try {
                 Add-Printer -Name $PrinterName -PortName $PortName -DriverName $DriverName -ErrorAction Stop
                 Write-Host "OK: Printer '$PrinterName' added successfully." -ForegroundColor Green
+                $printerAdded = $true
             }
             catch {
-                Write-Host "ERROR: Could not add printer: $($_.Exception.Message)" -ForegroundColor Red
+                Write-Host "WARNING: Add-Printer failed ($($_.Exception.Message))" -ForegroundColor Yellow
+                Write-Host "         Retrying via printui (offline-safe)..." -ForegroundColor Yellow
+                try {
+                    $printArgs = "/if /b `"$PrinterName`" /f `"$($DriverName)`" /r `"$PortName`" /m `"$DriverName`""
+                    $p = Start-Process -FilePath "rundll32.exe" `
+                        -ArgumentList "printui.dll,PrintUIEntry $printArgs" `
+                        -Wait -PassThru -ErrorAction Stop
+                    if ($p.ExitCode -eq 0) {
+                        Write-Host "OK: Printer '$PrinterName' added via printui." -ForegroundColor Green
+                        $printerAdded = $true
+                    }
+                    else {
+                        Write-Host "ERROR: printui exited with code $($p.ExitCode)." -ForegroundColor Red
+                    }
+                }
+                catch {
+                    Write-Host "ERROR: printui fallback failed: $($_.Exception.Message)" -ForegroundColor Red
+                }
+            }
+
+            if (-not $printerAdded) {
                 $script:InstallationLog += [PSCustomObject]@{
                     File   = $PrinterName
                     Type   = "Network (IP)"
