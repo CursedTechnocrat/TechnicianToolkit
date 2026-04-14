@@ -2,18 +2,36 @@
 .SYNOPSIS
     C.O.N.J.U.R.E. — Centrally Orchestrates Network-Joined Updates, Rollouts & Executables
     Automated Software Deployment Tool for PowerShell 5.1+
-.DESCRIPTION
-    Automated software installation and management
-.NOTES
-    Requires Administrator privileges
-    Requires Windows Package Manager (winget)
-    Compatible with PowerShell 5.1+
 
-    Part of the toolbox alongside:
-    R.U.N.E.P.R.E.S.S.  — Remote Utility for Networked Equipment — Printer Registration, Extraction & Silent Setup
-    R.E.S.T.O.R.A.T.I.O.N. — Renews Every System Through Orderly Rite — Automating The Installation Of New updates
-    O.R.A.C.L.E.        — Observes, Reports & Audits Computer Logs & Environments
-    C.O.V.E.N.A.N.T.    — Configures Onboarding Via Entra — Network, Accounts, Naming & Timezone
+.DESCRIPTION
+    Manages software deployment using the Windows Package Manager (winget)
+    or Chocolatey. Installs required and optional software packages, supports
+    an upgrade-all mode for keeping existing packages current, and tracks
+    installation status per package.
+
+.USAGE
+    PS C:\> .\conjure.ps1      # Must be run as Administrator
+
+.NOTES
+    Version : 1.0
+
+    Tools Available
+    ─────────────────────────────────────────────────────────────────
+    G.R.I.M.O.I.R.E.       — Technician Toolkit hub and central launcher
+    R.U.N.E.P.R.E.S.S.     — Printer driver installation & configuration
+    R.E.S.T.O.R.A.T.I.O.N. — Windows Update management
+    C.O.N.J.U.R.E.         — Software deployment via winget / Chocolatey
+    O.R.A.C.L.E.           — System diagnostics & HTML report generation
+    C.O.V.E.N.A.N.T.       — Machine onboarding & Entra ID domain join
+
+    Color Schema
+    ─────────────────────────────────────────
+    Cyan     Headers and section dividers
+    Magenta  Progress indicators
+    Green    Success messages
+    Yellow   Warnings and cautions
+    Red      Critical errors
+    Gray     Information and details
 #>
 
 # ===========================
