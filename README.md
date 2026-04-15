@@ -27,6 +27,10 @@
 | **conjure.ps1** | **C.O.N.J.U.R.E.** — Centrally Orchestrates Network-Joined Updates, Rollouts & Executables | Software deployment via Windows Package Manager or Chocolatey |
 | **oracle.ps1** | **O.R.A.C.L.E.** — Observes, Reports & Audits Computer Logs & Environments | System diagnostics, health assessment, and HTML report generation |
 | **covenant.ps1** | **C.O.V.E.N.A.N.T.** — Configures Onboarding Via Entra — Network, Accounts, Naming & Timezone | Machine onboarding, Entra ID domain join, and new device setup |
+| **phantom.ps1** | **P.H.A.N.T.O.M.** — Portable Home Archive: Navigates & Transfers Objects to new Machine | Profile migration and data transfer between machines or profiles |
+| **cipher.ps1** | **C.I.P.H.E.R.** — Configures & Implements Policy-based Hardware Encryption & Recovery | BitLocker drive encryption management — enable, disable, key backup |
+| **ward.ps1** | **W.A.R.D.** — Watches Accounts, Reviews Roles & Detects anomalies | Local user account audit with role, last logon, flags, and HTML report |
+| **archive.ps1** | **A.R.C.H.I.V.E.** — Automated Repository Compressing & Housing Important Volume Exports | Pre-reimaging profile backup — ZIP to local path or network share |
 
 ---
 
@@ -81,7 +85,7 @@ Manages software deployment using the Windows Package Manager (winget) or Chocol
 
 ### O.R.A.C.L.E.
 
-Audits the current state of a Windows machine and exports a formatted HTML report to the Desktop.
+Audits the current state of a Windows machine and exports a formatted HTML report to the script directory.
 
 - Hardware inventory: CPU, RAM, disk usage with visual bar charts, model and serial number
 - OS details: version, build, architecture, install date, activation status
@@ -108,6 +112,65 @@ Guides a technician through the full setup of a new Windows machine.
 
 ---
 
+### P.H.A.N.T.O.M.
+
+Migrates user profile data from a source machine or profile to a destination using Robocopy for reliable folder transfers.
+
+- Select source from local profiles or enter a custom/UNC path
+- Select destination profile or custom path
+- Choose individual items or migrate all at once
+- Migrates: Desktop, Documents, Downloads, Pictures, Videos, Music
+- Migrates: Outlook profiles & data files, email signatures
+- Migrates: Chrome bookmarks, Edge bookmarks, Firefox profiles
+- Generates a timestamped CSV migration log in the script directory
+
+---
+
+### C.I.P.H.E.R.
+
+Manages BitLocker drive encryption across all volumes with an interactive menu-driven interface.
+
+- Displays current encryption status for all drives on launch
+- Enable BitLocker with TPM, TPM + PIN, or recovery password only
+- Recovery key displayed and confirmed before encryption begins
+- Disable BitLocker (full decryption) with confirmation prompt
+- Back up recovery key to Active Directory or Entra ID (Azure AD)
+- View recovery key ID and password for any encrypted drive
+- Suspend BitLocker for BIOS/firmware updates (auto-resumes after reboot)
+- Resume suspended BitLocker protection
+
+---
+
+### W.A.R.D.
+
+Audits all local user accounts and exports a dark-themed HTML report to the script directory.
+
+- Lists all local accounts: enabled/disabled status, last logon, password info
+- Identifies group memberships — flags all Administrator accounts
+- Flags potentially risky accounts: no password required, password never set, stale (no logon in 90+ days)
+- Console summary with highlighted flagged accounts
+- HTML report with color-coded badges and summary cards
+- Report saved to script directory as `WARD_<timestamp>.html`
+
+---
+
+### A.R.C.H.I.V.E.
+
+Creates a compressed ZIP backup of a selected user profile before a machine is reimaged or wiped.
+
+- Select profile from detected local user profiles
+- Choose individual items or archive all at once
+- Archives: Desktop, Documents, Downloads, Pictures, Videos, Music
+- Archives: Outlook data, email signatures, Chrome/Edge/Firefox bookmarks
+- Destination can be a local path or UNC network share
+- Stages files to `%TEMP%` via Robocopy before compressing
+- Creates ZIP using .NET `System.IO.Compression.ZipFile` (no 2 GB file limit)
+- Writes a plain-text manifest inside the ZIP listing every archived item
+- Cleans up staging folder automatically on completion
+- Generates a timestamped CSV log in the script directory
+
+---
+
 ## Requirements
 
 | Requirement | Notes |
@@ -118,6 +181,8 @@ Guides a technician through the full setup of a new Windows machine.
 | Windows Package Manager (winget) | `conjure.ps1` (Chocolatey supported as alternative) |
 | PSWindowsUpdate module | `restoration.ps1` (auto-installed if missing) |
 | Entra ID account with device join permissions | `covenant.ps1` |
+| Robocopy (built into Windows) | `phantom.ps1`, `archive.ps1` |
+| BitLocker-capable Windows edition (Pro/Enterprise) | `cipher.ps1` |
 
 ---
 
@@ -152,6 +217,10 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\conjure.ps1       # Software deployment via winget or Chocolatey
 .\oracle.ps1        # System diagnostics and HTML health report
 .\covenant.ps1      # New machine onboarding and Entra ID domain join
+.\phantom.ps1       # Profile migration and data transfer
+.\cipher.ps1        # BitLocker drive encryption management
+.\ward.ps1          # User account audit and HTML report
+.\archive.ps1       # Pre-reimaging profile backup to ZIP
 ```
 
 All scripts must be run as Administrator.
@@ -168,8 +237,12 @@ Only `conjure.ps1` exposes configurable variables at the top of the file. All ot
 | **runepress.ps1** | `$ExtractRoot` — driver extraction staging folder (defaults to `.\ExtractedDrivers`) |
 | **restoration.ps1** | None — power settings are detected and restored automatically |
 | **conjure.ps1** | `$RequiredSoftware` / `$RequiredSoftwareChoco` — required package IDs; `$OptionalSoftware` / `$OptionalSoftwareChoco` — optional package IDs; `$PackageManager` — default manager (`winget` or `choco`) |
-| **oracle.ps1** | `$ReportOutputPath` — folder where the HTML report is saved (defaults to `%USERPROFILE%\Desktop`; accepts any local or UNC path) |
+| **oracle.ps1** | `$ReportOutputPath` — folder where the HTML report is saved (defaults to script directory; accepts any local or UNC path) |
 | **covenant.ps1** | None — all settings entered interactively at each step |
+| **phantom.ps1** | None — source, destination, and items selected interactively at runtime |
+| **cipher.ps1** | None — drive and action selected interactively at runtime |
+| **ward.ps1** | None — audit runs automatically; stale threshold is 90 days (editable in script) |
+| **archive.ps1** | None — profile, items, and destination selected interactively at runtime |
 
 ---
 
@@ -183,6 +256,10 @@ Only `conjure.ps1` exposes configurable variables at the top of the file. All ot
 | **conjure.ps1** | Console — per-package status table printed at completion |
 | **oracle.ps1** | `$ReportOutputPath` — `ORACLE_<timestamp>.html` (defaults to Desktop; configurable) |
 | **covenant.ps1** | Console — action summary printed at completion |
+| **phantom.ps1** | Script directory — `PHANTOM_MigrationLog_<timestamp>.csv` |
+| **cipher.ps1** | Console only — no log file |
+| **ward.ps1** | Script directory — `WARD_<timestamp>.html` (dark-themed HTML report) |
+| **archive.ps1** | Script directory — `ARCHIVE_Log_<timestamp>.csv`; manifest inside ZIP |
 
 ---
 

@@ -16,11 +16,15 @@
 
     Tools Available
     ─────────────────────────────────────────────────────────────────
-    R.U.N.E.P.R.E.S.S.   — Printer driver installation & configuration
+    R.U.N.E.P.R.E.S.S.     — Printer driver installation & configuration
     R.E.S.T.O.R.A.T.I.O.N. — Windows Update management
-    C.O.N.J.U.R.E.       — Software deployment via winget / Chocolatey
-    O.R.A.C.L.E.         — System diagnostics & HTML report generation
-    C.O.V.E.N.A.N.T.     — Machine onboarding & Entra ID domain join
+    C.O.N.J.U.R.E.         — Software deployment via winget / Chocolatey
+    O.R.A.C.L.E.           — System diagnostics & HTML report generation
+    C.O.V.E.N.A.N.T.       — Machine onboarding & Entra ID domain join
+    P.H.A.N.T.O.M.         — Profile migration & data transfer
+    C.I.P.H.E.R.           — BitLocker drive encryption management
+    W.A.R.D.               — User account & local security audit
+    A.R.C.H.I.V.E.         — Pre-reimaging profile backup
 
     Color Schema
     ─────────────────────────────────────────
@@ -105,6 +109,34 @@ $Tools = @(
         File        = 'covenant.ps1'
         Description = 'Machine onboarding, Entra ID domain join, and new device setup'
         Color       = 'Blue'
+    },
+    [PSCustomObject]@{
+        Key         = '6'
+        Name        = 'P.H.A.N.T.O.M.'
+        File        = 'phantom.ps1'
+        Description = 'Profile migration and data transfer to a new machine'
+        Color       = 'Cyan'
+    },
+    [PSCustomObject]@{
+        Key         = '7'
+        Name        = 'C.I.P.H.E.R.'
+        File        = 'cipher.ps1'
+        Description = 'BitLocker drive encryption — enable, disable, backup keys'
+        Color       = 'Green'
+    },
+    [PSCustomObject]@{
+        Key         = '8'
+        Name        = 'W.A.R.D.'
+        File        = 'ward.ps1'
+        Description = 'User account audit — roles, last logon, flags, HTML report'
+        Color       = 'Yellow'
+    },
+    [PSCustomObject]@{
+        Key         = '9'
+        Name        = 'A.R.C.H.I.V.E.'
+        File        = 'archive.ps1'
+        Description = 'Pre-reimaging profile backup — ZIP to local or network share'
+        Color       = 'Magenta'
     }
 )
 
@@ -223,7 +255,7 @@ do {
     }
     else {
         Write-Host ""
-        Write-Host "  [!!] Invalid selection. Enter 1-5 or Q to quit." -ForegroundColor $ColorSchema.Warning
+        Write-Host "  [!!] Invalid selection. Enter 1-9 or Q to quit." -ForegroundColor $ColorSchema.Warning
         Start-Sleep -Seconds 1
     }
 
