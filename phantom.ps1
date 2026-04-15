@@ -202,11 +202,14 @@ Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host ""
 Write-Host "  [1] Select from local profiles on this machine" -ForegroundColor $ColorSchema.Info
 Write-Host "  [2] Enter a custom or remote path  (e.g. \\OldPC\C`$\Users\John)" -ForegroundColor $ColorSchema.Info
+Write-Host "  [3] Restore from an A.R.C.H.I.V.E. ZIP" -ForegroundColor $ColorSchema.Info
 Write-Host ""
 Write-Host -NoNewline "  Enter selection: " -ForegroundColor $ColorSchema.Header
 $sourceChoice = (Read-Host).Trim()
 
-$SourceRoot = ""
+$SourceRoot      = ""
+$IsArchiveZip    = $false
+$TempExtractDir  = ""
 
 if ($sourceChoice -eq "1") {
     $profiles = Get-LocalProfiles
@@ -246,6 +249,38 @@ elseif ($sourceChoice -eq "2") {
     if (-not (Test-Path $SourceRoot)) {
         Write-Host ""
         Write-Host "  [-] Path not accessible: $SourceRoot" -ForegroundColor $ColorSchema.Error
+        exit 1
+    }
+}
+elseif ($sourceChoice -eq "3") {
+    Write-Host ""
+    Write-Host -NoNewline "  Enter path to A.R.C.H.I.V.E. ZIP file: " -ForegroundColor $ColorSchema.Header
+    $zipSource = (Read-Host).Trim().Trim('"')
+
+    if (-not (Test-Path $zipSource)) {
+        Write-Host ""
+        Write-Host "  [-] File not found: $zipSource" -ForegroundColor $ColorSchema.Error
+        exit 1
+    }
+    if ([System.IO.Path]::GetExtension($zipSource) -ine ".zip") {
+        Write-Host ""
+        Write-Host "  [-] File does not appear to be a ZIP archive." -ForegroundColor $ColorSchema.Error
+        exit 1
+    }
+
+    $TempExtractDir = Join-Path $env:TEMP "PHANTOM_Extract_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+
+    try {
+        Write-Host ""
+        Write-Host "  [*] Extracting archive — this may take a moment..." -ForegroundColor $ColorSchema.Progress
+        Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+        [System.IO.Compression.ZipFile]::ExtractToDirectory($zipSource, $TempExtractDir)
+        $SourceRoot   = $TempExtractDir
+        $IsArchiveZip = $true
+        Write-Host "  [+] Archive extracted." -ForegroundColor $ColorSchema.Success
+    }
+    catch {
+        Write-Host "  [-] Failed to extract archive: $_" -ForegroundColor $ColorSchema.Error
         exit 1
     }
 }
@@ -353,22 +388,41 @@ Write-Host "  MIGRATING" -ForegroundColor $ColorSchema.Header
 Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host ""
 
-$sourceAppData = Join-Path $SourceRoot "AppData\Roaming"
-$sourceLocal   = Join-Path $SourceRoot "AppData\Local"
-$destMigration = Join-Path $DestRoot   "PHANTOM_Migration"
+$destMigration = Join-Path $DestRoot "PHANTOM_Migration"
 
-$itemMap = [ordered]@{
-    1  = @{ Label = "Desktop";             Type = "Folder"; Src = (Join-Path $SourceRoot "Desktop");                                            Dst = (Join-Path $DestRoot "Desktop") }
-    2  = @{ Label = "Documents";           Type = "Folder"; Src = (Join-Path $SourceRoot "Documents");                                          Dst = (Join-Path $DestRoot "Documents") }
-    3  = @{ Label = "Downloads";           Type = "Folder"; Src = (Join-Path $SourceRoot "Downloads");                                          Dst = (Join-Path $DestRoot "Downloads") }
-    4  = @{ Label = "Pictures";            Type = "Folder"; Src = (Join-Path $SourceRoot "Pictures");                                           Dst = (Join-Path $DestRoot "Pictures") }
-    5  = @{ Label = "Videos";              Type = "Folder"; Src = (Join-Path $SourceRoot "Videos");                                             Dst = (Join-Path $DestRoot "Videos") }
-    6  = @{ Label = "Music";               Type = "Folder"; Src = (Join-Path $SourceRoot "Music");                                              Dst = (Join-Path $DestRoot "Music") }
-    7  = @{ Label = "Outlook Profiles";    Type = "Folder"; Src = (Join-Path $sourceAppData "Microsoft\Outlook");                               Dst = (Join-Path $destMigration "Outlook") }
-    8  = @{ Label = "Email Signatures";    Type = "Folder"; Src = (Join-Path $sourceAppData "Microsoft\Signatures");                            Dst = (Join-Path $destMigration "Signatures") }
-    9  = @{ Label = "Chrome Bookmarks";    Type = "File";   Src = (Join-Path $sourceLocal   "Google\Chrome\User Data\Default\Bookmarks");       Dst = (Join-Path $destMigration "Chrome") }
-    10 = @{ Label = "Edge Bookmarks";      Type = "File";   Src = (Join-Path $sourceLocal   "Microsoft\Edge\User Data\Default\Bookmarks");      Dst = (Join-Path $destMigration "Edge") }
-    11 = @{ Label = "Firefox Profiles";    Type = "Folder"; Src = (Join-Path $sourceAppData "Mozilla\Firefox\Profiles");                        Dst = (Join-Path $destMigration "Firefox") }
+# ARCHIVE ZIPs use a flat folder structure (Desktop, Outlook, Chrome, etc. at root).
+# Live profiles use deep AppData paths. Build the item map accordingly.
+if ($IsArchiveZip) {
+    $itemMap = [ordered]@{
+        1  = @{ Label = "Desktop";             Type = "Folder"; Src = (Join-Path $SourceRoot "Desktop");                         Dst = (Join-Path $DestRoot "Desktop") }
+        2  = @{ Label = "Documents";           Type = "Folder"; Src = (Join-Path $SourceRoot "Documents");                       Dst = (Join-Path $DestRoot "Documents") }
+        3  = @{ Label = "Downloads";           Type = "Folder"; Src = (Join-Path $SourceRoot "Downloads");                       Dst = (Join-Path $DestRoot "Downloads") }
+        4  = @{ Label = "Pictures";            Type = "Folder"; Src = (Join-Path $SourceRoot "Pictures");                        Dst = (Join-Path $DestRoot "Pictures") }
+        5  = @{ Label = "Videos";              Type = "Folder"; Src = (Join-Path $SourceRoot "Videos");                          Dst = (Join-Path $DestRoot "Videos") }
+        6  = @{ Label = "Music";               Type = "Folder"; Src = (Join-Path $SourceRoot "Music");                           Dst = (Join-Path $DestRoot "Music") }
+        7  = @{ Label = "Outlook Profiles";    Type = "Folder"; Src = (Join-Path $SourceRoot "Outlook");                         Dst = (Join-Path $destMigration "Outlook") }
+        8  = @{ Label = "Email Signatures";    Type = "Folder"; Src = (Join-Path $SourceRoot "Signatures");                      Dst = (Join-Path $destMigration "Signatures") }
+        9  = @{ Label = "Chrome Bookmarks";    Type = "File";   Src = (Join-Path $SourceRoot "Chrome\Bookmarks");                Dst = (Join-Path $destMigration "Chrome") }
+        10 = @{ Label = "Edge Bookmarks";      Type = "File";   Src = (Join-Path $SourceRoot "Edge\Bookmarks");                  Dst = (Join-Path $destMigration "Edge") }
+        11 = @{ Label = "Firefox Profiles";    Type = "Folder"; Src = (Join-Path $SourceRoot "Firefox");                         Dst = (Join-Path $destMigration "Firefox") }
+    }
+} else {
+    $sourceAppData = Join-Path $SourceRoot "AppData\Roaming"
+    $sourceLocal   = Join-Path $SourceRoot "AppData\Local"
+
+    $itemMap = [ordered]@{
+        1  = @{ Label = "Desktop";             Type = "Folder"; Src = (Join-Path $SourceRoot "Desktop");                                            Dst = (Join-Path $DestRoot "Desktop") }
+        2  = @{ Label = "Documents";           Type = "Folder"; Src = (Join-Path $SourceRoot "Documents");                                          Dst = (Join-Path $DestRoot "Documents") }
+        3  = @{ Label = "Downloads";           Type = "Folder"; Src = (Join-Path $SourceRoot "Downloads");                                          Dst = (Join-Path $DestRoot "Downloads") }
+        4  = @{ Label = "Pictures";            Type = "Folder"; Src = (Join-Path $SourceRoot "Pictures");                                           Dst = (Join-Path $DestRoot "Pictures") }
+        5  = @{ Label = "Videos";              Type = "Folder"; Src = (Join-Path $SourceRoot "Videos");                                             Dst = (Join-Path $DestRoot "Videos") }
+        6  = @{ Label = "Music";               Type = "Folder"; Src = (Join-Path $SourceRoot "Music");                                              Dst = (Join-Path $DestRoot "Music") }
+        7  = @{ Label = "Outlook Profiles";    Type = "Folder"; Src = (Join-Path $sourceAppData "Microsoft\Outlook");                               Dst = (Join-Path $destMigration "Outlook") }
+        8  = @{ Label = "Email Signatures";    Type = "Folder"; Src = (Join-Path $sourceAppData "Microsoft\Signatures");                            Dst = (Join-Path $destMigration "Signatures") }
+        9  = @{ Label = "Chrome Bookmarks";    Type = "File";   Src = (Join-Path $sourceLocal   "Google\Chrome\User Data\Default\Bookmarks");       Dst = (Join-Path $destMigration "Chrome") }
+        10 = @{ Label = "Edge Bookmarks";      Type = "File";   Src = (Join-Path $sourceLocal   "Microsoft\Edge\User Data\Default\Bookmarks");      Dst = (Join-Path $destMigration "Edge") }
+        11 = @{ Label = "Firefox Profiles";    Type = "Folder"; Src = (Join-Path $sourceAppData "Mozilla\Firefox\Profiles");                        Dst = (Join-Path $destMigration "Firefox") }
+    }
 }
 
 foreach ($num in $selectedItems) {
@@ -379,6 +433,20 @@ foreach ($num in $selectedItems) {
         Copy-ProfileFolder -SourcePath $item.Src -DestPath $item.Dst -Label $item.Label
     } else {
         Copy-ProfileFile -SourceFile $item.Src -DestFolder $item.Dst -Label $item.Label
+    }
+}
+
+# ── CLEANUP ARCHIVE EXTRACT ───────────────────────────────────────────────────
+
+if ($IsArchiveZip -and $TempExtractDir -and (Test-Path $TempExtractDir)) {
+    Write-Host ""
+    Write-Host "  [*] Removing temporary extract folder..." -ForegroundColor $ColorSchema.Progress
+    try {
+        Remove-Item -Path $TempExtractDir -Recurse -Force -ErrorAction Stop
+        Write-Host "  [+] Temporary files cleaned up." -ForegroundColor $ColorSchema.Success
+    }
+    catch {
+        Write-Host "  [!!] Could not remove temp folder — delete manually: $TempExtractDir" -ForegroundColor $ColorSchema.Warning
     }
 }
 
