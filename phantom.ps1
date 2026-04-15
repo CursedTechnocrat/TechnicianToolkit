@@ -188,6 +188,38 @@ function Copy-ProfileFile {
     }
 }
 
+function Get-OneDriveBusinessPath {
+    param([string]$ProfileRoot)
+
+    # Registry is most reliable — only works when the source is the current user's profile
+    if ($ProfileRoot -ieq $env:USERPROFILE) {
+        foreach ($acct in @('Business1', 'Business2', 'Personal')) {
+            $reg = "HKCU:\Software\Microsoft\OneDrive\Accounts\$acct"
+            if (Test-Path $reg) {
+                $folder = (Get-ItemProperty $reg -ErrorAction SilentlyContinue).UserFolder
+                if ($folder -and (Test-Path $folder)) { return $folder }
+            }
+        }
+    }
+
+    # Fallback: scan profile root for any folder named OneDrive* (covers other profiles and UNC sources)
+    $match = Get-ChildItem -Path $ProfileRoot -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -like 'OneDrive*' } |
+        Select-Object -First 1
+
+    return if ($match) { $match.FullName } else { $null }
+}
+
+function Test-KnownFolderMove {
+    param([string]$ProfileRoot)
+    # KFM redirects Desktop/Documents into the OneDrive folder — detect by comparing paths
+    $desktop   = Join-Path $ProfileRoot 'Desktop'
+    $documents = Join-Path $ProfileRoot 'Documents'
+    $oneDrive  = Get-OneDriveBusinessPath -ProfileRoot $ProfileRoot
+    if (-not $oneDrive) { return $false }
+    return ($desktop -like "$oneDrive*") -or ($documents -like "$oneDrive*")
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # MAIN
 # ─────────────────────────────────────────────────────────────────────────────
@@ -293,6 +325,19 @@ else {
 Write-Host ""
 Write-Host "  [+] Source: $SourceRoot" -ForegroundColor $ColorSchema.Success
 
+if (-not $IsArchiveZip) {
+    $oneDrivePath = Get-OneDriveBusinessPath -ProfileRoot $SourceRoot
+    if ($oneDrivePath) {
+        Write-Host "  [*] OneDrive for Business detected: $oneDrivePath" -ForegroundColor $ColorSchema.Info
+        if (Test-KnownFolderMove -ProfileRoot $SourceRoot) {
+            Write-Host "  [!!] Known Folder Move is active — Desktop/Documents are already inside OneDrive." -ForegroundColor $ColorSchema.Warning
+            Write-Host "       Selecting both [1]/[2] and [12] will duplicate those folders." -ForegroundColor $ColorSchema.Warning
+        }
+    } else {
+        $oneDrivePath = $null
+    }
+}
+
 # ── DESTINATION ───────────────────────────────────────────────────────────────
 
 Write-Host ""
@@ -357,6 +402,7 @@ Write-Host "  [8]  Email Signatures" -ForegroundColor $ColorSchema.Info
 Write-Host "  [9]  Chrome Bookmarks" -ForegroundColor $ColorSchema.Info
 Write-Host "  [10] Edge Bookmarks" -ForegroundColor $ColorSchema.Info
 Write-Host "  [11] Firefox Profiles" -ForegroundColor $ColorSchema.Info
+Write-Host "  [12] OneDrive for Business" -ForegroundColor $ColorSchema.Info
 Write-Host ""
 Write-Host -NoNewline "  Enter selection: " -ForegroundColor $ColorSchema.Header
 $rawInput = (Read-Host).Trim().ToUpper()
@@ -364,13 +410,13 @@ $rawInput = (Read-Host).Trim().ToUpper()
 $selectedItems = @()
 
 if ($rawInput -eq "A") {
-    $selectedItems = 1..11
+    $selectedItems = 1..12
 } else {
     $selectedItems = $rawInput -split ',' |
         ForEach-Object { $_.Trim() } |
         Where-Object   { $_ -match '^\d+$' } |
         ForEach-Object { [int]$_ } |
-        Where-Object   { $_ -ge 1 -and $_ -le 11 } |
+        Where-Object   { $_ -ge 1 -and $_ -le 12 } |
         Sort-Object -Unique
 }
 
@@ -404,24 +450,26 @@ if ($IsArchiveZip) {
         8  = @{ Label = "Email Signatures";    Type = "Folder"; Src = (Join-Path $SourceRoot "Signatures");                      Dst = (Join-Path $destMigration "Signatures") }
         9  = @{ Label = "Chrome Bookmarks";    Type = "File";   Src = (Join-Path $SourceRoot "Chrome\Bookmarks");                Dst = (Join-Path $destMigration "Chrome") }
         10 = @{ Label = "Edge Bookmarks";      Type = "File";   Src = (Join-Path $SourceRoot "Edge\Bookmarks");                  Dst = (Join-Path $destMigration "Edge") }
-        11 = @{ Label = "Firefox Profiles";    Type = "Folder"; Src = (Join-Path $SourceRoot "Firefox");                         Dst = (Join-Path $destMigration "Firefox") }
+        11 = @{ Label = "Firefox Profiles";       Type = "Folder"; Src = (Join-Path $SourceRoot "Firefox");                         Dst = (Join-Path $destMigration "Firefox") }
+        12 = @{ Label = "OneDrive for Business";   Type = "Folder"; Src = (Join-Path $SourceRoot "OneDrive");                        Dst = (Join-Path $destMigration "OneDrive") }
     }
 } else {
     $sourceAppData = Join-Path $SourceRoot "AppData\Roaming"
     $sourceLocal   = Join-Path $SourceRoot "AppData\Local"
 
     $itemMap = [ordered]@{
-        1  = @{ Label = "Desktop";             Type = "Folder"; Src = (Join-Path $SourceRoot "Desktop");                                            Dst = (Join-Path $DestRoot "Desktop") }
-        2  = @{ Label = "Documents";           Type = "Folder"; Src = (Join-Path $SourceRoot "Documents");                                          Dst = (Join-Path $DestRoot "Documents") }
-        3  = @{ Label = "Downloads";           Type = "Folder"; Src = (Join-Path $SourceRoot "Downloads");                                          Dst = (Join-Path $DestRoot "Downloads") }
-        4  = @{ Label = "Pictures";            Type = "Folder"; Src = (Join-Path $SourceRoot "Pictures");                                           Dst = (Join-Path $DestRoot "Pictures") }
-        5  = @{ Label = "Videos";              Type = "Folder"; Src = (Join-Path $SourceRoot "Videos");                                             Dst = (Join-Path $DestRoot "Videos") }
-        6  = @{ Label = "Music";               Type = "Folder"; Src = (Join-Path $SourceRoot "Music");                                              Dst = (Join-Path $DestRoot "Music") }
-        7  = @{ Label = "Outlook Profiles";    Type = "Folder"; Src = (Join-Path $sourceAppData "Microsoft\Outlook");                               Dst = (Join-Path $destMigration "Outlook") }
-        8  = @{ Label = "Email Signatures";    Type = "Folder"; Src = (Join-Path $sourceAppData "Microsoft\Signatures");                            Dst = (Join-Path $destMigration "Signatures") }
-        9  = @{ Label = "Chrome Bookmarks";    Type = "File";   Src = (Join-Path $sourceLocal   "Google\Chrome\User Data\Default\Bookmarks");       Dst = (Join-Path $destMigration "Chrome") }
-        10 = @{ Label = "Edge Bookmarks";      Type = "File";   Src = (Join-Path $sourceLocal   "Microsoft\Edge\User Data\Default\Bookmarks");      Dst = (Join-Path $destMigration "Edge") }
-        11 = @{ Label = "Firefox Profiles";    Type = "Folder"; Src = (Join-Path $sourceAppData "Mozilla\Firefox\Profiles");                        Dst = (Join-Path $destMigration "Firefox") }
+        1  = @{ Label = "Desktop";                 Type = "Folder"; Src = (Join-Path $SourceRoot "Desktop");                                            Dst = (Join-Path $DestRoot "Desktop") }
+        2  = @{ Label = "Documents";               Type = "Folder"; Src = (Join-Path $SourceRoot "Documents");                                          Dst = (Join-Path $DestRoot "Documents") }
+        3  = @{ Label = "Downloads";               Type = "Folder"; Src = (Join-Path $SourceRoot "Downloads");                                          Dst = (Join-Path $DestRoot "Downloads") }
+        4  = @{ Label = "Pictures";                Type = "Folder"; Src = (Join-Path $SourceRoot "Pictures");                                           Dst = (Join-Path $DestRoot "Pictures") }
+        5  = @{ Label = "Videos";                  Type = "Folder"; Src = (Join-Path $SourceRoot "Videos");                                             Dst = (Join-Path $DestRoot "Videos") }
+        6  = @{ Label = "Music";                   Type = "Folder"; Src = (Join-Path $SourceRoot "Music");                                              Dst = (Join-Path $DestRoot "Music") }
+        7  = @{ Label = "Outlook Profiles";        Type = "Folder"; Src = (Join-Path $sourceAppData "Microsoft\Outlook");                               Dst = (Join-Path $destMigration "Outlook") }
+        8  = @{ Label = "Email Signatures";        Type = "Folder"; Src = (Join-Path $sourceAppData "Microsoft\Signatures");                            Dst = (Join-Path $destMigration "Signatures") }
+        9  = @{ Label = "Chrome Bookmarks";        Type = "File";   Src = (Join-Path $sourceLocal   "Google\Chrome\User Data\Default\Bookmarks");       Dst = (Join-Path $destMigration "Chrome") }
+        10 = @{ Label = "Edge Bookmarks";          Type = "File";   Src = (Join-Path $sourceLocal   "Microsoft\Edge\User Data\Default\Bookmarks");      Dst = (Join-Path $destMigration "Edge") }
+        11 = @{ Label = "Firefox Profiles";        Type = "Folder"; Src = (Join-Path $sourceAppData "Mozilla\Firefox\Profiles");                        Dst = (Join-Path $destMigration "Firefox") }
+        12 = @{ Label = "OneDrive for Business";   Type = "Folder"; Src = $(if ($oneDrivePath) { $oneDrivePath } else { Join-Path $SourceRoot "OneDrive - *" }); Dst = (Join-Path $destMigration "OneDrive") }
     }
 }
 

@@ -129,6 +129,37 @@ function Get-LocalProfiles {
         Sort-Object LastUse -Descending
 }
 
+function Get-OneDriveBusinessPath {
+    param([string]$ProfileRoot)
+
+    # Registry is most reliable — only works when the source is the current user's profile
+    if ($ProfileRoot -ieq $env:USERPROFILE) {
+        foreach ($acct in @('Business1', 'Business2', 'Personal')) {
+            $reg = "HKCU:\Software\Microsoft\OneDrive\Accounts\$acct"
+            if (Test-Path $reg) {
+                $folder = (Get-ItemProperty $reg -ErrorAction SilentlyContinue).UserFolder
+                if ($folder -and (Test-Path $folder)) { return $folder }
+            }
+        }
+    }
+
+    # Fallback: scan profile root for any folder named OneDrive*
+    $match = Get-ChildItem -Path $ProfileRoot -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -like 'OneDrive*' } |
+        Select-Object -First 1
+
+    return if ($match) { $match.FullName } else { $null }
+}
+
+function Test-KnownFolderMove {
+    param([string]$ProfileRoot)
+    $desktop   = Join-Path $ProfileRoot 'Desktop'
+    $documents = Join-Path $ProfileRoot 'Documents'
+    $oneDrive  = Get-OneDriveBusinessPath -ProfileRoot $ProfileRoot
+    if (-not $oneDrive) { return $false }
+    return ($desktop -like "$oneDrive*") -or ($documents -like "$oneDrive*")
+}
+
 function Get-FolderSizeMB {
     param([string]$FolderPath)
     try {
@@ -226,6 +257,15 @@ $profileUsername  = $selectedProfile.Username
 Write-Host ""
 Write-Host "  [+] Profile: $profileRoot" -ForegroundColor $ColorSchema.Success
 
+$oneDrivePath = Get-OneDriveBusinessPath -ProfileRoot $profileRoot
+if ($oneDrivePath) {
+    Write-Host "  [*] OneDrive for Business detected: $oneDrivePath" -ForegroundColor $ColorSchema.Info
+    if (Test-KnownFolderMove -ProfileRoot $profileRoot) {
+        Write-Host "  [!!] Known Folder Move is active — Desktop/Documents are already inside OneDrive." -ForegroundColor $ColorSchema.Warning
+        Write-Host "       Selecting both [1]/[2] and [12] will duplicate those folders in the archive." -ForegroundColor $ColorSchema.Warning
+    }
+}
+
 # ── ITEM SELECTION ────────────────────────────────────────────────────────────
 
 Write-Host ""
@@ -246,6 +286,7 @@ Write-Host "  [8]  Email Signatures" -ForegroundColor $ColorSchema.Info
 Write-Host "  [9]  Chrome Bookmarks" -ForegroundColor $ColorSchema.Info
 Write-Host "  [10] Edge Bookmarks" -ForegroundColor $ColorSchema.Info
 Write-Host "  [11] Firefox Profiles" -ForegroundColor $ColorSchema.Info
+Write-Host "  [12] OneDrive for Business" -ForegroundColor $ColorSchema.Info
 Write-Host ""
 Write-Host -NoNewline "  Enter selection: " -ForegroundColor $ColorSchema.Header
 $rawInput = (Read-Host).Trim().ToUpper()
@@ -253,13 +294,13 @@ $rawInput = (Read-Host).Trim().ToUpper()
 $selectedItems = @()
 
 if ($rawInput -eq "A") {
-    $selectedItems = 1..11
+    $selectedItems = 1..12
 } else {
     $selectedItems = $rawInput -split ',' |
         ForEach-Object { $_.Trim() } |
         Where-Object   { $_ -match '^\d+$' } |
         ForEach-Object { [int]$_ } |
-        Where-Object   { $_ -ge 1 -and $_ -le 11 } |
+        Where-Object   { $_ -ge 1 -and $_ -le 12 } |
         Sort-Object -Unique
 }
 
@@ -346,7 +387,8 @@ $itemMap = [ordered]@{
     8  = @{ Label = "Email Signatures"; Src = (Join-Path $sourceAppData "Microsoft\Signatures");                             Dst = "Signatures" }
     9  = @{ Label = "Chrome Bookmarks"; Src = (Join-Path $sourceLocal   "Google\Chrome\User Data\Default\Bookmarks");        Dst = "Chrome" }
     10 = @{ Label = "Edge Bookmarks";   Src = (Join-Path $sourceLocal   "Microsoft\Edge\User Data\Default\Bookmarks");       Dst = "Edge" }
-    11 = @{ Label = "Firefox Profiles"; Src = (Join-Path $sourceAppData "Mozilla\Firefox\Profiles");                         Dst = "Firefox" }
+    11 = @{ Label = "Firefox Profiles";       Src = (Join-Path $sourceAppData "Mozilla\Firefox\Profiles");                    Dst = "Firefox" }
+    12 = @{ Label = "OneDrive for Business";   Src = $(if ($oneDrivePath) { $oneDrivePath } else { "" });                        Dst = "OneDrive" }
 }
 
 foreach ($num in $selectedItems) {
