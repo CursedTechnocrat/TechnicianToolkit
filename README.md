@@ -4,6 +4,25 @@
 
 ---
 
+## LiveConnect Suite
+
+> **Deploying remotely via Kaseya VSA LiveConnect?** Use the companion repository instead:
+> ### [TechnicianToolkit-LiveConnect →](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)
+
+This toolkit is built around interactive menus, guided prompts, and real-time feedback — it is designed for technicians who are **present at the machine**, whether physically or via a full interactive remote session (RDP, Enter-PSSession, etc.).
+
+If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot handle `Read-Host`, `ReadKey`, `Clear-Host`, or multi-step menu navigation. Those calls cause the session to hang or error immediately. The LiveConnect Suite is a separate set of scripts written from the ground up to run entirely from parameters, with no interactive calls of any kind.
+
+| Situation | Use |
+|-----------|-----|
+| Sitting at the machine or in a full RDP session | **This repo** — TechnicianToolkit |
+| Running through Kaseya VSA LiveConnect | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
+| Need a guided, menu-driven workflow | **This repo** — full prompts and confirmations at every step |
+| Need fire-and-forget with parameter-only input | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
+| Need tools with no LiveConnect counterpart (COVENANT, PHANTOM, CIPHER, ARCHIVE, SPECTER, RUNEPRESS) | **This repo** — these tools are interactive by nature |
+
+---
+
 ## Table of Contents
 
 - [Tools Overview](#tools-overview)
