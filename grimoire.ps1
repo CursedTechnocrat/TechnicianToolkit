@@ -217,8 +217,8 @@ function Invoke-Tool {
         Write-Host ""
         Write-Host "  Downloading $($Tool.File) from GitHub..." -ForegroundColor $ColorSchema.Accent
         try {
-            $response = Invoke-WebRequest -Uri $DownloadUrl -UseBasicParsing -ErrorAction Stop
-            [System.IO.File]::WriteAllText($ToolPath, $response.Content, [System.Text.UTF8Encoding]::new($true))
+            Invoke-RestMethod -Uri $DownloadUrl -OutFile $ToolPath -ErrorAction Stop
+            [IO.File]::WriteAllText($ToolPath, [IO.File]::ReadAllText($ToolPath, [Text.Encoding]::UTF8), [Text.UTF8Encoding]::new($true))
             Write-Host "  Downloaded successfully." -ForegroundColor $ColorSchema.Success
         }
         catch {

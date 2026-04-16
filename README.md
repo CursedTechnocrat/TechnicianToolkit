@@ -265,40 +265,40 @@ Run any script directly from GitHub without cloning — downloads to `%TEMP%` an
 
 ```powershell
 # G.R.I.M.O.I.R.E. — Hub launcher (recommended starting point)
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$env:TEMP\grimoire.ps1"; [IO.File]::WriteAllText($f,(iwr https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/grimoire.ps1 -UseBasicParsing).Content,[Text.UTF8Encoding]::new($true)); & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$env:TEMP\grimoire.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/grimoire.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # A.R.C.H.I.V.E. — Pre-reimaging profile backup
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$env:TEMP\archive.ps1"; [IO.File]::WriteAllText($f,(iwr https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/archive.ps1 -UseBasicParsing).Content,[Text.UTF8Encoding]::new($true)); & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$env:TEMP\archive.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/archive.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # C.I.P.H.E.R. — BitLocker encryption management
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$env:TEMP\cipher.ps1"; [IO.File]::WriteAllText($f,(iwr https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/cipher.ps1 -UseBasicParsing).Content,[Text.UTF8Encoding]::new($true)); & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$env:TEMP\cipher.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/cipher.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # C.O.N.J.U.R.E. — Software deployment
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$env:TEMP\conjure.ps1"; [IO.File]::WriteAllText($f,(iwr https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/conjure.ps1 -UseBasicParsing).Content,[Text.UTF8Encoding]::new($true)); & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$env:TEMP\conjure.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/conjure.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # C.O.V.E.N.A.N.T. — Machine onboarding
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$env:TEMP\covenant.ps1"; [IO.File]::WriteAllText($f,(iwr https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/covenant.ps1 -UseBasicParsing).Content,[Text.UTF8Encoding]::new($true)); & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$env:TEMP\covenant.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/covenant.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # O.R.A.C.L.E. — System diagnostics and HTML report
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$env:TEMP\oracle.ps1"; [IO.File]::WriteAllText($f,(iwr https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/oracle.ps1 -UseBasicParsing).Content,[Text.UTF8Encoding]::new($true)); & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$env:TEMP\oracle.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/oracle.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # P.H.A.N.T.O.M. — Profile migration
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$env:TEMP\phantom.ps1"; [IO.File]::WriteAllText($f,(iwr https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/phantom.ps1 -UseBasicParsing).Content,[Text.UTF8Encoding]::new($true)); & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$env:TEMP\phantom.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/phantom.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # R.E.S.T.O.R.A.T.I.O.N. — Windows Update management
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$env:TEMP\restoration.ps1"; [IO.File]::WriteAllText($f,(iwr https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/restoration.ps1 -UseBasicParsing).Content,[Text.UTF8Encoding]::new($true)); & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$env:TEMP\restoration.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/restoration.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # R.U.N.E.P.R.E.S.S. — Printer driver installation
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$env:TEMP\runepress.ps1"; [IO.File]::WriteAllText($f,(iwr https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/runepress.ps1 -UseBasicParsing).Content,[Text.UTF8Encoding]::new($true)); & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$env:TEMP\runepress.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/runepress.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # S.I.G.I.L. — Security baseline enforcement
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$env:TEMP\sigil.ps1"; [IO.File]::WriteAllText($f,(iwr https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/sigil.ps1 -UseBasicParsing).Content,[Text.UTF8Encoding]::new($true)); & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$env:TEMP\sigil.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/sigil.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # S.P.E.C.T.E.R. — Remote execution via WinRM
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$env:TEMP\specter.ps1"; [IO.File]::WriteAllText($f,(iwr https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/specter.ps1 -UseBasicParsing).Content,[Text.UTF8Encoding]::new($true)); & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$env:TEMP\specter.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/specter.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # W.A.R.D. — Local user account audit
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$env:TEMP\ward.ps1"; [IO.File]::WriteAllText($f,(iwr https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/ward.ps1 -UseBasicParsing).Content,[Text.UTF8Encoding]::new($true)); & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$env:TEMP\ward.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/ward.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 ```
 
 > All scripts require an Administrator PowerShell session. The `-Scope Process` flag limits the execution policy bypass to the current session only — it does not permanently change system policy.
