@@ -162,6 +162,10 @@ function Get-AccountData {
 # HTML REPORT GENERATION
 # ─────────────────────────────────────────────────────────────────────────────
 
+function HtmlEncode([string]$s) {
+    $s -replace '&','&amp;' -replace '<','&lt;' -replace '>','&gt;' -replace '"','&quot;'
+}
+
 function Build-HtmlReport {
     param([array]$Accounts, [string]$MachineName, [string]$ReportTimestamp)
 
@@ -185,18 +189,18 @@ function Build-HtmlReport {
             "<span class='badge badge-neutral'>Standard</span>"
         }
         $flagCell = if ($acct.Flags) {
-            "<span class='flag'>$([System.Web.HttpUtility]::HtmlEncode($acct.Flags))</span>"
+            "<span class='flag'>$(HtmlEncode($acct.Flags))</span>"
         } else { "" }
 
         $rows += @"
             <tr>
-                <td><strong>$([System.Web.HttpUtility]::HtmlEncode($acct.Name))</strong></td>
-                <td>$([System.Web.HttpUtility]::HtmlEncode($acct.FullName))</td>
+                <td><strong>$(HtmlEncode($acct.Name))</strong></td>
+                <td>$(HtmlEncode($acct.FullName))</td>
                 <td>$enabledBadge</td>
                 <td>$adminBadge</td>
-                <td>$([System.Web.HttpUtility]::HtmlEncode($acct.LastLogon))</td>
-                <td>$([System.Web.HttpUtility]::HtmlEncode($acct.PasswordLastSet))</td>
-                <td>$([System.Web.HttpUtility]::HtmlEncode($acct.PasswordExpires))</td>
+                <td>$(HtmlEncode($acct.LastLogon))</td>
+                <td>$(HtmlEncode($acct.PasswordLastSet))</td>
+                <td>$(HtmlEncode($acct.PasswordExpires))</td>
                 <td>$flagCell</td>
             </tr>
 "@
