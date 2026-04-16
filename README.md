@@ -28,6 +28,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 - [Tools Overview](#tools-overview)
 - [Requirements](#requirements)
 - [Installation](#installation)
+- [Quick Launch](#quick-launch)
 - [Usage](#usage)
 - [Configuration](#configuration)
 - [Logging](#logging)
@@ -255,6 +256,52 @@ Creates a compressed ZIP backup of a selected user profile before a machine is r
 ```powershell
 cd C:\Path\To\Toolkit
 ```
+
+---
+
+## Quick Launch
+
+Run any script directly from GitHub without cloning — downloads to `%TEMP%` and executes immediately.
+
+```powershell
+# G.R.I.M.O.I.R.E. — Hub launcher (recommended starting point)
+$f="$env:TEMP\grimoire.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/grimoire.ps1 -OutFile $f; & $f
+
+# A.R.C.H.I.V.E. — Pre-reimaging profile backup
+$f="$env:TEMP\archive.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/archive.ps1 -OutFile $f; & $f
+
+# C.I.P.H.E.R. — BitLocker encryption management
+$f="$env:TEMP\cipher.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/cipher.ps1 -OutFile $f; & $f
+
+# C.O.N.J.U.R.E. — Software deployment
+$f="$env:TEMP\conjure.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/conjure.ps1 -OutFile $f; & $f
+
+# C.O.V.E.N.A.N.T. — Machine onboarding
+$f="$env:TEMP\covenant.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/covenant.ps1 -OutFile $f; & $f
+
+# O.R.A.C.L.E. — System diagnostics and HTML report
+$f="$env:TEMP\oracle.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/oracle.ps1 -OutFile $f; & $f
+
+# P.H.A.N.T.O.M. — Profile migration
+$f="$env:TEMP\phantom.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/phantom.ps1 -OutFile $f; & $f
+
+# R.E.S.T.O.R.A.T.I.O.N. — Windows Update management
+$f="$env:TEMP\restoration.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/restoration.ps1 -OutFile $f; & $f
+
+# R.U.N.E.P.R.E.S.S. — Printer driver installation
+$f="$env:TEMP\runepress.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/runepress.ps1 -OutFile $f; & $f
+
+# S.I.G.I.L. — Security baseline enforcement
+$f="$env:TEMP\sigil.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/sigil.ps1 -OutFile $f; & $f
+
+# S.P.E.C.T.E.R. — Remote execution via WinRM
+$f="$env:TEMP\specter.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/specter.ps1 -OutFile $f; & $f
+
+# W.A.R.D. — Local user account audit
+$f="$env:TEMP\ward.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/ward.ps1 -OutFile $f; & $f
+```
+
+> All scripts require an Administrator PowerShell session. If your execution policy blocks local scripts, prepend `Set-ExecutionPolicy Bypass -Scope Process -Force; ` to the one-liner.
 
 ---
 
