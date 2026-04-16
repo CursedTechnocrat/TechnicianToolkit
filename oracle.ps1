@@ -546,7 +546,8 @@ function ConvertTo-HtmlTable {
         $html += "<tr>"
         foreach ($h in $headers) {
             $val = $row.$h
-            $html += "<td>$([System.Web.HttpUtility]::HtmlEncode($val))</td>"
+            $escaped = "$val" -replace '&','&amp;' -replace '<','&lt;' -replace '>','&gt;' -replace '"','&quot;'
+            $html += "<td>$escaped</td>"
         }
         $html += "</tr>"
     }
@@ -801,7 +802,6 @@ $htmlReport = @"
 "@
 
 try {
-    Add-Type -AssemblyName System.Web -ErrorAction SilentlyContinue
     $htmlReport | Out-File -FilePath $reportPath -Encoding UTF8 -Force
     Write-Host "[+] Report saved: $reportPath" -ForegroundColor $ColorSchema.Success
 }
