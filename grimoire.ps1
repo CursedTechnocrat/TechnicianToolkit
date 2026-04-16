@@ -205,18 +205,29 @@ function Show-Menu {
 # TOOL LAUNCHER
 # ===========================
 
+$BaseUrl = 'https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main'
+
 function Invoke-Tool {
     param([PSCustomObject]$Tool)
 
     $ToolPath = Join-Path $ScriptPath $Tool.File
 
     if (-not (Test-Path $ToolPath)) {
+        $DownloadUrl = "$BaseUrl/$($Tool.File)"
         Write-Host ""
-        Write-Host "  [!!] Script not found: $ToolPath" -ForegroundColor $ColorSchema.Error
-        Write-Host "       Ensure $($Tool.File) is in the same directory as grimoire.ps1" -ForegroundColor $ColorSchema.Warning
-        Write-Host ""
-        Pause-ForKey
-        return
+        Write-Host "  Downloading $($Tool.File) from GitHub..." -ForegroundColor $ColorSchema.Accent
+        try {
+            Invoke-RestMethod -Uri $DownloadUrl -OutFile $ToolPath -ErrorAction Stop
+            Write-Host "  Downloaded successfully." -ForegroundColor $ColorSchema.Success
+        }
+        catch {
+            Write-Host ""
+            Write-Host "  [!!] Could not download $($Tool.File):" -ForegroundColor $ColorSchema.Error
+            Write-Host "       $($_.Exception.Message)" -ForegroundColor $ColorSchema.Error
+            Write-Host ""
+            Pause-ForKey
+            return
+        }
     }
 
     Write-Host ""
