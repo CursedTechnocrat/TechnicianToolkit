@@ -176,6 +176,49 @@ function Enable-DriveEncryption {
     if ($vol.VolumeStatus -eq "FullyEncrypted") {
         Write-Host ""
         Write-Host "  [!!] Drive $($vol.MountPoint) is already fully encrypted." -ForegroundColor $ColorSchema.Warning
+
+        $existingKey = $vol.KeyProtector | Where-Object { $_.KeyProtectorType -eq 'RecoveryPassword' } | Select-Object -Last 1
+        if ($existingKey) {
+            Write-Host ""
+            Write-Host "  [+] Recovery key is already present." -ForegroundColor $ColorSchema.Success
+            Write-Host "  ID  : $($existingKey.KeyProtectorId)" -ForegroundColor $ColorSchema.Warning
+            Write-Host "  Key : $($existingKey.RecoveryPassword)" -ForegroundColor $ColorSchema.Warning
+        } else {
+            Write-Host "  [!!] No recovery key found — adding one now." -ForegroundColor $ColorSchema.Warning
+            try {
+                $vol = Add-BitLockerKeyProtector -MountPoint $vol.MountPoint -RecoveryPasswordProtector -ErrorAction Stop
+                $newKey = $vol.KeyProtector | Where-Object { $_.KeyProtectorType -eq 'RecoveryPassword' } | Select-Object -Last 1
+                if ($newKey) {
+                    Write-Host ""
+                    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Warning
+                    Write-Host "  RECOVERY KEY — SAVE THIS BEFORE CONTINUING" -ForegroundColor $ColorSchema.Warning
+                    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Warning
+                    Write-Host ""
+                    Write-Host "  ID  : $($newKey.KeyProtectorId)" -ForegroundColor $ColorSchema.Warning
+                    Write-Host "  Key : $($newKey.RecoveryPassword)" -ForegroundColor $ColorSchema.Warning
+                    Write-Host ""
+                    Read-Host "  Press Enter once you have saved the recovery key"
+                    Write-Host "  [+] Recovery key added successfully." -ForegroundColor $ColorSchema.Success
+                }
+            } catch {
+                Write-Host "  [-] Failed to add recovery key: $_" -ForegroundColor $ColorSchema.Error
+            }
+        }
+        if ($vol.ProtectionStatus -ne "On") {
+            Write-Host ""
+            Write-Host "  [!!] BitLocker protection is OFF — encryption exists but keys are exposed." -ForegroundColor $ColorSchema.Warning
+            Write-Host "  [*] Activating BitLocker protection..." -ForegroundColor $ColorSchema.Progress
+            try {
+                Resume-BitLocker -MountPoint $vol.MountPoint -ErrorAction Stop | Out-Null
+                Write-Host "  [+] BitLocker protection is now ON." -ForegroundColor $ColorSchema.Success
+            } catch {
+                Write-Host "  [-] Failed to activate protection: $_" -ForegroundColor $ColorSchema.Error
+            }
+        } else {
+            Write-Host "  [+] BitLocker protection is ON." -ForegroundColor $ColorSchema.Success
+        }
+
+        Write-Host ""
         return
     }
 
