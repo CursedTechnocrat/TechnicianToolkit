@@ -154,6 +154,20 @@ $Tools = @(
         File        = 'specter.ps1'
         Description = 'Remote execution via WinRM — run toolkit tools on a remote machine'
         Color       = 'White'
+    },
+    [PSCustomObject]@{
+        Key         = '12'
+        Name        = 'L.E.Y.L.I.N.E.'
+        File        = 'leyline.ps1'
+        Description = 'Network diagnostics & remediation — adapters, ping, DNS, port tests'
+        Color       = 'Cyan'
+    },
+    [PSCustomObject]@{
+        Key         = '13'
+        Name        = 'F.O.R.G.E.'
+        File        = 'forge.ps1'
+        Description = 'Driver detection & installation — problem devices, Windows Update, local packages'
+        Color       = 'Yellow'
     }
 )
 
@@ -285,7 +299,7 @@ do {
     }
     else {
         Write-Host ""
-        Write-Host "  [!!] Invalid selection. Enter 1-11 or Q to quit." -ForegroundColor $ColorSchema.Warning
+        Write-Host "  [!!] Invalid selection. Enter 1-13 or Q to quit." -ForegroundColor $ColorSchema.Warning
         Start-Sleep -Seconds 1
     }
 

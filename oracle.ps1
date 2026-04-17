@@ -132,7 +132,7 @@ $reportData = [ordered]@{}
 # STEP 1: HARDWARE
 # ─────────────────────────────────────────────────────────────────────────────
 
-Write-Host "[1/8] Collecting Hardware Info..." -ForegroundColor $ColorSchema.Progress
+Write-Host "[1/9] Collecting Hardware Info..." -ForegroundColor $ColorSchema.Progress
 
 try {
     $cs        = Get-CimInstance -ClassName Win32_ComputerSystem
@@ -192,7 +192,7 @@ Write-Host ""
 # STEP 2: OPERATING SYSTEM
 # ─────────────────────────────────────────────────────────────────────────────
 
-Write-Host "[2/8] Collecting OS Info..." -ForegroundColor $ColorSchema.Progress
+Write-Host "[2/9] Collecting OS Info..." -ForegroundColor $ColorSchema.Progress
 
 try {
     $os          = Get-CimInstance -ClassName Win32_OperatingSystem
@@ -241,7 +241,7 @@ Write-Host ""
 # STEP 3: NETWORK CONFIGURATION
 # ─────────────────────────────────────────────────────────────────────────────
 
-Write-Host "[3/8] Collecting Network Configuration..." -ForegroundColor $ColorSchema.Progress
+Write-Host "[3/9] Collecting Network Configuration..." -ForegroundColor $ColorSchema.Progress
 
 try {
     $adapters = Get-CimInstance -ClassName Win32_NetworkAdapterConfiguration -Filter "IPEnabled=True"
@@ -281,7 +281,7 @@ Write-Host ""
 # STEP 4: SYSTEM HEALTH & UPTIME
 # ─────────────────────────────────────────────────────────────────────────────
 
-Write-Host "[4/8] Collecting System Health..." -ForegroundColor $ColorSchema.Progress
+Write-Host "[4/9] Collecting System Health..." -ForegroundColor $ColorSchema.Progress
 
 try {
     $os        = Get-CimInstance -ClassName Win32_OperatingSystem
@@ -328,7 +328,7 @@ Write-Host ""
 # STEP 5: STORAGE & RAID HEALTH
 # ─────────────────────────────────────────────────────────────────────────────
 
-Write-Host "[5/8] Collecting Storage & RAID Health..." -ForegroundColor $ColorSchema.Progress
+Write-Host "[5/9] Collecting Storage & RAID Health..." -ForegroundColor $ColorSchema.Progress
 
 $physicalDiskSummary = @()
 $virtualDiskSummary  = @()
@@ -403,7 +403,7 @@ Write-Host ""
 # STEP 6: PENDING WINDOWS UPDATES
 # ─────────────────────────────────────────────────────────────────────────────
 
-Write-Host "[6/8] Scanning for Pending Updates..." -ForegroundColor $ColorSchema.Progress
+Write-Host "[6/9] Scanning for Pending Updates..." -ForegroundColor $ColorSchema.Progress
 Write-Host "    This may take a moment..." -ForegroundColor $ColorSchema.Info
 
 $pendingUpdates = @()
@@ -441,7 +441,7 @@ Write-Host ""
 # STEP 6: INSTALLED SOFTWARE
 # ─────────────────────────────────────────────────────────────────────────────
 
-Write-Host "[7/8] Collecting Installed Software..." -ForegroundColor $ColorSchema.Progress
+Write-Host "[7/9] Collecting Installed Software..." -ForegroundColor $ColorSchema.Progress
 
 $installedApps = @()
 try {
@@ -480,7 +480,7 @@ Write-Host ""
 # STEP 7: RECENT EVENT LOG ERRORS
 # ─────────────────────────────────────────────────────────────────────────────
 
-Write-Host "[8/8] Scanning Event Logs (last 24 hours)..." -ForegroundColor $ColorSchema.Progress
+Write-Host "[8/9] Scanning Event Logs (last 24 hours)..." -ForegroundColor $ColorSchema.Progress
 
 $eventSummary = @()
 try {
@@ -524,6 +524,55 @@ try {
 catch {
     Write-Host "[-] Error reading event logs: $_" -ForegroundColor $ColorSchema.Error
 }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STEP 9: SECURITY / AV STATUS
+# ─────────────────────────────────────────────────────────────────────────────
+
+Write-Host "[9/9] Collecting Security & AV Status..." -ForegroundColor $ColorSchema.Progress
+
+$avProducts = @()
+try {
+    $defender = Get-MpComputerStatus -ErrorAction SilentlyContinue
+    if ($defender) {
+        $defAgeDays = if ($defender.AntivirusSignatureLastUpdated) {
+            [int](New-TimeSpan -Start $defender.AntivirusSignatureLastUpdated -End (Get-Date)).TotalDays
+        } else { $null }
+
+        $lastScan = if ($defender.QuickScanEndTime -and $defender.QuickScanEndTime -ne [datetime]::MinValue) {
+            Get-Date $defender.QuickScanEndTime -Format 'yyyy-MM-dd HH:mm'
+        } else { 'Never' }
+
+        $avProducts += [PSCustomObject]@{
+            Product            = 'Windows Defender'
+            RealTimeProtection = if ($defender.RealTimeProtectionEnabled) { 'On' } else { 'Off' }
+            DefinitionAge      = if ($null -ne $defAgeDays) { "$defAgeDays day(s)" } else { 'Unknown' }
+            LastQuickScan      = $lastScan
+            ServiceEnabled     = if ($defender.AMServiceEnabled) { 'Yes' } else { 'No' }
+        }
+        Write-Host "[+] Windows Defender status collected" -ForegroundColor $ColorSchema.Success
+    }
+}
+catch {
+    Write-Host "[-] Could not read Windows Defender status: $_" -ForegroundColor $ColorSchema.Warning
+}
+
+try {
+    $thirdParty = Get-WmiObject -Namespace 'root\SecurityCenter2' -Class AntiVirusProduct -ErrorAction SilentlyContinue |
+                  Where-Object { $_.displayName -notmatch 'Windows Defender|Microsoft Defender' }
+    foreach ($av in $thirdParty) {
+        $avProducts += [PSCustomObject]@{
+            Product            = $av.displayName
+            RealTimeProtection = 'N/A'
+            DefinitionAge      = 'N/A'
+            LastQuickScan      = 'N/A'
+            ServiceEnabled     = 'Registered'
+        }
+    }
+}
+catch {}
+
+$reportData['Security'] = $avProducts
 
 Write-Host ""
 
@@ -643,6 +692,17 @@ $eventBadge = if ($eventCount -eq 0) {
 
 $softwareTable = ConvertTo-HtmlTable -Objects $reportData['Software'] -EmptyMessage "No software found."
 $eventsTable   = ConvertTo-HtmlTable -Objects $reportData['Events']   -EmptyMessage "No critical/error events in the last 24 hours."
+
+# AV / Security badge
+$avUnprotected = ($reportData['Security'] | Where-Object { $_.RealTimeProtection -eq 'Off' }).Count
+$avBadge = if ($reportData['Security'].Count -eq 0) {
+    "<span class='badge badge-warn'>No AV detected</span>"
+} elseif ($avUnprotected -gt 0) {
+    "<span class='badge badge-err'>$avUnprotected unprotected</span>"
+} else {
+    "<span class='badge badge-ok'>Protected</span>"
+}
+$securityTable = ConvertTo-HtmlTable -Objects $reportData['Security'] -EmptyMessage "No AV products detected."
 
 $htmlReport = @"
 <!DOCTYPE html>
@@ -795,6 +855,12 @@ $htmlReport = @"
     <div class="content">$eventsTable</div>
   </section>
 
+  <!-- SECURITY / AV STATUS -->
+  <section>
+    <h2>Security &amp; Antivirus Status $avBadge</h2>
+    <div class="content">$securityTable</div>
+  </section>
+
 </main>
 <footer>
   Generated by O.R.A.C.L.E. — Part of the Technician Toolkit &nbsp;|&nbsp; $reportTimestamp
@@ -845,6 +911,14 @@ if ($eventCount -gt 0) {
 }
 else {
     Write-Host "  Events     : Clean" -ForegroundColor $ColorSchema.Success
+}
+
+if ($avUnprotected -gt 0) {
+    Write-Host "  Security   : $avUnprotected AV product(s) with protection OFF" -ForegroundColor $ColorSchema.Error
+} elseif ($reportData['Security'].Count -eq 0) {
+    Write-Host "  Security   : No AV detected" -ForegroundColor $ColorSchema.Warning
+} else {
+    Write-Host "  Security   : Protected" -ForegroundColor $ColorSchema.Success
 }
 
 Write-Host ""

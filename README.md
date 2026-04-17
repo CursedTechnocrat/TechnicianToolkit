@@ -19,7 +19,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | Running through Kaseya VSA LiveConnect | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
 | Need a guided, menu-driven workflow | **This repo** — full prompts and confirmations at every step |
 | Need fire-and-forget with parameter-only input | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
-| Need tools with no LiveConnect counterpart (COVENANT, PHANTOM, CIPHER, ARCHIVE, SPECTER, RUNEPRESS) | **This repo** — these tools are interactive by nature |
+| Need tools with no LiveConnect counterpart (COVENANT, PHANTOM, CIPHER, ARCHIVE, SPECTER, RUNEPRESS, LEYLINE, FORGE) | **This repo** — these tools are interactive by nature |
 
 ---
 
@@ -53,6 +53,8 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | **archive.ps1** | **A.R.C.H.I.V.E.** — Automated Repository Compressing & Housing Important Volume Exports | Pre-reimaging profile backup — ZIP to local path or network share |
 | **sigil.ps1** | **S.I.G.I.L.** — Secures Infrastructure: Governs via Integrated Lockdown | Security baseline enforcement — telemetry, UAC, firewall, audit policy, password policy |
 | **specter.ps1** | **S.P.E.C.T.E.R.** — Sends PowerShell Execution Commands To External Remotes | Remote machine execution via WinRM — run toolkit tools without physical access |
+| **leyline.ps1** | **L.E.Y.L.I.N.E.** — Locates, Examines & Yields Latency, Infrastructure, Network & Endpoints | Network diagnostics & remediation — adapters, ping, DNS, port tests, IP renew, stack reset |
+| **forge.ps1** | **F.O.R.G.E.** — Finds Outdated Resources & Generates Equipment-updates | Driver detection & installation — problem devices, Windows Update drivers, local packages |
 
 ---
 
@@ -116,6 +118,7 @@ Audits the current state of a Windows machine and exports a formatted HTML repor
 - Pending Windows Update scan (read-only, no installation)
 - Installed software list sourced from registry
 - Recent event log errors and critical events (last 24 hours)
+- **Security & AV status**: Windows Defender real-time protection, definition age, last scan; third-party AV products via SecurityCenter2
 - Dark-themed HTML report with color-coded indicators and status badges
 
 ---
@@ -196,6 +199,32 @@ Applies a standardized security and configuration baseline to a Windows machine.
 
 ---
 
+### L.E.Y.L.I.N.E.
+
+Tests and diagnoses network connectivity at every layer with one-click remediation options.
+
+- Displays all network adapters with status, IPv4 address, and MAC
+- Ping tests: default gateway, Google DNS (8.8.8.8), Cloudflare (1.1.1.1), and DNS resolution
+- Color-coded latency indicators (green < 50ms, yellow < 150ms, red ≥ 150ms)
+- DNS server listing per adapter
+- TCP port test — enter any host:port to check reachability
+- Traceroute to any destination
+- **Remediation**: flush DNS cache, DHCP release & renew, full network stack reset (Winsock + TCP/IP + firewall)
+
+---
+
+### F.O.R.G.E.
+
+Audits the device tree for driver problems and automates driver installation from multiple sources.
+
+- Scans all devices for errors with human-readable error descriptions (missing, corrupted, cannot start, etc.)
+- Checks Windows Update for available driver updates via PSWindowsUpdate (auto-installed if missing)
+- Installs drivers from the current folder: ZIP (extracts and runs pnputil on INF), bare INF, EXE (silent), MSI (quiet)
+- Exports a full driver inventory CSV with device name, driver version, date, and manufacturer
+- Cleans up extracted driver staging folders automatically
+
+---
+
 ### S.P.E.C.T.E.R.
 
 Connects to a remote Windows machine via WinRM and runs Technician Toolkit scripts without needing physical access.
@@ -243,6 +272,7 @@ Creates a compressed ZIP backup of a selected user profile before a machine is r
 | Robocopy (built into Windows) | `phantom.ps1`, `archive.ps1` |
 | BitLocker-capable Windows edition (Pro/Enterprise) | `cipher.ps1` |
 | WinRM enabled on target machine | `specter.ps1` |
+| PSWindowsUpdate module | `forge.ps1` (auto-installed if missing) |
 
 ---
 
@@ -306,6 +336,12 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\specter.ps
 
 # W.A.R.D. — Local user account audit
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\ward.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/ward.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
+# L.E.Y.L.I.N.E. — Network diagnostics & remediation
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\leyline.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/leyline.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
+# F.O.R.G.E. — Driver detection & installation
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\forge.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/forge.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 ```
 
 > All scripts require an Administrator PowerShell session. The `-Scope Process` flag limits the execution policy bypass to the current session only — it does not permanently change system policy.
@@ -377,6 +413,8 @@ Only `conjure.ps1` exposes configurable variables at the top of the file. All ot
 | **archive.ps1** | Script directory — `ARCHIVE_Log_<timestamp>.csv`; manifest inside ZIP |
 | **sigil.ps1** | Script directory — `SIGIL_BaselineLog_<timestamp>.csv` |
 | **specter.ps1** | Script directory — `SPECTER_<MachineName>\` folder containing retrieved output files |
+| **leyline.ps1** | Console only — no log file |
+| **forge.ps1** | Script directory — `FORGE_DriverReport_<timestamp>.csv` |
 
 ---
 
