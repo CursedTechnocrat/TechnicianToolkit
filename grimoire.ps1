@@ -60,7 +60,7 @@ if (-not $IsAdmin) {
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-$ScriptPath = if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }
+$ScriptPath = (Get-Location).Path
 
 $ColorSchema = @{
     Header  = 'Cyan'
