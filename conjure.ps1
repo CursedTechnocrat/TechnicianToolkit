@@ -527,3 +527,4 @@ Show-InstallationSummary
 Write-Host "[OK] C.O.N.J.U.R.E. Script completed!" -ForegroundColor $Colors.Success
 Write-Host ""
 if (-not $Unattended) { Read-Host "Press Enter to exit" }
+if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

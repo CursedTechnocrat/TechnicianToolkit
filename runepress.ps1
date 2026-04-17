@@ -699,3 +699,4 @@ if (-not $Unattended) { Add-NetworkPrinter }
 Show-InstallationSummary
 
 Invoke-CleanupPrompt
+if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

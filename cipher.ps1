@@ -554,3 +554,4 @@ if ($Unattended) {
 
     } while ($choice -ne "Q")
 }
+if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

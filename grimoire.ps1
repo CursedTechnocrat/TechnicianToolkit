@@ -60,7 +60,8 @@ if (-not $IsAdmin) {
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-$ScriptPath = (Get-Location).Path
+$ScriptPath      = (Get-Location).Path
+$DownloadedFiles = [System.Collections.Generic.List[string]]::new()
 
 $ColorSchema = @{
     Header  = 'Cyan'
@@ -219,6 +220,7 @@ function Invoke-Tool {
         try {
             Invoke-RestMethod -Uri $DownloadUrl -OutFile $ToolPath -ErrorAction Stop
             [IO.File]::WriteAllText($ToolPath, [IO.File]::ReadAllText($ToolPath, [Text.Encoding]::UTF8), [Text.UTF8Encoding]::new($true))
+            $DownloadedFiles.Add($ToolPath)
             Write-Host "  Downloaded successfully." -ForegroundColor $ColorSchema.Success
         }
         catch {
@@ -288,3 +290,12 @@ do {
     }
 
 } while ($true)
+
+# ===========================
+# CLEANUP
+# ===========================
+
+foreach ($f in $DownloadedFiles) {
+    Remove-Item -Path $f -Force -ErrorAction SilentlyContinue
+}
+if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }
