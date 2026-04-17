@@ -261,7 +261,14 @@ cd C:\Path\To\Toolkit
 
 ## Quick Launch
 
-Run any script directly from GitHub without cloning — downloads to the current working directory and executes immediately. `cd` to your target folder first.
+Run any script directly from GitHub without cloning — scripts download into whatever directory your shell is currently in. `cd` to your working folder first, then paste the command.
+
+```powershell
+# Example: navigate to your working folder first
+cd C:\Technicians\JobSite42\
+
+# Now run the quick launch — grimoire.ps1 (and any tools it downloads) will land here
+```
 
 ```powershell
 # G.R.I.M.O.I.R.E. — Hub launcher (recommended starting point)
