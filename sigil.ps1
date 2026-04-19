@@ -6,9 +6,10 @@
 .DESCRIPTION
     Applies a standardized security and configuration baseline to a Windows machine.
     Covers telemetry, screensaver lock, UAC, autorun, firewall, account policy,
-    password policy, Remote Desktop, and audit policy. Pairs naturally with
-    C.O.V.E.N.A.N.T. as a post-onboarding hardening step. Changes are logged
-    to a timestamped CSV in the script directory.
+    password policy, Remote Desktop, audit policy, legacy protocol hardening
+    (SMBv1, LLMNR, NetBIOS), and credential protection (LSA PPL, NoLMHash,
+    RDP Restricted Admin). Pairs naturally with C.O.V.E.N.A.N.T. as a
+    post-onboarding hardening step. Changes are logged to a timestamped CSV.
 
 .USAGE
     PS C:\> .\sigil.ps1                              # Must be run as Administrator
@@ -490,6 +491,100 @@ function Apply-WindowsUpdatePolicy {
     Write-Host ""
 }
 
+function Apply-LegacyProtocols {
+    Write-Host "  [*] Disabling legacy network protocols..." -ForegroundColor $ColorSchema.Progress
+
+    # ── SMBv1 ─────────────────────────────────────────────────────────────────
+    # Exploited by WannaCry / EternalBlue ransomware; no legitimate modern use.
+    try {
+        $smb1Enabled = (Get-SmbServerConfiguration -ErrorAction Stop).EnableSMB1Protocol
+        if (-not $smb1Enabled) {
+            Write-Host "    [OK] SMBv1 — already disabled." -ForegroundColor $ColorSchema.Info
+            Add-ActionRecord -Category "Legacy Protocols" -Setting "Disable SMBv1" -Status "Already Set" -Detail "EnableSMB1Protocol = False"
+        } else {
+            Set-SmbServerConfiguration -EnableSMB1Protocol $false -Force -ErrorAction Stop
+            Write-Host "    [+] SMBv1 — disabled." -ForegroundColor $ColorSchema.Success
+            Add-ActionRecord -Category "Legacy Protocols" -Setting "Disable SMBv1" -Status "Applied" -Detail "True → False"
+        }
+    }
+    catch {
+        Write-Host "    [-] SMBv1 — failed: $_" -ForegroundColor $ColorSchema.Error
+        Add-ActionRecord -Category "Legacy Protocols" -Setting "Disable SMBv1" -Status "Failed" -Detail $_
+    }
+
+    # ── LLMNR ─────────────────────────────────────────────────────────────────
+    # Link-Local Multicast Name Resolution — abused by Responder to capture hashes.
+    Set-BaselineReg `
+        -Path     "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient" `
+        -Name     "EnableMulticast" `
+        -Value    0 `
+        -Category "Legacy Protocols" `
+        -Label    "Disable LLMNR (Responder attack mitigation)"
+
+    # ── NetBIOS over TCP/IP ────────────────────────────────────────────────────
+    # Legacy protocol; disabling reduces attack surface for NBNS poisoning.
+    try {
+        $adapters = Get-WmiObject Win32_NetworkAdapterConfiguration -ErrorAction Stop |
+                    Where-Object { $_.IPEnabled }
+
+        $toDisable = $adapters | Where-Object { $_.TcpipNetbiosOptions -ne 2 }
+
+        if ($toDisable.Count -eq 0) {
+            Write-Host "    [OK] NetBIOS over TCP/IP — already disabled on all adapters." -ForegroundColor $ColorSchema.Info
+            Add-ActionRecord -Category "Legacy Protocols" -Setting "Disable NetBIOS over TCP/IP" -Status "Already Set"
+        } else {
+            $changed = 0
+            foreach ($adapter in $toDisable) {
+                $result = $adapter.SetTcpipNetbios(2)   # 2 = Disable NetBIOS over TCP/IP
+                if ($result.ReturnValue -eq 0) { $changed++ }
+            }
+            Write-Host "    [+] NetBIOS over TCP/IP — disabled on $changed adapter(s)." -ForegroundColor $ColorSchema.Success
+            Add-ActionRecord -Category "Legacy Protocols" -Setting "Disable NetBIOS over TCP/IP" -Status "Applied" -Detail "$changed adapter(s) updated"
+        }
+    }
+    catch {
+        Write-Host "    [-] NetBIOS disable — failed: $_" -ForegroundColor $ColorSchema.Error
+        Add-ActionRecord -Category "Legacy Protocols" -Setting "Disable NetBIOS over TCP/IP" -Status "Failed" -Detail $_
+    }
+
+    Write-Host ""
+}
+
+function Apply-CredentialProtection {
+    Write-Host "  [*] Applying credential protection settings..." -ForegroundColor $ColorSchema.Progress
+
+    # ── LSA Protected Process (RunAsPPL) ──────────────────────────────────────
+    # Prevents lsass.exe memory dumps by tools like Mimikatz. Requires reboot.
+    Set-BaselineReg `
+        -Path     "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" `
+        -Name     "RunAsPPL" `
+        -Value    1 `
+        -Category "Credential Protection" `
+        -Label    "LSA Protected Process Light (RunAsPPL) — blocks lsass memory dumps"
+
+    # ── No LM Hash ────────────────────────────────────────────────────────────
+    # Stops Windows storing weak LAN Manager password hashes alongside NTLM.
+    Set-BaselineReg `
+        -Path     "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" `
+        -Name     "NoLMHash" `
+        -Value    1 `
+        -Category "Credential Protection" `
+        -Label    "No LM Hash storage — prevents weak NTLM hash capture"
+
+    # ── RDP Restricted Admin mode ─────────────────────────────────────────────
+    # Prevents credential forwarding when connecting via Remote Desktop.
+    # DisableRestrictedAdmin = 0 means Restricted Admin IS enabled (double-negative).
+    Set-BaselineReg `
+        -Path     "HKLM:\System\CurrentControlSet\Control\Lsa" `
+        -Name     "DisableRestrictedAdmin" `
+        -Value    0 `
+        -Category "Credential Protection" `
+        -Label    "RDP Restricted Admin mode — prevents credential exposure over RDP"
+
+    Write-Host "  [!!] NOTE: RunAsPPL requires a reboot to take full effect." -ForegroundColor $ColorSchema.Warning
+    Write-Host ""
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # MAIN MENU
 # ─────────────────────────────────────────────────────────────────────────────
@@ -511,6 +606,8 @@ $categories = [ordered]@{
     "8"  = @{ Label = "Remote Desktop";             Fn = { Apply-RemoteDesktop } }
     "9"  = @{ Label = "Audit Policy";               Fn = { Apply-AuditPolicy } }
     "10" = @{ Label = "Windows Update Behavior";    Fn = { Apply-WindowsUpdatePolicy } }
+    "11" = @{ Label = "Legacy Protocol Hardening";  Fn = { Apply-LegacyProtocols } }
+    "12" = @{ Label = "Credential Protection";      Fn = { Apply-CredentialProtection } }
 }
 
 Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header

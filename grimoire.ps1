@@ -9,7 +9,8 @@
     completion.
 
 .USAGE
-    PS C:\> .\grimoire.ps1      # Must be run as Administrator
+    PS C:\> .\grimoire.ps1           # Must be run as Administrator
+    PS C:\> .\grimoire.ps1 -WhatIf   # Launch tools in dry-run mode (passed through to each tool that supports it)
 
 .NOTES
     Version : 1.0
@@ -45,6 +46,10 @@
     Red      Critical errors
     Gray     Information and details
 #>
+
+param(
+    [switch]$WhatIf
+)
 
 # ===========================
 # ADMIN PRIVILEGE CHECK
@@ -263,6 +268,10 @@ function Show-Banner {
     Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
     Write-Host "  Technician Toolkit  |  Hub v1.0  |  Run as Administrator" -ForegroundColor $ColorSchema.Info
     Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
+    if ($WhatIf) {
+        Write-Host ""
+        Write-Host "  *** DRY RUN MODE — tools that support -WhatIf will preview actions only ***" -ForegroundColor Cyan
+    }
     Write-Host ""
 }
 
@@ -333,8 +342,17 @@ function Invoke-Tool {
     Write-Host ""
     Start-Sleep -Milliseconds 600
 
+    # Build argument list — pass -WhatIf only if the target script accepts it
+    $toolArgs = @{}
+    if ($WhatIf) {
+        $toolCmd = Get-Command $ToolPath -ErrorAction SilentlyContinue
+        if ($toolCmd -and $toolCmd.Parameters.ContainsKey('WhatIf')) {
+            $toolArgs['WhatIf'] = $true
+        }
+    }
+
     try {
-        & $ToolPath
+        & $ToolPath @toolArgs
     }
     catch {
         Write-Host ""
