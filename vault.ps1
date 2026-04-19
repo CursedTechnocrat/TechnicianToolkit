@@ -596,7 +596,11 @@ function Build-HtmlReport {
 
     $totalLicensed   = ($UnlicensedData.Count)  # unlicensed count
     $totalUsers      = 0
-    try { $totalUsers = (Get-MgUser -Filter "accountEnabled eq true and userType eq 'Member'" -CountVariable x -ConsistencyLevel eventual -All -Property "id" -ErrorAction SilentlyContinue | Measure-Object).Count } catch {}
+    try {
+        $totalUsers = (Get-MgUser -Filter "accountEnabled eq true and userType eq 'Member'" -CountVariable x -ConsistencyLevel eventual -All -Property "id" -ErrorAction SilentlyContinue | Measure-Object).Count
+    } catch {
+        Write-Warn "Could not retrieve total user count — licensed count will show as '—'."
+    }
     $licensedCount   = if ($totalUsers -gt 0) { $totalUsers - $UnlicensedData.Count } else { '—' }
     $inactiveCount   = $InactiveData.Count
     $noMfaCount      = $NoMfaData.Count

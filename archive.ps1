@@ -519,22 +519,30 @@ Write-Host ""
 
 $zipPath = Join-Path $DestRoot "$archiveName.zip"
 
+# Pre-flight: count staged files and total size so the technician knows what they're waiting for
+$stagedFiles   = Get-ChildItem -Recurse -File -Path $stagingDir -ErrorAction SilentlyContinue
+$stagedCount   = $stagedFiles.Count
+$stagedSizeMB  = [math]::Round(($stagedFiles | Measure-Object -Property Length -Sum).Sum / 1MB, 1)
+
 Write-Host "  [*] Creating ZIP: $zipPath" -ForegroundColor $ColorSchema.Progress
-Write-Host "  [*] This may take several minutes for large profiles..." -ForegroundColor $ColorSchema.Info
+Write-Host ("  [*] Compressing {0} files ({1} MB) — this may take several minutes..." -f $stagedCount, $stagedSizeMB) -ForegroundColor $ColorSchema.Info
 Write-Host ""
 
 if ($WhatIf) {
     Write-Host "  [~] Would compress staged files into: $zipPath" -ForegroundColor Cyan
     Write-Host ""
-    Add-ArchiveRecord -Item "ZIP Archive" -Status "WhatIf" -Detail "Would create: $zipPath"
+    Add-ArchiveRecord -Item "ZIP Archive" -Status "WhatIf" -Detail "Would create: $zipPath ($stagedCount files, $stagedSizeMB MB)"
 } else {
+
+$compressionStart = Get-Date
 
 try {
     Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
     [System.IO.Compression.ZipFile]::CreateFromDirectory($stagingDir, $zipPath, [System.IO.Compression.CompressionLevel]::Optimal, $false)
 
-    $zipSizeMB = [math]::Round((Get-Item $zipPath).Length / 1MB, 1)
-    Write-Host "  [+] Archive created: $zipPath  ($zipSizeMB MB)" -ForegroundColor $ColorSchema.Success
+    $zipSizeMB      = [math]::Round((Get-Item $zipPath).Length / 1MB, 1)
+    $compressionSec = [math]::Round(((Get-Date) - $compressionStart).TotalSeconds, 1)
+    Write-Host ("  [+] Archive created: {0}  ({1} MB, {2}s)" -f $zipPath, $zipSizeMB, $compressionSec) -ForegroundColor $ColorSchema.Success
     Add-ArchiveRecord -Item "ZIP Archive" -Status "Created" -Detail "$zipSizeMB MB — $zipPath"
 }
 catch {

@@ -284,7 +284,9 @@ function Invoke-RenewIP {
         Write-Host ("  [*] Releasing IP on: {0}" -f $iface.InterfaceAlias) -ForegroundColor $C.Progress
         try {
             ipconfig /release $iface.InterfaceAlias 2>&1 | Out-Null
-        } catch {}
+        } catch {
+            Write-Host ("  [!] Release failed on {0}: {1}" -f $iface.InterfaceAlias, $_) -ForegroundColor $C.Warning
+        }
     }
 
     Start-Sleep -Seconds 2

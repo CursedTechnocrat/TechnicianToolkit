@@ -379,7 +379,9 @@ function Show-UserDetails {
     try {
         $groups = (Get-ADPrincipalGroupMembership -Identity $u.SamAccountName -ErrorAction Stop |
                    Sort-Object Name | ForEach-Object { $_.Name })
-    } catch { }
+    } catch {
+        Write-Host "    [!] Could not resolve group memberships: $_" -ForegroundColor $C.Warning
+    }
 
     Write-Section "USER DETAILS — $($u.SamAccountName)"
 

@@ -274,9 +274,16 @@ function Install-Software {
     Write-Host "========================================" -ForegroundColor $Colors.Header
     Write-Host ""
 
+    $total = $SoftwareList.Count
+    $i     = 0
+
     foreach ($item in $SoftwareList) {
-        Write-Host "[*] Installing: $item..." -ForegroundColor $Colors.Info
-        
+        $i++
+        Write-Progress -Activity "Installing $Type software" `
+                       -Status        "[$i/$total] $item" `
+                       -PercentComplete ([math]::Floor($i / $total * 100))
+        Write-Host "[$i/$total] Installing: $item..." -ForegroundColor $Colors.Info
+
         try {
             $startTime = Get-Date
 
@@ -287,15 +294,16 @@ function Install-Software {
                 $output = & winget install -e --id $item --accept-source-agreements --accept-package-agreements -h 2>&1
             }
 
-            $exitCode = $LASTEXITCODE
+            $exitCode    = $LASTEXITCODE
             $installTime = (Get-Date).ToString('HH:mm:ss')
+            $elapsed     = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
 
             if ($exitCode -eq 0 -or $exitCode -eq 931 -or $exitCode -eq 3010) {
-                Write-Host "[OK] $item installed successfully at $installTime" -ForegroundColor $Colors.Success
+                Write-Host "[OK] $item installed successfully at $installTime (${elapsed}s)" -ForegroundColor $Colors.Success
                 Add-InstallationRecord -Software $item -Status "INSTALLED"
             }
             else {
-                Write-Host "[!!] $item installation completed with status code $exitCode at $installTime" -ForegroundColor $Colors.Warning
+                Write-Host "[!!] $item completed with exit code $exitCode at $installTime" -ForegroundColor $Colors.Warning
                 Add-InstallationRecord -Software $item -Status "INSTALLED (with warnings - Exit Code: $exitCode)"
             }
         }
@@ -303,9 +311,11 @@ function Install-Software {
             Write-Host "[ERROR] Error installing $item : $($_.Exception.Message)" -ForegroundColor $Colors.Error
             Add-InstallationRecord -Software $item -Status "FAILED"
         }
-        
+
         Start-Sleep -Seconds 1
     }
+
+    Write-Progress -Activity "Installing $Type software" -Completed
 }
 
 function Update-AllSoftware {
