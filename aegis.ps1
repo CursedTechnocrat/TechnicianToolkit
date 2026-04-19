@@ -55,10 +55,10 @@ param(
     [switch]$NoOpen
 )
 
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+Import-Module "$PSScriptRoot\TechnicianToolkit.psm1" -Force
 
 # ─────────────────────────────────────────────────────────────────────────────
-# COLOR SCHEMA & HELPERS
+# COLOR SCHEMA
 # ─────────────────────────────────────────────────────────────────────────────
 
 $C = @{
@@ -68,25 +68,6 @@ $C = @{
     Error    = 'Red'
     Info     = 'Gray'
     Progress = 'Magenta'
-}
-
-function Write-Section {
-    param([string]$Title)
-    Write-Host ""
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
-    Write-Host "  $Title" -ForegroundColor $C.Header
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
-    Write-Host ""
-}
-
-function Write-Step  { param([string]$Msg) Write-Host ("  [*] {0}" -f $Msg) -ForegroundColor $C.Progress }
-function Write-Ok    { param([string]$Msg) Write-Host ("  [+] {0}" -f $Msg) -ForegroundColor $C.Success  }
-function Write-Warn  { param([string]$Msg) Write-Host ("  [!] {0}" -f $Msg) -ForegroundColor $C.Warning  }
-function Write-Fail  { param([string]$Msg) Write-Host ("  [-] {0}" -f $Msg) -ForegroundColor $C.Error    }
-
-function EscHtml([string]$s) {
-    if (-not $s) { return '' }
-    $s -replace '&','&amp;' -replace '<','&lt;' -replace '>','&gt;' -replace '"','&quot;'
 }
 
 # ─────────────────────────────────────────────────────────────────────────────

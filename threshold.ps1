@@ -58,14 +58,8 @@ param(
 
 #region ── Bootstrap ────────────────────────────────────────────────────────────
 
-# Admin check
-$currentPrincipal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
-if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Warning "T.H.R.E.S.H.O.L.D. requires Administrator privileges. Please re-run as Administrator."
-    exit 1
-}
-
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+Import-Module "$PSScriptRoot\TechnicianToolkit.psm1" -Force
+Assert-AdminPrivilege
 
 # Script path resolution
 $ScriptPath = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Definition }
@@ -105,15 +99,6 @@ function Show-Banner {
 #endregion
 
 #region ── Helpers ──────────────────────────────────────────────────────────────
-
-function Write-Section {
-    param([string]$Title)
-    $line = "─" * 72
-    Write-Host ""
-    Write-Host "  $line" -ForegroundColor $C.Cyan
-    Write-Host "  $Title" -ForegroundColor $C.Cyan
-    Write-Host "  $line" -ForegroundColor $C.Cyan
-}
 
 function Format-Bytes {
     param([long]$Bytes)

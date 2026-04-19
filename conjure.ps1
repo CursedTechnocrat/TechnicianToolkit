@@ -51,7 +51,7 @@ if ([string]::IsNullOrEmpty($ScriptPath)) {
 $ExecutionTime = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
 
 # Set console to UTF-8 so Unicode block characters render correctly
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+Import-Module "$PSScriptRoot\TechnicianToolkit.psm1" -Force
 
 $RequiredSoftware = @(
     "Microsoft.Teams",

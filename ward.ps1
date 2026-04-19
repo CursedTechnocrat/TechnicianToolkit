@@ -45,12 +45,8 @@ param([switch]$Unattended)
 # ADMIN CHECK
 # ─────────────────────────────────────────────────────────────────────────────
 
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "This script must be run as Administrator!" -ForegroundColor Red
-    exit 1
-}
-
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+Import-Module "$PSScriptRoot\TechnicianToolkit.psm1" -Force
+Assert-AdminPrivilege
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SCRIPT PATH RESOLUTION

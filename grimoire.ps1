@@ -49,24 +49,12 @@
 # ===========================
 # ADMIN PRIVILEGE CHECK
 # ===========================
-$IsAdmin = ([Security.Principal.WindowsPrincipal] `
-    [Security.Principal.WindowsIdentity]::GetCurrent()
-).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
-
-if (-not $IsAdmin) {
-    Write-Host "  Restarting with administrator privileges..." -ForegroundColor Yellow
-    $PSExe = if ($PSVersionTable.PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
-    Start-Process -FilePath $PSExe `
-        -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" `
-        -Verb RunAs
-    exit
-}
-
 # ===========================
 # INITIALIZATION
 # ===========================
 
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+Import-Module "$PSScriptRoot\TechnicianToolkit.psm1" -Force
+Invoke-AdminElevation -ScriptFile $PSCommandPath
 
 $ScriptPath      = (Get-Location).Path
 $DownloadedFiles = [System.Collections.Generic.List[string]]::new()

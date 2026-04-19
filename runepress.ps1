@@ -40,18 +40,8 @@ param([switch]$Unattended)
 # ===========================
 # ADMIN PRIVILEGE CHECK
 # ===========================
-$IsAdmin = ([Security.Principal.WindowsPrincipal] `
-    [Security.Principal.WindowsIdentity]::GetCurrent()
-).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
-
-if (-not $IsAdmin) {
-    Write-Host "INFO: Restarting script with administrator privileges..." -ForegroundColor Yellow
-    $PSExe = if ($PSVersionTable.PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
-    Start-Process -FilePath $PSExe `
-        -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" `
-        -Verb RunAs
-    exit
-}
+Import-Module "$PSScriptRoot\TechnicianToolkit.psm1" -Force
+Invoke-AdminElevation -ScriptFile $PSCommandPath
 
 # ===========================
 # SCRIPT INITIALIZATION
@@ -67,9 +57,6 @@ elseif ($MyInvocation.MyCommand.Path) {
 else {
     $ScriptPath = (Get-Location).Path
 }
-
-# Set console to UTF-8 so Unicode block characters render correctly
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 # Initialize global variables
 $ExtractRoot     = Join-Path $ScriptPath "ExtractedDrivers"

@@ -60,12 +60,8 @@ param(
 # ADMIN CHECK
 # ─────────────────────────────────────────────────────────────────────────────
 
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "This script must be run as Administrator." -ForegroundColor Red
-    exit 1
-}
-
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+Import-Module "$PSScriptRoot\TechnicianToolkit.psm1" -Force
+Assert-AdminPrivilege
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SCRIPT PATH RESOLUTION
@@ -125,15 +121,6 @@ function Show-LanternBanner {
 # ─────────────────────────────────────────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
-
-function Write-Section {
-    param([string]$Title)
-    Write-Host ""
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
-    Write-Host "  $Title" -ForegroundColor $C.Header
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
-    Write-Host ""
-}
 
 function Test-TCPPort {
     param([string]$Hostname, [int]$Port, [int]$TimeoutMs = 1500)
