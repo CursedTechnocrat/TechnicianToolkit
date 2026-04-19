@@ -19,7 +19,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | Running through Kaseya VSA LiveConnect | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
 | Need a guided, menu-driven workflow | **This repo** — full prompts and confirmations at every step |
 | Need fire-and-forget with parameter-only input | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
-| Need tools with no LiveConnect counterpart (COVENANT, PHANTOM, CIPHER, ARCHIVE, SPECTER, RUNEPRESS, LEYLINE, FORGE) | **This repo** — these tools are interactive by nature |
+| Need tools with no LiveConnect counterpart (COVENANT, PHANTOM, CIPHER, ARCHIVE, SPECTER, RUNEPRESS, LEYLINE, FORGE, AEGIS, BASTION, LANTERN, THRESHOLD, VAULT, SENTINEL) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
 
 ---
 
@@ -55,17 +55,23 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | **specter.ps1** | **S.P.E.C.T.E.R.** — Sends PowerShell Execution Commands To External Remotes | Remote machine execution via WinRM — run toolkit tools without physical access |
 | **leyline.ps1** | **L.E.Y.L.I.N.E.** — Locates, Examines & Yields Latency, Infrastructure, Network & Endpoints | Network diagnostics & remediation — adapters, ping, DNS, port tests, IP renew, stack reset |
 | **forge.ps1** | **F.O.R.G.E.** — Finds Outdated Resources & Generates Equipment-updates | Driver detection & installation — problem devices, Windows Update drivers, local packages |
+| **aegis.ps1** | **A.E.G.I.S.** — Azure Environment & Governance Inspection System | Azure subscription assessment — security posture, RBAC, backup coverage, Advisor alerts, HTML report |
+| **bastion.ps1** | **B.A.S.T.I.O.N.** — Bulk Active-directory Stewardship: Tasks, Identity, Operations & Namespacing | Active Directory user & group management — unlock, reset, enable/disable, stale account report |
+| **lantern.ps1** | **L.A.N.T.E.R.N.** — Locates & Audits Network Topology, Enumerating Resources & Nodes | Network discovery — subnet ping sweep, DNS lookup, MAC addresses, port scan, HTML report |
+| **threshold.ps1** | **T.H.R.E.S.H.O.L.D.** — Tests Hardware Reliability, Evaluates Storage Health, & Optimizes/Logs Disk data | Disk & storage health — physical disk status, volume space, cleanup, old profiles, HTML report |
+| **vault.ps1** | **V.A.U.L.T.** — Validates Assets & User License Tracking | Microsoft 365 license & mailbox audit — license assignments, MFA status, shared mailboxes, HTML report |
+| **sentinel.ps1** | **S.E.N.T.I.N.E.L.** — Scans & Evaluates services, Networks, Tasks, Infrastructure, Node Events & Logs | Service, task & event log monitor — health check local or remote machine, HTML report |
 
 ---
 
 ### G.R.I.M.O.I.R.E.
 
-The central hub for the Technician Toolkit. Presents an interactive numbered menu to launch any of the five tools without navigating the file system. After a tool completes, control returns to the GRIMOIRE menu automatically.
+The central hub for the Technician Toolkit. Presents a categorized, interactive menu to launch any tool without navigating the file system. After a tool completes, control returns to the GRIMOIRE menu automatically.
 
 - Auto-elevates to Administrator on first launch if not already elevated
 - Validates that each script file exists before attempting to launch it
 - Returns to the hub menu after each tool finishes or errors out
-- All five tools remain independently runnable without the hub
+- All tools remain independently runnable without the hub
 
 ---
 
@@ -259,27 +265,125 @@ Creates a compressed ZIP backup of a selected user profile before a machine is r
 
 ---
 
+### A.E.G.I.S.
+
+Connects to an Azure subscription and generates a comprehensive HTML assessment report for the environment.
+
+- Auto-installs required `Az.*` modules if missing
+- Security posture: NSG inbound exposure, publicly accessible storage accounts, SQL firewall rules, HTTPS enforcement on web apps
+- Access & governance: RBAC role assignments, resource locks, Azure Policy compliance
+- Backup coverage: Recovery Services Vaults, protected items, storage redundancy
+- VM inventory: OS, size, region, power state, NIC and disk details
+- SQL hygiene: database tier, size, backup retention, geo-redundancy
+- Orphaned resources: unattached disks, unused public IPs, empty NICs
+- Tag coverage: resources and resource groups missing tags
+- Azure Advisor alerts and Defender for Cloud secure score
+- Prioritized remediation recommendations section
+- Parameters: `-SubscriptionId` to target a specific subscription; `-OutputPath` to set report destination; `-NoOpen` to suppress auto-open
+
+---
+
+### B.A.S.T.I.O.N.
+
+Interactive Active Directory user and group management tool. Requires RSAT (auto-installed if missing).
+
+- Search and view AD users by name, UPN, or SAM account name
+- Unlock locked-out accounts
+- Reset user passwords with force-change-on-next-logon option
+- Enable and disable user accounts
+- View and modify group memberships — add or remove from security/distribution groups
+- Stale account report: identifies accounts inactive for 90+ days, exports dark-themed HTML report
+- `-Unattended -Action StaleReport` for silent stale account HTML export
+
+---
+
+### L.A.N.T.E.R.N.
+
+Discovers all live hosts on the local /24 subnet and produces a network asset inventory.
+
+- Parallel ICMP ping sweep across all 254 host addresses
+- DNS reverse lookup for hostname resolution on each live host
+- MAC address retrieval from the ARP neighbor table
+- Optional TCP port scan against common service ports (21, 22, 23, 80, 443, 445, 3389, 5985, 8080, 8443)
+- Color-coded port badges in the HTML report (open vs. closed)
+- Summary cards: total hosts discovered, ports scanned, unreachable
+- CSV export of the full host inventory
+- Dark-themed HTML report saved to the script directory
+- `-Unattended -Action Sweep` for silent sweep and report export
+
+---
+
+### T.H.R.E.S.H.O.L.D.
+
+Audits physical disk and volume health, flags space problems, and performs optional cleanup.
+
+- Physical disk health status via `Get-PhysicalDisk` — Healthy / Warning / Unhealthy
+- Disk operational status and media type (SSD / HDD / Unspecified) via `Get-Disk`
+- Volume space summary for all lettered drives: used, free, total, percentage
+- **Warning** flagged at < 15% free space; **Critical** at < 5% free space
+- Disk cleanup: Windows Temp, user Temp, Recycle Bin, Windows Update cache
+- Old profile detection: user profile folders not accessed in 90+ days
+- Dark-themed HTML report with color-coded status badges
+- `-Unattended` for silent health check and HTML export
+
+---
+
+### V.A.U.L.T.
+
+Connects to Microsoft 365 via the Microsoft Graph API and audits the tenant's license and mailbox state.
+
+- Auto-installs required `Microsoft.Graph` modules if missing
+- License assignment audit: per-user SKU name, assigned licenses, consumed vs. purchased units
+- Unlicensed user identification — active accounts with no M365 license assigned
+- Inactive user report — accounts with no sign-in activity in 90+ days
+- MFA registration status per user (registered / not registered)
+- Shared mailbox audit: display name, primary SMTP address, size, last activity
+- Dark-themed HTML report combining all sections with summary cards
+- `-Unattended` to auto-connect and export the full report without prompts
+
+---
+
+### S.E.N.T.I.N.E.L.
+
+Audits Windows services, scheduled tasks, and recent event log errors — locally or against a remote machine.
+
+- Critical service audit: checks a predefined set of essential services (WinDefend, Spooler, BITS, WMI, W32Time, and more)
+- Flags stopped or non-automatic services; offers one-at-a-time restart with confirmation
+- Scheduled task audit: lists all active non-Microsoft tasks with last/next run and status
+- Event log sweep: Warning and Error events from System and Application logs in the last 24 hours
+- Supports remote execution via WinRM with `-Target HOSTNAME`
+- Dark-themed HTML health report with color-coded service status badges
+- `-Unattended` for silent report export; `-Unattended -Target HOSTNAME` for remote
+
+---
+
 ## Requirements
 
 | Requirement | Notes |
 |-------------|-------|
 | Windows PowerShell 5.1+ | All scripts |
+| **TechnicianToolkit.psm1 in the same folder** | All scripts — shared module providing logging, HTML, and privilege helpers |
 | Administrator privileges | All scripts (auto-elevation on `grimoire.ps1` and `runepress.ps1`) |
 | Internet connectivity | All scripts |
 | Windows Package Manager (winget) | `conjure.ps1` (Chocolatey supported as alternative) |
-| PSWindowsUpdate module | `restoration.ps1` (auto-installed if missing) |
+| PSWindowsUpdate module | `restoration.ps1`, `forge.ps1` (auto-installed if missing) |
 | Entra ID account with device join permissions | `covenant.ps1` |
 | Robocopy (built into Windows) | `phantom.ps1`, `archive.ps1` |
 | BitLocker-capable Windows edition (Pro/Enterprise) | `cipher.ps1` |
-| WinRM enabled on target machine | `specter.ps1` |
-| PSWindowsUpdate module | `forge.ps1` (auto-installed if missing) |
+| WinRM enabled on target machine | `specter.ps1`, `sentinel.ps1` (remote mode) |
+| RSAT ActiveDirectory module | `bastion.ps1` (auto-installed if missing) |
+| Az PowerShell modules | `aegis.ps1` (auto-installed if missing) |
+| Microsoft.Graph modules | `vault.ps1` (auto-installed if missing) |
+| Azure subscription + appropriate RBAC | `aegis.ps1` |
+| Microsoft 365 tenant + Global Reader or equivalent | `vault.ps1` |
+| On-premises Active Directory domain membership | `bastion.ps1` |
 
 ---
 
 ## Installation
 
 1. Clone or download this repository
-2. Extract all files into the same folder
+2. Extract **all files** (`.ps1` and `TechnicianToolkit.psm1`) into the same folder — the module must be co-located with the scripts
 3. Open PowerShell as Administrator
 4. Navigate to the toolkit directory
 
@@ -293,6 +397,8 @@ cd C:\Path\To\Toolkit
 
 Run any script directly from GitHub without cloning — scripts download into whatever directory your shell is currently in. `cd` to your working folder first, then paste the command.
 
+> **Note:** All scripts depend on `TechnicianToolkit.psm1`. The module is downloaded automatically by the GRIMOIRE command below. If running an individual script without GRIMOIRE, download the module first — see the first command in the block.
+
 ```powershell
 # Example: navigate to your working folder first
 cd C:\Technicians\JobSite42\
@@ -301,8 +407,11 @@ cd C:\Technicians\JobSite42\
 ```
 
 ```powershell
-# G.R.I.M.O.I.R.E. — Hub launcher (recommended starting point)
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\grimoire.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/grimoire.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+# TechnicianToolkit.psm1 — Shared module (download once per working folder; required by all scripts)
+Set-ExecutionPolicy Bypass -Scope Process -Force; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/TechnicianToolkit.psm1 -OutFile "$(Get-Location)\TechnicianToolkit.psm1"
+
+# G.R.I.M.O.I.R.E. — Hub launcher (recommended starting point; downloads module automatically)
+Set-ExecutionPolicy Bypass -Scope Process -Force; $d="$(Get-Location)"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/TechnicianToolkit.psm1 -OutFile "$d\TechnicianToolkit.psm1"; $f="$d\grimoire.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/grimoire.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # A.R.C.H.I.V.E. — Pre-reimaging profile backup
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\archive.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/archive.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
@@ -342,6 +451,24 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\leyline.ps
 
 # F.O.R.G.E. — Driver detection & installation
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\forge.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/forge.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
+# A.E.G.I.S. — Azure environment assessment
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\aegis.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/aegis.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
+# B.A.S.T.I.O.N. — Active Directory management
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\bastion.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/bastion.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
+# L.A.N.T.E.R.N. — Network discovery & asset inventory
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\lantern.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/lantern.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
+# T.H.R.E.S.H.O.L.D. — Disk & storage health monitor
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\threshold.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/threshold.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
+# V.A.U.L.T. — Microsoft 365 license & mailbox audit
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\vault.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/vault.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
+# S.E.N.T.I.N.E.L. — Service, task & event log monitor
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\sentinel.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/sentinel.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 ```
 
 > All scripts require an Administrator PowerShell session. The `-Scope Process` flag limits the execution policy bypass to the current session only — it does not permanently change system policy.
@@ -370,6 +497,16 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\cipher.ps1        # BitLocker drive encryption management
 .\ward.ps1          # User account audit and HTML report
 .\archive.ps1       # Pre-reimaging profile backup to ZIP
+.\sigil.ps1         # Security baseline enforcement
+.\specter.ps1       # Remote execution via WinRM
+.\leyline.ps1       # Network diagnostics and remediation
+.\forge.ps1         # Driver detection and installation
+.\aegis.ps1         # Azure environment assessment and HTML report
+.\bastion.ps1       # Active Directory user and group management
+.\lantern.ps1       # Network discovery and asset inventory
+.\threshold.ps1     # Disk and storage health monitor
+.\vault.ps1         # Microsoft 365 license and mailbox audit
+.\sentinel.ps1      # Service, task, and event log monitor
 ```
 
 All scripts must be run as Administrator.
@@ -394,6 +531,14 @@ Only `conjure.ps1` exposes configurable variables at the top of the file. All ot
 | **archive.ps1** | None — profile, items, and destination selected interactively at runtime |
 | **sigil.ps1** | None — categories selected interactively; screensaver timeout editable in script (default 600 s) |
 | **specter.ps1** | None — target, credentials, and operation selected interactively at runtime |
+| **leyline.ps1** | None — all tests run interactively; no persistent config |
+| **forge.ps1** | None — driver sources scanned from current folder automatically |
+| **aegis.ps1** | `-SubscriptionId` — target a specific Azure subscription; `-OutputPath` — HTML report destination; `-NoOpen` — suppress auto-open after export |
+| **bastion.ps1** | None — user search and action selected interactively; stale threshold is 90 days (editable in script) |
+| **lantern.ps1** | `$script:ScanPorts` — list of TCP ports checked during scan (editable in script) |
+| **threshold.ps1** | None — thresholds are Warning < 15% free, Critical < 5% free (editable in script); old profile threshold is 90 days |
+| **vault.ps1** | None — tenant and report scope selected interactively at runtime |
+| **sentinel.ps1** | None — critical service list editable in script; `-Target` accepts any WinRM-reachable hostname |
 
 ---
 
@@ -415,6 +560,12 @@ Only `conjure.ps1` exposes configurable variables at the top of the file. All ot
 | **specter.ps1** | Script directory — `SPECTER_<MachineName>\` folder containing retrieved output files |
 | **leyline.ps1** | Console only — no log file |
 | **forge.ps1** | Script directory — `FORGE_DriverReport_<timestamp>.csv` |
+| **aegis.ps1** | `-OutputPath` (default `%TEMP%`) — `azure-assessment-<timestamp>.html`; auto-opens in browser |
+| **bastion.ps1** | Script directory — `BASTION_StaleAccounts_<timestamp>.html` (stale account report mode only) |
+| **lantern.ps1** | Script directory — `LANTERN_<timestamp>.html` and `LANTERN_<timestamp>.csv` |
+| **threshold.ps1** | Script directory — `THRESHOLD_<timestamp>.html` (dark-themed HTML report) |
+| **vault.ps1** | Script directory — `VAULT_<timestamp>.html` (combined license & mailbox report) |
+| **sentinel.ps1** | Script directory — `SENTINEL_<timestamp>.html` (dark-themed HTML health report) |
 
 ---
 
