@@ -1,0 +1,14 @@
+{
+  "OrgName": "",
+  "LogDirectory": "",
+  "Archive": {
+    "DefaultDestination": ""
+  },
+  "Phantom": {
+    "DefaultDestination": ""
+  },
+  "Covenant": {
+    "DefaultTimezone": "",
+    "DefaultLocalAdminUser": ""
+  }
+}

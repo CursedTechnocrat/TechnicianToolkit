@@ -34,6 +34,8 @@
     S.P.E.C.T.E.R.         — Remote machine execution via WinRM
     L.E.Y.L.I.N.E.         — Network diagnostics & remediation
     F.O.R.G.E.             — Driver update detection & installation
+    R.E.L.I.C.             — Certificate health & SSL expiry monitoring
+    H.E.A.R.T.H.           — Toolkit setup & configuration wizard
 
     Color Schema
     ─────────────────────────────────────────
@@ -48,21 +50,20 @@
 param(
     [switch]$Unattended,
     [ValidateSet('Audit','WindowsUpdate','LocalInstall','Report')]
-    [string]$Action = 'Audit'
+    [string]$Action = 'Audit',
+    [switch]$Transcript
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ADMIN CHECK
 # ─────────────────────────────────────────────────────────────────────────────
 
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "This script must be run as Administrator." -ForegroundColor Red
-    exit 1
-}
-
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+Import-Module "$PSScriptRoot\TechnicianToolkit.psm1" -Force
+Assert-AdminPrivilege
 
 $ScriptPath = (Get-Location).Path
+
+if ($Transcript) { Start-TKTranscript -LogRoot (Resolve-LogDirectory -FallbackPath $ScriptPath) }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # COLOR SCHEMA
@@ -101,15 +102,6 @@ function Show-ForgeBanner {
 # ─────────────────────────────────────────────────────────────────────────────
 # HELPER
 # ─────────────────────────────────────────────────────────────────────────────
-
-function Write-Section {
-    param([string]$Title)
-    Write-Host ""
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
-    Write-Host "  $Title" -ForegroundColor $C.Header
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
-    Write-Host ""
-}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # DEVICE AUDIT
@@ -339,7 +331,7 @@ function Export-DriverReport {
 
     Write-Host "  [*] Collecting driver information..." -ForegroundColor $C.Progress
 
-    $logPath = Join-Path $ScriptPath ("FORGE_DriverReport_{0}.csv" -f (Get-Date -Format 'yyyyMMdd_HHmmss'))
+    $logPath = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) ("FORGE_DriverReport_{0}.csv" -f (Get-Date -Format 'yyyyMMdd_HHmmss'))
 
     try {
         $drivers = Get-WmiObject Win32_PnPSignedDriver -ErrorAction SilentlyContinue |
@@ -412,4 +404,5 @@ if ($Unattended) {
 
     } while ($choice -ne 'Q')
 }
+if ($Transcript) { Stop-TKTranscript }
 if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

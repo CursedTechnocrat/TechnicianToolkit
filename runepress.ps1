@@ -24,6 +24,8 @@
     C.O.N.J.U.R.E.         — Software deployment via winget / Chocolatey
     O.R.A.C.L.E.           — System diagnostics & HTML report generation
     C.O.V.E.N.A.N.T.       — Machine onboarding & Entra ID domain join
+    R.E.L.I.C.             — Certificate health & SSL expiry monitoring
+    H.E.A.R.T.H.           — Toolkit setup & configuration wizard
 
     Color Schema
     ─────────────────────────────────────────
@@ -35,23 +37,16 @@
     Gray     Information and details
 #>
 
-param([switch]$Unattended)
+param(
+    [switch]$Unattended,
+    [switch]$Transcript
+)
 
 # ===========================
 # ADMIN PRIVILEGE CHECK
 # ===========================
-$IsAdmin = ([Security.Principal.WindowsPrincipal] `
-    [Security.Principal.WindowsIdentity]::GetCurrent()
-).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
-
-if (-not $IsAdmin) {
-    Write-Host "INFO: Restarting script with administrator privileges..." -ForegroundColor Yellow
-    $PSExe = if ($PSVersionTable.PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
-    Start-Process -FilePath $PSExe `
-        -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" `
-        -Verb RunAs
-    exit
-}
+Import-Module "$PSScriptRoot\TechnicianToolkit.psm1" -Force
+Invoke-AdminElevation -ScriptFile $PSCommandPath
 
 # ===========================
 # SCRIPT INITIALIZATION
@@ -68,8 +63,7 @@ else {
     $ScriptPath = (Get-Location).Path
 }
 
-# Set console to UTF-8 so Unicode block characters render correctly
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+if ($Transcript) { Start-TKTranscript -LogRoot (Resolve-LogDirectory -FallbackPath $ScriptPath) }
 
 # Initialize global variables
 $ExtractRoot     = Join-Path $ScriptPath "ExtractedDrivers"
@@ -612,7 +606,7 @@ function Show-InstallationSummary {
     Write-Host ""
 
     # Export log to CSV
-    $LogPath = Join-Path $ScriptPath "RUNEPRESS_InstallLog_$(Get-Date -Format 'yyyyMMdd_HHmmss').csv"
+    $LogPath = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "RUNEPRESS_InstallLog_$(Get-Date -Format 'yyyyMMdd_HHmmss').csv"
     try {
         $InstallationLog | Export-Csv -Path $LogPath -NoTypeInformation -ErrorAction Stop
         Write-Host "Log saved: $LogPath" -ForegroundColor Gray
@@ -699,4 +693,5 @@ if (-not $Unattended) { Add-NetworkPrinter }
 Show-InstallationSummary
 
 Invoke-CleanupPrompt
+if ($Transcript) { Stop-TKTranscript }
 if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

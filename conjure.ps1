@@ -24,6 +24,8 @@
     C.O.N.J.U.R.E.         — Software deployment via winget / Chocolatey
     O.R.A.C.L.E.           — System diagnostics & HTML report generation
     C.O.V.E.N.A.N.T.       — Machine onboarding & Entra ID domain join
+    R.E.L.I.C.             — Certificate health & SSL expiry monitoring
+    H.E.A.R.T.H.           — Toolkit setup & configuration wizard
 
     Color Schema
     ─────────────────────────────────────────
@@ -36,7 +38,8 @@
 #>
 
 param(
-    [switch]$Unattended
+    [switch]$Unattended,
+    [switch]$Transcript
 )
 
 # ===========================
@@ -51,7 +54,9 @@ if ([string]::IsNullOrEmpty($ScriptPath)) {
 $ExecutionTime = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
 
 # Set console to UTF-8 so Unicode block characters render correctly
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+Import-Module "$PSScriptRoot\TechnicianToolkit.psm1" -Force
+
+if ($Transcript) { Start-TKTranscript -LogRoot (Resolve-LogDirectory -FallbackPath $ScriptPath) }
 
 $RequiredSoftware = @(
     "Microsoft.Teams",
@@ -274,9 +279,16 @@ function Install-Software {
     Write-Host "========================================" -ForegroundColor $Colors.Header
     Write-Host ""
 
+    $total = $SoftwareList.Count
+    $i     = 0
+
     foreach ($item in $SoftwareList) {
-        Write-Host "[*] Installing: $item..." -ForegroundColor $Colors.Info
-        
+        $i++
+        Write-Progress -Activity "Installing $Type software" `
+                       -Status        "[$i/$total] $item" `
+                       -PercentComplete ([math]::Floor($i / $total * 100))
+        Write-Host "[$i/$total] Installing: $item..." -ForegroundColor $Colors.Info
+
         try {
             $startTime = Get-Date
 
@@ -287,15 +299,16 @@ function Install-Software {
                 $output = & winget install -e --id $item --accept-source-agreements --accept-package-agreements -h 2>&1
             }
 
-            $exitCode = $LASTEXITCODE
+            $exitCode    = $LASTEXITCODE
             $installTime = (Get-Date).ToString('HH:mm:ss')
+            $elapsed     = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
 
             if ($exitCode -eq 0 -or $exitCode -eq 931 -or $exitCode -eq 3010) {
-                Write-Host "[OK] $item installed successfully at $installTime" -ForegroundColor $Colors.Success
+                Write-Host "[OK] $item installed successfully at $installTime (${elapsed}s)" -ForegroundColor $Colors.Success
                 Add-InstallationRecord -Software $item -Status "INSTALLED"
             }
             else {
-                Write-Host "[!!] $item installation completed with status code $exitCode at $installTime" -ForegroundColor $Colors.Warning
+                Write-Host "[!!] $item completed with exit code $exitCode at $installTime" -ForegroundColor $Colors.Warning
                 Add-InstallationRecord -Software $item -Status "INSTALLED (with warnings - Exit Code: $exitCode)"
             }
         }
@@ -303,9 +316,11 @@ function Install-Software {
             Write-Host "[ERROR] Error installing $item : $($_.Exception.Message)" -ForegroundColor $Colors.Error
             Add-InstallationRecord -Software $item -Status "FAILED"
         }
-        
+
         Start-Sleep -Seconds 1
     }
+
+    Write-Progress -Activity "Installing $Type software" -Completed
 }
 
 function Update-AllSoftware {
@@ -527,4 +542,5 @@ Show-InstallationSummary
 Write-Host "[OK] C.O.N.J.U.R.E. Script completed!" -ForegroundColor $Colors.Success
 Write-Host ""
 if (-not $Unattended) { Read-Host "Press Enter to exit" }
+if ($Transcript) { Stop-TKTranscript }
 if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

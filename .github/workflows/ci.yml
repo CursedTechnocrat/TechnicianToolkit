@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: PSScriptAnalyzer
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module PSScriptAnalyzer -Scope CurrentUser -Force -ErrorAction Stop
+
+      - name: Run PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          $settings = Join-Path $env:GITHUB_WORKSPACE '.github\PSScriptAnalyzerSettings.psd1'
+          $results  = Invoke-ScriptAnalyzer -Path $env:GITHUB_WORKSPACE `
+                          -Recurse `
+                          -Settings $settings `
+                          -ExcludeRule PSAvoidUsingWriteHost
+
+          if ($results) {
+            $results | Format-Table -AutoSize
+            $errors = $results | Where-Object { $_.Severity -eq 'Error' }
+            if ($errors) {
+              Write-Error "PSScriptAnalyzer found $($errors.Count) error(s). Failing build."
+              exit 1
+            } else {
+              Write-Warning "PSScriptAnalyzer found $($results.Count) warning(s). Review above."
+            }
+          } else {
+            Write-Host "PSScriptAnalyzer: no issues found." -ForegroundColor Green
+          }
+
+  test:
+    name: Pester Tests
+    runs-on: windows-latest
+    needs: lint
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Pester
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -Scope CurrentUser -Force -MinimumVersion 5.0 -ErrorAction Stop
+
+      - name: Run Pester tests
+        shell: pwsh
+        run: |
+          $config = New-PesterConfiguration
+          $config.Run.Path        = Join-Path $env:GITHUB_WORKSPACE 'tests'
+          $config.Output.Verbosity = 'Detailed'
+          $config.TestResult.Enabled    = $true
+          $config.TestResult.OutputPath = 'TestResults.xml'
+          $config.TestResult.OutputFormat = 'NUnitXml'
+
+          $result = Invoke-Pester -Configuration $config
+          if ($result.FailedCount -gt 0) {
+            Write-Error "$($result.FailedCount) Pester test(s) failed."
+            exit 1
+          }
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pester-results
+          path: TestResults.xml

@@ -28,6 +28,8 @@
     C.I.P.H.E.R.           — BitLocker drive encryption management
     W.A.R.D.               — User account & local security audit
     A.R.C.H.I.V.E.         — Pre-reimaging profile backup
+    R.E.L.I.C.             — Certificate health & SSL expiry monitoring
+    H.E.A.R.T.H.           — Toolkit setup & configuration wizard
 
     Color Schema
     ─────────────────────────────────────────
@@ -43,19 +45,16 @@ param(
     [switch]$Unattended,
     [string]$SourcePath = "",
     [string]$DestPath   = "",
-    [string]$Items      = "A"
+    [string]$Items      = "A",
+    [switch]$Transcript
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ADMIN CHECK
 # ─────────────────────────────────────────────────────────────────────────────
 
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "This script must be run as Administrator!" -ForegroundColor Red
-    exit 1
-}
-
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+Import-Module "$PSScriptRoot\TechnicianToolkit.psm1" -Force
+Assert-AdminPrivilege
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SCRIPT PATH RESOLUTION
@@ -68,6 +67,8 @@ if ($PSScriptRoot) {
 } else {
     $ScriptPath = (Get-Location).Path
 }
+
+if ($Transcript) { Start-TKTranscript -LogRoot (Resolve-LogDirectory -FallbackPath $ScriptPath) }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # COLOR SCHEMA
@@ -151,22 +152,47 @@ function Copy-ProfileFolder {
         return
     }
 
-    Write-Host "    [*] Copying $Label..." -ForegroundColor $ColorSchema.Progress
+    # Pre-flight scan so the progress bar has a denominator
+    Write-Host "    [*] Scanning $Label..." -ForegroundColor $ColorSchema.Progress
+    $sourceFiles = Get-ChildItem -Recurse -File -Path $SourcePath -ErrorAction SilentlyContinue
+    $totalFiles  = $sourceFiles.Count
+    $totalSizeMB = [math]::Round(($sourceFiles | Measure-Object -Property Length -Sum).Sum / 1MB, 1)
+
+    Write-Host "    [*] Copying $Label  ($totalFiles files, $totalSizeMB MB)..." -ForegroundColor $ColorSchema.Progress
 
     try {
         $null = New-Item -ItemType Directory -Path $DestPath -Force -ErrorAction Stop
-        $robocopyArgs = @($SourcePath, $DestPath, '/E', '/R:2', '/W:3', '/NP', '/NFL', '/NDL', '/NJH', '/NJS')
-        & robocopy @robocopyArgs | Out-Null
+
+        # /NFL removed so robocopy emits per-file lines for progress tracking
+        $robocopyArgs = @($SourcePath, $DestPath, '/E', '/R:2', '/W:3', '/NP', '/NDL', '/NJH', '/NJS')
+        $copied    = 0
+        $startTime = Get-Date
+
+        & robocopy @robocopyArgs | ForEach-Object {
+            # Match lines where robocopy reports a file it is copying
+            if ($_ -match '^\s+(New File|Newer|Older|Changed)\s') {
+                $copied++
+                $pct = if ($totalFiles -gt 0) { [math]::Min(99, [math]::Floor($copied / $totalFiles * 100)) } else { 0 }
+                Write-Progress -Activity "Copying $Label" `
+                               -Status   "$copied / $totalFiles files" `
+                               -PercentComplete $pct
+            }
+        }
+
+        Write-Progress -Activity "Copying $Label" -Completed
+        $elapsed = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
 
         if ($LASTEXITCODE -le 7) {
-            Write-Host "    [+] $Label — copied successfully." -ForegroundColor $ColorSchema.Success
-            Add-MigrationRecord -Item $Label -Status "Copied"
+            Write-Host "    [+] $Label — done  ($copied files copied, $totalSizeMB MB, ${elapsed}s)." -ForegroundColor $ColorSchema.Success
+            Add-MigrationRecord -Item $Label -Status "Copied" -Detail "$totalFiles files, $totalSizeMB MB"
         } else {
+            Write-Progress -Activity "Copying $Label" -Completed
             Write-Host "    [!!] $Label — completed with warnings (exit $LASTEXITCODE)." -ForegroundColor $ColorSchema.Warning
-            Add-MigrationRecord -Item $Label -Status "Partial" -Detail "Robocopy exit code $LASTEXITCODE"
+            Add-MigrationRecord -Item $Label -Status "Partial" -Detail "Robocopy exit $LASTEXITCODE, $totalFiles files, $totalSizeMB MB"
         }
     }
     catch {
+        Write-Progress -Activity "Copying $Label" -Completed
         Write-Host "    [-] $Label — failed: $_" -ForegroundColor $ColorSchema.Error
         Add-MigrationRecord -Item $Label -Status "Failed" -Detail $_
     }
@@ -372,12 +398,28 @@ Write-Host ""
 
 $DestRoot = ""
 
+$_cfg = Get-TKConfig
+
 if ($Unattended) {
+    if ([string]::IsNullOrWhiteSpace($DestPath) -and -not [string]::IsNullOrWhiteSpace($_cfg.Phantom.DefaultDestination)) {
+        $DestPath = $_cfg.Phantom.DefaultDestination
+        Write-Host "  [*] No -DestPath provided — using config default: $DestPath" -ForegroundColor $ColorSchema.Info
+    }
     if ([string]::IsNullOrWhiteSpace($DestPath)) {
-        Write-Host "  [-] -DestPath is required in unattended mode." -ForegroundColor $ColorSchema.Error
+        Write-Host "  [-] -DestPath is required in unattended mode (or set Phantom.DefaultDestination in config.json)." -ForegroundColor $ColorSchema.Error
         exit 1
     }
     $DestRoot = $DestPath.TrimEnd('\')
+    if (-not (Test-Path $DestRoot)) {
+        try {
+            $null = New-Item -ItemType Directory -Path $DestRoot -Force -ErrorAction Stop
+            Write-Host "  [+] Destination created: $DestRoot" -ForegroundColor $ColorSchema.Success
+        }
+        catch {
+            Write-Host "  [-] Destination not accessible and could not be created: $_" -ForegroundColor $ColorSchema.Error
+            exit 1
+        }
+    }
     Write-Host "  [+] Destination: $DestRoot" -ForegroundColor $ColorSchema.Success
 } else {
     Write-Host "  [1] Current user's profile  ($env:USERPROFILE)" -ForegroundColor $ColorSchema.Info
@@ -398,6 +440,18 @@ if ($Unattended) {
             Write-Host ""
             Write-Host "  [-] No path entered." -ForegroundColor $ColorSchema.Error
             exit 1
+        }
+        if (-not (Test-Path $DestRoot)) {
+            Write-Host ""
+            Write-Host "  [*] Destination not found — attempting to create it..." -ForegroundColor $ColorSchema.Progress
+            try {
+                $null = New-Item -ItemType Directory -Path $DestRoot -Force -ErrorAction Stop
+                Write-Host "  [+] Destination created." -ForegroundColor $ColorSchema.Success
+            }
+            catch {
+                Write-Host "  [-] Could not create destination: $_" -ForegroundColor $ColorSchema.Error
+                exit 1
+            }
         }
     }
     else {
@@ -536,7 +590,7 @@ if ($IsArchiveZip -and $TempExtractDir -and (Test-Path $TempExtractDir)) {
 
 # ── LOG ───────────────────────────────────────────────────────────────────────
 
-$logFile = Join-Path $ScriptPath "PHANTOM_MigrationLog_$(Get-Date -Format 'yyyyMMdd_HHmmss').csv"
+$logFile = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "PHANTOM_MigrationLog_$(Get-Date -Format 'yyyyMMdd_HHmmss').csv"
 
 try {
     $MigrationLog | Export-Csv -Path $logFile -NoTypeInformation -Encoding UTF8
@@ -581,4 +635,5 @@ Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host ""
 
 if (-not $Unattended) { Read-Host "  Press Enter to exit" }
+if ($Transcript) { Stop-TKTranscript }
 if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

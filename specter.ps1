@@ -38,6 +38,8 @@
     A.R.C.H.I.V.E.         — Pre-reimaging profile backup
     S.I.G.I.L.             — Security baseline & policy enforcement
     S.P.E.C.T.E.R.         — Remote machine execution via WinRM
+    R.E.L.I.C.             — Certificate health & SSL expiry monitoring
+    H.E.A.R.T.H.           — Toolkit setup & configuration wizard
 
     Color Schema
     ─────────────────────────────────────────
@@ -49,16 +51,16 @@
     Gray     Information and details
 #>
 
+param(
+    [switch]$Transcript
+)
+
 # ─────────────────────────────────────────────────────────────────────────────
 # ADMIN CHECK
 # ─────────────────────────────────────────────────────────────────────────────
 
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "This script must be run as Administrator!" -ForegroundColor Red
-    exit 1
-}
-
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+Import-Module "$PSScriptRoot\TechnicianToolkit.psm1" -Force
+Assert-AdminPrivilege
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SCRIPT PATH RESOLUTION
@@ -71,6 +73,8 @@ if ($PSScriptRoot) {
 } else {
     $ScriptPath = (Get-Location).Path
 }
+
+if ($Transcript) { Start-TKTranscript -LogRoot (Resolve-LogDirectory -FallbackPath $ScriptPath) }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # COLOR SCHEMA
@@ -474,4 +478,5 @@ do {
     }
 
 } while ($choice -ne "Q")
+if ($Transcript) { Stop-TKTranscript }
 if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

@@ -35,6 +35,8 @@
     S.P.E.C.T.E.R.         — Remote machine execution via WinRM
     L.E.Y.L.I.N.E.         — Network diagnostics & remediation
     F.O.R.G.E.             — Driver update detection & installation
+    R.E.L.I.C.             — Certificate health & SSL expiry monitoring
+    H.E.A.R.T.H.           — Toolkit setup & configuration wizard
 
     Color Schema
     ─────────────────────────────────────────
@@ -48,21 +50,20 @@
 
 param(
     [switch]$Unattended,
-    [ValidateSet('Status','FlushDNS','Renew','ResetStack','PortTest','Trace')]
+    [ValidateSet('Status','FlushDNS','Renew','ResetStack','PortTest','Trace','ARPScan')]
     [string]$Action = 'Status',
-    [string]$Target = ''
+    [string]$Target = '',
+    [switch]$Transcript
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ADMIN CHECK
 # ─────────────────────────────────────────────────────────────────────────────
 
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "This script must be run as Administrator." -ForegroundColor Red
-    exit 1
-}
+Import-Module "$PSScriptRoot\TechnicianToolkit.psm1" -Force
+Assert-AdminPrivilege
 
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+if ($Transcript) { Start-TKTranscript -LogRoot (Resolve-LogDirectory -FallbackPath $PSScriptRoot) }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # COLOR SCHEMA
@@ -101,15 +102,6 @@ function Show-LeylineBanner {
 # ─────────────────────────────────────────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
-
-function Write-Section {
-    param([string]$Title)
-    Write-Host ""
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
-    Write-Host "  $Title" -ForegroundColor $C.Header
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
-    Write-Host ""
-}
 
 function Test-TCPPort {
     param([string]$Hostname, [int]$Port, [int]$TimeoutMs = 2000)
@@ -297,7 +289,9 @@ function Invoke-RenewIP {
         Write-Host ("  [*] Releasing IP on: {0}" -f $iface.InterfaceAlias) -ForegroundColor $C.Progress
         try {
             ipconfig /release $iface.InterfaceAlias 2>&1 | Out-Null
-        } catch {}
+        } catch {
+            Write-Host ("  [!] Release failed on {0}: {1}" -f $iface.InterfaceAlias, $_) -ForegroundColor $C.Warning
+        }
     }
 
     Start-Sleep -Seconds 2
@@ -357,6 +351,73 @@ function Invoke-ResetStack {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# NETWORK NEIGHBORS — ARP TABLE (IP + MAC SCAN)
+# ─────────────────────────────────────────────────────────────────────────────
+
+function Show-NetworkNeighbors {
+    Write-Section "NETWORK NEIGHBORS  (IP / MAC ADDRESS TABLE)"
+
+    # Optional ping sweep to populate the ARP cache before reading it
+    if (-not $Unattended) {
+        Write-Host -NoNewline "  Ping-sweep local subnet first to discover more hosts? (Y/N): " -ForegroundColor $C.Header
+        $sweep = (Read-Host).Trim().ToUpper()
+    } else {
+        $sweep = 'N'
+    }
+
+    if ($sweep -eq 'Y') {
+        $localIP = (Get-NetIPAddress -AddressFamily IPv4 |
+                    Where-Object { $_.PrefixOrigin -ne 'WellKnown' -and $_.IPAddress -notmatch '^169\.' } |
+                    Select-Object -First 1)
+
+        if ($localIP) {
+            $prefix = ($localIP.IPAddress -split '\.')[ 0..2] -join '.'
+            Write-Host ("  [*] Sweeping {0}.1-254 — this may take a moment..." -f $prefix) -ForegroundColor $C.Progress
+            1..254 | ForEach-Object {
+                $addr = "$prefix.$_"
+                [void](Test-Connection -ComputerName $addr -Count 1 -TimeoutSeconds 1 -ErrorAction SilentlyContinue -AsJob)
+            }
+            Get-Job | Wait-Job -Timeout 8 | Out-Null
+            Get-Job | Remove-Job -Force
+            Start-Sleep -Seconds 1
+        } else {
+            Write-Host "  [!!] Could not determine local subnet — skipping sweep." -ForegroundColor $C.Warning
+        }
+    }
+
+    Write-Host ""
+
+    $neighbors = Get-NetNeighbor -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+                 Where-Object { $_.LinkLayerAddress -and $_.LinkLayerAddress -ne '00-00-00-00-00-00' -and $_.State -ne 'Unreachable' } |
+                 Sort-Object -Property IPAddress
+
+    if (-not $neighbors) {
+        Write-Host "  [-] No neighbor entries found." -ForegroundColor $C.Warning
+        Write-Host ""
+        return
+    }
+
+    $header = "  {0,-18} {1,-20} {2,-30} {3}" -f "IP Address", "MAC Address", "Adapter", "State"
+    Write-Host $header -ForegroundColor $C.Header
+    Write-Host ("  " + ("─" * 74)) -ForegroundColor $C.Header
+
+    foreach ($n in $neighbors) {
+        $adapter = (Get-NetAdapter -InterfaceIndex $n.InterfaceIndex -ErrorAction SilentlyContinue).Name
+        $stateColor = switch ($n.State) {
+            'Reachable'   { $C.Success }
+            'Stale'       { $C.Warning }
+            'Incomplete'  { $C.Error   }
+            default       { $C.Info    }
+        }
+        Write-Host ("  {0,-18} {1,-20} {2,-30} {3}" -f $n.IPAddress, $n.LinkLayerAddress, $adapter, $n.State) -ForegroundColor $stateColor
+    }
+
+    Write-Host ""
+    Write-Host ("  Total entries: {0}" -f $neighbors.Count) -ForegroundColor $C.Info
+    Write-Host ""
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # FULL STATUS (adapters + connectivity + DNS)
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -379,6 +440,7 @@ if ($Unattended) {
         'ResetStack' { Write-Host "  [!!] ResetStack requires interactive confirmation — run without -Unattended." -ForegroundColor $C.Warning }
         'PortTest'   { Invoke-PortTest -TargetInput $Target }
         'Trace'      { Write-Host "  [!!] Trace requires interactive input — run without -Unattended." -ForegroundColor $C.Warning }
+        'ARPScan'    { Show-NetworkNeighbors }
     }
 } else {
     $choice = ''
@@ -396,6 +458,7 @@ if ($Unattended) {
         Write-Host "  [3] Flush DNS cache" -ForegroundColor $C.Info
         Write-Host "  [4] Release & renew IP  (DHCP)" -ForegroundColor $C.Info
         Write-Host "  [5] Reset network stack  (requires reboot)" -ForegroundColor $C.Info
+        Write-Host "  [6] Show network neighbors  (IP / MAC table)" -ForegroundColor $C.Info
         Write-Host "  [R] Refresh status" -ForegroundColor $C.Info
         Write-Host "  [Q] Quit" -ForegroundColor $C.Info
         Write-Host ""
@@ -408,6 +471,7 @@ if ($Unattended) {
             '3' { Invoke-FlushDNS }
             '4' { Invoke-RenewIP }
             '5' { Invoke-ResetStack }
+            '6' { Show-NetworkNeighbors }
             'R' { }
             'Q' {
                 Write-Host ""
@@ -416,7 +480,7 @@ if ($Unattended) {
             }
             default {
                 Write-Host ""
-                Write-Host "  [!!] Invalid selection. Enter 1-5, R, or Q." -ForegroundColor $C.Warning
+                Write-Host "  [!!] Invalid selection. Enter 1-6, R, or Q." -ForegroundColor $C.Warning
                 Start-Sleep -Seconds 1
             }
         }
@@ -428,4 +492,5 @@ if ($Unattended) {
 
     } while ($choice -ne 'Q')
 }
+if ($Transcript) { Stop-TKTranscript }
 if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

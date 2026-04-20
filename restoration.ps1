@@ -25,6 +25,8 @@
     C.O.N.J.U.R.E.         — Software deployment via winget / Chocolatey
     O.R.A.C.L.E.           — System diagnostics & HTML report generation
     C.O.V.E.N.A.N.T.       — Machine onboarding & Entra ID domain join
+    R.E.L.I.C.             — Certificate health & SSL expiry monitoring
+    H.E.A.R.T.H.           — Toolkit setup & configuration wizard
 
     Color Schema
     ─────────────────────────────────────────
@@ -45,13 +47,8 @@ param(
 # ADMIN CHECK
 # ─────────────────────────────────────────────────────────────────────────────
 
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "This script must be run as Administrator!" -ForegroundColor Red
-    exit 1
-}
-
-# Set console to UTF-8 so Unicode block characters render correctly
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+Import-Module "$PSScriptRoot\TechnicianToolkit.psm1" -Force
+Assert-AdminPrivilege
 
 # ─────────────────────────────────────────────────────────────────────────────
 # BANNER DISPLAY

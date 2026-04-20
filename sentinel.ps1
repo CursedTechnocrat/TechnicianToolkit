@@ -1,17 +1,18 @@
 ﻿<#
 .SYNOPSIS
-    S.E.N.T.I.N.E.L. — Scans & Evaluates NVMe/Traditional Infrastructure, Noting Error Likelihood
-    Disk Health Assessment Tool for PowerShell 5.1+
+    S.E.N.T.I.N.E.L. — Scans & Evaluates services, Networks, Tasks, Infrastructure, Node Events & Logs
+    Service, Task & Event Log Monitor for PowerShell 5.1+
 
 .DESCRIPTION
-    Inspects every physical disk in the system: health status, operational
-    state, SMART failure prediction, volume integrity, and bus/media type.
-    Flags disks that report degraded health or predicted failures and exports
-    a dark-themed HTML report to the script directory.
+    Audits critical Windows services, scheduled tasks, and recent event log errors on the local
+    machine or optionally a remote machine via WinRM. Generates a dark-themed HTML health report,
+    displays interactive console summaries, and can restart stopped critical services with
+    per-service confirmation prompts.
 
 .USAGE
-    PS C:\> .\sentinel.ps1                    # Must be run as Administrator
-    PS C:\> .\sentinel.ps1 -Unattended        # Silent mode — no prompts, no banner
+    PS C:\> .\sentinel.ps1                              # Interactive menu (local machine)
+    PS C:\> .\sentinel.ps1 -Unattended                  # Export health report silently
+    PS C:\> .\sentinel.ps1 -Unattended -Target HOSTNAME  # Remote machine report
 
 .NOTES
     Version : 1.0
@@ -19,33 +20,50 @@
     Tools Available
     ─────────────────────────────────────────────────────────────────
     G.R.I.M.O.I.R.E.       — Technician Toolkit hub and central launcher
+    R.U.N.E.P.R.E.S.S.     — Printer driver installation & configuration
+    R.E.S.T.O.R.A.T.I.O.N. — Windows Update management
+    C.O.N.J.U.R.E.         — Software deployment via winget / Chocolatey
     O.R.A.C.L.E.           — System diagnostics & HTML report generation
+    C.O.V.E.N.A.N.T.       — Machine onboarding & Entra ID domain join
+    P.H.A.N.T.O.M.         — Profile migration & data transfer
+    C.I.P.H.E.R.           — BitLocker drive encryption management
+    W.A.R.D.               — User account & local security audit
     A.R.C.H.I.V.E.         — Pre-reimaging profile backup
-    P.U.R.G.E.             — Disk cleanup — temp, update cache, browser caches
-    S.E.N.T.I.N.E.L.       — Disk health assessment & SMART status
+    S.I.G.I.L.             — Security baseline & policy enforcement
+    S.P.E.C.T.E.R.         — Remote machine execution via WinRM
+    L.E.Y.L.I.N.E.         — Network diagnostics & remediation
+    F.O.R.G.E.             — Driver update detection & installation
+    A.E.G.I.S.             — Azure environment assessment & reporting
+    B.A.S.T.I.O.N.         — Active Directory & identity management
+    L.A.N.T.E.R.N.         — Network discovery & asset inventory
+    T.H.R.E.S.H.O.L.D.     — Disk & storage health monitoring
+    V.A.U.L.T.             — M365 license & mailbox auditing
+    S.E.N.T.I.N.E.L.       — Service & scheduled task monitoring
+    R.E.L.I.C.             — Certificate health & SSL expiry monitoring
+    H.E.A.R.T.H.           — Toolkit setup & configuration wizard
 
     Color Schema
     ─────────────────────────────────────────
     Cyan     Headers and section dividers
     Magenta  Progress indicators
-    Green    Success messages
-    Yellow   Warnings and cautions
-    Red      Critical errors
+    Green    Healthy / running
+    Yellow   Warnings / degraded
+    Red      Critical errors / stopped
     Gray     Information and details
 #>
 
-param([switch]$Unattended)
+param(
+    [switch]$Unattended,
+    [string]$Target = '',
+    [switch]$Transcript
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ADMIN CHECK
 # ─────────────────────────────────────────────────────────────────────────────
 
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "This script must be run as Administrator!" -ForegroundColor Red
-    exit 1
-}
-
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+Import-Module "$PSScriptRoot\TechnicianToolkit.psm1" -Force
+Assert-AdminPrivilege
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SCRIPT PATH RESOLUTION
@@ -59,11 +77,13 @@ if ($PSScriptRoot) {
     $ScriptPath = (Get-Location).Path
 }
 
+if ($Transcript) { Start-TKTranscript -LogRoot (Resolve-LogDirectory -FallbackPath $ScriptPath) }
+
 # ─────────────────────────────────────────────────────────────────────────────
 # COLOR SCHEMA
 # ─────────────────────────────────────────────────────────────────────────────
 
-$ColorSchema = @{
+$C = @{
     Header   = 'Cyan'
     Success  = 'Green'
     Warning  = 'Yellow'
@@ -72,6 +92,12 @@ $ColorSchema = @{
     Progress = 'Magenta'
     Accent   = 'Blue'
 }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# REMOTE TARGET STATE
+# ─────────────────────────────────────────────────────────────────────────────
+
+$script:RemoteTarget = $Target.Trim()
 
 # ─────────────────────────────────────────────────────────────────────────────
 # BANNER
@@ -89,390 +115,978 @@ function Show-SentinelBanner {
   ╚══════╝╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝╚═╝  ╚═══╝╚══════╝╚══════╝
 
 "@ -ForegroundColor Cyan
-    Write-Host "    S.E.N.T.I.N.E.L. — Scans & Evaluates NVMe/Traditional Infrastructure, Noting Error Likelihood" -ForegroundColor Cyan
-    Write-Host "    Disk Health Assessment Tool" -ForegroundColor Cyan
+    Write-Host "    S.E.N.T.I.N.E.L. — Scans & Evaluates services, Networks, Tasks, Infrastructure, Node Events & Logs" -ForegroundColor Cyan
+    Write-Host "    Service, Task & Event Log Monitor" -ForegroundColor Cyan
     Write-Host ""
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# HTML HELPERS
+# HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
 
-function HtmlEncode([string]$s) {
+function HtmlEncode {
+    param([string]$s)
     $s -replace '&','&amp;' -replace '<','&lt;' -replace '>','&gt;' -replace '"','&quot;'
 }
 
+function Show-Spinner {
+    param([string]$Message, [scriptblock]$Work)
+    $frames = @('|','/','-','\')
+    $i = 0
+    $job = Start-Job -ScriptBlock $Work
+    Write-Host -NoNewline "  $Message " -ForegroundColor $C.Progress
+    while ($job.State -eq 'Running') {
+        Write-Host -NoNewline "`b$($frames[$i % 4])" -ForegroundColor $C.Progress
+        $i++
+        Start-Sleep -Milliseconds 120
+    }
+    Write-Host -NoNewline "`b" -ForegroundColor $C.Progress
+    $result = Receive-Job $job
+    Remove-Job $job
+    return $result
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
-# MAIN
+# CRITICAL SERVICES LIST
 # ─────────────────────────────────────────────────────────────────────────────
 
-if (-not $Unattended) { Show-SentinelBanner }
-
-$reportTimestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-$reportFilename  = "SENTINEL_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
-$reportPath      = Join-Path $ScriptPath $reportFilename
-
-Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
-Write-Host "  DISK HEALTH ASSESSMENT" -ForegroundColor $ColorSchema.Header
-Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
-Write-Host "  Machine   : $env:COMPUTERNAME" -ForegroundColor $ColorSchema.Info
-Write-Host "  Timestamp : $reportTimestamp" -ForegroundColor $ColorSchema.Info
-Write-Host ""
+$CriticalServices = @(
+    @{ Name='wuauserv';          Display='Windows Update'                   },
+    @{ Name='WinDefend';         Display='Windows Defender Antivirus'       },
+    @{ Name='EventLog';          Display='Windows Event Log'                },
+    @{ Name='Schedule';          Display='Task Scheduler'                   },
+    @{ Name='Dnscache';          Display='DNS Client'                       },
+    @{ Name='LanmanWorkstation'; Display='Workstation (SMB Client)'         },
+    @{ Name='W32Time';           Display='Windows Time'                     },
+    @{ Name='SamSs';             Display='Security Accounts Manager'        },
+    @{ Name='RpcSs';             Display='Remote Procedure Call'            },
+    @{ Name='BITS';              Display='Background Intelligent Transfer'  },
+    @{ Name='cryptsvc';          Display='Cryptographic Services'           },
+    @{ Name='MpsSvc';            Display='Windows Firewall'                 },
+    @{ Name='Spooler';           Display='Print Spooler'                    },
+    @{ Name='lmhosts';           Display='TCP/IP NetBIOS Helper'            },
+    @{ Name='WerSvc';            Display='Windows Error Reporting'          }
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# STEP 1: PHYSICAL DISKS
+# GET-SERVICEHEALTH
 # ─────────────────────────────────────────────────────────────────────────────
 
-Write-Host "  [1/3] Reading physical disk health..." -ForegroundColor $ColorSchema.Progress
+function Get-ServiceHealth {
+    $serviceNames = $CriticalServices | ForEach-Object { $_.Name }
+    $displayMap   = @{}
+    foreach ($svc in $CriticalServices) { $displayMap[$svc.Name] = $svc.Display }
 
-$diskReport = @()
-
-try {
-    $physDisks = Get-PhysicalDisk -ErrorAction Stop
-
-    # SMART failure prediction via WMI
-    $smartData = @{}
-    try {
-        $smartRaw = Get-WmiObject -Namespace root\wmi -Class MSStorageDriver_FailurePredictStatus -ErrorAction SilentlyContinue
-        foreach ($s in $smartRaw) {
-            # InstanceName typically ends in _0, _1, etc. — use it as a loose key
-            $key = ($s.InstanceName -split '\\' | Select-Object -Last 1) -replace '_\d+$',''
-            $smartData[$key] = $s
+    $scriptBlock = {
+        param($names)
+        $results = @()
+        foreach ($name in $names) {
+            try {
+                $svc = Get-Service -Name $name -ErrorAction Stop
+                $results += [PSCustomObject]@{
+                    Name      = $svc.Name
+                    Status    = $svc.Status.ToString()
+                    StartType = $svc.StartType.ToString()
+                }
+            }
+            catch {
+                $results += [PSCustomObject]@{
+                    Name      = $name
+                    Status    = 'NotFound'
+                    StartType = 'Unknown'
+                }
+            }
         }
-    } catch {}
+        return $results
+    }
 
-    # Win32_DiskDrive for serial/firmware
-    $wmiDisks = @{}
-    try {
-        Get-CimInstance -ClassName Win32_DiskDrive -ErrorAction SilentlyContinue | ForEach-Object {
-            $wmiDisks[$_.Index] = $_
+    if ($script:RemoteTarget) {
+        try {
+            $raw = Invoke-Command -ComputerName $script:RemoteTarget -ScriptBlock $scriptBlock -ArgumentList (,$serviceNames) -ErrorAction Stop
         }
-    } catch {}
+        catch {
+            Write-Host "  [-] Remote service query failed: $_" -ForegroundColor $C.Error
+            $raw = @()
+        }
+    } else {
+        $raw = & $scriptBlock -names $serviceNames
+    }
 
-    foreach ($pd in $physDisks) {
-        $sizeGB = if ($pd.Size -gt 0) { [math]::Round($pd.Size / 1GB, 1) } else { 0 }
+    $output = @()
+    foreach ($r in $raw) {
+        $concern = ($r.Status -eq 'Stopped' -and $r.StartType -eq 'Automatic')
+        $output += [PSCustomObject]@{
+            Name        = $r.Name
+            DisplayName = if ($displayMap.ContainsKey($r.Name)) { $displayMap[$r.Name] } else { $r.Name }
+            Status      = $r.Status
+            StartType   = $r.StartType
+            Concern     = $concern
+        }
+    }
+    return $output
+}
 
-        # Match SMART entry by device index or friendly name fragment
-        $smartEntry  = $smartData.Values | Where-Object { $_.InstanceName -match [regex]::Escape($pd.DeviceId) } | Select-Object -First 1
-        $smartFail   = if ($smartEntry) { $smartEntry.PredictFailure } else { $null }
-        $smartReason = if ($smartEntry -and $smartEntry.Reason) { "0x{0:X8}" -f $smartEntry.Reason } else { 'N/A' }
+# ─────────────────────────────────────────────────────────────────────────────
+# GET-TASKAUDIT
+# ─────────────────────────────────────────────────────────────────────────────
 
-        $wmiDisk   = $wmiDisks[$pd.DeviceId]
-        $serial    = if ($wmiDisk -and $wmiDisk.SerialNumber) { $wmiDisk.SerialNumber.Trim() } else { 'N/A' }
-        $firmware  = if ($wmiDisk -and $wmiDisk.FirmwareRevision) { $wmiDisk.FirmwareRevision.Trim() } else { 'N/A' }
+function Get-TaskAudit {
+    $scriptBlock = {
+        $tasks = Get-ScheduledTask -ErrorAction SilentlyContinue
+        $results = @()
+        foreach ($task in $tasks) {
+            try {
+                $info = $task | Get-ScheduledTaskInfo -ErrorAction Stop
+                $results += [PSCustomObject]@{
+                    TaskName       = $task.TaskName
+                    TaskPath       = $task.TaskPath
+                    State          = $task.State.ToString()
+                    LastRunTime    = $info.LastRunTime
+                    LastTaskResult = $info.LastTaskResult
+                    NextRunTime    = $info.NextRunTime
+                }
+            }
+            catch {
+                $results += [PSCustomObject]@{
+                    TaskName       = $task.TaskName
+                    TaskPath       = $task.TaskPath
+                    State          = $task.State.ToString()
+                    LastRunTime    = $null
+                    LastTaskResult = -1
+                    NextRunTime    = $null
+                }
+            }
+        }
+        return $results
+    }
 
-        $healthColor = switch ($pd.HealthStatus) {
-            'Healthy' { $ColorSchema.Success }
-            'Warning' { $ColorSchema.Warning }
-            default   { $ColorSchema.Error   }
+    if ($script:RemoteTarget) {
+        try {
+            $raw = Invoke-Command -ComputerName $script:RemoteTarget -ScriptBlock $scriptBlock -ErrorAction Stop
+        }
+        catch {
+            Write-Host "  [-] Remote task query failed: $_" -ForegroundColor $C.Error
+            return @()
+        }
+    } else {
+        $raw = & $scriptBlock
+    }
+
+    $cutoff = (Get-Date).AddDays(-7)
+    # LastTaskResult codes: 0=success, 267009=running, 267011=never run
+    $successCodes = @(0, 267009, 267011)
+
+    $output = @()
+    foreach ($t in $raw) {
+        $isMicrosoft  = $t.TaskPath -like '\Microsoft\*'
+        $lastRunStale = ($t.LastRunTime -ne $null -and $t.LastRunTime -lt $cutoff -and $t.LastRunTime -gt [datetime]'1900-01-01')
+        $hasFailed    = ($t.LastTaskResult -notin $successCodes)
+        $isDisabled   = ($t.State -eq 'Disabled')
+
+        # Flag logic
+        $flagReason = ''
+        if ($hasFailed -and $lastRunStale -and -not $isMicrosoft) {
+            $flagReason = 'Failed+Stale'
+        } elseif ($hasFailed -and -not $isMicrosoft) {
+            $flagReason = 'Failed'
+        } elseif ($isDisabled -and -not $isMicrosoft) {
+            $flagReason = 'Disabled'
+        } elseif ($hasFailed -and $isMicrosoft) {
+            $flagReason = 'MSFailed'
         }
 
-        $smartLabel = if ($null -eq $smartFail)   { 'N/A' }
-                      elseif ($smartFail -eq $false) { 'OK' }
-                      else                           { 'FAILING' }
+        $output += [PSCustomObject]@{
+            TaskName       = $t.TaskName
+            TaskPath       = $t.TaskPath
+            State          = $t.State
+            LastRunTime    = $t.LastRunTime
+            LastTaskResult = $t.LastTaskResult
+            NextRunTime    = $t.NextRunTime
+            IsMicrosoft    = $isMicrosoft
+            FlagReason     = $flagReason
+        }
+    }
+    return $output
+}
 
-        $displayLine = "  [{0}] {1} | {2} {3} | {4} GB | Health: {5} | SMART: {6}" -f `
-            $pd.DeviceId, $pd.FriendlyName, $pd.MediaType, $pd.BusType, $sizeGB, $pd.HealthStatus, $smartLabel
+# ─────────────────────────────────────────────────────────────────────────────
+# GET-EVENTERRORS
+# ─────────────────────────────────────────────────────────────────────────────
 
-        $lineColor = if ($smartFail -eq $true -or $pd.HealthStatus -ne 'Healthy') {
-            $ColorSchema.Error
-        } elseif ($pd.HealthStatus -eq 'Warning') {
-            $ColorSchema.Warning
+function Get-EventErrors {
+    $since = (Get-Date).AddHours(-24)
+
+    if ($script:RemoteTarget) {
+        $target = $script:RemoteTarget
+        $sysErrors = try {
+            Get-EventLog -LogName System -EntryType Error -After $since -Newest 50 -ComputerName $target -ErrorAction Stop
+        } catch { @() }
+
+        $appErrors = try {
+            Get-EventLog -LogName Application -EntryType Error -After $since -Newest 50 -ComputerName $target -ErrorAction Stop
+        } catch { @() }
+    } else {
+        $sysErrors = try {
+            Get-EventLog -LogName System -EntryType Error -After $since -Newest 50 -ErrorAction Stop
+        } catch { @() }
+
+        $appErrors = try {
+            Get-EventLog -LogName Application -EntryType Error -After $since -Newest 50 -ErrorAction Stop
+        } catch { @() }
+    }
+
+    $allErrors = @()
+    foreach ($e in $sysErrors) {
+        $allErrors += [PSCustomObject]@{
+            Log           = 'System'
+            TimeGenerated = $e.TimeGenerated
+            EntryType     = $e.EntryType.ToString()
+            Source        = $e.Source
+            EventID       = $e.EventID
+            Message       = if ($e.Message.Length -gt 120) { $e.Message.Substring(0,120) + '...' } else { $e.Message }
+        }
+    }
+    foreach ($e in $appErrors) {
+        $allErrors += [PSCustomObject]@{
+            Log           = 'Application'
+            TimeGenerated = $e.TimeGenerated
+            EntryType     = $e.EntryType.ToString()
+            Source        = $e.Source
+            EventID       = $e.EventID
+            Message       = if ($e.Message.Length -gt 120) { $e.Message.Substring(0,120) + '...' } else { $e.Message }
+        }
+    }
+
+    # Build source summary (top 10)
+    $sourceSummary = $allErrors |
+        Group-Object Source |
+        Sort-Object Count -Descending |
+        Select-Object -First 10 |
+        ForEach-Object { [PSCustomObject]@{ Source = $_.Name; Count = $_.Count } }
+
+    return [PSCustomObject]@{
+        Events        = ($allErrors | Sort-Object TimeGenerated -Descending)
+        SourceSummary = $sourceSummary
+        TotalCount    = $allErrors.Count
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INVOKE-RESTARTSERVICE
+# ─────────────────────────────────────────────────────────────────────────────
+
+function Invoke-RestartService {
+    param([array]$ServiceData)
+
+    $stopped = $ServiceData | Where-Object { $_.Status -eq 'Stopped' -and $_.StartType -eq 'Automatic' }
+
+    if (-not $stopped -or $stopped.Count -eq 0) {
+        Write-Host "  [+] No stopped Automatic-start services to restart." -ForegroundColor $C.Success
+        return
+    }
+
+    Write-Host "  Found $($stopped.Count) stopped Automatic-start service(s):" -ForegroundColor $C.Warning
+    Write-Host ""
+
+    $restartAll = $false
+    $skipAll    = $false
+
+    foreach ($svc in $stopped) {
+        if ($skipAll) { break }
+
+        $label = "$($svc.DisplayName) ($($svc.Name))"
+
+        if ($restartAll) {
+            Write-Host "  [*] Restarting: $label" -ForegroundColor $C.Progress
         } else {
-            $ColorSchema.Success
+            Write-Host -NoNewline "  Restart $label ? (Y/N/A=All/S=Skip all): " -ForegroundColor $C.Warning
+            $answer = (Read-Host).Trim().ToUpper()
+            switch ($answer) {
+                'A' { $restartAll = $true }
+                'S' { $skipAll    = $true; Write-Host "  [*] Skipping remaining." -ForegroundColor $C.Info; break }
+                'N' { Write-Host "  [*] Skipped." -ForegroundColor $C.Info; continue }
+            }
         }
 
-        Write-Host $displayLine -ForegroundColor $lineColor
+        if (-not $skipAll) {
+            try {
+                if ($script:RemoteTarget) {
+                    Invoke-Command -ComputerName $script:RemoteTarget -ScriptBlock {
+                        param($n) Start-Service -Name $n -ErrorAction Stop
+                    } -ArgumentList $svc.Name -ErrorAction Stop
+                } else {
+                    Start-Service -Name $svc.Name -ErrorAction Stop
+                }
+                Write-Host "  [+] Started: $label" -ForegroundColor $C.Success
+            }
+            catch {
+                Write-Host "  [-] Failed to start $label`: $_" -ForegroundColor $C.Error
+            }
+        }
+    }
+}
 
-        $diskReport += [PSCustomObject]@{
-            ID                = $pd.DeviceId
-            Name              = $pd.FriendlyName
-            Serial            = $serial
-            Firmware          = $firmware
-            MediaType         = $pd.MediaType
-            BusType           = $pd.BusType
-            SizeGB            = $sizeGB
-            HealthStatus      = $pd.HealthStatus
-            OperationalStatus = $pd.OperationalStatus
-            SMARTPrediction   = $smartLabel
-            SMARTReason       = $smartReason
+# ─────────────────────────────────────────────────────────────────────────────
+# SHOW-SERVICEHEALTH (console)
+# ─────────────────────────────────────────────────────────────────────────────
+
+function Show-ServiceHealth {
+    param([array]$Data)
+
+    Write-Section "SERVICE HEALTH — CRITICAL SERVICES"
+
+    if (-not $Data -or $Data.Count -eq 0) {
+        Write-Host "  No service data available." -ForegroundColor $C.Warning
+        return
+    }
+
+    $colW = @(26, 34, 10, 12, 8)
+    $hdr  = "  {0,-$($colW[0])}{1,-$($colW[1])}{2,-$($colW[2])}{3,-$($colW[3])}{4}" -f 'Service Name','Display Name','Status','Start Type','Concern'
+    Write-Host $hdr -ForegroundColor $C.Header
+
+    foreach ($svc in $Data) {
+        $statusColor = switch ($svc.Status) {
+            'Running' { $C.Success }
+            'Stopped' { $C.Error   }
+            default   { $C.Warning }
+        }
+        $concernStr  = if ($svc.Concern) { '!! CONCERN' } else { '' }
+        $concernColor = if ($svc.Concern) { $C.Error } else { $C.Info }
+
+        $line = "  {0,-$($colW[0])}{1,-$($colW[1])}{2,-$($colW[2])}{3,-$($colW[3])}" -f `
+            $svc.Name, $svc.DisplayName, $svc.Status, $svc.StartType
+        Write-Host -NoNewline $line
+        Write-Host $concernStr -ForegroundColor $concernColor
+    }
+
+    $ok      = ($Data | Where-Object { -not $_.Concern }).Count
+    $concern = ($Data | Where-Object {    $_.Concern }).Count
+    Write-Host ""
+    Write-Host "  Services OK: $ok   Concerns: $concern" -ForegroundColor $(if ($concern -gt 0) { $C.Warning } else { $C.Success })
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SHOW-TASKAUDIT (console)
+# ─────────────────────────────────────────────────────────────────────────────
+
+function Show-TaskAudit {
+    param([array]$Data)
+
+    Write-Section "SCHEDULED TASK AUDIT"
+
+    if (-not $Data -or $Data.Count -eq 0) {
+        Write-Host "  No task data available." -ForegroundColor $C.Warning
+        return
+    }
+
+    $flagged = $Data | Where-Object { $_.FlagReason -and $_.FlagReason -ne 'MSFailed' } | Sort-Object FlagReason
+    $msFailed = $Data | Where-Object { $_.FlagReason -eq 'MSFailed' }
+
+    if ($flagged.Count -eq 0) {
+        Write-Host "  [+] No problematic non-Microsoft tasks found." -ForegroundColor $C.Success
+    } else {
+        Write-Host "  Non-Microsoft flagged tasks ($($flagged.Count)):" -ForegroundColor $C.Warning
+        Write-Host ""
+        $hdr = "  {0,-32}{1,-28}{2,-10}{3,-12}{4}" -f 'Task Name','Path','State','Last Result','Flag'
+        Write-Host $hdr -ForegroundColor $C.Header
+
+        foreach ($t in $flagged) {
+            $color = switch -Wildcard ($t.FlagReason) {
+                'Failed*' { $C.Error   }
+                'Disabled' { $C.Warning }
+                default    { $C.Info   }
+            }
+            $shortPath = if ($t.TaskPath.Length -gt 27) { $t.TaskPath.Substring(0,24) + '...' } else { $t.TaskPath }
+            $shortName = if ($t.TaskName.Length -gt 31) { $t.TaskName.Substring(0,28) + '...' } else { $t.TaskName }
+            $line = "  {0,-32}{1,-28}{2,-10}{3,-12}{4}" -f $shortName, $shortPath, $t.State, $t.LastTaskResult, $t.FlagReason
+            Write-Host $line -ForegroundColor $color
+        }
+    }
+
+    if ($msFailed.Count -gt 0) {
+        Write-Host ""
+        Write-Host "  Microsoft tasks with errors ($($msFailed.Count)):" -ForegroundColor $C.Warning
+        foreach ($t in $msFailed | Select-Object -First 10) {
+            Write-Host "    $($t.TaskPath)$($t.TaskName)  [Result: $($t.LastTaskResult)]" -ForegroundColor $C.Info
         }
     }
 
     Write-Host ""
-    Write-Host "  [+] $($diskReport.Count) physical disk(s) assessed" -ForegroundColor $ColorSchema.Success
+    $disabledNonMs = ($Data | Where-Object { $_.FlagReason -eq 'Disabled' }).Count
+    $failedNonMs   = ($Data | Where-Object { $_.FlagReason -like 'Failed*' }).Count
+    Write-Host "  Failed (non-MS): $failedNonMs   Disabled (non-MS): $disabledNonMs   MS errors: $($msFailed.Count)" -ForegroundColor $C.Info
 }
-catch {
-    Write-Host "  [-] Error reading physical disks: $_" -ForegroundColor $ColorSchema.Error
-}
-
-Write-Host ""
 
 # ─────────────────────────────────────────────────────────────────────────────
-# STEP 2: VOLUME HEALTH
+# SHOW-EVENTERRORS (console)
 # ─────────────────────────────────────────────────────────────────────────────
 
-Write-Host "  [2/3] Reading volume health..." -ForegroundColor $ColorSchema.Progress
+function Show-EventErrors {
+    param([object]$Data)
 
-$volumeReport = @()
+    Write-Section "RECENT EVENT LOG ERRORS (Last 24 Hours)"
 
-try {
-    $volumes = Get-Volume -ErrorAction Stop | Where-Object { $_.DriveLetter -or $_.FileSystemLabel }
+    if (-not $Data -or $Data.TotalCount -eq 0) {
+        Write-Host "  [+] No errors found in System or Application logs." -ForegroundColor $C.Success
+        return
+    }
 
-    foreach ($vol in $volumes) {
-        $totalGB = if ($vol.Size -gt 0) { [math]::Round($vol.Size / 1GB, 1) } else { 0 }
-        $freeGB  = if ($vol.SizeRemaining -gt 0) { [math]::Round($vol.SizeRemaining / 1GB, 1) } else { 0 }
-        $pct     = if ($vol.Size -gt 0) { [math]::Round(($vol.Size - $vol.SizeRemaining) / $vol.Size * 100, 1) } else { 0 }
+    Write-Host "  Total errors: $($Data.TotalCount)" -ForegroundColor $C.Warning
+    Write-Host ""
 
-        $healthColor = switch ($vol.HealthStatus) {
-            'Healthy' { $ColorSchema.Success }
-            'Warning' { $ColorSchema.Warning }
-            default   { $ColorSchema.Error   }
-        }
-
-        $label  = if ($vol.DriveLetter)      { "$($vol.DriveLetter):" } else { "(no letter)" }
-        $fsLabel = if ($vol.FileSystemLabel) { $vol.FileSystemLabel }   else { "" }
-
-        Write-Host ("  {0,-6} {1,-20} {2,7} GB total  {3,7} GB free  {4,5}%  [{5}]" -f `
-            $label, $fsLabel, $totalGB, $freeGB, $pct, $vol.HealthStatus) -ForegroundColor $healthColor
-
-        $volumeReport += [PSCustomObject]@{
-            Drive       = $label
-            Label       = $fsLabel
-            FileSystem  = $vol.FileSystem
-            TotalGB     = $totalGB
-            FreeGB      = $freeGB
-            PctUsed     = $pct
-            Health      = $vol.HealthStatus
-            DriveType   = $vol.DriveType
-        }
+    # Source summary
+    Write-Host "  Top Error Sources:" -ForegroundColor $C.Header
+    $hdr = "  {0,-40}{1}" -f 'Source','Count'
+    Write-Host $hdr -ForegroundColor $C.Header
+    foreach ($src in $Data.SourceSummary) {
+        $color = if ($src.Count -ge 10) { $C.Error } elseif ($src.Count -ge 3) { $C.Warning } else { $C.Info }
+        Write-Host ("  {0,-40}{1}" -f $src.Source, $src.Count) -ForegroundColor $color
     }
 
     Write-Host ""
-    Write-Host "  [+] $($volumeReport.Count) volume(s) assessed" -ForegroundColor $ColorSchema.Success
-}
-catch {
-    Write-Host "  [-] Error reading volumes: $_" -ForegroundColor $ColorSchema.Error
-}
+    Write-Host "  Recent Events (newest first):" -ForegroundColor $C.Header
+    $hdr2 = "  {0,-22}{1,-6}{2,-26}{3,-8}{4}" -f 'Time','Log','Source','EventID','Message'
+    Write-Host $hdr2 -ForegroundColor $C.Header
 
-Write-Host ""
-
-# ─────────────────────────────────────────────────────────────────────────────
-# STEP 3: GENERATE HTML REPORT
-# ─────────────────────────────────────────────────────────────────────────────
-
-Write-Host "  [3/3] Generating HTML report..." -ForegroundColor $ColorSchema.Progress
-
-$healthyCount   = ($diskReport | Where-Object { $_.HealthStatus -eq 'Healthy' -and $_.SMARTPrediction -ne 'FAILING' }).Count
-$warningCount   = ($diskReport | Where-Object { $_.HealthStatus -eq 'Warning' }).Count
-$criticalCount  = ($diskReport | Where-Object { $_.HealthStatus -ne 'Healthy' -and $_.HealthStatus -ne 'Warning' }).Count
-$smartFailCount = ($diskReport | Where-Object { $_.SMARTPrediction -eq 'FAILING' }).Count
-
-# Physical disk rows
-$diskRows = ""
-foreach ($d in $diskReport) {
-    $hColor = switch ($d.HealthStatus) {
-        'Healthy' { '#2ecc71' } 'Warning' { '#f39c12' } default { '#e74c3c' }
+    foreach ($evt in ($Data.Events | Select-Object -First 20)) {
+        $timeStr   = $evt.TimeGenerated.ToString('MM/dd HH:mm:ss')
+        $shortSrc  = if ($evt.Source.Length -gt 25) { $evt.Source.Substring(0,22) + '...' } else { $evt.Source }
+        $shortMsg  = if ($evt.Message.Length -gt 50) { $evt.Message.Substring(0,47) + '...' } else { $evt.Message }
+        $logAbbr   = if ($evt.Log -eq 'System') { 'SYS' } else { 'APP' }
+        $line = "  {0,-22}{1,-6}{2,-26}{3,-8}{4}" -f $timeStr, $logAbbr, $shortSrc, $evt.EventID, $shortMsg
+        Write-Host $line -ForegroundColor $C.Error
     }
-    $sColor = if ($d.SMARTPrediction -eq 'FAILING') { '#e74c3c' } elseif ($d.SMARTPrediction -eq 'OK') { '#2ecc71' } else { '#888' }
-    $diskRows += @"
-    <tr>
-      <td>$(HtmlEncode $d.ID)</td>
-      <td>$(HtmlEncode $d.Name)</td>
-      <td>$(HtmlEncode $d.Serial)</td>
-      <td>$(HtmlEncode $d.MediaType)</td>
-      <td>$(HtmlEncode $d.BusType)</td>
-      <td>$($d.SizeGB) GB</td>
-      <td style="color:$hColor;font-weight:600;">$(HtmlEncode $d.HealthStatus)</td>
-      <td>$(HtmlEncode $d.OperationalStatus)</td>
-      <td style="color:$sColor;font-weight:600;">$(HtmlEncode $d.SMARTPrediction)</td>
-      <td>$(HtmlEncode $d.SMARTReason)</td>
-      <td>$(HtmlEncode $d.Firmware)</td>
-    </tr>
-"@
 }
 
-# Volume rows
-$volumeRows = ""
-foreach ($v in $volumeReport) {
-    $barColor = if ($v.PctUsed -ge 90) { "#e74c3c" } elseif ($v.PctUsed -ge 75) { "#f39c12" } else { "#2ecc71" }
-    $vhColor  = switch ($v.Health) { 'Healthy' { '#2ecc71' } 'Warning' { '#f39c12' } default { '#e74c3c' } }
-    $volumeRows += @"
-    <tr>
-      <td>$(HtmlEncode $v.Drive)</td>
-      <td>$(HtmlEncode $v.Label)</td>
-      <td>$(HtmlEncode $v.FileSystem)</td>
-      <td>$($v.TotalGB) GB</td>
-      <td>$($v.FreeGB) GB</td>
-      <td>
-        <div style="background:#333;border-radius:4px;height:12px;width:120px;display:inline-block;">
-          <div style="background:$barColor;width:$($v.PctUsed)%;height:12px;border-radius:4px;"></div>
-        </div>
-        $($v.PctUsed)%
-      </td>
-      <td style="color:$vhColor;font-weight:600;">$(HtmlEncode $v.Health)</td>
-    </tr>
-"@
-}
+# ─────────────────────────────────────────────────────────────────────────────
+# BUILD-HTMLREPORT
+# ─────────────────────────────────────────────────────────────────────────────
 
-$overallBadge = if ($criticalCount -gt 0 -or $smartFailCount -gt 0) {
-    "<span class='badge badge-err'>$($criticalCount + $smartFailCount) critical issue(s)</span>"
-} elseif ($warningCount -gt 0) {
-    "<span class='badge badge-warn'>$warningCount warning(s)</span>"
-} else {
-    "<span class='badge badge-ok'>All Healthy</span>"
-}
+function Build-HtmlReport {
+    param(
+        [array]$Services,
+        [array]$Tasks,
+        [object]$Events,
+        [string]$MachineName,
+        [string]$ReportTimestamp
+    )
 
-$htmlReport = @"
+    # Summary counts
+    $svcOk       = ($Services | Where-Object { -not $_.Concern }).Count
+    $svcConcern  = ($Services | Where-Object {    $_.Concern }).Count
+    $taskFailed  = ($Tasks    | Where-Object { $_.FlagReason -like 'Failed*' }).Count
+    $taskDisabled = ($Tasks   | Where-Object { $_.FlagReason -eq 'Disabled' }).Count
+    $eventTotal  = if ($Events) { $Events.TotalCount } else { 0 }
+
+    # Service rows
+    $svcRows = ''
+    foreach ($svc in $Services) {
+        $statusBadge = if ($svc.Status -eq 'Running') {
+            "<span class='badge badge-ok'>Running</span>"
+        } elseif ($svc.Status -eq 'Stopped') {
+            "<span class='badge badge-crit'>Stopped</span>"
+        } else {
+            "<span class='badge badge-warn'>$(HtmlEncode($svc.Status))</span>"
+        }
+        $concernCell = if ($svc.Concern) {
+            "<span class='flag'>!! Concern</span>"
+        } else {
+            "<span style='color:#555'>—</span>"
+        }
+        $svcRows += "<tr>
+            <td>$(HtmlEncode($svc.Name))</td>
+            <td>$(HtmlEncode($svc.DisplayName))</td>
+            <td>$statusBadge</td>
+            <td>$(HtmlEncode($svc.StartType))</td>
+            <td>$concernCell</td>
+        </tr>`n"
+    }
+
+    # Task rows — non-Microsoft flagged
+    $taskRowsFlagged = ''
+    $flaggedTasks = $Tasks | Where-Object { $_.FlagReason -and $_.FlagReason -ne 'MSFailed' } | Sort-Object FlagReason
+    foreach ($t in $flaggedTasks) {
+        $resultBadge = if ($t.LastTaskResult -in @(0, 267009, 267011)) {
+            "<span class='badge badge-ok'>$($t.LastTaskResult)</span>"
+        } else {
+            "<span class='badge badge-crit'>$($t.LastTaskResult)</span>"
+        }
+        $stateBadge = if ($t.State -eq 'Ready') {
+            "<span class='badge badge-ok'>Ready</span>"
+        } elseif ($t.State -eq 'Disabled') {
+            "<span class='badge badge-warn'>Disabled</span>"
+        } elseif ($t.State -eq 'Running') {
+            "<span class='badge badge-ok'>Running</span>"
+        } else {
+            "<span class='badge badge-neutral'>$(HtmlEncode($t.State))</span>"
+        }
+        $lastRun  = if ($t.LastRunTime -and $t.LastRunTime -gt [datetime]'1900-01-01') { $t.LastRunTime.ToString('yyyy-MM-dd HH:mm') } else { 'Never' }
+        $nextRun  = if ($t.NextRunTime -and $t.NextRunTime -gt [datetime]'1900-01-01') { $t.NextRunTime.ToString('yyyy-MM-dd HH:mm') } else { '—' }
+        $taskRowsFlagged += "<tr>
+            <td>$(HtmlEncode($t.TaskName))</td>
+            <td style='font-size:11px;color:#888'>$(HtmlEncode($t.TaskPath))</td>
+            <td>$stateBadge</td>
+            <td>$lastRun</td>
+            <td>$resultBadge</td>
+            <td>$nextRun</td>
+        </tr>`n"
+    }
+
+    # Task rows — MS failed
+    $taskRowsMs = ''
+    $msFailed = $Tasks | Where-Object { $_.FlagReason -eq 'MSFailed' }
+    foreach ($t in $msFailed) {
+        $lastRun = if ($t.LastRunTime -and $t.LastRunTime -gt [datetime]'1900-01-01') { $t.LastRunTime.ToString('yyyy-MM-dd HH:mm') } else { 'Never' }
+        $taskRowsMs += "<tr>
+            <td>$(HtmlEncode($t.TaskName))</td>
+            <td style='font-size:11px;color:#888'>$(HtmlEncode($t.TaskPath))</td>
+            <td><span class='badge badge-neutral'>$(HtmlEncode($t.State))</span></td>
+            <td>$lastRun</td>
+            <td><span class='badge badge-warn'>$($t.LastTaskResult)</span></td>
+            <td>—</td>
+        </tr>`n"
+    }
+
+    # Event source summary rows
+    $srcRows = ''
+    if ($Events -and $Events.SourceSummary) {
+        foreach ($src in $Events.SourceSummary) {
+            $cntClass = if ($src.Count -ge 10) { 'badge-crit' } elseif ($src.Count -ge 3) { 'badge-warn' } else { 'badge-neutral' }
+            $srcRows += "<tr><td>$(HtmlEncode($src.Source))</td><td><span class='badge $cntClass'>$($src.Count)</span></td></tr>`n"
+        }
+    }
+
+    # Event detail rows
+    $evtRows = ''
+    if ($Events -and $Events.Events) {
+        foreach ($evt in ($Events.Events | Select-Object -First 50)) {
+            $timeStr  = $evt.TimeGenerated.ToString('yyyy-MM-dd HH:mm:ss')
+            $logBadge = if ($evt.Log -eq 'System') {
+                "<span class='badge badge-warn'>SYS</span>"
+            } else {
+                "<span class='badge badge-neutral'>APP</span>"
+            }
+            $evtRows += "<tr>
+                <td>$timeStr</td>
+                <td>$logBadge</td>
+                <td>$(HtmlEncode($evt.Source))</td>
+                <td>$($evt.EventID)</td>
+                <td style='font-size:12px'>$(HtmlEncode($evt.Message))</td>
+            </tr>`n"
+        }
+    }
+
+    $noFlagged   = if ($flaggedTasks.Count -eq 0) { "<p style='color:#555'>No non-Microsoft tasks flagged.</p>" } else { '' }
+    $noMsFailed  = if ($msFailed.Count -eq 0)     { "<p style='color:#555'>No Microsoft task failures.</p>"      } else { '' }
+    $noEvents    = if ($eventTotal -eq 0)          { "<p style='color:#2ecc71'>No errors in the last 24 hours.</p>" } else { '' }
+
+    return @"
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="color-scheme" content="dark">
-<title>S.E.N.T.I.N.E.L. — $env:COMPUTERNAME — $reportTimestamp</title>
+<title>S.E.N.T.I.N.E.L. Health Report — $MachineName</title>
 <style>
-  :root { color-scheme: dark; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; font-size: 14px; }
-  header { background: linear-gradient(135deg, #0f3460, #16213e); padding: 28px 40px; border-bottom: 3px solid #00d4ff; }
-  header h1 { color: #00d4ff; font-size: 2em; letter-spacing: 4px; font-weight: 700; }
-  header p  { color: #aaa; margin-top: 6px; font-size: 0.9em; }
-  header .meta { display: flex; gap: 30px; margin-top: 14px; flex-wrap: wrap; }
-  header .meta span { color: #ccc; font-size: 0.85em; }
-  header .meta strong { color: #00d4ff; }
-  main { padding: 30px 40px; max-width: 1400px; margin: 0 auto; }
-  .summary-cards { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
-  .card { background: #16213e; border: 1px solid #0f3460; border-radius: 8px; padding: 16px 24px; min-width: 120px; text-align: center; }
-  .card .val { font-size: 32px; font-weight: bold; color: #00d4ff; }
-  .card .lbl { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
-  .card.ok   .val { color: #2ecc71; }
-  .card.warn .val { color: #f39c12; }
-  .card.crit .val { color: #e74c3c; }
-  section { background: #16213e; border-radius: 8px; margin-bottom: 24px; overflow: hidden; border: 1px solid #0f3460; }
-  section h2 { background: #0f3460; color: #00d4ff; padding: 14px 20px; font-size: 1em;
-               letter-spacing: 2px; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
-  section .content { padding: 20px; overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
-  th { background: #0f3460; color: #00d4ff; padding: 10px 12px; text-align: left;
-       font-weight: 600; letter-spacing: 1px; text-transform: uppercase; font-size: 0.78em; white-space: nowrap; }
-  td { padding: 8px 12px; border-bottom: 1px solid #1e3a5f; color: #ccc; }
-  tr:hover td { background: #1e3a5f; }
-  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.78em;
-           font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
-  .badge-ok   { background: #1a4a2e; color: #2ecc71; border: 1px solid #2ecc71; }
-  .badge-warn { background: #4a3000; color: #f39c12; border: 1px solid #f39c12; }
-  .badge-err  { background: #4a0000; color: #e74c3c; border: 1px solid #e74c3c; }
-  footer { text-align: center; padding: 20px; color: #444; font-size: 0.8em; border-top: 1px solid #0f3460; }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', Consolas, monospace; font-size: 14px; padding: 24px; }
+  h1 { color: #00d4ff; font-size: 22px; margin-bottom: 4px; }
+  .subtitle { color: #888; font-size: 13px; margin-bottom: 24px; }
+  .summary { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
+  .card { background: #0f3460; border-radius: 8px; padding: 16px 24px; min-width: 140px; text-align: center; }
+  .card-value { font-size: 28px; font-weight: bold; color: #00d4ff; }
+  .card-value.ok   { color: #2ecc71; }
+  .card-value.warn { color: #f39c12; }
+  .card-value.crit { color: #e74c3c; }
+  .card-label { font-size: 11px; color: #aaa; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  th { background: #0f3460; color: #00d4ff; padding: 10px 12px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 9px 12px; border-bottom: 1px solid #1e2d4d; vertical-align: top; }
+  tr:hover td { background: #1e2d4d; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+  .badge-ok      { background: #1a4a2e; color: #2ecc71; }
+  .badge-warn    { background: #4a3a10; color: #f39c12; }
+  .badge-crit    { background: #4a1a1a; color: #e74c3c; }
+  .badge-neutral { background: #2a2a3e; color: #aaa; }
+  .flag { color: #e74c3c; font-size: 12px; font-weight: bold; }
+  .section-title { color: #00d4ff; font-size: 16px; margin: 28px 0 10px; border-bottom: 2px solid #0f3460; padding-bottom: 6px; }
+  .sub-title { color: #00d4ff; font-size: 13px; margin: 16px 0 8px; opacity: 0.8; }
+  .footer { margin-top: 32px; color: #555; font-size: 11px; border-top: 1px solid #1e2d4d; padding-top: 12px; }
 </style>
 </head>
 <body>
-<header>
-  <h1>S.E.N.T.I.N.E.L.</h1>
-  <p>Scans &amp; Evaluates NVMe/Traditional Infrastructure, Noting Error Likelihood</p>
-  <div class="meta">
-    <span><strong>Machine:</strong> $env:COMPUTERNAME</span>
-    <span><strong>Run As:</strong> $env:USERDOMAIN\$env:USERNAME</span>
-    <span><strong>Generated:</strong> $reportTimestamp</span>
-    <span><strong>Overall:</strong> $overallBadge</span>
+
+<h1>S.E.N.T.I.N.E.L. Health Report</h1>
+<div class="subtitle">Machine: $MachineName &nbsp;|&nbsp; Generated: $ReportTimestamp</div>
+
+<div class="summary">
+  <div class="card">
+    <div class="card-value $(if ($svcOk -eq $Services.Count) {'ok'} elseif ($svcConcern -gt 0) {'warn'} else {'ok'})">$svcOk</div>
+    <div class="card-label">Services OK</div>
   </div>
-</header>
-<main>
-
-  <div class="summary-cards">
-    <div class="card ok"><div class="val">$healthyCount</div><div class="lbl">Healthy</div></div>
-    <div class="card warn"><div class="val">$warningCount</div><div class="lbl">Warning</div></div>
-    <div class="card crit"><div class="val">$criticalCount</div><div class="lbl">Critical</div></div>
-    <div class="card crit"><div class="val">$smartFailCount</div><div class="lbl">SMART Fail</div></div>
+  <div class="card">
+    <div class="card-value $(if ($svcConcern -eq 0) {'ok'} else {'crit'})">$svcConcern</div>
+    <div class="card-label">Services Concern</div>
   </div>
+  <div class="card">
+    <div class="card-value $(if ($taskFailed -eq 0) {'ok'} else {'crit'})">$taskFailed</div>
+    <div class="card-label">Tasks Failed</div>
+  </div>
+  <div class="card">
+    <div class="card-value $(if ($taskDisabled -eq 0) {'ok'} else {'warn'})">$taskDisabled</div>
+    <div class="card-label">Tasks Disabled</div>
+  </div>
+  <div class="card">
+    <div class="card-value $(if ($eventTotal -eq 0) {'ok'} elseif ($eventTotal -lt 10) {'warn'} else {'crit'})">$eventTotal</div>
+    <div class="card-label">Event Errors (24h)</div>
+  </div>
+</div>
 
-  <!-- PHYSICAL DISKS -->
-  <section>
-    <h2>Physical Disks ($($diskReport.Count))</h2>
-    <div class="content">
-      $(if ($diskRows) {
-        "<table><thead><tr><th>ID</th><th>Name</th><th>Serial</th><th>Type</th><th>Bus</th><th>Size</th><th>Health</th><th>Status</th><th>SMART</th><th>SMART Reason</th><th>Firmware</th></tr></thead><tbody>$diskRows</tbody></table>"
-      } else {
-        "<p style='color:#666;font-style:italic;'>No physical disk data available.</p>"
-      })
-    </div>
-  </section>
+<!-- ═══ SECTION 1: SERVICES ═══ -->
+<div class="section-title">Section 1 — Critical Service Health</div>
+<table>
+  <thead><tr>
+    <th>Service Name</th>
+    <th>Display Name</th>
+    <th>Status</th>
+    <th>Start Type</th>
+    <th>Concern</th>
+  </tr></thead>
+  <tbody>
+    $svcRows
+  </tbody>
+</table>
 
-  <!-- VOLUMES -->
-  <section>
-    <h2>Volumes ($($volumeReport.Count))</h2>
-    <div class="content">
-      $(if ($volumeRows) {
-        "<table><thead><tr><th>Drive</th><th>Label</th><th>File System</th><th>Total</th><th>Free</th><th>Usage</th><th>Health</th></tr></thead><tbody>$volumeRows</tbody></table>"
-      } else {
-        "<p style='color:#666;font-style:italic;'>No volume data available.</p>"
-      })
-    </div>
-  </section>
+<!-- ═══ SECTION 2: TASKS ═══ -->
+<div class="section-title">Section 2 — Scheduled Task Audit</div>
 
-</main>
-<footer>
-  Generated by S.E.N.T.I.N.E.L. — Part of the Technician Toolkit &nbsp;|&nbsp; $reportTimestamp
-</footer>
+<div class="sub-title">Non-Microsoft Flagged Tasks</div>
+$noFlagged
+<table $(if ($flaggedTasks.Count -eq 0) {'style="display:none"'})>
+  <thead><tr>
+    <th>Task Name</th>
+    <th>Path</th>
+    <th>State</th>
+    <th>Last Run</th>
+    <th>Last Result</th>
+    <th>Next Run</th>
+  </tr></thead>
+  <tbody>
+    $taskRowsFlagged
+  </tbody>
+</table>
+
+<div class="sub-title">Microsoft Tasks with Errors</div>
+$noMsFailed
+<table $(if ($msFailed.Count -eq 0) {'style="display:none"'})>
+  <thead><tr>
+    <th>Task Name</th>
+    <th>Path</th>
+    <th>State</th>
+    <th>Last Run</th>
+    <th>Last Result</th>
+    <th>Next Run</th>
+  </tr></thead>
+  <tbody>
+    $taskRowsMs
+  </tbody>
+</table>
+
+<!-- ═══ SECTION 3: EVENTS ═══ -->
+<div class="section-title">Section 3 — Event Log Errors (Last 24 Hours)</div>
+$noEvents
+
+<div class="sub-title">Top Error Sources</div>
+<table style="max-width:480px">
+  <thead><tr><th>Source</th><th>Error Count</th></tr></thead>
+  <tbody>$srcRows</tbody>
+</table>
+
+<div class="sub-title">Recent Error Events (newest first, up to 50)</div>
+<table>
+  <thead><tr>
+    <th>Time</th>
+    <th>Log</th>
+    <th>Source</th>
+    <th>Event ID</th>
+    <th>Message</th>
+  </tr></thead>
+  <tbody>
+    $evtRows
+  </tbody>
+</table>
+
+<div class="footer">
+  S.E.N.T.I.N.E.L. v1.0 &nbsp;|&nbsp; Technician Toolkit &nbsp;|&nbsp; Report generated $ReportTimestamp
+</div>
 </body>
 </html>
 "@
-
-try {
-    [System.IO.File]::WriteAllText($reportPath, $htmlReport, [System.Text.Encoding]::UTF8)
-    Write-Host "  [+] Report saved: $reportPath" -ForegroundColor $ColorSchema.Success
-}
-catch {
-    Write-Host "  [-] Could not save report: $_" -ForegroundColor $ColorSchema.Error
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SUMMARY
+# REMOTE TARGET CONNECT
 # ─────────────────────────────────────────────────────────────────────────────
 
-Write-Host ""
-Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
-Write-Host "  SENTINEL ASSESSMENT COMPLETE" -ForegroundColor $ColorSchema.Header
-Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
-Write-Host ""
-Write-Host "  Physical Disks : $($diskReport.Count) assessed" -ForegroundColor $ColorSchema.Info
+function Connect-RemoteTarget {
+    Write-Host ""
+    Write-Host -NoNewline "  Enter hostname or IP (leave blank to revert to LOCAL): " -ForegroundColor $C.Header
+    $newTarget = (Read-Host).Trim()
 
-if ($criticalCount -gt 0) {
-    Write-Host "  Critical       : $criticalCount disk(s) in critical state!" -ForegroundColor $ColorSchema.Error
-} else {
-    Write-Host "  Critical       : None" -ForegroundColor $ColorSchema.Success
-}
+    if ([string]::IsNullOrWhiteSpace($newTarget)) {
+        $script:RemoteTarget = ''
+        Write-Host "  [*] Reverted to LOCAL machine." -ForegroundColor $C.Success
+        return
+    }
 
-if ($smartFailCount -gt 0) {
-    Write-Host "  SMART Failure  : $smartFailCount disk(s) predicting failure!" -ForegroundColor $ColorSchema.Error
-} else {
-    Write-Host "  SMART Failure  : None predicted" -ForegroundColor $ColorSchema.Success
-}
-
-if ($warningCount -gt 0) {
-    Write-Host "  Warnings       : $warningCount disk(s) in warning state" -ForegroundColor $ColorSchema.Warning
-} else {
-    Write-Host "  Healthy        : All disks healthy" -ForegroundColor $ColorSchema.Success
-}
-
-Write-Host ""
-Write-Host "  Report         : $reportPath" -ForegroundColor $ColorSchema.Accent
-Write-Host ""
-
-if (-not $Unattended) {
-    $open = Read-Host "  Open the HTML report now? (Y/N)"
-    if ($open -eq 'Y' -or $open -eq 'y') {
-        try {
-            Start-Process $reportPath
-            Write-Host "  [+] Opening report..." -ForegroundColor $ColorSchema.Success
-        }
-        catch {
-            Write-Host "  [-] Could not open report. Navigate to: $reportPath" -ForegroundColor $ColorSchema.Warning
-        }
+    Write-Host "  [*] Testing WinRM connectivity to $newTarget..." -ForegroundColor $C.Progress
+    try {
+        Test-WSMan -ComputerName $newTarget -ErrorAction Stop | Out-Null
+        $script:RemoteTarget = $newTarget
+        Write-Host "  [+] Connected. Target is now: $newTarget" -ForegroundColor $C.Success
+    }
+    catch {
+        Write-Host "  [-] WinRM connection failed: $_" -ForegroundColor $C.Error
+        Write-Host "      Ensure WinRM is enabled on target: Enable-PSRemoting -Force" -ForegroundColor $C.Warning
+        Write-Host "  [*] Keeping current target: $(if ($script:RemoteTarget) { $script:RemoteTarget } else { 'LOCAL' })" -ForegroundColor $C.Info
     }
 }
 
-Write-Host ""
-Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
-Write-Host ""
+# ─────────────────────────────────────────────────────────────────────────────
+# EXPORT HTML REPORT
+# ─────────────────────────────────────────────────────────────────────────────
+
+function Export-HtmlReport {
+    param(
+        [array]$Services,
+        [array]$Tasks,
+        [object]$Events
+    )
+
+    $machineName = if ($script:RemoteTarget) { $script:RemoteTarget } else { $env:COMPUTERNAME }
+    $timestamp   = Get-Date -Format 'yyyyMMdd_HHmmss'
+    $reportName  = "SENTINEL_${timestamp}.html"
+    $reportPath  = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) $reportName
+
+    Write-Host "  [*] Building HTML report..." -ForegroundColor $C.Progress
+
+    $html = Build-HtmlReport `
+        -Services  $Services `
+        -Tasks     $Tasks `
+        -Events    $Events `
+        -MachineName      $machineName `
+        -ReportTimestamp  (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+
+    try {
+        [System.IO.File]::WriteAllText($reportPath, $html, [System.Text.Encoding]::UTF8)
+        Write-Host "  [+] Report saved: $reportPath" -ForegroundColor $C.Success
+    }
+    catch {
+        Write-Host "  [-] Failed to save report: $_" -ForegroundColor $C.Error
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# UNATTENDED MODE
+# ─────────────────────────────────────────────────────────────────────────────
+
+if ($Unattended) {
+    Show-SentinelBanner
+    $machineName = if ($script:RemoteTarget) { $script:RemoteTarget } else { $env:COMPUTERNAME }
+    Write-Host "  [*] Unattended mode — Target: $machineName" -ForegroundColor $C.Progress
+    Write-Host ""
+
+    Write-Host "  [*] Collecting service health..." -ForegroundColor $C.Progress
+    $services = Get-ServiceHealth
+
+    Write-Host "  [*] Collecting scheduled task audit..." -ForegroundColor $C.Progress
+    $tasks = Get-TaskAudit
+
+    Write-Host "  [*] Collecting event log errors (this may take a moment)..." -ForegroundColor $C.Progress
+    $events = Get-EventErrors
+
+    Export-HtmlReport -Services $services -Tasks $tasks -Events $events
+    Write-Host ""
+    Write-Host "  [+] S.E.N.T.I.N.E.L. unattended run complete." -ForegroundColor $C.Success
+    Write-Host ""
+    if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }
+    exit 0
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INTERACTIVE MENU
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Pre-load data
+$cachedServices = $null
+$cachedTasks    = $null
+$cachedEvents   = $null
+
+function Invoke-RefreshAll {
+    $machineName = if ($script:RemoteTarget) { $script:RemoteTarget } else { $env:COMPUTERNAME }
+    Write-Host "  [*] Refreshing all data from: $machineName" -ForegroundColor $C.Progress
+
+    Write-Host "  [*] Querying services..." -ForegroundColor $C.Progress
+    $script:cachedServices = Get-ServiceHealth
+
+    Write-Host "  [*] Querying scheduled tasks..." -ForegroundColor $C.Progress
+    $script:cachedTasks = Get-TaskAudit
+
+    Write-Host "  [*] Querying event logs (last 24h, up to 50 each log)..." -ForegroundColor $C.Progress
+    $script:cachedEvents = Get-EventErrors
+
+    Write-Host "  [+] Refresh complete." -ForegroundColor $C.Success
+}
+
+# Initial data load
+Show-SentinelBanner
+Invoke-RefreshAll
+
+$choice = ''
+
+do {
+    Show-SentinelBanner
+
+    $targetLabel = if ($script:RemoteTarget) { $script:RemoteTarget } else { 'LOCAL' }
+    $svcConcern  = if ($cachedServices) { ($cachedServices | Where-Object { $_.Concern }).Count } else { '?' }
+    $taskFailed  = if ($cachedTasks)    { ($cachedTasks | Where-Object { $_.FlagReason -like 'Failed*' }).Count } else { '?' }
+    $evtCount    = if ($cachedEvents)   { $cachedEvents.TotalCount } else { '?' }
+
+    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host "  S.E.N.T.I.N.E.L. MENU  —  Target: $targetLabel" -ForegroundColor $C.Header
+    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host ""
+
+    $svcColor = if ($svcConcern -gt 0) { $C.Error } else { $C.Success }
+    $tskColor = if ($taskFailed -gt 0) { $C.Error } else { $C.Success }
+    $evtColor = if ($evtCount -gt 0)   { $C.Warning } else { $C.Success }
+
+    Write-Host -NoNewline "  [1] " -ForegroundColor $C.Header
+    Write-Host -NoNewline "Show service health          " -ForegroundColor $C.Info
+    Write-Host "Concerns: $svcConcern" -ForegroundColor $svcColor
+
+    Write-Host -NoNewline "  [2] " -ForegroundColor $C.Header
+    Write-Host -NoNewline "Show scheduled task audit    " -ForegroundColor $C.Info
+    Write-Host "Failed:   $taskFailed" -ForegroundColor $tskColor
+
+    Write-Host -NoNewline "  [3] " -ForegroundColor $C.Header
+    Write-Host -NoNewline "Show recent event log errors " -ForegroundColor $C.Info
+    Write-Host "Errors:   $evtCount" -ForegroundColor $evtColor
+
+    Write-Host "  [4] Restart stopped critical services (interactive)" -ForegroundColor $C.Warning
+    Write-Host "  [5] Export HTML report" -ForegroundColor $C.Info
+    Write-Host "  [6] Connect to remote machine" -ForegroundColor $C.Info
+    Write-Host "  [R] Refresh all" -ForegroundColor $C.Progress
+    Write-Host "  [Q] Quit" -ForegroundColor $C.Info
+    Write-Host ""
+    Write-Host -NoNewline "  Enter selection: " -ForegroundColor $C.Header
+    $choice = (Read-Host).Trim().ToUpper()
+
+    switch ($choice) {
+        '1' {
+            Show-SentinelBanner
+            if (-not $cachedServices) {
+                Write-Host "  [*] Collecting service health..." -ForegroundColor $C.Progress
+                $cachedServices = Get-ServiceHealth
+            }
+            Show-ServiceHealth -Data $cachedServices
+            Write-Host ""
+            Write-Host -NoNewline "  Press Enter to return to menu..." -ForegroundColor $C.Info
+            Read-Host | Out-Null
+        }
+        '2' {
+            Show-SentinelBanner
+            if (-not $cachedTasks) {
+                Write-Host "  [*] Collecting task audit..." -ForegroundColor $C.Progress
+                $cachedTasks = Get-TaskAudit
+            }
+            Show-TaskAudit -Data $cachedTasks
+            Write-Host ""
+            Write-Host -NoNewline "  Press Enter to return to menu..." -ForegroundColor $C.Info
+            Read-Host | Out-Null
+        }
+        '3' {
+            Show-SentinelBanner
+            if (-not $cachedEvents) {
+                Write-Host "  [*] Collecting event log errors (this may take a moment)..." -ForegroundColor $C.Progress
+                $cachedEvents = Get-EventErrors
+            }
+            Show-EventErrors -Data $cachedEvents
+            Write-Host ""
+            Write-Host -NoNewline "  Press Enter to return to menu..." -ForegroundColor $C.Info
+            Read-Host | Out-Null
+        }
+        '4' {
+            Show-SentinelBanner
+            Write-Section "RESTART STOPPED CRITICAL SERVICES"
+            if (-not $cachedServices) {
+                Write-Host "  [*] Collecting service health..." -ForegroundColor $C.Progress
+                $cachedServices = Get-ServiceHealth
+            }
+            Invoke-RestartService -ServiceData $cachedServices
+            Write-Host ""
+            Write-Host "  [*] Refreshing service data after restart..." -ForegroundColor $C.Progress
+            $cachedServices = Get-ServiceHealth
+            Write-Host ""
+            Write-Host -NoNewline "  Press Enter to return to menu..." -ForegroundColor $C.Info
+            Read-Host | Out-Null
+        }
+        '5' {
+            Show-SentinelBanner
+            Write-Section "EXPORT HTML REPORT"
+            if (-not $cachedServices) {
+                Write-Host "  [*] Collecting service health..." -ForegroundColor $C.Progress
+                $cachedServices = Get-ServiceHealth
+            }
+            if (-not $cachedTasks) {
+                Write-Host "  [*] Collecting task audit..." -ForegroundColor $C.Progress
+                $cachedTasks = Get-TaskAudit
+            }
+            if (-not $cachedEvents) {
+                Write-Host "  [*] Collecting event log errors (this may take a moment)..." -ForegroundColor $C.Progress
+                $cachedEvents = Get-EventErrors
+            }
+            Export-HtmlReport -Services $cachedServices -Tasks $cachedTasks -Events $cachedEvents
+            Write-Host ""
+            Write-Host -NoNewline "  Press Enter to return to menu..." -ForegroundColor $C.Info
+            Read-Host | Out-Null
+        }
+        '6' {
+            Show-SentinelBanner
+            Connect-RemoteTarget
+            # Clear cached data so next action re-fetches from new target
+            $cachedServices = $null
+            $cachedTasks    = $null
+            $cachedEvents   = $null
+            if ($script:RemoteTarget) {
+                Write-Host ""
+                Write-Host "  [*] Loading data from $($script:RemoteTarget)..." -ForegroundColor $C.Progress
+                Invoke-RefreshAll
+            }
+            Write-Host ""
+            Write-Host -NoNewline "  Press Enter to return to menu..." -ForegroundColor $C.Info
+            Read-Host | Out-Null
+        }
+        'R' {
+            Show-SentinelBanner
+            Write-Section "REFRESH ALL DATA"
+            Invoke-RefreshAll
+            Write-Host ""
+            Write-Host -NoNewline "  Press Enter to return to menu..." -ForegroundColor $C.Info
+            Read-Host | Out-Null
+        }
+        'Q' {
+            Write-Host ""
+            Write-Host "  Closing S.E.N.T.I.N.E.L." -ForegroundColor $C.Header
+            Write-Host ""
+        }
+        default {
+            Write-Host ""
+            Write-Host "  [!!] Invalid selection. Enter 1-6, R, or Q." -ForegroundColor $C.Warning
+            Start-Sleep -Seconds 1
+        }
+    }
+
+} while ($choice -ne 'Q')
+
+if ($Transcript) { Stop-TKTranscript }
 if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

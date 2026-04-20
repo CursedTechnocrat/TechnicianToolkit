@@ -28,6 +28,8 @@
     C.I.P.H.E.R.           — BitLocker drive encryption management
     W.A.R.D.               — User account & local security audit
     A.R.C.H.I.V.E.         — Pre-reimaging profile backup
+    R.E.L.I.C.             — Certificate health & SSL expiry monitoring
+    H.E.A.R.T.H.           — Toolkit setup & configuration wizard
 
     Color Schema
     ─────────────────────────────────────────
@@ -39,18 +41,17 @@
     Gray     Information and details
 #>
 
-param([switch]$Unattended)
+param(
+    [switch]$Unattended,
+    [switch]$Transcript
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ADMIN CHECK
 # ─────────────────────────────────────────────────────────────────────────────
 
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "This script must be run as Administrator!" -ForegroundColor Red
-    exit 1
-}
-
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+Import-Module "$PSScriptRoot\TechnicianToolkit.psm1" -Force
+Assert-AdminPrivilege
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SCRIPT PATH RESOLUTION
@@ -63,6 +64,8 @@ if ($PSScriptRoot) {
 } else {
     $ScriptPath = (Get-Location).Path
 }
+
+if ($Transcript) { Start-TKTranscript -LogRoot (Resolve-LogDirectory -FallbackPath $ScriptPath) }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # COLOR SCHEMA
@@ -240,7 +243,7 @@ function Build-HtmlReport {
 </head>
 <body>
 <h1>W.A.R.D. — Account Audit Report</h1>
-<div class="subtitle">Machine: <strong>$MachineName</strong> &nbsp;|&nbsp; Generated: $ReportTimestamp</div>
+<div class="subtitle">$(if (-not [string]::IsNullOrWhiteSpace((Get-TKConfig).OrgName)) { "$(EscHtml (Get-TKConfig).OrgName) &nbsp;|&nbsp; " })Machine: <strong>$MachineName</strong> &nbsp;|&nbsp; Generated: $ReportTimestamp</div>
 
 <div class="summary">
   <div class="card"><div class="val">$totalAccounts</div><div class="lbl">Total Accounts</div></div>
@@ -340,7 +343,7 @@ Write-Host ""
 Write-Host "  [*] Generating HTML report..." -ForegroundColor $ColorSchema.Progress
 
 $reportFilename = "WARD_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
-$reportPath     = Join-Path $ScriptPath $reportFilename
+$reportPath     = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) $reportFilename
 
 try {
     $htmlContent = Build-HtmlReport -Accounts $accounts -MachineName $machineName -ReportTimestamp $reportTimestamp
@@ -375,4 +378,5 @@ Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host ""
 
 if (-not $Unattended) { Read-Host "  Press Enter to exit" }
+if ($Transcript) { Stop-TKTranscript }
 if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

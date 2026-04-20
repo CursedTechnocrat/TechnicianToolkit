@@ -11,6 +11,7 @@
 
 .USAGE
     PS C:\> .\cipher.ps1                                           # Must be run as Administrator
+    PS C:\> .\cipher.ps1 -WhatIf                                   # Preview actions without making changes
     PS C:\> .\cipher.ps1 -Unattended -Action Status                # Show drive status and exit
     PS C:\> .\cipher.ps1 -Unattended -Action Disable -Drive C      # Disable BitLocker on C:
     PS C:\> .\cipher.ps1 -Unattended -Action Suspend -Drive C      # Suspend BitLocker on C:
@@ -31,6 +32,8 @@
     C.I.P.H.E.R.           — BitLocker drive encryption management
     W.A.R.D.               — User account & local security audit
     A.R.C.H.I.V.E.         — Pre-reimaging profile backup
+    R.E.L.I.C.             — Certificate health & SSL expiry monitoring
+    H.E.A.R.T.H.           — Toolkit setup & configuration wizard
 
     Color Schema
     ─────────────────────────────────────────
@@ -44,21 +47,21 @@
 
 param(
     [switch]$Unattended,
+    [switch]$WhatIf,
     [ValidateSet('Status','Enable','Disable','Suspend','Resume','BackupAD','BackupEntraID')]
     [string]$Action = "Status",
-    [string]$Drive  = "C"
+    [string]$Drive  = "C",
+    [switch]$Transcript
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ADMIN CHECK
 # ─────────────────────────────────────────────────────────────────────────────
 
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "This script must be run as Administrator!" -ForegroundColor Red
-    exit 1
-}
+Import-Module "$PSScriptRoot\TechnicianToolkit.psm1" -Force
+Assert-AdminPrivilege
 
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+if ($Transcript) { Start-TKTranscript -LogRoot (Resolve-LogDirectory -FallbackPath $PSScriptRoot) }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # COLOR SCHEMA
@@ -231,6 +234,19 @@ function Enable-DriveEncryption {
     Write-Host -NoNewline "  Enter selection: " -ForegroundColor $ColorSchema.Header
     $protChoice = (Read-Host).Trim()
 
+    if ($WhatIf) {
+        $protName = switch ($protChoice) {
+            '1' { 'TPM' }; '2' { 'TPM + PIN' }; '3' { 'Recovery password only' }
+            default { 'Recovery password only' }
+        }
+        Write-Host ""
+        Write-Host "  [~] Would add recovery password protector to $($vol.MountPoint)" -ForegroundColor Cyan
+        Write-Host "  [~] Would add $protName protector to $($vol.MountPoint)" -ForegroundColor Cyan
+        Write-Host "  [~] Would start XtsAes256 encryption (used space only) on $($vol.MountPoint)" -ForegroundColor Cyan
+        Write-Host ""
+        return
+    }
+
     try {
         Write-Host ""
         Write-Host "  [*] Adding recovery password protector..." -ForegroundColor $ColorSchema.Progress
@@ -308,6 +324,13 @@ function Disable-DriveEncryption {
 
     $vol = Select-Drive -Prompt "Drive letter to decrypt"
     if (-not $vol) { return }
+
+    if ($WhatIf) {
+        Write-Host ""
+        Write-Host "  [~] Would start decryption (disable BitLocker) on $($vol.MountPoint)" -ForegroundColor Cyan
+        Write-Host ""
+        return
+    }
 
     try {
         Write-Host ""
@@ -416,6 +439,13 @@ function Suspend-DriveProtection {
     $vol = Select-Drive -Prompt "Drive letter to suspend"
     if (-not $vol) { return }
 
+    if ($WhatIf) {
+        Write-Host ""
+        Write-Host "  [~] Would suspend BitLocker protection on $($vol.MountPoint) (resumes after 1 reboot)" -ForegroundColor Cyan
+        Write-Host ""
+        return
+    }
+
     try {
         Suspend-BitLocker -MountPoint $vol.MountPoint -RebootCount 1 -ErrorAction Stop | Out-Null
         Write-Host ""
@@ -436,6 +466,13 @@ function Resume-DriveProtection {
 
     $vol = Select-Drive -Prompt "Drive letter to resume"
     if (-not $vol) { return }
+
+    if ($WhatIf) {
+        Write-Host ""
+        Write-Host "  [~] Would resume BitLocker protection on $($vol.MountPoint)" -ForegroundColor Cyan
+        Write-Host ""
+        return
+    }
 
     try {
         Resume-BitLocker -MountPoint $vol.MountPoint -ErrorAction Stop | Out-Null
@@ -516,6 +553,12 @@ if ($Unattended) {
 
     do {
         Show-CipherBanner
+        if ($WhatIf) {
+            Write-Host "  ─────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+            Write-Host "  [~] DRY RUN MODE — No changes will be made to this system." -ForegroundColor Cyan
+            Write-Host "  ─────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+            Write-Host ""
+        }
         Show-DriveStatus
 
         Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
@@ -561,4 +604,5 @@ if ($Unattended) {
 
     } while ($choice -ne "Q")
 }
+if ($Transcript) { Stop-TKTranscript }
 if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

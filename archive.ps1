@@ -12,6 +12,7 @@
     PS C:\> .\archive.ps1                                                           # Must be run as Administrator
     PS C:\> .\archive.ps1 -Unattended -Username "John"                              # Archive all items for user John
     PS C:\> .\archive.ps1 -Unattended -Username "John" -Items "1,2,3" -Destination "\\server\backup"
+    PS C:\> .\archive.ps1 -WhatIf                                                   # Preview actions without staging or compressing
 
 .NOTES
     Version : 1.0
@@ -28,6 +29,8 @@
     C.I.P.H.E.R.           — BitLocker drive encryption management
     W.A.R.D.               — User account & local security audit
     A.R.C.H.I.V.E.         — Pre-reimaging profile backup
+    R.E.L.I.C.             — Certificate health & SSL expiry monitoring
+    H.E.A.R.T.H.           — Toolkit setup & configuration wizard
 
     Color Schema
     ─────────────────────────────────────────
@@ -41,21 +44,19 @@
 
 param(
     [switch]$Unattended,
+    [switch]$WhatIf,
     [string]$Username    = "",
     [string]$Items       = "A",
-    [string]$Destination = ""
+    [string]$Destination = "",
+    [switch]$Transcript
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ADMIN CHECK
 # ─────────────────────────────────────────────────────────────────────────────
 
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "This script must be run as Administrator!" -ForegroundColor Red
-    exit 1
-}
-
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+Import-Module "$PSScriptRoot\TechnicianToolkit.psm1" -Force
+Assert-AdminPrivilege
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SCRIPT PATH RESOLUTION
@@ -68,6 +69,8 @@ if ($PSScriptRoot) {
 } else {
     $ScriptPath = (Get-Location).Path
 }
+
+if ($Transcript) { Start-TKTranscript -LogRoot (Resolve-LogDirectory -FallbackPath $ScriptPath) }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # COLOR SCHEMA
@@ -194,6 +197,12 @@ function Stage-Item {
 
     Write-Host "    [*] Staging $Label..." -ForegroundColor $ColorSchema.Progress
 
+    if ($WhatIf) {
+        Write-Host "    [~] Would stage $Label from $SourcePath" -ForegroundColor Cyan
+        Add-ArchiveRecord -Item $Label -Status "WhatIf" -Detail "Would stage from: $SourcePath"
+        return
+    }
+
     try {
         $null = New-Item -ItemType Directory -Path $StageDest -Force -ErrorAction Stop
 
@@ -225,6 +234,12 @@ function Stage-Item {
 # ─────────────────────────────────────────────────────────────────────────────
 
 if (-not $Unattended) { Show-ArchiveBanner }
+
+if ($WhatIf) {
+    Write-Host ""
+    Write-Host "  *** DRY RUN MODE — No files will be staged or compressed ***" -ForegroundColor Cyan
+    Write-Host ""
+}
 
 Write-Host "  [!!] Run this tool BEFORE reimaging or wiping the machine." -ForegroundColor $ColorSchema.Warning
 Write-Host "       Ensure the destination has sufficient free space." -ForegroundColor $ColorSchema.Warning
@@ -352,7 +367,16 @@ Write-Host ""
 
 $DestRoot = ""
 
+$_cfg = Get-TKConfig
+
 if ($Unattended) {
+    if ([string]::IsNullOrWhiteSpace($Destination)) {
+        # Fall back to config default, then script directory
+        if (-not [string]::IsNullOrWhiteSpace($_cfg.Archive.DefaultDestination)) {
+            $Destination = $_cfg.Archive.DefaultDestination
+            Write-Host "  [*] No -Destination provided — using config default: $Destination" -ForegroundColor $ColorSchema.Info
+        }
+    }
     if ([string]::IsNullOrWhiteSpace($Destination)) {
         $DestRoot = $ScriptPath
         Write-Host "  [*] No -Destination provided — using script directory." -ForegroundColor $ColorSchema.Info
@@ -372,12 +396,22 @@ if ($Unattended) {
 } else {
     Write-Host "  [1] Script directory  ($ScriptPath)" -ForegroundColor $ColorSchema.Info
     Write-Host "  [2] Enter a custom path  (local or UNC share)" -ForegroundColor $ColorSchema.Info
+    if (-not [string]::IsNullOrWhiteSpace($_cfg.Archive.DefaultDestination)) {
+        Write-Host "  [3] Config default  ($($_cfg.Archive.DefaultDestination))" -ForegroundColor $ColorSchema.Info
+    }
     Write-Host ""
     Write-Host -NoNewline "  Enter selection: " -ForegroundColor $ColorSchema.Header
     $destChoice = (Read-Host).Trim()
 
     if ($destChoice -eq "1") {
         $DestRoot = $ScriptPath
+    }
+    elseif ($destChoice -eq "3" -and -not [string]::IsNullOrWhiteSpace($_cfg.Archive.DefaultDestination)) {
+        $DestRoot = $_cfg.Archive.DefaultDestination.TrimEnd('\')
+        if (-not (Test-Path $DestRoot)) {
+            try { $null = New-Item -ItemType Directory -Path $DestRoot -Force -ErrorAction Stop }
+            catch { Write-Host "  [-] Could not create destination: $_" -ForegroundColor $ColorSchema.Error; exit 1 }
+        }
     }
     elseif ($destChoice -eq "2") {
         Write-Host ""
@@ -490,16 +524,30 @@ Write-Host ""
 
 $zipPath = Join-Path $DestRoot "$archiveName.zip"
 
+# Pre-flight: count staged files and total size so the technician knows what they're waiting for
+$stagedFiles   = Get-ChildItem -Recurse -File -Path $stagingDir -ErrorAction SilentlyContinue
+$stagedCount   = $stagedFiles.Count
+$stagedSizeMB  = [math]::Round(($stagedFiles | Measure-Object -Property Length -Sum).Sum / 1MB, 1)
+
 Write-Host "  [*] Creating ZIP: $zipPath" -ForegroundColor $ColorSchema.Progress
-Write-Host "  [*] This may take several minutes for large profiles..." -ForegroundColor $ColorSchema.Info
+Write-Host ("  [*] Compressing {0} files ({1} MB) — this may take several minutes..." -f $stagedCount, $stagedSizeMB) -ForegroundColor $ColorSchema.Info
 Write-Host ""
+
+if ($WhatIf) {
+    Write-Host "  [~] Would compress staged files into: $zipPath" -ForegroundColor Cyan
+    Write-Host ""
+    Add-ArchiveRecord -Item "ZIP Archive" -Status "WhatIf" -Detail "Would create: $zipPath ($stagedCount files, $stagedSizeMB MB)"
+} else {
+
+$compressionStart = Get-Date
 
 try {
     Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
     [System.IO.Compression.ZipFile]::CreateFromDirectory($stagingDir, $zipPath, [System.IO.Compression.CompressionLevel]::Optimal, $false)
 
-    $zipSizeMB = [math]::Round((Get-Item $zipPath).Length / 1MB, 1)
-    Write-Host "  [+] Archive created: $zipPath  ($zipSizeMB MB)" -ForegroundColor $ColorSchema.Success
+    $zipSizeMB      = [math]::Round((Get-Item $zipPath).Length / 1MB, 1)
+    $compressionSec = [math]::Round(((Get-Date) - $compressionStart).TotalSeconds, 1)
+    Write-Host ("  [+] Archive created: {0}  ({1} MB, {2}s)" -f $zipPath, $zipSizeMB, $compressionSec) -ForegroundColor $ColorSchema.Success
     Add-ArchiveRecord -Item "ZIP Archive" -Status "Created" -Detail "$zipSizeMB MB — $zipPath"
 }
 catch {
@@ -516,10 +564,11 @@ finally {
         Write-Host "  [!!] Could not remove staging folder: $stagingDir" -ForegroundColor $ColorSchema.Warning
     }
 }
+}  # end else (not WhatIf)
 
 # ── LOG ───────────────────────────────────────────────────────────────────────
 
-$logFile = Join-Path $ScriptPath "ARCHIVE_Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').csv"
+$logFile = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "ARCHIVE_Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').csv"
 
 try {
     $ArchiveLog | Export-Csv -Path $logFile -NoTypeInformation -Encoding UTF8
@@ -545,6 +594,7 @@ foreach ($record in $ArchiveLog) {
         "Created"  { $ColorSchema.Success }
         "Partial"  { $ColorSchema.Warning }
         "Skipped"  { $ColorSchema.Info    }
+        "WhatIf"   { 'Cyan'               }
         default    { $ColorSchema.Error   }
     }
     $detail = if ($record.Detail) { " — $($record.Detail)" } else { "" }
@@ -564,4 +614,5 @@ Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host ""
 
 if (-not $Unattended) { Read-Host "  Press Enter to exit" }
+if ($Transcript) { Stop-TKTranscript }
 if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }
