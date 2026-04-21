@@ -203,11 +203,13 @@ Describe 'Module bootstrap compliance — all tool scripts' {
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Param block compliance — interactive tool scripts must declare -Unattended
-# Excludes grimoire.ps1 (hub launcher, not an interactive tool itself)
+# Excludes the two launcher-style scripts that don't have sensible defaults
+# for their required inputs (grimoire needs a tool choice; specter needs a
+# target machine + credentials).
 # ─────────────────────────────────────────────────────────────────────────────
 Describe 'Param block compliance — -Unattended switch' {
     $scriptCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Filter '*.ps1' -File |
-        Where-Object { $_.Name -ne 'grimoire.ps1' } |
+        Where-Object { $_.Name -notin @('grimoire.ps1', 'specter.ps1') } |
         ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
 
     It '<Name> declares -Unattended' -ForEach $scriptCases {
