@@ -36,6 +36,8 @@
     T.H.R.E.S.H.O.L.D.     — Disk & storage health monitoring
     V.A.U.L.T.             — M365 license & mailbox auditing
     S.E.N.T.I.N.E.L.       — Service & scheduled task monitoring
+    D.W.A.R.F.             — Disk wear & health — SMART status, physical disk reliability, HTML report
+    P.U.R.G.E.             — Disk cleanup — temp files, Windows Update cache, browser caches, Recycle Bin
     R.E.L.I.C.             — Certificate health & SSL expiry monitoring
     H.E.A.R.T.H.           — Toolkit setup & configuration wizard
 
@@ -180,6 +182,24 @@ $Tools = @(
         Version     = '1.0'
         Description = 'Service & task monitor — critical services, scheduled tasks, event log errors'
         Color       = 'Red'
+        Category    = 'Diagnostics & Reporting'
+    },
+    [PSCustomObject]@{
+        Key         = '22'
+        Name        = 'D.W.A.R.F.'
+        File        = 'dwarf.ps1'
+        Version     = '1.0'
+        Description = 'Disk wear & health — SMART status, physical disk reliability, HTML report'
+        Color       = 'Yellow'
+        Category    = 'Diagnostics & Reporting'
+    },
+    [PSCustomObject]@{
+        Key         = '23'
+        Name        = 'P.U.R.G.E.'
+        File        = 'purge.ps1'
+        Version     = '1.0'
+        Description = 'Disk cleanup — temp files, Windows Update cache, browser caches, Recycle Bin'
+        Color       = 'Magenta'
         Category    = 'Diagnostics & Reporting'
     },
     # ── Security ─────────────────────────────────────────────────────

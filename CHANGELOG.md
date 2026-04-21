@@ -8,6 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **DWARF and PURGE in GRIMOIRE** — both tools are now registered in the GRIMOIRE hub (keys 22 and 23) under the "Diagnostics & Reporting" category and are accessible from the central launcher.
+- **DWARF and PURGE module integration** — both scripts now import `TechnicianToolkit.psm1` and use `Invoke-AdminElevation`, matching every other tool and enabling centralized error telemetry and config access.
+- **Module import compliance test** — new Pester test block verifies that every `.ps1` tool script in the root imports `TechnicianToolkit.psm1`, catching regressions before CI.
+- **`TeamsWebhook` in `config.json` template** — the on-disk template now includes the `TeamsWebhook` key so technicians can see and populate it without inspecting the module source.
 - **SIGIL `-WhatIf` mode** — preview every registry, firewall, account policy, audit policy, and protocol change before applying. All functions updated: `Set-BaselineReg`, `Apply-Firewall`, `Apply-GuestAccount`, `Apply-PasswordPolicy`, `Apply-RemoteDesktop`, `Apply-AuditPolicy`, `Apply-LegacyProtocols`. Summary output reflects WhatIf status counts.
 - **Centralized error telemetry** (`Write-TKError` in `TechnicianToolkit.psm1`) — appends structured JSON-lines to a monthly error log in the configured `LogDirectory`. Optionally posts to a Teams incoming webhook via the new `TeamsWebhook` config key.
 - **GRIMOIRE download integrity** — downloaded scripts are passed through the PowerShell parser before execution. Corrupt or syntactically invalid files are removed and the launch is aborted rather than executing unknown code.
@@ -19,6 +23,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 - **SIGIL unattended mode bug** — `-Unattended -Categories` was silently a no-op because `$selectedKeys` was never populated in the unattended branch. Categories are now correctly parsed and applied.
 - **`Get-TKConfig` defaults** — added `TeamsWebhook` to the defaults object so callers never receive null for the new key.
+- **`purge.ps1` .NOTES tool list** — incorrectly listed `S.E.N.T.I.N.E.L.` as "Disk health assessment & SMART status"; corrected to `D.W.A.R.F.`.
 
 ---
 

@@ -164,3 +164,17 @@ Describe 'PowerShell syntax — all scripts' {
         }
     }
 }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Module import compliance — every tool script must import TechnicianToolkit.psm1
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'Module import compliance — all tool scripts' {
+    $scripts = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Filter '*.ps1' -File
+
+    foreach ($script in $scripts) {
+        It "$($script.Name) imports TechnicianToolkit.psm1" {
+            $content = Get-Content $script.FullName -Raw
+            $content | Should -Match 'Import-Module.*TechnicianToolkit\.psm1'
+        }
+    }
+}

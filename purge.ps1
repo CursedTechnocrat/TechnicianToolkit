@@ -21,7 +21,7 @@
     G.R.I.M.O.I.R.E.       — Technician Toolkit hub and central launcher
     O.R.A.C.L.E.           — System diagnostics & HTML report generation
     A.R.C.H.I.V.E.         — Pre-reimaging profile backup
-    S.E.N.T.I.N.E.L.       — Disk health assessment & SMART status
+    D.W.A.R.F.             — Disk wear & health assessment, SMART status
     P.U.R.G.E.             — Disk cleanup — temp, update cache, browser caches
 
     Color Schema
@@ -37,15 +37,11 @@
 param([switch]$Unattended)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ADMIN CHECK
+# INITIALIZATION
 # ─────────────────────────────────────────────────────────────────────────────
 
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "This script must be run as Administrator!" -ForegroundColor Red
-    exit 1
-}
-
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+Import-Module "$PSScriptRoot\TechnicianToolkit.psm1" -Force
+Invoke-AdminElevation -ScriptFile $PSCommandPath
 
 # ─────────────────────────────────────────────────────────────────────────────
 # COLOR SCHEMA
