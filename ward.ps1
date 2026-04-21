@@ -182,17 +182,17 @@ function Build-HtmlReport {
     $rows = ""
     foreach ($acct in ($Accounts | Sort-Object IsAdmin -Descending)) {
         $enabledBadge = if ($acct.Enabled) {
-            "<span class='badge badge-ok'>Enabled</span>"
+            "<span class='tk-badge-ok'>Enabled</span>"
         } else {
-            "<span class='badge badge-warn'>Disabled</span>"
+            "<span class='tk-badge-warn'>Disabled</span>"
         }
         $adminBadge = if ($acct.IsAdmin) {
-            "<span class='badge badge-crit'>Admin</span>"
+            "<span class='tk-badge-err'>Admin</span>"
         } else {
-            "<span class='badge badge-neutral'>Standard</span>"
+            "<span class='tk-badge-info'>Standard</span>"
         }
         $flagCell = if ($acct.Flags) {
-            "<span class='flag'>$(HtmlEncode($acct.Flags))</span>"
+            "<span class='tk-badge-warn'>$(HtmlEncode($acct.Flags))</span>"
         } else { "" }
 
         $rows += @"
@@ -209,75 +209,88 @@ function Build-HtmlReport {
 "@
     }
 
-    $html = @"
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>W.A.R.D. Account Audit — $MachineName</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', Consolas, monospace; font-size: 14px; padding: 24px; }
-  h1 { color: #00d4ff; font-size: 22px; margin-bottom: 4px; }
-  .subtitle { color: #888; font-size: 13px; margin-bottom: 24px; }
-  .summary { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
-  .card { background: #16213e; border: 1px solid #0f3460; border-radius: 8px; padding: 16px 24px; min-width: 120px; text-align: center; }
-  .card .val { font-size: 28px; font-weight: bold; color: #00d4ff; }
-  .card .lbl { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
-  .card.warn .val { color: #f39c12; }
-  .card.crit .val { color: #e74c3c; }
-  .card.ok   .val { color: #2ecc71; }
-  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-  th { background: #0f3460; color: #00d4ff; padding: 10px 12px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-  td { padding: 9px 12px; border-bottom: 1px solid #1e2d4d; vertical-align: top; }
-  tr:hover td { background: #1e2d4d; }
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
-  .badge-ok      { background: #1a4a2e; color: #2ecc71; }
-  .badge-warn    { background: #4a3a10; color: #f39c12; }
-  .badge-crit    { background: #4a1a1a; color: #e74c3c; }
-  .badge-neutral { background: #2a2a3e; color: #aaa; }
-  .flag { color: #f39c12; font-size: 12px; }
-  .section-title { color: #00d4ff; font-size: 15px; margin: 28px 0 10px; border-bottom: 1px solid #0f3460; padding-bottom: 6px; }
-  .footer { margin-top: 32px; color: #555; font-size: 11px; }
-</style>
-</head>
-<body>
-<h1>W.A.R.D. — Account Audit Report</h1>
-<div class="subtitle">$(if (-not [string]::IsNullOrWhiteSpace((Get-TKConfig).OrgName)) { "$(EscHtml (Get-TKConfig).OrgName) &nbsp;|&nbsp; " })Machine: <strong>$MachineName</strong> &nbsp;|&nbsp; Generated: $ReportTimestamp</div>
+    $tkConfig  = Get-TKConfig
+    $tkOrgName = if (-not [string]::IsNullOrWhiteSpace($tkConfig.OrgName)) { EscHtml $tkConfig.OrgName } else { $null }
+    $tkSubtitle = if ($tkOrgName) { "$tkOrgName -- $MachineName" } else { $MachineName }
 
-<div class="summary">
-  <div class="card"><div class="val">$totalAccounts</div><div class="lbl">Total Accounts</div></div>
-  <div class="card ok"><div class="val">$enabledCount</div><div class="lbl">Enabled</div></div>
-  <div class="card"><div class="val">$disabledCount</div><div class="lbl">Disabled</div></div>
-  <div class="card warn"><div class="val">$adminCount</div><div class="lbl">Administrators</div></div>
-  <div class="card crit"><div class="val">$flaggedCount</div><div class="lbl">Flagged</div></div>
+    $tkMetaItems = [ordered]@{
+        'Machine'   = $MachineName
+        'Generated' = $ReportTimestamp
+        'Accounts'  = $totalAccounts
+        'Flagged'   = $flaggedCount
+    }
+
+    $tkNavItems = @('Local User Accounts')
+
+    $flaggedClass    = if ($flaggedCount -gt 0) { "err" } else { "ok" }
+    $adminClass      = if ($adminCount -gt 1)   { "warn" } else { "info" }
+
+    $summaryCards = @"
+<div class="tk-summary-row">
+  <div class="tk-summary-card info">
+    <div class="tk-summary-num">$totalAccounts</div>
+    <div class="tk-summary-lbl">Total Accounts</div>
+  </div>
+  <div class="tk-summary-card ok">
+    <div class="tk-summary-num">$enabledCount</div>
+    <div class="tk-summary-lbl">Enabled</div>
+  </div>
+  <div class="tk-summary-card">
+    <div class="tk-summary-num">$disabledCount</div>
+    <div class="tk-summary-lbl">Disabled</div>
+  </div>
+  <div class="tk-summary-card $adminClass">
+    <div class="tk-summary-num">$adminCount</div>
+    <div class="tk-summary-lbl">Administrators</div>
+  </div>
+  <div class="tk-summary-card $flaggedClass">
+    <div class="tk-summary-num">$flaggedCount</div>
+    <div class="tk-summary-lbl">Flagged</div>
+  </div>
 </div>
-
-<div class="section-title">Local User Accounts</div>
-<table>
-  <thead>
-    <tr>
-      <th>Username</th>
-      <th>Full Name</th>
-      <th>Status</th>
-      <th>Role</th>
-      <th>Last Logon</th>
-      <th>Password Set</th>
-      <th>Password Expires</th>
-      <th>Flags</th>
-    </tr>
-  </thead>
-  <tbody>
-    $rows
-  </tbody>
-</table>
-
-<div class="footer">
-  Generated by W.A.R.D. — Technician Toolkit &nbsp;|&nbsp; Stale threshold: 90 days without logon
-</div>
-</body>
-</html>
 "@
+
+    $html = (Get-TKHtmlHead `
+        -Title      'Account Audit Report' `
+        -ScriptName 'W.A.R.D.' `
+        -Subtitle   $tkSubtitle `
+        -MetaItems  $tkMetaItems `
+        -NavItems   $tkNavItems) + @"
+
+  $summaryCards
+
+  <div class="tk-section" id="local-user-accounts">
+    <div class="tk-card">
+      <div class="tk-card-header">
+        <span class="tk-section-tag">PART 1</span>
+        <h2 class="tk-section-title">Local User Accounts</h2>
+      </div>
+      <div style="padding:20px;">
+        <table class="tk-table">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Full Name</th>
+              <th>Status</th>
+              <th>Role</th>
+              <th>Last Logon</th>
+              <th>Password Set</th>
+              <th>Password Expires</th>
+              <th>Flags</th>
+            </tr>
+          </thead>
+          <tbody>
+            $rows
+          </tbody>
+        </table>
+        <div class="tk-info-box" style="margin-top:18px;">
+          <span class="tk-info-label">Note</span> Stale threshold: 90 days without logon
+        </div>
+      </div>
+    </div>
+  </div>
+
+"@ + (Get-TKHtmlFoot -ScriptName 'W.A.R.D. v1.0')
 
     return $html
 }

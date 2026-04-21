@@ -555,8 +555,8 @@ if ($lockRows.Length -eq 0) {
     [void]$lockRows.Append("<tr><td colspan='4' class='tk-badge-ok' style='text-align:center;padding:16px'>All critical resources have resource locks.</td></tr>")
 }
 
-$policyNote = if ($totalPolicyStates -eq 0) { 'No non-compliant states found (or no policies assigned / insufficient access).' } else { "$totalPolicyStates non-compliant policy state(s) detected." }
-$policyColor = if ($totalPolicyStates -gt 0) { '#a4262c' } else { '#107c10' }
+$policyNote  = if ($totalPolicyStates -eq 0) { 'No non-compliant states found (or no policies assigned / insufficient access).' } else { "$totalPolicyStates non-compliant policy state(s) detected." }
+$policyBadge = if ($totalPolicyStates -gt 0) { 'tk-badge-err' } else { 'tk-badge-ok' }
 
 $policyRows = [System.Text.StringBuilder]::new()
 if ($nonCompliantPolicies.Count -gt 0) {
@@ -567,10 +567,10 @@ if ($nonCompliantPolicies.Count -gt 0) {
         [void]$policyRows.Append("<tr><td>$pname</td><td>$asgn</td><td>$res</td></tr>`n")
     }
     if ($nonCompliantPolicies.Count -gt 25) {
-        [void]$policyRows.Append("<tr><td colspan='3' style='color:#7a5800;padding:10px 14px'>... and $($nonCompliantPolicies.Count - 25) more — review in Azure Portal under Policy &gt; Compliance.</td></tr>")
+        [void]$policyRows.Append("<tr><td colspan='3' class='tk-badge-warn' style='padding:10px 14px'>... and $($nonCompliantPolicies.Count - 25) more — review in Azure Portal under Policy &gt; Compliance.</td></tr>")
     }
 } else {
-    [void]$policyRows.Append("<tr><td colspan='3' style='text-align:center;color:#107c10;padding:16px'>$policyNote</td></tr>")
+    [void]$policyRows.Append("<tr><td colspan='3' class='tk-badge-ok' style='text-align:center;padding:16px'>$policyNote</td></tr>")
 }
 
 $governanceSection = @"

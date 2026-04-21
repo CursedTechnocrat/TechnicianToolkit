@@ -607,24 +607,24 @@ function Build-HtmlReport {
     $flaggedTasks = $Tasks | Where-Object { $_.FlagReason -and $_.FlagReason -ne 'MSFailed' } | Sort-Object FlagReason
     foreach ($t in $flaggedTasks) {
         $resultBadge = if ($t.LastTaskResult -in @(0, 267009, 267011)) {
-            "<span class='badge badge-ok'>$($t.LastTaskResult)</span>"
+            "<span class='tk-badge-ok'>$($t.LastTaskResult)</span>"
         } else {
-            "<span class='badge badge-crit'>$($t.LastTaskResult)</span>"
+            "<span class='tk-badge-err'>$($t.LastTaskResult)</span>"
         }
         $stateBadge = if ($t.State -eq 'Ready') {
-            "<span class='badge badge-ok'>Ready</span>"
+            "<span class='tk-badge-ok'>Ready</span>"
         } elseif ($t.State -eq 'Disabled') {
-            "<span class='badge badge-warn'>Disabled</span>"
+            "<span class='tk-badge-warn'>Disabled</span>"
         } elseif ($t.State -eq 'Running') {
-            "<span class='badge badge-ok'>Running</span>"
+            "<span class='tk-badge-ok'>Running</span>"
         } else {
-            "<span class='badge badge-neutral'>$(HtmlEncode($t.State))</span>"
+            "<span class='tk-badge-info'>$(HtmlEncode($t.State))</span>"
         }
         $lastRun  = if ($t.LastRunTime -and $t.LastRunTime -gt [datetime]'1900-01-01') { $t.LastRunTime.ToString('yyyy-MM-dd HH:mm') } else { 'Never' }
-        $nextRun  = if ($t.NextRunTime -and $t.NextRunTime -gt [datetime]'1900-01-01') { $t.NextRunTime.ToString('yyyy-MM-dd HH:mm') } else { '—' }
+        $nextRun  = if ($t.NextRunTime -and $t.NextRunTime -gt [datetime]'1900-01-01') { $t.NextRunTime.ToString('yyyy-MM-dd HH:mm') } else { 'N/A' }
         $taskRowsFlagged += "<tr>
             <td>$(HtmlEncode($t.TaskName))</td>
-            <td style='font-size:11px;color:#888'>$(HtmlEncode($t.TaskPath))</td>
+            <td class='tk-mono' style='font-size:11px'>$(HtmlEncode($t.TaskPath))</td>
             <td>$stateBadge</td>
             <td>$lastRun</td>
             <td>$resultBadge</td>
@@ -639,11 +639,11 @@ function Build-HtmlReport {
         $lastRun = if ($t.LastRunTime -and $t.LastRunTime -gt [datetime]'1900-01-01') { $t.LastRunTime.ToString('yyyy-MM-dd HH:mm') } else { 'Never' }
         $taskRowsMs += "<tr>
             <td>$(HtmlEncode($t.TaskName))</td>
-            <td style='font-size:11px;color:#888'>$(HtmlEncode($t.TaskPath))</td>
-            <td><span class='badge badge-neutral'>$(HtmlEncode($t.State))</span></td>
+            <td class='tk-mono' style='font-size:11px'>$(HtmlEncode($t.TaskPath))</td>
+            <td><span class='tk-badge-info'>$(HtmlEncode($t.State))</span></td>
             <td>$lastRun</td>
-            <td><span class='badge badge-warn'>$($t.LastTaskResult)</span></td>
-            <td>—</td>
+            <td><span class='tk-badge-warn'>$($t.LastTaskResult)</span></td>
+            <td>N/A</td>
         </tr>`n"
     }
 
@@ -651,8 +651,8 @@ function Build-HtmlReport {
     $srcRows = ''
     if ($Events -and $Events.SourceSummary) {
         foreach ($src in $Events.SourceSummary) {
-            $cntClass = if ($src.Count -ge 10) { 'badge-crit' } elseif ($src.Count -ge 3) { 'badge-warn' } else { 'badge-neutral' }
-            $srcRows += "<tr><td>$(HtmlEncode($src.Source))</td><td><span class='badge $cntClass'>$($src.Count)</span></td></tr>`n"
+            $cntBadge = if ($src.Count -ge 10) { 'tk-badge-err' } elseif ($src.Count -ge 3) { 'tk-badge-warn' } else { 'tk-badge-info' }
+            $srcRows += "<tr><td>$(HtmlEncode($src.Source))</td><td><span class='$cntBadge'>$($src.Count)</span></td></tr>`n"
         }
     }
 
@@ -662,165 +662,160 @@ function Build-HtmlReport {
         foreach ($evt in ($Events.Events | Select-Object -First 50)) {
             $timeStr  = $evt.TimeGenerated.ToString('yyyy-MM-dd HH:mm:ss')
             $logBadge = if ($evt.Log -eq 'System') {
-                "<span class='badge badge-warn'>SYS</span>"
+                "<span class='tk-badge-warn'>SYS</span>"
             } else {
-                "<span class='badge badge-neutral'>APP</span>"
+                "<span class='tk-badge-info'>APP</span>"
             }
             $evtRows += "<tr>
-                <td>$timeStr</td>
+                <td class='tk-mono'>$timeStr</td>
                 <td>$logBadge</td>
                 <td>$(HtmlEncode($evt.Source))</td>
-                <td>$($evt.EventID)</td>
+                <td class='tk-mono'>$($evt.EventID)</td>
                 <td style='font-size:12px'>$(HtmlEncode($evt.Message))</td>
             </tr>`n"
         }
     }
 
-    $noFlagged   = if ($flaggedTasks.Count -eq 0) { "<p style='color:#555'>No non-Microsoft tasks flagged.</p>" } else { '' }
-    $noMsFailed  = if ($msFailed.Count -eq 0)     { "<p style='color:#555'>No Microsoft task failures.</p>"      } else { '' }
-    $noEvents    = if ($eventTotal -eq 0)          { "<p style='color:#2ecc71'>No errors in the last 24 hours.</p>" } else { '' }
+    $noFlagged  = if ($flaggedTasks.Count -eq 0) { "<div class='tk-info-box'><span class='tk-info-label'>INFO</span> No non-Microsoft tasks flagged.</div>" } else { '' }
+    $noMsFailed = if ($msFailed.Count -eq 0)     { "<div class='tk-info-box'><span class='tk-info-label'>INFO</span> No Microsoft task failures.</div>"      } else { '' }
+    $noEvents   = if ($eventTotal -eq 0)          { "<div class='tk-info-box'><span class='tk-info-label tk-badge-ok'>OK</span> No errors in System or Application logs in the last 24 hours.</div>" } else { '' }
 
-    return @"
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>S.E.N.T.I.N.E.L. Health Report — $MachineName</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #1a1a2e; color: #e0e0e0; font-family: 'Segoe UI', Consolas, monospace; font-size: 14px; padding: 24px; }
-  h1 { color: #00d4ff; font-size: 22px; margin-bottom: 4px; }
-  .subtitle { color: #888; font-size: 13px; margin-bottom: 24px; }
-  .summary { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
-  .card { background: #0f3460; border-radius: 8px; padding: 16px 24px; min-width: 140px; text-align: center; }
-  .card-value { font-size: 28px; font-weight: bold; color: #00d4ff; }
-  .card-value.ok   { color: #2ecc71; }
-  .card-value.warn { color: #f39c12; }
-  .card-value.crit { color: #e74c3c; }
-  .card-label { font-size: 11px; color: #aaa; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
-  th { background: #0f3460; color: #00d4ff; padding: 10px 12px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-  td { padding: 9px 12px; border-bottom: 1px solid #1e2d4d; vertical-align: top; }
-  tr:hover td { background: #1e2d4d; }
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
-  .badge-ok      { background: #1a4a2e; color: #2ecc71; }
-  .badge-warn    { background: #4a3a10; color: #f39c12; }
-  .badge-crit    { background: #4a1a1a; color: #e74c3c; }
-  .badge-neutral { background: #2a2a3e; color: #aaa; }
-  .flag { color: #e74c3c; font-size: 12px; font-weight: bold; }
-  .section-title { color: #00d4ff; font-size: 16px; margin: 28px 0 10px; border-bottom: 2px solid #0f3460; padding-bottom: 6px; }
-  .sub-title { color: #00d4ff; font-size: 13px; margin: 16px 0 8px; opacity: 0.8; }
-  .footer { margin-top: 32px; color: #555; font-size: 11px; border-top: 1px solid #1e2d4d; padding-top: 12px; }
-</style>
-</head>
-<body>
+    $svcOkClass      = if ($svcConcern -gt 0) { 'warn' } else { 'ok' }
+    $svcConcernClass = if ($svcConcern -eq 0) { 'ok' }   else { 'err' }
+    $taskFailClass   = if ($taskFailed -eq 0)  { 'ok' }   else { 'err' }
+    $taskDisClass    = if ($taskDisabled -eq 0) { 'ok' }  else { 'warn' }
+    $evtClass        = if ($eventTotal -eq 0)  { 'ok' }   elseif ($eventTotal -lt 10) { 'warn' } else { 'err' }
 
-<h1>S.E.N.T.I.N.E.L. Health Report</h1>
-<div class="subtitle">Machine: $MachineName &nbsp;|&nbsp; Generated: $ReportTimestamp</div>
+    $showFlagTable = if ($flaggedTasks.Count -eq 0) { ' style="display:none"' } else { '' }
+    $showMsTable   = if ($msFailed.Count -eq 0)     { ' style="display:none"' } else { '' }
 
-<div class="summary">
-  <div class="card">
-    <div class="card-value $(if ($svcOk -eq $Services.Count) {'ok'} elseif ($svcConcern -gt 0) {'warn'} else {'ok'})">$svcOk</div>
-    <div class="card-label">Services OK</div>
-  </div>
-  <div class="card">
-    <div class="card-value $(if ($svcConcern -eq 0) {'ok'} else {'crit'})">$svcConcern</div>
-    <div class="card-label">Services Concern</div>
-  </div>
-  <div class="card">
-    <div class="card-value $(if ($taskFailed -eq 0) {'ok'} else {'crit'})">$taskFailed</div>
-    <div class="card-label">Tasks Failed</div>
-  </div>
-  <div class="card">
-    <div class="card-value $(if ($taskDisabled -eq 0) {'ok'} else {'warn'})">$taskDisabled</div>
-    <div class="card-label">Tasks Disabled</div>
-  </div>
-  <div class="card">
-    <div class="card-value $(if ($eventTotal -eq 0) {'ok'} elseif ($eventTotal -lt 10) {'warn'} else {'crit'})">$eventTotal</div>
-    <div class="card-label">Event Errors (24h)</div>
-  </div>
+    $html  = Get-TKHtmlHead `
+        -Title      'Service & Task Health Report' `
+        -ScriptName 'S.E.N.T.I.N.E.L.' `
+        -Subtitle   $MachineName `
+        -MetaItems  ([ordered]@{
+            'Machine'   = $MachineName
+            'Generated' = $ReportTimestamp
+            'Tool'      = 'Service, Task & Event Log Monitor v1.0'
+        }) `
+        -NavItems   @('Critical Services', 'Scheduled Tasks', 'Event Log Errors')
+
+    $html += @"
+
+<div class="tk-summary-row">
+    <div class="tk-summary-card $svcOkClass">
+        <div class="tk-summary-num">$svcOk</div>
+        <div class="tk-summary-lbl">Services OK</div>
+    </div>
+    <div class="tk-summary-card $svcConcernClass">
+        <div class="tk-summary-num">$svcConcern</div>
+        <div class="tk-summary-lbl">Services Concern</div>
+    </div>
+    <div class="tk-summary-card $taskFailClass">
+        <div class="tk-summary-num">$taskFailed</div>
+        <div class="tk-summary-lbl">Tasks Failed</div>
+    </div>
+    <div class="tk-summary-card $taskDisClass">
+        <div class="tk-summary-num">$taskDisabled</div>
+        <div class="tk-summary-lbl">Tasks Disabled</div>
+    </div>
+    <div class="tk-summary-card $evtClass">
+        <div class="tk-summary-num">$eventTotal</div>
+        <div class="tk-summary-lbl">Event Errors (24h)</div>
+    </div>
 </div>
 
-<!-- ═══ SECTION 1: SERVICES ═══ -->
-<div class="section-title">Section 1 — Critical Service Health</div>
-<table>
-  <thead><tr>
-    <th>Service Name</th>
-    <th>Display Name</th>
-    <th>Status</th>
-    <th>Start Type</th>
-    <th>Concern</th>
-  </tr></thead>
-  <tbody>
-    $svcRows
-  </tbody>
-</table>
-
-<!-- ═══ SECTION 2: TASKS ═══ -->
-<div class="section-title">Section 2 — Scheduled Task Audit</div>
-
-<div class="sub-title">Non-Microsoft Flagged Tasks</div>
-$noFlagged
-<table $(if ($flaggedTasks.Count -eq 0) {'style="display:none"'})>
-  <thead><tr>
-    <th>Task Name</th>
-    <th>Path</th>
-    <th>State</th>
-    <th>Last Run</th>
-    <th>Last Result</th>
-    <th>Next Run</th>
-  </tr></thead>
-  <tbody>
-    $taskRowsFlagged
-  </tbody>
-</table>
-
-<div class="sub-title">Microsoft Tasks with Errors</div>
-$noMsFailed
-<table $(if ($msFailed.Count -eq 0) {'style="display:none"'})>
-  <thead><tr>
-    <th>Task Name</th>
-    <th>Path</th>
-    <th>State</th>
-    <th>Last Run</th>
-    <th>Last Result</th>
-    <th>Next Run</th>
-  </tr></thead>
-  <tbody>
-    $taskRowsMs
-  </tbody>
-</table>
-
-<!-- ═══ SECTION 3: EVENTS ═══ -->
-<div class="section-title">Section 3 — Event Log Errors (Last 24 Hours)</div>
-$noEvents
-
-<div class="sub-title">Top Error Sources</div>
-<table style="max-width:480px">
-  <thead><tr><th>Source</th><th>Error Count</th></tr></thead>
-  <tbody>$srcRows</tbody>
-</table>
-
-<div class="sub-title">Recent Error Events (newest first, up to 50)</div>
-<table>
-  <thead><tr>
-    <th>Time</th>
-    <th>Log</th>
-    <th>Source</th>
-    <th>Event ID</th>
-    <th>Message</th>
-  </tr></thead>
-  <tbody>
-    $evtRows
-  </tbody>
-</table>
-
-<div class="footer">
-  S.E.N.T.I.N.E.L. v1.0 &nbsp;|&nbsp; Technician Toolkit &nbsp;|&nbsp; Report generated $ReportTimestamp
+<div class="tk-section" id="critical-services">
+    <div class="tk-card">
+        <div class="tk-card-header">
+            <span class="tk-card-label">Critical Services</span>
+        </div>
+        <table class="tk-table">
+            <thead><tr>
+                <th>Service Name</th>
+                <th>Display Name</th>
+                <th>Status</th>
+                <th>Start Type</th>
+                <th>Concern</th>
+            </tr></thead>
+            <tbody>
+                $svcRows
+            </tbody>
+        </table>
+    </div>
 </div>
-</body>
-</html>
+
+<div class="tk-section" id="scheduled-tasks">
+    <div class="tk-card">
+        <div class="tk-card-header">
+            <span class="tk-card-label">Scheduled Tasks</span>
+        </div>
+        <div class="tk-section-subtitle" style="padding:0 0 10px 0">Non-Microsoft Flagged Tasks</div>
+        $noFlagged
+        <table class="tk-table"$showFlagTable>
+            <thead><tr>
+                <th>Task Name</th>
+                <th>Path</th>
+                <th>State</th>
+                <th>Last Run</th>
+                <th>Last Result</th>
+                <th>Next Run</th>
+            </tr></thead>
+            <tbody>
+                $taskRowsFlagged
+            </tbody>
+        </table>
+        <div class="tk-divider"></div>
+        <div class="tk-section-subtitle" style="padding:10px 0">Microsoft Tasks with Errors</div>
+        $noMsFailed
+        <table class="tk-table"$showMsTable>
+            <thead><tr>
+                <th>Task Name</th>
+                <th>Path</th>
+                <th>State</th>
+                <th>Last Run</th>
+                <th>Last Result</th>
+                <th>Next Run</th>
+            </tr></thead>
+            <tbody>
+                $taskRowsMs
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="tk-section" id="event-log-errors">
+    <div class="tk-card">
+        <div class="tk-card-header">
+            <span class="tk-card-label">Event Log Errors (Last 24 Hours)</span>
+        </div>
+        $noEvents
+        <div class="tk-section-subtitle" style="padding:0 0 10px 0">Top Error Sources</div>
+        <table class="tk-table" style="max-width:480px">
+            <thead><tr><th>Source</th><th>Error Count</th></tr></thead>
+            <tbody>$srcRows</tbody>
+        </table>
+        <div class="tk-divider"></div>
+        <div class="tk-section-subtitle" style="padding:10px 0">Recent Error Events (newest first, up to 50)</div>
+        <table class="tk-table">
+            <thead><tr>
+                <th>Time</th>
+                <th>Log</th>
+                <th>Source</th>
+                <th>Event ID</th>
+                <th>Message</th>
+            </tr></thead>
+            <tbody>
+                $evtRows
+            </tbody>
+        </table>
+    </div>
+</div>
+
 "@
+
+    $html += Get-TKHtmlFoot -ScriptName 'S.E.N.T.I.N.E.L. v1.0'
+    return $html
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
