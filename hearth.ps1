@@ -319,16 +319,16 @@ function Invoke-SetupWizard {
 
         Write-Host ""
         Write-Host -NoNewline "  Enter new value (or press Enter to keep current): " -ForegroundColor $C.Header
-        $input = (Read-Host).Trim()
+        $userInput = (Read-Host).Trim()
 
-        if ([string]::IsNullOrWhiteSpace($input)) {
+        if ([string]::IsNullOrWhiteSpace($userInput)) {
             $displayCurrent = if ([string]::IsNullOrWhiteSpace($currentValue)) { '(not configured)' } else { $currentValue }
             Write-Host "  [*] Kept: $displayCurrent" -ForegroundColor $C.Info
         } else {
             if ($field.IsPath) {
-                $null = Invoke-PathValidation -Path $input
+                $null = Invoke-PathValidation -Path $userInput
             }
-            Save-FieldValue -Field $field -Value $input
+            Save-FieldValue -Field $field -Value $userInput
             Write-Host "  [+] Saved." -ForegroundColor $C.Success
         }
 

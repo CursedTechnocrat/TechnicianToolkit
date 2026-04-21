@@ -323,23 +323,23 @@ function Pick-ADUser {
     Write-Host ""
     Write-Host "  $Prompt" -ForegroundColor $C.Info
     Write-Host -NoNewline "  Username (SamAccountName) or search term: " -ForegroundColor $C.Header
-    $input = (Read-Host).Trim()
-    if ([string]::IsNullOrWhiteSpace($input)) { return $null }
+    $userInput = (Read-Host).Trim()
+    if ([string]::IsNullOrWhiteSpace($userInput)) { return $null }
 
     try {
         # Try exact match first
-        $user = Get-ADUser -Identity $input -Properties DisplayName, EmailAddress, Department, Title, Enabled -ErrorAction Stop
+        $user = Get-ADUser -Identity $userInput -Properties DisplayName, EmailAddress, Department, Title, Enabled -ErrorAction Stop
         return $user
     } catch {
         # Fall back to search
         Write-Host "  [*] Exact match not found — searching..." -ForegroundColor $C.Progress
         try {
-            $filter = "Name -like '*$input*' -or SamAccountName -like '*$input*' -or DisplayName -like '*$input*'"
+            $filter = "Name -like '*$userInput*' -or SamAccountName -like '*$userInput*' -or DisplayName -like '*$userInput*'"
             $users  = Get-ADUser -Filter $filter -Properties DisplayName, EmailAddress, Department, Title, Enabled -ErrorAction Stop |
                       Sort-Object SamAccountName
 
             if ($users.Count -eq 0) {
-                Write-Host "  [-] No users found matching '$input'." -ForegroundColor $C.Warning
+                Write-Host "  [-] No users found matching '$userInput'." -ForegroundColor $C.Warning
                 return $null
             }
 

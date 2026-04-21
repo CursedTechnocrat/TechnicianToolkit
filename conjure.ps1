@@ -421,10 +421,10 @@ function Select-OptionalSoftware {
             Write-Host "[OK] Selected all optional software" -ForegroundColor $Colors.Success
         }
         "S" {
-            $input = Read-Host "Enter numbers (comma-separated, e.g., 1,2)"
+            $userInput = Read-Host "Enter numbers (comma-separated, e.g., 1,2)"
 
-            if (-not [string]::IsNullOrWhiteSpace($input)) {
-                $numbers = $input -split ','
+            if (-not [string]::IsNullOrWhiteSpace($userInput)) {
+                $numbers = $userInput -split ','
                 foreach ($num in $numbers) {
                     $trimmed = $num.Trim()
                     if ([int]::TryParse($trimmed, [ref]$null)) {

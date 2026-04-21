@@ -174,8 +174,8 @@ function Select-Drive {
     param([string]$Prompt = "Enter drive letter (e.g. C)")
     Write-Host ""
     Write-Host -NoNewline "  $Prompt`: " -ForegroundColor $ColorSchema.Header
-    $input = (Read-Host).Trim().ToUpper().TrimEnd(':')
-    $mountPoint = "$input`:"
+    $userInput = (Read-Host).Trim().ToUpper().TrimEnd(':')
+    $mountPoint = "$userInput`:"
 
     try {
         return Get-BitLockerVolume -MountPoint $mountPoint -ErrorAction Stop
