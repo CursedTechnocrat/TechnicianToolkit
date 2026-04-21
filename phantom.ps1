@@ -14,7 +14,7 @@
     PS C:\> .\phantom.ps1 -Unattended -SourcePath "\\OldPC\C$\Users\John" -DestPath "C:\Users\John" -Items "1,2,3"
 
 .NOTES
-    Version : 1.0
+    Version : 1.1
 
     Tools Available
     ─────────────────────────────────────────────────────────────────
@@ -46,7 +46,8 @@ param(
     [string]$SourcePath = "",
     [string]$DestPath   = "",
     [string]$Items      = "A",
-    [switch]$Transcript
+    [switch]$Transcript,
+    [switch]$WhatIf
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -158,6 +159,12 @@ function Copy-ProfileFolder {
     $totalFiles  = $sourceFiles.Count
     $totalSizeMB = [math]::Round(($sourceFiles | Measure-Object -Property Length -Sum).Sum / 1MB, 1)
 
+    if ($WhatIf) {
+        Write-Host "    [~] WhatIf: Would copy $Label  ($totalFiles files, $totalSizeMB MB) => $DestPath" -ForegroundColor $ColorSchema.Warning
+        Add-MigrationRecord -Item $Label -Status "WhatIf" -Detail "$totalFiles files, $totalSizeMB MB"
+        return
+    }
+
     Write-Host "    [*] Copying $Label  ($totalFiles files, $totalSizeMB MB)..." -ForegroundColor $ColorSchema.Progress
 
     try {
@@ -208,6 +215,12 @@ function Copy-ProfileFile {
     if (-not (Test-Path $SourceFile)) {
         Write-Host "    [!!] $Label — not found, skipping." -ForegroundColor $ColorSchema.Warning
         Add-MigrationRecord -Item $Label -Status "Skipped" -Detail "Source file not found"
+        return
+    }
+
+    if ($WhatIf) {
+        Write-Host "    [~] WhatIf: Would copy $Label => $DestFolder" -ForegroundColor $ColorSchema.Warning
+        Add-MigrationRecord -Item $Label -Status "WhatIf"
         return
     }
 
@@ -615,6 +628,7 @@ foreach ($record in $MigrationLog) {
         "Copied"  { $ColorSchema.Success }
         "Partial" { $ColorSchema.Warning }
         "Skipped" { $ColorSchema.Info    }
+        "WhatIf"  { 'Cyan'              }
         default   { $ColorSchema.Error   }
     }
     $detail = if ($record.Detail) { " — $($record.Detail)" } else { "" }
@@ -626,8 +640,11 @@ $copied  = ($MigrationLog | Where-Object { $_.Status -eq "Copied"  } | Measure-O
 $partial = ($MigrationLog | Where-Object { $_.Status -eq "Partial" } | Measure-Object).Count
 $skipped = ($MigrationLog | Where-Object { $_.Status -eq "Skipped" } | Measure-Object).Count
 $failed  = ($MigrationLog | Where-Object { $_.Status -eq "Failed"  } | Measure-Object).Count
+$whatif  = ($MigrationLog | Where-Object { $_.Status -eq "WhatIf"  } | Measure-Object).Count
 
-Write-Host "  Copied: $copied  |  Partial: $partial  |  Skipped: $skipped  |  Failed: $failed" -ForegroundColor $ColorSchema.Header
+$summaryLine = "  Copied: $copied  |  Partial: $partial  |  Skipped: $skipped  |  Failed: $failed"
+if ($whatif -gt 0) { $summaryLine += "  |  WhatIf: $whatif" }
+Write-Host $summaryLine -ForegroundColor $ColorSchema.Header
 Write-Host ""
 Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host "  P.H.A.N.T.O.M. COMPLETE" -ForegroundColor $ColorSchema.Header

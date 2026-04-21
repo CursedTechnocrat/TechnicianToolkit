@@ -178,3 +178,52 @@ Describe 'Module import compliance — all tool scripts' {
         }
     }
 }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Param block compliance — interactive tool scripts must declare -Unattended
+# Excludes grimoire.ps1 (hub launcher, not an interactive tool itself)
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'Param block compliance — -Unattended switch' {
+    $scripts = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Filter '*.ps1' -File |
+        Where-Object { $_.Name -ne 'grimoire.ps1' }
+
+    foreach ($script in $scripts) {
+        It "$($script.Name) declares -Unattended" {
+            $errors = $null
+            $ast    = [System.Management.Automation.Language.Parser]::ParseFile(
+                $script.FullName, [ref]$null, [ref]$errors
+            )
+            $params = $ast.FindAll({
+                param($node)
+                $node -is [System.Management.Automation.Language.ParameterAst]
+            }, $true)
+            $paramNames = $params | ForEach-Object { $_.Name.VariablePath.UserPath }
+            $paramNames | Should -Contain 'Unattended'
+        }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GRIMOIRE registry integrity — every File entry must exist on disk
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'GRIMOIRE registry integrity' {
+    $GrimoirePath = Join-Path $PSScriptRoot '..\grimoire.ps1'
+    $ToolkitRoot  = Join-Path $PSScriptRoot '..'
+
+    It 'grimoire.ps1 exists' {
+        $GrimoirePath | Should -Exist
+    }
+
+    # Parse the $Tools array by extracting File = '...' values from the script text
+    $content   = Get-Content $GrimoirePath -Raw
+    $fileNames = [regex]::Matches($content, "File\s*=\s*'([^']+)'") |
+        ForEach-Object { $_.Groups[1].Value } |
+        Select-Object -Unique
+
+    foreach ($fileName in $fileNames) {
+        It "registered tool '$fileName' exists on disk" {
+            $fullPath = Join-Path $ToolkitRoot $fileName
+            $fullPath | Should -Exist
+        }
+    }
+}

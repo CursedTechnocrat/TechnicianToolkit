@@ -13,7 +13,7 @@
     PS C:\> .\grimoire.ps1 -WhatIf   # Launch tools in dry-run mode (passed through to each tool that supports it)
 
 .NOTES
-    Version : 1.0
+    Version : 1.1
 
     Tools Available
     ─────────────────────────────────────────────────────────────────
@@ -142,8 +142,8 @@ $Tools = @(
         Key         = '6'
         Name        = 'H.E.A.R.T.H.'
         File        = 'hearth.ps1'
-        Version     = '1.0'
-        Description = 'Toolkit setup wizard — configure org name, log paths, and default values'
+        Version     = '1.1'
+        Description = 'Toolkit setup wizard — org name, log path, Teams webhook, and tool defaults'
         Color       = 'White'
         Category    = 'Deployment & Onboarding'
     },
@@ -171,7 +171,7 @@ $Tools = @(
         Name        = 'T.H.R.E.S.H.O.L.D.'
         File        = 'threshold.ps1'
         Version     = '1.0'
-        Description = 'Disk & storage health — physical disk status, volume space, cleanup, old profiles'
+        Description = 'Disk space monitor — volume usage, low-space alerts, temp cleanup, old profile detection'
         Color       = 'Yellow'
         Category    = 'Diagnostics & Reporting'
     },
@@ -197,7 +197,7 @@ $Tools = @(
         Key         = '23'
         Name        = 'P.U.R.G.E.'
         File        = 'purge.ps1'
-        Version     = '1.0'
+        Version     = '1.1'
         Description = 'Disk cleanup — temp files, Windows Update cache, browser caches, Recycle Bin'
         Color       = 'Magenta'
         Category    = 'Diagnostics & Reporting'
@@ -291,7 +291,7 @@ $Tools = @(
         Key         = '20'
         Name        = 'P.H.A.N.T.O.M.'
         File        = 'phantom.ps1'
-        Version     = '1.0'
+        Version     = '1.1'
         Description = 'Profile migration and data transfer to a new machine'
         Color       = 'Cyan'
         Category    = 'Data & Migration'
@@ -326,7 +326,7 @@ function Show-Banner {
     Write-Host ""
     Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
     $toolCount = $Tools.Count
-    Write-Host "  Technician Toolkit  |  Hub v1.0  |  $toolCount tools  |  Run as Administrator" -ForegroundColor $ColorSchema.Info
+    Write-Host "  Technician Toolkit  |  Hub v1.1  |  $toolCount tools  |  Run as Administrator" -ForegroundColor $ColorSchema.Info
     Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
     if ($WhatIf) {
         Write-Host ""
