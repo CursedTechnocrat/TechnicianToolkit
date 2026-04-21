@@ -27,6 +27,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **GRIMOIRE registry validation test** — new Pester test block parses every `File = '...'` entry from `grimoire.ps1` and verifies the corresponding `.ps1` file exists on disk.
 - **Param block compliance test** — new Pester test block verifies that every tool script (excluding `grimoire.ps1`) declares a `-Unattended` parameter.
 - **Version bumps** — `hearth.ps1`, `phantom.ps1`, `purge.ps1`, and `grimoire.ps1` bumped from 1.0 to 1.1.
+- **HTML theme system** (`TechnicianToolkit.psm1`) — three new exported functions: `Get-TKHtmlCss`, `Get-TKHtmlHead`, `Get-TKHtmlFoot`. Provide a shared dark-theme `<style>` block, a full page header with title/subtitle/meta bar/nav anchors, and a footer. All HTML-generating scripts now call these instead of embedding bespoke `<style>` blocks and boilerplate HTML.
+- **Unified dark HTML theme** — all 10 report-generating scripts (ORACLE, WARD, THRESHOLD, SENTINEL, AUGUR, RELIC, BASTION, LANTERN, VAULT, AEGIS) migrated to the `Get-TKHtmlHead`/`Get-TKHtmlFoot` pattern. Reports share a dark cyan-accented design via CSS custom properties (`--tk-bg`, `--tk-surface`, `--tk-cyan`, etc.) and standardized class names (`.tk-card`, `.tk-table`, `.tk-badge-ok/warn/err/info`, `.tk-section`, `.tk-summary-card`, etc.).
+- **HTML Report Pattern in CLAUDE.md** — documents the `Get-TKHtmlHead`/`Get-TKHtmlFoot` usage pattern and full CSS class reference so developers adding new HTML-generating tools can use the shared theme correctly.
+- **Pester module-export tests updated** — `Get-TKHtmlCss`, `Get-TKHtmlHead`, and `Get-TKHtmlFoot` added to the `$expectedFunctions` list in `TechnicianToolkit.Tests.ps1`.
 
 ### Changed
 - **GRIMOIRE THRESHOLD description** — updated from "Disk & storage health — physical disk status, volume space, cleanup, old profiles" to "Disk space monitor — volume usage, low-space alerts, temp cleanup, old profile detection" to clearly distinguish it from DWARF's SMART/hardware focus.
@@ -40,6 +44,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **README Configuration** — added config key reference table (OrgName, LogDirectory, TeamsWebhook, Archive, Phantom, Covenant); DWARF and PURGE rows added; HEARTH row updated.
 - **README Logging** — DWARF and PURGE log output rows added.
 - **README License** — replaced placeholder with MIT reference.
+- **DWARF renamed to AUGUR** (`dwarf.ps1` -> `augur.ps1`) — full rebrand to A.U.G.U.R. (Automated Universal Gauge for Understanding Resources); banner, ASCII art, internal references, `.NOTES` tool list, and GRIMOIRE registry entry all updated.
+- **PURGE renamed to CLEANSE** (`purge.ps1` -> `cleanse.ps1`) — full rebrand to C.L.E.A.N.S.E. (Cleans Leftover, Ephemeral And Neglected System Entries); new ASCII art banner (`Show-CleanseBanner`), internal references, `.NOTES` tool list, and GRIMOIRE registry entry all updated. Version bumped to 1.2.
+- **GRIMOIRE key scheme** — keys reorganised into category ranges to support future growth without displacing existing tools: 1-9 Deployment, 10-19 Diagnostics & Reporting, 20-29 Security & Compliance, 30-39 Network & Remote, 40-49 Cloud & M365, 50-59 Data & Profiles. Final mapping: ORACLE 10, WARD 11, THRESHOLD 12, SENTINEL 13, AUGUR 14, CLEANSE 15, CIPHER 20, SIGIL 21, BASTION 22, RELIC 23, LEYLINE 30, SPECTER 31, LANTERN 32, AEGIS 40, VAULT 41, PHANTOM 50, ARCHIVE 51.
+- **GRIMOIRE scroll buffer** — `[Console]::Clear()` replaces `Clear-Host` in `Show-Banner` and the Q-exit branch, eliminating stale menu renders when scrolling up through terminal history.
+- **Bulk ASCII encoding fix** — all 24 `.ps1` files and `TechnicianToolkit.psm1` had multi-byte Unicode characters (`-`, `--`, `-`, `*`) in functional code lines (string literals, region markers, format strings) replaced with plain ASCII equivalents. Banner heredocs and block comments were left intact. Prevents Windows-1252 mojibake when PowerShell 5.1 reads files cloned without a UTF-8 BOM.
+- **CLAUDE.md** — Module Exports table updated to include `Get-TKHtmlCss`, `Get-TKHtmlHead`, `Get-TKHtmlFoot`; new HTML Report Pattern section with code example and CSS class reference; Tool Distinctions section updated to reference AUGUR instead of DWARF.
+- **README** — AUGUR/CLEANSE renames reflected throughout; GRIMOIRE key numbers updated in all tables; Quick Launch and Usage sections updated with AUGUR/CLEANSE one-liners.
+- **Version bumps** — `grimoire.ps1` 1.1 -> 1.2; `augur.ps1` introduced at 1.1; `cleanse.ps1` introduced at 1.2.
 
 ### Fixed
 - **SIGIL unattended mode bug** — `-Unattended -Categories` was silently a no-op because `$selectedKeys` was never populated in the unattended branch. Categories are now correctly parsed and applied.

@@ -48,7 +48,36 @@ Key functions exported by `TechnicianToolkit.psm1`:
 | `Start-TKTranscript` / `Stop-TKTranscript` | PowerShell transcript wrappers |
 | `Write-TKError` | Log error to file and optionally POST to Teams webhook |
 | `EscHtml` | HTML-escape a string for use in report templates |
+| `Get-TKHtmlCss` | Returns the shared `<style>` block — rarely called directly |
+| `Get-TKHtmlHead` | Returns `<!DOCTYPE html>…<div class="tk-main">` with shared CSS, page header, and nav bar |
+| `Get-TKHtmlFoot` | Returns `</div><footer>…</body></html>` |
 | `Write-Section`, `Write-Step`, `Write-Ok`, `Write-Warn`, `Write-Fail`, `Write-Info` | Formatted console output helpers |
+
+### HTML Report Pattern
+
+All tools that produce HTML reports use the shared template helpers:
+
+```powershell
+$html  = Get-TKHtmlHead -Title 'Report Title' -ScriptName 'T.O.O.L.' `
+             -Subtitle $env:COMPUTERNAME `
+             -MetaItems ([ordered]@{ 'Generated' = (Get-Date -Format 'yyyy-MM-dd HH:mm') }) `
+             -NavItems @('Section One', 'Section Two')
+$html += @"
+<div class="tk-section">
+  <div class="tk-section-title"><span class="tk-section-num">01</span> Section One</div>
+  <div class="tk-card">
+    <table class="tk-table"><thead><tr><th>Column</th></tr></thead>
+    <tbody><tr><td>Data</td></tr></tbody></table>
+  </div>
+</div>
+"@
+$html += Get-TKHtmlFoot -ScriptName 'T.O.O.L. v1.0'
+```
+
+Key CSS classes: `.tk-card`, `.tk-card-header`, `.tk-card-label`, `.tk-summary-row`,
+`.tk-summary-card` (+ modifier `ok`/`warn`/`err`/`info`), `.tk-section`, `.tk-section-title`,
+`.tk-section-num`, `.tk-table`, `.tk-badge-ok/warn/err/info/blue`, `.tk-info-box`, `.tk-info-label`,
+`.tk-progress-wrap` + `.tk-progress-bar.ok/warn/err`, `.tk-mono`.
 
 ## Running Tests
 
