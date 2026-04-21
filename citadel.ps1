@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-    B.A.S.T.I.O.N. — Bulk Active-directory Stewardship: Tasks, Identity, Operations & Namespacing
+    C.I.T.A.D.E.L. — Centralizes Identity, Tasks, Accounts, Directories, Entitlements & Logons
     Active Directory & Identity Management Tool for PowerShell 5.1+
 
 .DESCRIPTION
@@ -10,8 +10,8 @@
     If RSAT is not installed, the script will detect this and offer to install it automatically.
 
 .USAGE
-    PS C:\> .\bastion.ps1                         # Interactive menu — must be run as Administrator
-    PS C:\> .\bastion.ps1 -Unattended -Action StaleReport   # Export stale accounts HTML report silently
+    PS C:\> .\citadel.ps1                         # Interactive menu — must be run as Administrator
+    PS C:\> .\citadel.ps1 -Unattended -Action StaleReport   # Export stale accounts HTML report silently
 
 .NOTES
     Version : 1.0
@@ -22,23 +22,23 @@
     R.U.N.E.P.R.E.S.S.     — Printer driver installation & configuration
     R.E.S.T.O.R.A.T.I.O.N. — Windows Update management
     C.O.N.J.U.R.E.         — Software deployment via winget / Chocolatey
-    O.R.A.C.L.E.           — System diagnostics & HTML report generation
+    A.U.S.P.E.X.           — System diagnostics & HTML report generation
     C.O.V.E.N.A.N.T.       — Machine onboarding & Entra ID domain join
-    P.H.A.N.T.O.M.         — Profile migration & data transfer
+    R.E.V.E.N.A.N.T.       — Profile migration & data transfer
     C.I.P.H.E.R.           — BitLocker drive encryption management
     W.A.R.D.               — User account & local security audit
     A.R.C.H.I.V.E.         — Pre-reimaging profile backup
     S.I.G.I.L.             — Security baseline & policy enforcement
-    S.P.E.C.T.E.R.         — Remote machine execution via WinRM
+    S.H.A.D.E.             — Remote machine execution via WinRM
     L.E.Y.L.I.N.E.         — Network diagnostics & remediation
     F.O.R.G.E.             — Driver update detection & installation
-    A.E.G.I.S.             — Azure environment assessment & reporting
-    B.A.S.T.I.O.N.         — Active Directory & identity management
+    T.A.L.I.S.M.A.N.       — Azure environment assessment & reporting
+    C.I.T.A.D.E.L.         — Active Directory & identity management
     L.A.N.T.E.R.N.         — Network discovery & asset inventory
     T.H.R.E.S.H.O.L.D.     — Disk & storage health monitoring
-    V.A.U.L.T.             — M365 license & mailbox auditing
-    S.E.N.T.I.N.E.L.       — Service & scheduled task monitoring
-    R.E.L.I.C.             — Certificate health & SSL expiry monitoring
+    R.E.L.I.Q.U.A.R.Y.     — M365 license & mailbox auditing
+    G.A.R.G.O.Y.L.E.       — Service & scheduled task monitoring
+    A.R.T.I.F.A.C.T.       — Certificate health & SSL expiry monitoring
     H.E.A.R.T.H.           — Toolkit setup & configuration wizard
 
     Color Schema
@@ -124,19 +124,19 @@ $C = @{
 # BANNER
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Show-BastionBanner {
+function Show-CitadelBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host @"
 
-  ██████╗  █████╗ ███████╗████████╗██╗ ██████╗ ███╗   ██╗
-  ██╔══██╗██╔══██╗██╔════╝╚══██╔══╝██║██╔═══██╗████╗  ██║
-  ██████╔╝███████║███████╗   ██║   ██║██║   ██║██╔██╗ ██║
-  ██╔══██╗██╔══██║╚════██║   ██║   ██║██║   ██║██║╚██╗██║
-  ██████╔╝██║  ██║███████║   ██║   ██║╚██████╔╝██║ ╚████║
-  ╚═════╝ ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝
+   ██████╗██╗████████╗ █████╗ ██████╗ ███████╗██╗
+  ██╔════╝██║╚══██╔══╝██╔══██╗██╔══██╗██╔════╝██║
+  ██║     ██║   ██║   ███████║██║  ██║█████╗  ██║
+  ██║     ██║   ██║   ██╔══██║██║  ██║██╔══╝  ██║
+  ╚██████╗██║   ██║   ██║  ██║██████╔╝███████╗███████╗
+   ╚═════╝╚═╝   ╚═╝   ╚═╝  ╚═╝╚═════╝ ╚══════╝╚══════╝
 
 "@ -ForegroundColor Cyan
-    Write-Host "    B.A.S.T.I.O.N. — Bulk Active-directory Stewardship: Tasks, Identity, Operations & Namespacing" -ForegroundColor Cyan
+    Write-Host "    C.I.T.A.D.E.L. — Centralizes Identity, Tasks, Accounts, Directories, Entitlements & Logons" -ForegroundColor Cyan
     Write-Host "    Active Directory & Identity Management Tool" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -196,7 +196,7 @@ function Assert-ADModule {
     Write-Host ""
     Write-Host "  The ActiveDirectory PowerShell module is part of RSAT" -ForegroundColor $C.Info
     Write-Host "  (Remote Server Administration Tools). It is required for" -ForegroundColor $C.Info
-    Write-Host "  all B.A.S.T.I.O.N. functions." -ForegroundColor $C.Info
+    Write-Host "  all C.I.T.A.D.E.L. functions." -ForegroundColor $C.Info
     Write-Host ""
     Write-Host "  RSAT is supported on Windows 10 (1809+) and Windows 11." -ForegroundColor $C.Info
     Write-Host ""
@@ -246,7 +246,7 @@ function Assert-ADModule {
             Write-Host "    Download RSAT from the Microsoft Download Center and run" -ForegroundColor $C.Warning
             Write-Host "    the installer, then enable the AD DS Tools feature." -ForegroundColor $C.Warning
             Write-Host ""
-            Write-Host "  After installation, re-run bastion.ps1." -ForegroundColor $C.Info
+            Write-Host "  After installation, re-run citadel.ps1." -ForegroundColor $C.Info
             Write-Host ""
             Read-Host "  Press Enter to exit"
             return $false
@@ -850,8 +850,8 @@ function Export-StaleReport {
     }
 
     $html = (Get-TKHtmlHead `
-        -Title     'B.A.S.T.I.O.N. Stale Accounts Report' `
-        -ScriptName 'B.A.S.T.I.O.N.' `
+        -Title     'C.I.T.A.D.E.L. Stale Accounts Report' `
+        -ScriptName 'C.I.T.A.D.E.L.' `
         -Subtitle  "Domain: $domain" `
         -MetaItems ([ordered]@{ 'Generated' = $reportTimestamp; 'Stale Threshold' = '90 days' }) `
         -NavItems  @('Stale User Accounts')) + @"
@@ -896,9 +896,9 @@ function Export-StaleReport {
   </table>
 </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'B.A.S.T.I.O.N. v1.0')
+"@ + (Get-TKHtmlFoot -ScriptName 'C.I.T.A.D.E.L. v1.0')
 
-    $reportFilename = "BASTION_Stale_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
+    $reportFilename = "CITADEL_Stale_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
     $reportPath     = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) $reportFilename
 
     try {
@@ -1160,8 +1160,8 @@ function Export-PasswordExpiryReport {
     }
 
     $html = (Get-TKHtmlHead `
-        -Title     'B.A.S.T.I.O.N. Password Expiry Report' `
-        -ScriptName 'B.A.S.T.I.O.N.' `
+        -Title     'C.I.T.A.D.E.L. Password Expiry Report' `
+        -ScriptName 'C.I.T.A.D.E.L.' `
         -Subtitle  "Domain: $domain" `
         -MetaItems ([ordered]@{ 'Generated' = $reportTimestamp; 'Threshold' = "$thresholdDays days" }) `
         -NavItems  @('Users with Expiring Passwords')) + @"
@@ -1205,9 +1205,9 @@ function Export-PasswordExpiryReport {
   </table>
 </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'B.A.S.T.I.O.N. v1.0')
+"@ + (Get-TKHtmlFoot -ScriptName 'C.I.T.A.D.E.L. v1.0')
 
-    $reportFilename = "BASTION_PwdExpiry_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
+    $reportFilename = "CITADEL_PwdExpiry_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
     $reportPath     = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) $reportFilename
 
     try {
@@ -1233,7 +1233,7 @@ function Export-PasswordExpiryReport {
 # ─────────────────────────────────────────────────────────────────────────────
 
 function Show-Menu {
-    Show-BastionBanner
+    Show-CitadelBanner
 
     # Domain-join warning
     if (-not (Test-DomainJoined)) {
@@ -1281,11 +1281,11 @@ if (-not (Assert-ADModule)) {
 if ($Unattended) {
     switch ($Action) {
         'StaleReport' {
-            Write-Host "[*] B.A.S.T.I.O.N.  -  Running unattended stale accounts report..." -ForegroundColor $C.Progress
+            Write-Host "[*] C.I.T.A.D.E.L.  -  Running unattended stale accounts report..." -ForegroundColor $C.Progress
             Export-StaleReport
         }
         'PasswordExpiryReport' {
-            Write-Host "[*] B.A.S.T.I.O.N.  -  Running unattended password expiry report..." -ForegroundColor $C.Progress
+            Write-Host "[*] C.I.T.A.D.E.L.  -  Running unattended password expiry report..." -ForegroundColor $C.Progress
             Export-PasswordExpiryReport
         }
     }
@@ -1324,7 +1324,7 @@ if ($Unattended) {
             "12" { Export-PasswordExpiryReport }
             "Q" {
                 Write-Host ""
-                Write-Host "  Closing B.A.S.T.I.O.N." -ForegroundColor $C.Header
+                Write-Host "  Closing C.I.T.A.D.E.L." -ForegroundColor $C.Header
                 Write-Host ""
             }
             default {

@@ -209,7 +209,7 @@ function Get-TKHtmlHead {
     .SYNOPSIS
         Returns the opening HTML, head, and page-header markup for a toolkit report.
     .PARAMETER Title      Report title shown as the page heading.
-    .PARAMETER ScriptName Acronym label (e.g. 'O.R.A.C.L.E.') used in the report-label tag.
+    .PARAMETER ScriptName Acronym label (e.g. 'A.U.S.P.E.X.') used in the report-label tag.
     .PARAMETER Subtitle   Optional subtitle / machine name line beneath the title.
     .PARAMETER MetaItems  Ordered hashtable of label->value pairs shown in the metadata bar.
     .PARAMETER NavItems   Array of section-label strings for the sticky nav bar.
@@ -268,7 +268,7 @@ function Get-TKHtmlFoot {
     <#
     .SYNOPSIS
         Returns the closing HTML markup for a toolkit report.
-    .PARAMETER ScriptName  Shown in footer right (e.g. 'O.R.A.C.L.E. v1.0').
+    .PARAMETER ScriptName  Shown in footer right (e.g. 'A.U.S.P.E.X. v1.0').
     #>
     param([string]$ScriptName = 'TechnicianToolkit')
     $ts       = Get-Date -Format 'yyyy-MM-dd HH:mm'
@@ -302,7 +302,7 @@ function Get-TKConfig {
         LogDirectory  = ''
         TeamsWebhook  = ''
         Archive       = [PSCustomObject]@{ DefaultDestination   = '' }
-        Phantom       = [PSCustomObject]@{ DefaultDestination   = '' }
+        Revenant      = [PSCustomObject]@{ DefaultDestination   = '' }
         Covenant      = [PSCustomObject]@{ DefaultTimezone = ''; DefaultLocalAdminUser = '' }
     }
 
@@ -318,7 +318,7 @@ function Get-TKConfig {
             }
         }
         # Ensure nested keys exist
-        foreach ($section in @('Archive','Phantom','Covenant')) {
+        foreach ($section in @('Archive','Revenant','Covenant')) {
             if ($raw.$section -isnot [PSCustomObject]) {
                 $raw | Add-Member -NotePropertyName $section -NotePropertyValue $defaults.$section -Force
             } else {

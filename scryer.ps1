@@ -20,11 +20,11 @@
     Tools Available
     -----------------------------------------------------------------
     G.R.I.M.O.I.R.E.       -- Technician Toolkit hub and central launcher
-    O.R.A.C.L.E.           -- System diagnostics and HTML report generation
+    A.U.S.P.E.X.           -- System diagnostics and HTML report generation
     W.A.R.D.               -- User account and local security audit
     T.H.R.E.S.H.O.L.D.     -- Disk space monitor and volume usage
     A.U.G.U.R.             -- Disk wear and health assessment, SMART status
-    S.E.N.T.I.N.E.L.       -- Service and scheduled task monitoring
+    G.A.R.G.O.Y.L.E.       -- Service and scheduled task monitoring
     S.C.R.Y.E.R.           -- Unified diagnostic report (all of the above)
 
     Color Schema

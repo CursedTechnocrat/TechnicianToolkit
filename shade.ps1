@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-    S.P.E.C.T.E.R. — Sends PowerShell Execution Commands To External Remotes
+    S.H.A.D.E. — Summons Hosts for Administrative Deployment & Execution
     Remote Machine Execution Tool for PowerShell 5.1+
 
 .DESCRIPTION
@@ -10,7 +10,7 @@
     automatic retrieval of output files, and interactive remote sessions.
 
 .USAGE
-    PS C:\> .\specter.ps1      # Must be run as Administrator
+    PS C:\> .\shade.ps1      # Must be run as Administrator
     Target machine must have WinRM enabled. Run on target:
         Enable-PSRemoting -Force
 
@@ -19,7 +19,7 @@
 
     Remote-Compatible Tools
     ─────────────────────────────────────────────────────────────────
-    O.R.A.C.L.E.   — Diagnostics report (HTML retrieved automatically)
+    A.U.S.P.E.X.   — Diagnostics report (HTML retrieved automatically)
     W.A.R.D.       — Account audit (HTML retrieved automatically)
     R.E.S.T.O.R.A.T.I.O.N. — Windows Updates (non-interactive)
     S.I.G.I.L.     — Baseline enforcement (auto-apply all categories)
@@ -30,15 +30,15 @@
     R.U.N.E.P.R.E.S.S.     — Printer driver installation & configuration
     R.E.S.T.O.R.A.T.I.O.N. — Windows Update management
     C.O.N.J.U.R.E.         — Software deployment via winget / Chocolatey
-    O.R.A.C.L.E.           — System diagnostics & HTML report generation
+    A.U.S.P.E.X.           — System diagnostics & HTML report generation
     C.O.V.E.N.A.N.T.       — Machine onboarding & Entra ID domain join
-    P.H.A.N.T.O.M.         — Profile migration & data transfer
+    R.E.V.E.N.A.N.T.       — Profile migration & data transfer
     C.I.P.H.E.R.           — BitLocker drive encryption management
     W.A.R.D.               — User account & local security audit
     A.R.C.H.I.V.E.         — Pre-reimaging profile backup
     S.I.G.I.L.             — Security baseline & policy enforcement
-    S.P.E.C.T.E.R.         — Remote machine execution via WinRM
-    R.E.L.I.C.             — Certificate health & SSL expiry monitoring
+    S.H.A.D.E.             — Remote machine execution via WinRM
+    A.R.T.I.F.A.C.T.       — Certificate health & SSL expiry monitoring
     H.E.A.R.T.H.           — Toolkit setup & configuration wizard
 
     Color Schema
@@ -121,19 +121,19 @@ $ColorSchema = @{
 # BANNER
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Show-SpecterBanner {
+function Show-ShadeBanner {
     Clear-Host
     Write-Host @"
 
-   ███████╗██████╗ ███████╗ ██████╗████████╗███████╗██████╗
-   ██╔════╝██╔══██╗██╔════╝██╔════╝╚══██╔══╝██╔════╝██╔══██╗
-   ███████╗██████╔╝█████╗  ██║        ██║   █████╗  ██████╔╝
-   ╚════██║██╔═══╝ ██╔══╝  ██║        ██║   ██╔══╝  ██╔══██╗
-   ███████║██║     ███████╗╚██████╗   ██║   ███████╗██║  ██║
-   ╚══════╝╚═╝     ╚══════╝ ╚═════╝   ╚═╝   ╚══════╝╚═╝  ╚═╝
+   ███████╗██╗  ██╗ █████╗ ██████╗ ███████╗
+   ██╔════╝██║  ██║██╔══██╗██╔══██╗██╔════╝
+   ███████╗███████║███████║██║  ██║█████╗
+   ╚════██║██╔══██║██╔══██║██║  ██║██╔══╝
+   ███████║██║  ██║██║  ██║██████╔╝███████╗
+   ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚══════╝
 
 "@ -ForegroundColor Cyan
-    Write-Host "    S.P.E.C.T.E.R. — Sends PowerShell Execution Commands To External Remotes" -ForegroundColor Cyan
+    Write-Host "    S.H.A.D.E. — Summons Hosts for Administrative Deployment & Execution" -ForegroundColor Cyan
     Write-Host "    Remote Machine Execution Tool" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -212,12 +212,12 @@ function Invoke-RemoteTool {
     )
 
     $localScript  = Join-Path $ScriptPath $ScriptFile
-    $remoteTempDir = "C:\Temp\SpecterToolkit"
+    $remoteTempDir = "C:\Temp\ShadeToolkit"
     $remoteScript  = "$remoteTempDir\$ScriptFile"
 
     if (-not (Test-Path $localScript)) {
         Write-Host "  [-] Script not found locally: $localScript" -ForegroundColor $ColorSchema.Error
-        Write-Host "  [!!] Ensure $ScriptFile is in the same folder as specter.ps1." -ForegroundColor $ColorSchema.Warning
+        Write-Host "  [!!] Ensure $ScriptFile is in the same folder as shade.ps1." -ForegroundColor $ColorSchema.Warning
         return
     }
 
@@ -253,7 +253,7 @@ function Invoke-RemoteTool {
         } -ArgumentList $remoteTempDir
 
         if ($outputFiles) {
-            $retrieveDir = Join-Path $ScriptPath "SPECTER_$ComputerName"
+            $retrieveDir = Join-Path $ScriptPath "SHADE_$ComputerName"
             $null = New-Item -Path $retrieveDir -ItemType Directory -Force
 
             foreach ($file in $outputFiles) {
@@ -284,7 +284,7 @@ function Invoke-RemoteSigil {
     )
 
     $localScript   = Join-Path $ScriptPath "sigil.ps1"
-    $remoteTempDir = "C:\Temp\SpecterToolkit"
+    $remoteTempDir = "C:\Temp\ShadeToolkit"
     $remoteScript  = "$remoteTempDir\sigil.ps1"
 
     if (-not (Test-Path $localScript)) {
@@ -318,7 +318,7 @@ function Invoke-RemoteSigil {
         } -ArgumentList $remoteTempDir
 
         if ($logFiles) {
-            $retrieveDir = Join-Path $ScriptPath "SPECTER_$ComputerName"
+            $retrieveDir = Join-Path $ScriptPath "SHADE_$ComputerName"
             $null = New-Item -Path $retrieveDir -ItemType Directory -Force
             foreach ($file in $logFiles) {
                 Copy-Item -Path "$remoteTempDir\$file" -Destination (Join-Path $retrieveDir $file) -FromSession $Session -ErrorAction SilentlyContinue
@@ -340,7 +340,7 @@ function Invoke-RemoteSigil {
 # MAIN
 # ─────────────────────────────────────────────────────────────────────────────
 
-Show-SpecterBanner
+Show-ShadeBanner
 
 Write-Host "  [!!] The target machine must have WinRM enabled." -ForegroundColor $ColorSchema.Warning
 Write-Host "       On the target, run: Enable-PSRemoting -Force" -ForegroundColor $ColorSchema.Warning
@@ -417,7 +417,7 @@ do {
     Write-Host "  REMOTE OPERATIONS  —  Target: $targetMachine" -ForegroundColor $ColorSchema.Header
     Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
     Write-Host ""
-    Write-Host "  [1] Run O.R.A.C.L.E.         — diagnostics & HTML report" -ForegroundColor $ColorSchema.Info
+    Write-Host "  [1] Run A.U.S.P.E.X.         — diagnostics & HTML report" -ForegroundColor $ColorSchema.Info
     Write-Host "  [2] Run W.A.R.D.             — account audit & HTML report" -ForegroundColor $ColorSchema.Info
     Write-Host "  [3] Run R.E.S.T.O.R.A.T.I.O.N. — install Windows Updates" -ForegroundColor $ColorSchema.Info
     Write-Host "  [4] Run S.I.G.I.L.           — apply security baseline (all categories)" -ForegroundColor $ColorSchema.Info
@@ -433,7 +433,7 @@ do {
             Write-Host ""
             $session = New-RemoteSession -ComputerName $targetMachine -Credential $remoteCred
             if ($session) {
-                Invoke-RemoteTool -Session $session -ScriptFile "oracle.ps1" -ComputerName $targetMachine -ToolName "O.R.A.C.L.E."
+                Invoke-RemoteTool -Session $session -ScriptFile "auspex.ps1" -ComputerName $targetMachine -ToolName "A.U.S.P.E.X."
                 Remove-PSSession $session
             }
         }
@@ -471,7 +471,7 @@ do {
         "5" {
             Write-Host ""
             Write-Host "  [*] Opening interactive session with $targetMachine..." -ForegroundColor $ColorSchema.Progress
-            Write-Host "  [*] Type 'exit' to return to S.P.E.C.T.E.R." -ForegroundColor $ColorSchema.Info
+            Write-Host "  [*] Type 'exit' to return to S.H.A.D.E." -ForegroundColor $ColorSchema.Info
             Write-Host ""
             try {
                 $enterParams = @{ ComputerName = $targetMachine }
@@ -488,7 +488,7 @@ do {
         }
         "Q" {
             Write-Host ""
-            Write-Host "  Closing S.P.E.C.T.E.R." -ForegroundColor $ColorSchema.Header
+            Write-Host "  Closing S.H.A.D.E." -ForegroundColor $ColorSchema.Header
             Write-Host ""
         }
         default {

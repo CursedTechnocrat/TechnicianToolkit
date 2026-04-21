@@ -28,9 +28,9 @@
     R.U.N.E.P.R.E.S.S.     — Printer driver installation & configuration
     R.E.S.T.O.R.A.T.I.O.N. — Windows Update management
     C.O.N.J.U.R.E.         — Software deployment via winget / Chocolatey
-    O.R.A.C.L.E.           — System diagnostics & HTML report generation
+    A.U.S.P.E.X.           — System diagnostics & HTML report generation
     C.O.V.E.N.A.N.T.       — Machine onboarding & Entra ID domain join
-    R.E.L.I.C.             — Certificate health & SSL expiry monitoring
+    A.R.T.I.F.A.C.T.       — Certificate health & SSL expiry monitoring
     H.E.A.R.T.H.           — Toolkit setup & configuration wizard
 
     Color Schema

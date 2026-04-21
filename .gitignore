@@ -1,6 +1,6 @@
 # ─── Runtime Output ───────────────────────────────────────────────────────────
-# ORACLE — HTML diagnostic reports (saved to Desktop by default)
-ORACLE_*.html
+# AUSPEX — HTML diagnostic reports (saved to Desktop by default)
+AUSPEX_*.html
 
 # RUNEPRESS — CSV install logs (saved alongside the script)
 RUNEPRESS_InstallLog_*.csv

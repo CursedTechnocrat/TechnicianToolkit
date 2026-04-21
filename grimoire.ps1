@@ -20,26 +20,26 @@
     R.U.N.E.P.R.E.S.S.     — Printer driver installation & configuration
     R.E.S.T.O.R.A.T.I.O.N. — Windows Update management
     C.O.N.J.U.R.E.         — Software deployment via winget / Chocolatey
-    O.R.A.C.L.E.           — System diagnostics & HTML report generation
+    A.U.S.P.E.X.           — System diagnostics & HTML report generation
     C.O.V.E.N.A.N.T.       — Machine onboarding & Entra ID domain join
-    P.H.A.N.T.O.M.         — Profile migration & data transfer
+    R.E.V.E.N.A.N.T.       — Profile migration & data transfer
     C.I.P.H.E.R.           — BitLocker drive encryption management
     W.A.R.D.               — User account & local security audit
     A.R.C.H.I.V.E.         — Pre-reimaging profile backup
     S.I.G.I.L.             — Security baseline & policy enforcement
-    S.P.E.C.T.E.R.         — Remote machine execution via WinRM
+    S.H.A.D.E.             — Remote machine execution via WinRM
     L.E.Y.L.I.N.E.         — Network diagnostics & remediation
     F.O.R.G.E.             — Driver update detection & installation
-    A.E.G.I.S.             — Azure environment assessment & reporting
-    B.A.S.T.I.O.N.         — Active Directory & identity management
+    T.A.L.I.S.M.A.N.       — Azure environment assessment & reporting
+    C.I.T.A.D.E.L.         — Active Directory & identity management
     L.A.N.T.E.R.N.         — Network discovery & asset inventory
     T.H.R.E.S.H.O.L.D.     — Disk & storage health monitoring
-    V.A.U.L.T.             — M365 license & mailbox auditing
-    S.E.N.T.I.N.E.L.       — Service & scheduled task monitoring
+    R.E.L.I.Q.U.A.R.Y.     — M365 license & mailbox auditing
+    G.A.R.G.O.Y.L.E.       — Service & scheduled task monitoring
     A.U.G.U.R.             — Disk wear & health — SMART status, physical disk reliability, HTML report
     C.L.E.A.N.S.E.         — Disk cleanup — temp files, Windows Update cache, browser caches, Recycle Bin
     S.C.R.Y.E.R.           — Unified diagnostic report — system, users, disks, SMART, services in one HTML
-    R.E.L.I.C.             — Certificate health & SSL expiry monitoring
+    A.R.T.I.F.A.C.T.       — Certificate health & SSL expiry monitoring
     H.E.A.R.T.H.           — Toolkit setup & configuration wizard
 
     Color Schema
@@ -187,8 +187,8 @@ $Tools = @(
     # ── Diagnostics & Reporting (10–19) ─────────────────────────────
     [PSCustomObject]@{
         Key         = '10'
-        Name        = 'O.R.A.C.L.E.'
-        File        = 'oracle.ps1'
+        Name        = 'A.U.S.P.E.X.'
+        File        = 'auspex.ps1'
         Version     = '1.0'
         Description = 'System diagnostics, health assessment, and HTML report generation'
         Color       = 'Yellow'
@@ -214,8 +214,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '13'
-        Name        = 'S.E.N.T.I.N.E.L.'
-        File        = 'sentinel.ps1'
+        Name        = 'G.A.R.G.O.Y.L.E.'
+        File        = 'gargoyle.ps1'
         Version     = '1.0'
         Description = 'Service & task monitor  -  critical services, scheduled tasks, event log errors'
         Color       = 'Red'
@@ -269,8 +269,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '22'
-        Name        = 'B.A.S.T.I.O.N.'
-        File        = 'bastion.ps1'
+        Name        = 'C.I.T.A.D.E.L.'
+        File        = 'citadel.ps1'
         Version     = '1.0'
         Description = 'Active Directory management  -  search, unlock, reset passwords, group membership'
         Color       = 'Blue'
@@ -278,8 +278,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '23'
-        Name        = 'R.E.L.I.C.'
-        File        = 'relic.ps1'
+        Name        = 'A.R.T.I.F.A.C.T.'
+        File        = 'artifact.ps1'
         Version     = '1.0'
         Description = 'Certificate health monitor  -  local cert stores, SSL/TLS expiry, HTML report'
         Color       = 'Yellow'
@@ -297,8 +297,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '31'
-        Name        = 'S.P.E.C.T.E.R.'
-        File        = 'specter.ps1'
+        Name        = 'S.H.A.D.E.'
+        File        = 'shade.ps1'
         Version     = '1.0'
         Description = 'Remote execution via WinRM  -  run toolkit tools on a remote machine'
         Color       = 'White'
@@ -316,8 +316,8 @@ $Tools = @(
     # ── Cloud & Identity (40–49) ─────────────────────────────────────
     [PSCustomObject]@{
         Key         = '40'
-        Name        = 'A.E.G.I.S.'
-        File        = 'aegis.ps1'
+        Name        = 'T.A.L.I.S.M.A.N.'
+        File        = 'talisman.ps1'
         Version     = '2.2'
         Description = 'Azure environment assessment  -  security posture, RBAC, backup coverage, HTML report'
         Color       = 'Cyan'
@@ -325,8 +325,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '41'
-        Name        = 'V.A.U.L.T.'
-        File        = 'vault.ps1'
+        Name        = 'R.E.L.I.Q.U.A.R.Y.'
+        File        = 'reliquary.ps1'
         Version     = '1.0'
         Description = 'M365 license & mailbox audit  -  SKU inventory, unlicensed users, MFA status'
         Color       = 'Green'
@@ -335,9 +335,9 @@ $Tools = @(
     # ── Data & Migration (50–59) ─────────────────────────────────────
     [PSCustomObject]@{
         Key         = '50'
-        Name        = 'P.H.A.N.T.O.M.'
-        File        = 'phantom.ps1'
-        Version     = '1.1'
+        Name        = 'R.E.V.E.N.A.N.T.'
+        File        = 'revenant.ps1'
+        Version     = '1.2'
         Description = 'Profile migration and data transfer to a new machine'
         Color       = 'Cyan'
         Category    = 'Data & Migration'

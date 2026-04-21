@@ -19,7 +19,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | Running through Kaseya VSA LiveConnect | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
 | Need a guided, menu-driven workflow | **This repo** — full prompts and confirmations at every step |
 | Need fire-and-forget with parameter-only input | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
-| Need tools with no LiveConnect counterpart (COVENANT, PHANTOM, CIPHER, ARCHIVE, SPECTER, RUNEPRESS, LEYLINE, FORGE, AEGIS, BASTION, LANTERN, THRESHOLD, AUGUR, CLEANSE, VAULT, SENTINEL, RELIC, HEARTH) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
+| Need tools with no LiveConnect counterpart (COVENANT, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GARGOYLE, ARTIFACT, HEARTH) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
 
 ---
 
@@ -60,10 +60,10 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 
 | # | Script | Acronym | Purpose |
 |---|--------|---------|---------|
-| 10 | **oracle.ps1** | **O.R.A.C.L.E.** — Observes, Reports & Audits Computer Logs & Environments | System diagnostics, health assessment, and HTML report generation |
+| 10 | **auspex.ps1** | **A.U.S.P.E.X.** — Audits, Uncovers, Surveys Performance, Events & eXceptions | System diagnostics, health assessment, and HTML report generation |
 | 11 | **ward.ps1** | **W.A.R.D.** — Watches Accounts, Reviews Roles & Detects anomalies | Local user account audit with role, last logon, flags, and HTML report |
 | 12 | **threshold.ps1** | **T.H.R.E.S.H.O.L.D.** — Tests Hardware Reliability, Evaluates Storage Health, & Optimizes/Logs Disk data | Disk space monitor — volume usage, low-space alerts, temp cleanup, old profile detection, HTML report |
-| 13 | **sentinel.ps1** | **S.E.N.T.I.N.E.L.** — Scans & Evaluates services, Networks, Tasks, Infrastructure, Node Events & Logs | Service, task & event log monitor — health check local or remote machine, HTML report |
+| 13 | **gargoyle.ps1** | **G.A.R.G.O.Y.L.E.** — Guards Against Runtime Glitches On Your Log Events | Service, task & event log monitor — health check local or remote machine, HTML report |
 | 14 | **augur.ps1** | **A.U.G.U.R.** — Analyzes, Uncovers & Gauges Unit Reliability | Physical disk health — SMART status, wear prediction, failure forecast, hardware reliability, HTML report |
 | 15 | **cleanse.ps1** | **C.L.E.A.N.S.E.** — Cleans Leftover, Ephemeral And Neglected System Entries | Disk cleanup — user & system temp, Windows Update cache, browser caches, Recycle Bin |
 
@@ -73,29 +73,29 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 |---|--------|---------|---------|
 | 20 | **cipher.ps1** | **C.I.P.H.E.R.** — Configures & Implements Policy-based Hardware Encryption & Recovery | BitLocker drive encryption management — enable, disable, key backup |
 | 21 | **sigil.ps1** | **S.I.G.I.L.** — Secures Infrastructure: Governs via Integrated Lockdown | Security baseline enforcement — telemetry, UAC, firewall, audit policy, password policy |
-| 22 | **bastion.ps1** | **B.A.S.T.I.O.N.** — Bulk Active-directory Stewardship: Tasks, Identity, Operations & Namespacing | Active Directory user & group management — unlock, reset, lockout forensics, stale & expiry reports |
-| 23 | **relic.ps1** | **R.E.L.I.C.** — Reviews & Enumerates Latent Identity Certificates | Certificate health monitor — local cert stores, SSL/TLS expiry, HTML report |
+| 22 | **citadel.ps1** | **C.I.T.A.D.E.L.** — Centralizes Identity, Tasks, Accounts, Directories, Entitlements & Logons | Active Directory user & group management — unlock, reset, lockout forensics, stale & expiry reports |
+| 23 | **artifact.ps1** | **A.R.T.I.F.A.C.T.** — Audits, Reports Trust, Identity, Fingerprints, Authority, Certificates & TLS | Certificate health monitor — local cert stores, SSL/TLS expiry, HTML report |
 
 ### Network & Remote
 
 | # | Script | Acronym | Purpose |
 |---|--------|---------|---------|
 | 30 | **leyline.ps1** | **L.E.Y.L.I.N.E.** — Locates, Examines & Yields Latency, Infrastructure, Network & Endpoints | Network diagnostics & remediation — adapters, ping, DNS, port tests, IP renew, stack reset |
-| 31 | **specter.ps1** | **S.P.E.C.T.E.R.** — Sends PowerShell Execution Commands To External Remotes | Remote machine execution via WinRM — run toolkit tools without physical access |
+| 31 | **shade.ps1** | **S.H.A.D.E.** — Summons Hosts for Administrative Deployment & Execution | Remote machine execution via WinRM — run toolkit tools without physical access |
 | 32 | **lantern.ps1** | **L.A.N.T.E.R.N.** — Locates & Audits Network Topology, Enumerating Resources & Nodes | Network discovery — subnet ping sweep, DNS lookup, MAC addresses, port scan, HTML report |
 
 ### Cloud & Identity
 
 | # | Script | Acronym | Purpose |
 |---|--------|---------|---------|
-| 40 | **aegis.ps1** | **A.E.G.I.S.** — Azure Environment & Governance Inspection System | Azure subscription assessment — security posture, RBAC, backup coverage, Advisor alerts, HTML report |
-| 41 | **vault.ps1** | **V.A.U.L.T.** — Validates Assets & User License Tracking | Microsoft 365 license & mailbox audit — license assignments, MFA status, shared mailboxes, HTML report |
+| 40 | **talisman.ps1** | **T.A.L.I.S.M.A.N.** — Tenant Assessment, Logging, Infrastructure, Security, Monitoring & Access Navigator | Azure subscription assessment — security posture, RBAC, backup coverage, Advisor alerts, HTML report |
+| 41 | **reliquary.ps1** | **R.E.L.I.Q.U.A.R.Y.** — Reports, Evaluates Licenses, Inventories, Quotas, Users, Access & Registration Yields | Microsoft 365 license & mailbox audit — license assignments, MFA status, shared mailboxes, HTML report |
 
 ### Data & Migration
 
 | # | Script | Acronym | Purpose |
 |---|--------|---------|---------|
-| 50 | **phantom.ps1** | **P.H.A.N.T.O.M.** — Portable Home Archive: Navigates & Transfers Objects to new Machine | Profile migration and data transfer between machines or profiles |
+| 50 | **revenant.ps1** | **R.E.V.E.N.A.N.T.** — Relocates, Extracts, Validates Environments, Networks, Accounts 'N Transfers | Profile migration and data transfer between machines or profiles |
 | 51 | **archive.ps1** | **A.R.C.H.I.V.E.** — Automated Repository Compressing & Housing Important Volume Exports | Pre-reimaging profile backup — ZIP to local path or network share |
 
 ---
@@ -183,7 +183,7 @@ Automates Windows Update detection, installation, and reboot handling with minim
 Interactive setup wizard for the Technician Toolkit — configure all settings without hand-editing JSON.
 
 - Step-by-step wizard covers all seven configuration fields with descriptions, hints, and live validation
-- Configures: organization name, log/report directory, Teams webhook URL, ARCHIVE default destination, PHANTOM default destination, COVENANT default timezone and local admin username
+- Configures: organization name, log/report directory, Teams webhook URL, ARCHIVE default destination, REVENANT default destination, COVENANT default timezone and local admin username
 - Path fields validate on entry — prompts to create missing directories automatically
 - View current configuration with color-coded status: green = configured, yellow = empty or path not found
 - Edit individual fields without re-running the full wizard
@@ -196,7 +196,7 @@ Interactive setup wizard for the Technician Toolkit — configure all settings w
 
 ## Diagnostics & Reporting
 
-### O.R.A.C.L.E.
+### A.U.S.P.E.X.
 
 Audits the current state of a Windows machine and exports a formatted HTML report to the script directory.
 
@@ -240,7 +240,7 @@ Audits physical disk and volume health, flags space problems, and performs optio
 
 ---
 
-### S.E.N.T.I.N.E.L.
+### G.A.R.G.O.Y.L.E.
 
 Audits Windows services, scheduled tasks, and recent event log errors — locally or against a remote machine.
 
@@ -324,7 +324,7 @@ Applies a standardized security and configuration baseline to a Windows machine.
 
 ---
 
-### B.A.S.T.I.O.N.
+### C.I.T.A.D.E.L.
 
 Interactive Active Directory user and group management tool. Requires RSAT (auto-installed if missing).
 
@@ -342,7 +342,7 @@ Interactive Active Directory user and group management tool. Requires RSAT (auto
 
 ---
 
-### R.E.L.I.C.
+### A.R.T.I.F.A.C.T.
 
 Monitors certificate health across the local machine and remote hosts — surfaces expiring and expired certificates before they cause outages.
 
@@ -372,13 +372,13 @@ Tests and diagnoses network connectivity at every layer with one-click remediati
 
 ---
 
-### S.P.E.C.T.E.R.
+### S.H.A.D.E.
 
 Connects to a remote Windows machine via WinRM and runs Technician Toolkit scripts without needing physical access.
 
 - Enter target hostname or IP; supports current credentials (domain/Kerberos) or manual entry
 - WinRM connectivity test with step-by-step enable instructions if unreachable
-- **Run O.R.A.C.L.E.** — copies script to remote, executes, retrieves HTML report locally
+- **Run A.U.S.P.E.X.** — copies script to remote, executes, retrieves HTML report locally
 - **Run W.A.R.D.** — copies script to remote, executes, retrieves HTML report locally
 - **Run R.E.S.T.O.R.A.T.I.O.N.** — installs Windows Updates on target (reboot warning shown)
 - **Run S.I.G.I.L.** — applies full security baseline on target, retrieves CSV log
@@ -407,7 +407,7 @@ Discovers all live hosts on the local /24 subnet and produces a network asset in
 
 ## Cloud & Identity
 
-### A.E.G.I.S.
+### T.A.L.I.S.M.A.N.
 
 Connects to an Azure subscription and generates a comprehensive HTML assessment report for the environment.
 
@@ -425,7 +425,7 @@ Connects to an Azure subscription and generates a comprehensive HTML assessment 
 
 ---
 
-### V.A.U.L.T.
+### R.E.L.I.Q.U.A.R.Y.
 
 Connects to Microsoft 365 via the Microsoft Graph API and audits the tenant's license and mailbox state.
 
@@ -442,7 +442,7 @@ Connects to Microsoft 365 via the Microsoft Graph API and audits the tenant's li
 
 ## Data & Migration
 
-### P.H.A.N.T.O.M.
+### R.E.V.E.N.A.N.T.
 
 Migrates user profile data from a source machine or profile to a destination using Robocopy for reliable folder transfers.
 
@@ -487,15 +487,15 @@ Creates a compressed ZIP backup of a selected user profile before a machine is r
 | Windows Package Manager (winget) | `conjure.ps1` (Chocolatey supported as alternative) |
 | PSWindowsUpdate module | `restoration.ps1`, `forge.ps1` (auto-installed if missing) |
 | Entra ID account with device join permissions | `covenant.ps1` |
-| Robocopy (built into Windows) | `phantom.ps1`, `archive.ps1` |
+| Robocopy (built into Windows) | `revenant.ps1`, `archive.ps1` |
 | BitLocker-capable Windows edition (Pro/Enterprise) | `cipher.ps1` |
-| WinRM enabled on target machine | `specter.ps1`, `sentinel.ps1` (remote mode) |
-| RSAT ActiveDirectory module | `bastion.ps1` (auto-installed if missing) |
-| Az PowerShell modules | `aegis.ps1` (auto-installed if missing) |
-| Microsoft.Graph modules | `vault.ps1` (auto-installed if missing) |
-| Azure subscription + appropriate RBAC | `aegis.ps1` |
-| Microsoft 365 tenant + Global Reader or equivalent | `vault.ps1` |
-| On-premises Active Directory domain membership | `bastion.ps1` |
+| WinRM enabled on target machine | `shade.ps1`, `gargoyle.ps1` (remote mode) |
+| RSAT ActiveDirectory module | `citadel.ps1` (auto-installed if missing) |
+| Az PowerShell modules | `talisman.ps1` (auto-installed if missing) |
+| Microsoft.Graph modules | `reliquary.ps1` (auto-installed if missing) |
+| Azure subscription + appropriate RBAC | `talisman.ps1` |
+| Microsoft 365 tenant + Global Reader or equivalent | `reliquary.ps1` |
+| On-premises Active Directory domain membership | `citadel.ps1` |
 
 ---
 
@@ -554,8 +554,8 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\hearth.ps1
 
 # ── Diagnostics & Reporting ──────────────────────────────────────────────────
 
-# O.R.A.C.L.E. — System diagnostics and HTML report
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\oracle.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/oracle.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+# A.U.S.P.E.X. — System diagnostics and HTML report
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\auspex.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/auspex.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # W.A.R.D. — Local user account audit
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\ward.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/ward.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
@@ -563,8 +563,8 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\ward.ps1";
 # T.H.R.E.S.H.O.L.D. — Disk & storage health monitor
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\threshold.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/threshold.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
-# S.E.N.T.I.N.E.L. — Service, task & event log monitor
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\sentinel.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/sentinel.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+# G.A.R.G.O.Y.L.E. — Service, task & event log monitor
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\gargoyle.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/gargoyle.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # A.U.G.U.R. — Physical disk health & SMART status
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\augur.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/augur.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
@@ -580,35 +580,35 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\cipher.ps1
 # S.I.G.I.L. — Security baseline enforcement
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\sigil.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/sigil.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
-# B.A.S.T.I.O.N. — Active Directory management
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\bastion.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/bastion.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+# C.I.T.A.D.E.L. — Active Directory management
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\citadel.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/citadel.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
-# R.E.L.I.C. — Certificate health monitor
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\relic.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/relic.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+# A.R.T.I.F.A.C.T. — Certificate health monitor
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\artifact.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/artifact.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # ── Network & Remote ─────────────────────────────────────────────────────────
 
 # L.E.Y.L.I.N.E. — Network diagnostics & remediation
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\leyline.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/leyline.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
-# S.P.E.C.T.E.R. — Remote execution via WinRM
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\specter.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/specter.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+# S.H.A.D.E. — Remote execution via WinRM
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\shade.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/shade.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # L.A.N.T.E.R.N. — Network discovery & asset inventory
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\lantern.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/lantern.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # ── Cloud & Identity ─────────────────────────────────────────────────────────
 
-# A.E.G.I.S. — Azure environment assessment
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\aegis.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/aegis.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+# T.A.L.I.S.M.A.N. — Azure environment assessment
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\talisman.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/talisman.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
-# V.A.U.L.T. — Microsoft 365 license & mailbox audit
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\vault.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/vault.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+# R.E.L.I.Q.U.A.R.Y. — Microsoft 365 license & mailbox audit
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\reliquary.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/reliquary.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # ── Data & Migration ─────────────────────────────────────────────────────────
 
-# P.H.A.N.T.O.M. — Profile migration
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\phantom.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/phantom.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+# R.E.V.E.N.A.N.T. — Profile migration
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\revenant.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/revenant.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # A.R.C.H.I.V.E. — Pre-reimaging profile backup
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\archive.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/archive.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
@@ -640,30 +640,30 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\hearth.ps1        # Toolkit setup wizard
 
 # Diagnostics & Reporting
-.\oracle.ps1        # System diagnostics and HTML health report
+.\auspex.ps1        # System diagnostics and HTML health report
 .\ward.ps1          # User account audit and HTML report
 .\threshold.ps1     # Disk space monitor — volume usage, low-space alerts, cleanup
-.\sentinel.ps1      # Service, task, and event log monitor
+.\gargoyle.ps1      # Service, task, and event log monitor
 .\augur.ps1         # Physical disk health — SMART status, wear prediction, failure forecast
 .\cleanse.ps1       # Disk cleanup — temp files, update cache, browser caches, Recycle Bin
 
 # Security
 .\cipher.ps1        # BitLocker drive encryption management
 .\sigil.ps1         # Security baseline enforcement
-.\bastion.ps1       # Active Directory user and group management
-.\relic.ps1         # Certificate health and SSL expiry monitor
+.\citadel.ps1       # Active Directory user and group management
+.\artifact.ps1         # Certificate health and SSL expiry monitor
 
 # Network & Remote
 .\leyline.ps1       # Network diagnostics and remediation
-.\specter.ps1       # Remote execution via WinRM
+.\shade.ps1       # Remote execution via WinRM
 .\lantern.ps1       # Network discovery and asset inventory
 
 # Cloud & Identity
-.\aegis.ps1         # Azure environment assessment and HTML report
-.\vault.ps1         # Microsoft 365 license and mailbox audit
+.\talisman.ps1         # Azure environment assessment and HTML report
+.\reliquary.ps1         # Microsoft 365 license and mailbox audit
 
 # Data & Migration
-.\phantom.ps1       # Profile migration and data transfer
+.\revenant.ps1       # Profile migration and data transfer
 .\archive.ps1       # Pre-reimaging profile backup to ZIP
 ```
 
@@ -681,7 +681,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | `LogDirectory` | Directory where HTML reports and transcripts are saved |
 | `TeamsWebhook` | Incoming webhook URL for Teams error notifications (used by `Write-TKError`) |
 | `Archive.DefaultDestination` | Default backup path for ARCHIVE |
-| `Phantom.DefaultDestination` | Default migration destination for PHANTOM |
+| `Revenant.DefaultDestination` | Default migration destination for REVENANT |
 | `Covenant.DefaultTimezone` | Default Windows timezone ID for COVENANT |
 | `Covenant.DefaultLocalAdminUser` | Default local administrator account name for COVENANT |
 
@@ -694,22 +694,22 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **forge.ps1** | None — driver sources scanned from current folder automatically |
 | **restoration.ps1** | None — power settings are detected and restored automatically |
 | **hearth.ps1** | None — all settings entered via the interactive wizard; `config.json` is the output (see config key table above) |
-| **oracle.ps1** | `$ReportOutputPath` — folder where the HTML report is saved (defaults to script directory; accepts any local or UNC path) |
+| **auspex.ps1** | `$ReportOutputPath` — folder where the HTML report is saved (defaults to script directory; accepts any local or UNC path) |
 | **ward.ps1** | None — audit runs automatically; stale threshold is 90 days (editable in script) |
 | **threshold.ps1** | None — thresholds are Warning < 15% free, Critical < 5% free (editable in script); old profile threshold is 90 days |
-| **sentinel.ps1** | None — critical service list editable in script; `-Target` accepts any WinRM-reachable hostname |
+| **gargoyle.ps1** | None — critical service list editable in script; `-Target` accepts any WinRM-reachable hostname |
 | **augur.ps1** | None — scans all physical disks automatically; `-Unattended` for silent HTML export |
 | **cleanse.ps1** | None — categories selected interactively or all cleaned with `-Unattended`; `-WhatIf` for dry run |
 | **cipher.ps1** | None — drive and action selected interactively at runtime |
 | **sigil.ps1** | None — categories selected interactively; screensaver timeout editable in script (default 600 s) |
-| **bastion.ps1** | None — user search and action selected interactively; stale threshold is 90 days (editable in script) |
-| **relic.ps1** | None — stores and targets selected interactively or via `-Targets` parameter |
+| **citadel.ps1** | None — user search and action selected interactively; stale threshold is 90 days (editable in script) |
+| **artifact.ps1** | None — stores and targets selected interactively or via `-Targets` parameter |
 | **leyline.ps1** | None — all tests run interactively; no persistent config |
-| **specter.ps1** | None — target, credentials, and operation selected interactively at runtime |
+| **shade.ps1** | None — target, credentials, and operation selected interactively at runtime |
 | **lantern.ps1** | `$script:ScanPorts` — list of TCP ports checked during scan (editable in script) |
-| **aegis.ps1** | `-SubscriptionId` — target a specific Azure subscription; `-OutputPath` — HTML report destination; `-NoOpen` — suppress auto-open after export |
-| **vault.ps1** | None — tenant and report scope selected interactively at runtime |
-| **phantom.ps1** | `config.json` — `Phantom.DefaultDestination`; source, items, and destination also selectable interactively |
+| **talisman.ps1** | `-SubscriptionId` — target a specific Azure subscription; `-OutputPath` — HTML report destination; `-NoOpen` — suppress auto-open after export |
+| **reliquary.ps1** | None — tenant and report scope selected interactively at runtime |
+| **revenant.ps1** | `config.json` — `Revenant.DefaultDestination`; source, items, and destination also selectable interactively |
 | **archive.ps1** | `config.json` — `Archive.DefaultDestination`; profile, items, and destination also selectable interactively |
 
 ---
@@ -727,20 +727,20 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **forge.ps1** | Script directory — `FORGE_DriverReport_<timestamp>.csv` |
 | **restoration.ps1** | `%TEMP%\RESTORATION_<timestamp>.log` (PowerShell transcript of the full session) |
 | **hearth.ps1** | Console only — settings persisted to `config.json` |
-| **oracle.ps1** | `$ReportOutputPath` — `ORACLE_<timestamp>.html` (defaults to Desktop; configurable) |
+| **auspex.ps1** | `$ReportOutputPath` — `ORACLE_<timestamp>.html` (defaults to Desktop; configurable) |
 | **ward.ps1** | Log directory — `WARD_<timestamp>.html` (dark-themed HTML report) |
 | **threshold.ps1** | Log directory — `THRESHOLD_<timestamp>.html` (dark-themed HTML report) |
-| **sentinel.ps1** | Log directory — `SENTINEL_<timestamp>.html` (dark-themed HTML health report) |
+| **gargoyle.ps1** | Log directory — `SENTINEL_<timestamp>.html` (dark-themed HTML health report) |
 | **cipher.ps1** | Console only — no log file |
 | **sigil.ps1** | Log directory — `SIGIL_BaselineLog_<timestamp>.csv` |
-| **bastion.ps1** | Log directory — `BASTION_Stale_<timestamp>.html`; `BASTION_PwdExpiry_<timestamp>.html` |
-| **relic.ps1** | Log directory — `RELIC_<timestamp>.html` (cert inventory & SSL results) |
+| **citadel.ps1** | Log directory — `BASTION_Stale_<timestamp>.html`; `BASTION_PwdExpiry_<timestamp>.html` |
+| **artifact.ps1** | Log directory — `RELIC_<timestamp>.html` (cert inventory & SSL results) |
 | **leyline.ps1** | Console only — no log file |
-| **specter.ps1** | Script directory — `SPECTER_<MachineName>\` folder containing retrieved output files |
+| **shade.ps1** | Script directory — `SPECTER_<MachineName>\` folder containing retrieved output files |
 | **lantern.ps1** | Log directory — `LANTERN_<timestamp>.html` and `LANTERN_<timestamp>.csv` |
-| **aegis.ps1** | `-OutputPath` (default `%TEMP%`) — `azure-assessment-<timestamp>.html`; auto-opens in browser |
-| **vault.ps1** | Log directory — `VAULT_<timestamp>.html` (combined license & mailbox report) |
-| **phantom.ps1** | Script directory — `PHANTOM_MigrationLog_<timestamp>.csv` |
+| **talisman.ps1** | `-OutputPath` (default `%TEMP%`) — `azure-assessment-<timestamp>.html`; auto-opens in browser |
+| **reliquary.ps1** | Log directory — `VAULT_<timestamp>.html` (combined license & mailbox report) |
+| **revenant.ps1** | Script directory — `PHANTOM_MigrationLog_<timestamp>.csv` |
 | **archive.ps1** | Script directory — `ARCHIVE_Log_<timestamp>.csv`; manifest inside ZIP |
 | **augur.ps1** | Log directory — `AUGUR_<timestamp>.html` (dark-themed HTML report) |
 | **cleanse.ps1** | Console only — cleanup summary printed at completion; no log file |

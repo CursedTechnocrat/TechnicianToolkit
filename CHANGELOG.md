@@ -7,6 +7,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- **Thematic rename of eight tools** to avoid name collisions with commercial products and strengthen the arcane theme. Filenames, banners, log/report prefixes, config section, and all cross-references updated toolkit-wide.
+  - `oracle.ps1` -> `auspex.ps1` — O.R.A.C.L.E. -> A.U.S.P.E.X. (Audits, Uncovers, Surveys Performance, Events & eXceptions)
+  - `sentinel.ps1` -> `gargoyle.ps1` — S.E.N.T.I.N.E.L. -> G.A.R.G.O.Y.L.E. (Guards Against Runtime Glitches On Your Log Events)
+  - `bastion.ps1` -> `citadel.ps1` — B.A.S.T.I.O.N. -> C.I.T.A.D.E.L. (Centralizes Identity, Tasks, Accounts, Directories, Entitlements & Logons)
+  - `vault.ps1` -> `reliquary.ps1` — V.A.U.L.T. -> R.E.L.I.Q.U.A.R.Y. (Reports, Evaluates Licenses, Inventories, Quotas, Users, Access & Registration Yields)
+  - `phantom.ps1` -> `revenant.ps1` — P.H.A.N.T.O.M. -> R.E.V.E.N.A.N.T. (Relocates, Extracts, Validates Environments, Networks, Accounts 'N Transfers)
+  - `specter.ps1` -> `shade.ps1` — S.P.E.C.T.E.R. -> S.H.A.D.E. (Summons Hosts for Administrative Deployment & Execution)
+  - `aegis.ps1` -> `talisman.ps1` — A.E.G.I.S. -> T.A.L.I.S.M.A.N. (Tenant Assessment, Logging, Infrastructure, Security, Monitoring & Access Navigator)
+  - `relic.ps1` -> `artifact.ps1` — R.E.L.I.C. -> A.R.T.I.F.A.C.T. (Audits, Reports Trust, Identity, Fingerprints, Authority, Certificates & TLS)
+- **config.json section `Phantom` renamed to `Revenant`** — the `DefaultDestination` key remains; `Get-TKConfig` defaults and the HEARTH wizard field were updated to match. Existing configs with the old `Phantom` section will lose that value after re-save and must be re-entered via HEARTH.
+- **GRIMOIRE registry** — eight `Name`/`File` entries updated to the new tool names and filenames.
+- **Pester tests** — `has Phantom section` check updated to `has Revenant section`; param-compliance exclusion list swapped `specter.ps1` for `shade.ps1`.
+
 ### Added
 - **DWARF and PURGE in GRIMOIRE** — both tools are now registered in the GRIMOIRE hub (keys 22 and 23) under the "Diagnostics & Reporting" category and are accessible from the central launcher.
 - **DWARF and PURGE module integration** — both scripts now import `TechnicianToolkit.psm1` and use `Invoke-AdminElevation`, matching every other tool and enabling centralized error telemetry and config access.

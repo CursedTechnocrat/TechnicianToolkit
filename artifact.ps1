@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-    R.E.L.I.C. — Reviews & Enumerates Latent Identity Certificates
+    A.R.T.I.F.A.C.T. — Audits, Reports Trust, Identity, Fingerprints, Authority, Certificates & TLS
     Certificate Health Monitor for PowerShell 5.1+
 
 .DESCRIPTION
@@ -10,9 +10,9 @@
     Exports a dark-themed HTML report with color-coded expiry indicators.
 
 .USAGE
-    PS C:\> .\relic.ps1                                          # Interactive menu
-    PS C:\> .\relic.ps1 -Unattended                              # Full audit (local + HTML report)
-    PS C:\> .\relic.ps1 -Unattended -Targets "srv1.contoso.com,srv2.contoso.com:8443"
+    PS C:\> .\artifact.ps1                                          # Interactive menu
+    PS C:\> .\artifact.ps1 -Unattended                              # Full audit (local + HTML report)
+    PS C:\> .\artifact.ps1 -Unattended -Targets "srv1.contoso.com,srv2.contoso.com:8443"
 
 .NOTES
     Version : 1.0
@@ -23,23 +23,23 @@
     R.U.N.E.P.R.E.S.S.     — Printer driver installation & configuration
     R.E.S.T.O.R.A.T.I.O.N. — Windows Update management
     C.O.N.J.U.R.E.         — Software deployment via winget / Chocolatey
-    O.R.A.C.L.E.           — System diagnostics & HTML report generation
+    A.U.S.P.E.X.           — System diagnostics & HTML report generation
     C.O.V.E.N.A.N.T.       — Machine onboarding & Entra ID domain join
-    P.H.A.N.T.O.M.         — Profile migration & data transfer
+    R.E.V.E.N.A.N.T.       — Profile migration & data transfer
     C.I.P.H.E.R.           — BitLocker drive encryption management
     W.A.R.D.               — User account & local security audit
     A.R.C.H.I.V.E.         — Pre-reimaging profile backup
     S.I.G.I.L.             — Security baseline & policy enforcement
-    S.P.E.C.T.E.R.         — Remote machine execution via WinRM
+    S.H.A.D.E.             — Remote machine execution via WinRM
     L.E.Y.L.I.N.E.         — Network diagnostics & remediation
     F.O.R.G.E.             — Driver update detection & installation
-    A.E.G.I.S.             — Azure environment assessment & reporting
-    B.A.S.T.I.O.N.         — Active Directory & identity management
+    T.A.L.I.S.M.A.N.       — Azure environment assessment & reporting
+    C.I.T.A.D.E.L.         — Active Directory & identity management
     L.A.N.T.E.R.N.         — Network discovery & asset inventory
     T.H.R.E.S.H.O.L.D.     — Disk & storage health monitoring
-    V.A.U.L.T.             — M365 license & mailbox auditing
-    S.E.N.T.I.N.E.L.       — Service & scheduled task monitoring
-    R.E.L.I.C.             — Certificate health & SSL expiry monitoring
+    R.E.L.I.Q.U.A.R.Y.     — M365 license & mailbox auditing
+    G.A.R.G.O.Y.L.E.       — Service & scheduled task monitoring
+    A.R.T.I.F.A.C.T.       — Certificate health & SSL expiry monitoring
     H.E.A.R.T.H.           — Toolkit setup & configuration wizard
 
     Color Schema
@@ -124,19 +124,19 @@ $C = @{
 # BANNER
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Show-RelicBanner {
+function Show-ArtifactBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host @"
 
-  ██████╗ ███████╗██╗     ██╗ ██████╗
-  ██╔══██╗██╔════╝██║     ██║██╔════╝
-  ██████╔╝█████╗  ██║     ██║██║
-  ██╔══██╗██╔══╝  ██║     ██║██║
-  ██║  ██║███████╗███████╗██║╚██████╗
-  ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝ ╚═════╝
+   █████╗ ██████╗ ████████╗██╗███████╗ █████╗  ██████╗████████╗
+  ██╔══██╗██╔══██╗╚══██╔══╝██║██╔════╝██╔══██╗██╔════╝╚══██╔══╝
+  ███████║██████╔╝   ██║   ██║█████╗  ███████║██║        ██║
+  ██╔══██║██╔══██╗   ██║   ██║██╔══╝  ██╔══██║██║        ██║
+  ██║  ██║██║  ██║   ██║   ██║██║     ██║  ██║╚██████╗   ██║
+  ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝╚═╝     ╚═╝  ╚═╝ ╚═════╝   ╚═╝
 
 "@ -ForegroundColor Cyan
-    Write-Host "    R.E.L.I.C. — Reviews & Enumerates Latent Identity Certificates" -ForegroundColor Cyan
+    Write-Host "    A.R.T.I.F.A.C.T. — Audits, Reports Trust, Identity, Fingerprints, Authority, Certificates & TLS" -ForegroundColor Cyan
     Write-Host "    Certificate Health & SSL Expiry Monitor" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -475,7 +475,7 @@ $sslRows
 
     $htmlHead = Get-TKHtmlHead `
         -Title      'Certificate Audit Report' `
-        -ScriptName 'R.E.L.I.C.' `
+        -ScriptName 'A.R.T.I.F.A.C.T.' `
         -Subtitle    $orgSubtitle `
         -MetaItems  ([ordered]@{
             'Machine'   = $MachineName
@@ -484,7 +484,7 @@ $sslRows
         }) `
         -NavItems   @('Local Certificates', 'SSL/TLS Checks')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'R.E.L.I.C. v1.0'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'A.R.T.I.F.A.C.T. v1.0'
 
     $html = $htmlHead + @"
 
@@ -543,7 +543,7 @@ function Save-HtmlReport {
         -MachineName     $machineName `
         -ReportTimestamp $reportTimestamp
 
-    $reportFilename = "RELIC_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
+    $reportFilename = "ARTIFACT_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
     $reportPath     = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) $reportFilename
 
     try {
@@ -562,7 +562,7 @@ function Save-HtmlReport {
 # ─────────────────────────────────────────────────────────────────────────────
 
 if ($Unattended) {
-    Show-RelicBanner
+    Show-ArtifactBanner
 
     $machineName = $env:COMPUTERNAME
     Write-Host "  [*] Unattended mode  -  Machine: $machineName" -ForegroundColor $C.Progress
@@ -601,7 +601,7 @@ if ($Unattended) {
     # Console summary
     Write-Host ""
     Write-Host ("  " + ("=" * 62)) -ForegroundColor $C.Header
-    Write-Host "  R.E.L.I.C. AUDIT SUMMARY" -ForegroundColor $C.Header
+    Write-Host "  A.R.T.I.F.A.C.T. AUDIT SUMMARY" -ForegroundColor $C.Header
     Write-Host ("  " + ("=" * 62)) -ForegroundColor $C.Header
     Write-Host ""
     Write-Host "  Total Certificates : $($localCerts.Count)" -ForegroundColor $C.Info
@@ -621,7 +621,7 @@ if ($Unattended) {
     }
     Write-Host ""
     Write-Host ("  " + ("=" * 62)) -ForegroundColor $C.Header
-    Write-Host "  R.E.L.I.C. UNATTENDED RUN COMPLETE" -ForegroundColor $C.Header
+    Write-Host "  A.R.T.I.F.A.C.T. UNATTENDED RUN COMPLETE" -ForegroundColor $C.Header
     Write-Host ("  " + ("=" * 62)) -ForegroundColor $C.Header
     Write-Host ""
 
@@ -634,12 +634,12 @@ if ($Unattended) {
 # INTERACTIVE MENU
 # ─────────────────────────────────────────────────────────────────────────────
 
-Show-RelicBanner
+Show-ArtifactBanner
 
 $choice = ''
 
 do {
-    Show-RelicBanner
+    Show-ArtifactBanner
 
     Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host "  MAIN MENU" -ForegroundColor $C.Header
@@ -657,7 +657,7 @@ do {
 
         # ── Option 1: Local cert audit ──────────────────────────────────────
         '1' {
-            Show-RelicBanner
+            Show-ArtifactBanner
             Write-Host "  [*] Auditing local certificate stores (My, CA, Root, TrustedPublisher)..." -ForegroundColor $C.Progress
             $localCerts = Get-LocalCertHealth
             Write-Host "  [+] Found $($localCerts.Count) certificate(s)." -ForegroundColor $C.Success
@@ -683,7 +683,7 @@ do {
 
         # ── Option 2: SSL remote checks ─────────────────────────────────────
         '2' {
-            Show-RelicBanner
+            Show-ArtifactBanner
             Write-Section "SSL/TLS REMOTE CERTIFICATE CHECK"
 
             Write-Host "  Enter target hosts to check." -ForegroundColor $C.Info
@@ -730,7 +730,7 @@ do {
 
         # ── Option 3: Full audit ────────────────────────────────────────────
         '3' {
-            Show-RelicBanner
+            Show-ArtifactBanner
 
             # Local cert audit
             Write-Host "  [*] Auditing local certificate stores..." -ForegroundColor $C.Progress
@@ -781,7 +781,7 @@ do {
         # ── Quit ─────────────────────────────────────────────────────────────
         'Q' {
             Write-Host ""
-            Write-Host "  Closing R.E.L.I.C." -ForegroundColor $C.Header
+            Write-Host "  Closing A.R.T.I.F.A.C.T." -ForegroundColor $C.Header
             Write-Host ""
         }
 

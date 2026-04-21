@@ -71,8 +71,8 @@ Describe 'Get-TKConfig' {
         It 'has Archive section' {
             $cfg.Archive | Should -Not -BeNullOrEmpty
         }
-        It 'has Phantom section' {
-            $cfg.Phantom | Should -Not -BeNullOrEmpty
+        It 'has Revenant section' {
+            $cfg.Revenant | Should -Not -BeNullOrEmpty
         }
         It 'has Covenant section' {
             $cfg.Covenant | Should -Not -BeNullOrEmpty
@@ -204,12 +204,12 @@ Describe 'Module bootstrap compliance — all tool scripts' {
 # ─────────────────────────────────────────────────────────────────────────────
 # Param block compliance — interactive tool scripts must declare -Unattended
 # Excludes the two launcher-style scripts that don't have sensible defaults
-# for their required inputs (grimoire needs a tool choice; specter needs a
+# for their required inputs (grimoire needs a tool choice; shade needs a
 # target machine + credentials).
 # ─────────────────────────────────────────────────────────────────────────────
 Describe 'Param block compliance — -Unattended switch' {
     $scriptCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Filter '*.ps1' -File |
-        Where-Object { $_.Name -notin @('grimoire.ps1', 'specter.ps1') } |
+        Where-Object { $_.Name -notin @('grimoire.ps1', 'shade.ps1') } |
         ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
 
     It '<Name> declares -Unattended' -ForEach $scriptCases {

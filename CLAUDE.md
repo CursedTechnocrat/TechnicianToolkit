@@ -3,7 +3,7 @@
 ## Project Overview
 
 A collection of PowerShell 5.1+ scripts for IT technicians. Each script is a self-contained tool
-with a themed acronym name (GRIMOIRE, ORACLE, PHANTOM, etc.). All tools share a common module
+with a themed acronym name (GRIMOIRE, AUSPEX, REVENANT, etc.). All tools share a common module
 (`TechnicianToolkit.psm1`) that provides logging, privilege checks, HTML helpers, and config I/O.
 
 ## Repository Layout
@@ -63,7 +63,7 @@ let the script continue until it hit an undefined function like `Get-TKHtmlHead`
 
 `Invoke-AdminElevation` re-launches the script as Administrator if not already elevated.
 Scripts that use `Assert-AdminPrivilege` instead will error-exit if not elevated rather
-than auto-relaunching — this is appropriate for scripts called programmatically (PHANTOM,
+than auto-relaunching — this is appropriate for scripts called programmatically (REVENANT,
 HEARTH, ARCHIVE).
 
 ## Module Exports
@@ -148,7 +148,7 @@ $ColorSchema = @{
 ### Parameter Conventions
 
 - All interactive tools expose `[switch]$Unattended` — skips prompts, runs defaults.
-- Destructive tools (PHANTOM, CLEANSE) also expose `[switch]$WhatIf` — previews actions without
+- Destructive tools (REVENANT, CLEANSE) also expose `[switch]$WhatIf` — previews actions without
   executing them. GRIMOIRE auto-detects and passes `-WhatIf` to any tool that declares it.
 - Tools that write logs expose `[switch]$Transcript`.
 
@@ -167,7 +167,7 @@ Every script carries a `.SYNOPSIS / .DESCRIPTION / .USAGE / .NOTES` comment bloc
   "LogDirectory": "",
   "TeamsWebhook": "",
   "Archive": { "DefaultDestination": "" },
-  "Phantom": { "DefaultDestination": "" },
+  "Revenant": { "DefaultDestination": "" },
   "Covenant": { "DefaultTimezone": "", "DefaultLocalAdminUser": "" }
 }
 ```

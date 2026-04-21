@@ -5,7 +5,7 @@
 
 .DESCRIPTION
     Interactive wizard for configuring the TechnicianToolkit. Sets org name,
-    log directory, default paths for ARCHIVE and PHANTOM, and default values
+    log directory, default paths for ARCHIVE and REVENANT, and default values
     for COVENANT. Runs first-run environment checks to confirm prerequisites
     (PowerShell version, RSAT, winget, required modules). All settings are
     persisted to config.json in the toolkit directory.
@@ -23,23 +23,23 @@
     R.U.N.E.P.R.E.S.S.     — Printer driver installation & configuration
     R.E.S.T.O.R.A.T.I.O.N. — Windows Update management
     C.O.N.J.U.R.E.         — Software deployment via winget / Chocolatey
-    O.R.A.C.L.E.           — System diagnostics & HTML report generation
+    A.U.S.P.E.X.           — System diagnostics & HTML report generation
     C.O.V.E.N.A.N.T.       — Machine onboarding & Entra ID domain join
-    P.H.A.N.T.O.M.         — Profile migration & data transfer
+    R.E.V.E.N.A.N.T.       — Profile migration & data transfer
     C.I.P.H.E.R.           — BitLocker drive encryption management
     W.A.R.D.               — User account & local security audit
     A.R.C.H.I.V.E.         — Pre-reimaging profile backup
     S.I.G.I.L.             — Security baseline & policy enforcement
-    S.P.E.C.T.E.R.         — Remote machine execution via WinRM
+    S.H.A.D.E.             — Remote machine execution via WinRM
     L.E.Y.L.I.N.E.         — Network diagnostics & remediation
     F.O.R.G.E.             — Driver update detection & installation
-    A.E.G.I.S.             — Azure environment assessment & reporting
-    B.A.S.T.I.O.N.         — Active Directory & identity management
+    T.A.L.I.S.M.A.N.       — Azure environment assessment & reporting
+    C.I.T.A.D.E.L.         — Active Directory & identity management
     L.A.N.T.E.R.N.         — Network discovery & asset inventory
     T.H.R.E.S.H.O.L.D.     — Disk & storage health monitoring
-    V.A.U.L.T.             — M365 license & mailbox auditing
-    S.E.N.T.I.N.E.L.       — Service & scheduled task monitoring
-    R.E.L.I.C.             — Certificate health & SSL expiry monitoring
+    R.E.L.I.Q.U.A.R.Y.     — M365 license & mailbox auditing
+    G.A.R.G.O.Y.L.E.       — Service & scheduled task monitoring
+    A.R.T.I.F.A.C.T.       — Certificate health & SSL expiry monitoring
     H.E.A.R.T.H.           — Toolkit setup & configuration wizard
 
     Color Schema
@@ -149,10 +149,10 @@ $Fields = @(
         IsPath      = $true
     },
     [PSCustomObject]@{
-        DisplayName = 'PHANTOM Default Destination'
+        DisplayName = 'REVENANT Default Destination'
         Key         = 'DefaultDestination'
-        Section     = 'Phantom'
-        Description = 'Default migration target path for PHANTOM'
+        Section     = 'Revenant'
+        Description = 'Default migration target path for REVENANT'
         Hint        = '\\fileserver\Migrations'
         IsPath      = $true
     },
@@ -496,28 +496,28 @@ function Invoke-EnvironmentCheck {
         Write-Host "  [!] Chocolatey (choco)          -  Not found (optional for CONJURE)" -ForegroundColor $C.Warning
     }
 
-    # 8. RSAT ActiveDirectory module (for BASTION)
+    # 8. RSAT ActiveDirectory module (for CITADEL)
     $adModule = Get-Module -ListAvailable -Name ActiveDirectory -ErrorAction SilentlyContinue
     if ($adModule) {
         Write-Host "  [+] RSAT: ActiveDirectory       -  Available ($($adModule[0].Version))" -ForegroundColor $C.Success
     } else {
-        Write-Host "  [!] RSAT: ActiveDirectory       -  Not found (required for BASTION)" -ForegroundColor $C.Warning
+        Write-Host "  [!] RSAT: ActiveDirectory       -  Not found (required for CITADEL)" -ForegroundColor $C.Warning
     }
 
-    # 9. Microsoft.Graph module (for VAULT)
+    # 9. Microsoft.Graph module (for RELIQUARY)
     $graphModule = Get-Module -ListAvailable -Name Microsoft.Graph -ErrorAction SilentlyContinue
     if ($graphModule) {
         Write-Host "  [+] Microsoft.Graph module      -  Available ($($graphModule[0].Version))" -ForegroundColor $C.Success
     } else {
-        Write-Host "  [!] Microsoft.Graph module      -  Not found (required for VAULT)" -ForegroundColor $C.Warning
+        Write-Host "  [!] Microsoft.Graph module      -  Not found (required for RELIQUARY)" -ForegroundColor $C.Warning
     }
 
-    # 10. Az module (for AEGIS)
+    # 10. Az module (for TALISMAN)
     $azModule = Get-Module -ListAvailable -Name Az -ErrorAction SilentlyContinue
     if ($azModule) {
         Write-Host "  [+] Az module                   -  Available ($($azModule[0].Version))" -ForegroundColor $C.Success
     } else {
-        Write-Host "  [!] Az module                   -  Not found (required for AEGIS)" -ForegroundColor $C.Warning
+        Write-Host "  [!] Az module                   -  Not found (required for TALISMAN)" -ForegroundColor $C.Warning
     }
 
     Write-Host ""

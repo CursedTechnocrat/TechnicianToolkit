@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-    S.E.N.T.I.N.E.L. — Scans & Evaluates services, Networks, Tasks, Infrastructure, Node Events & Logs
+    G.A.R.G.O.Y.L.E. — Guards Against Runtime Glitches On Your Log Events
     Service, Task & Event Log Monitor for PowerShell 5.1+
 
 .DESCRIPTION
@@ -10,9 +10,9 @@
     per-service confirmation prompts.
 
 .USAGE
-    PS C:\> .\sentinel.ps1                              # Interactive menu (local machine)
-    PS C:\> .\sentinel.ps1 -Unattended                  # Export health report silently
-    PS C:\> .\sentinel.ps1 -Unattended -Target HOSTNAME  # Remote machine report
+    PS C:\> .\gargoyle.ps1                              # Interactive menu (local machine)
+    PS C:\> .\gargoyle.ps1 -Unattended                  # Export health report silently
+    PS C:\> .\gargoyle.ps1 -Unattended -Target HOSTNAME  # Remote machine report
 
 .NOTES
     Version : 1.0
@@ -23,23 +23,23 @@
     R.U.N.E.P.R.E.S.S.     — Printer driver installation & configuration
     R.E.S.T.O.R.A.T.I.O.N. — Windows Update management
     C.O.N.J.U.R.E.         — Software deployment via winget / Chocolatey
-    O.R.A.C.L.E.           — System diagnostics & HTML report generation
+    A.U.S.P.E.X.           — System diagnostics & HTML report generation
     C.O.V.E.N.A.N.T.       — Machine onboarding & Entra ID domain join
-    P.H.A.N.T.O.M.         — Profile migration & data transfer
+    R.E.V.E.N.A.N.T.       — Profile migration & data transfer
     C.I.P.H.E.R.           — BitLocker drive encryption management
     W.A.R.D.               — User account & local security audit
     A.R.C.H.I.V.E.         — Pre-reimaging profile backup
     S.I.G.I.L.             — Security baseline & policy enforcement
-    S.P.E.C.T.E.R.         — Remote machine execution via WinRM
+    S.H.A.D.E.             — Remote machine execution via WinRM
     L.E.Y.L.I.N.E.         — Network diagnostics & remediation
     F.O.R.G.E.             — Driver update detection & installation
-    A.E.G.I.S.             — Azure environment assessment & reporting
-    B.A.S.T.I.O.N.         — Active Directory & identity management
+    T.A.L.I.S.M.A.N.       — Azure environment assessment & reporting
+    C.I.T.A.D.E.L.         — Active Directory & identity management
     L.A.N.T.E.R.N.         — Network discovery & asset inventory
     T.H.R.E.S.H.O.L.D.     — Disk & storage health monitoring
-    V.A.U.L.T.             — M365 license & mailbox auditing
-    S.E.N.T.I.N.E.L.       — Service & scheduled task monitoring
-    R.E.L.I.C.             — Certificate health & SSL expiry monitoring
+    R.E.L.I.Q.U.A.R.Y.     — M365 license & mailbox auditing
+    G.A.R.G.O.Y.L.E.       — Service & scheduled task monitoring
+    A.R.T.I.F.A.C.T.       — Certificate health & SSL expiry monitoring
     H.E.A.R.T.H.           — Toolkit setup & configuration wizard
 
     Color Schema
@@ -130,19 +130,19 @@ $script:RemoteTarget = $Target.Trim()
 # BANNER
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Show-SentinelBanner {
+function Show-GargoyleBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host @"
 
-  ███████╗███████╗███╗   ██╗████████╗██╗███╗   ██╗███████╗██╗
-  ██╔════╝██╔════╝████╗  ██║╚══██╔══╝██║████╗  ██║██╔════╝██║
-  ███████╗█████╗  ██╔██╗ ██║   ██║   ██║██╔██╗ ██║█████╗  ██║
-  ╚════██║██╔══╝  ██║╚██╗██║   ██║   ██║██║╚██╗██║██╔══╝  ██║
-  ███████║███████╗██║ ╚████║   ██║   ██║██║ ╚████║███████╗███████╗
-  ╚══════╝╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝╚═╝  ╚═══╝╚══════╝╚══════╝
+   ██████╗  █████╗ ██████╗  ██████╗  ██████╗ ██╗   ██╗██╗     ███████╗
+  ██╔════╝ ██╔══██╗██╔══██╗██╔════╝ ██╔═══██╗╚██╗ ██╔╝██║     ██╔════╝
+  ██║  ███╗███████║██████╔╝██║  ███╗██║   ██║ ╚████╔╝ ██║     █████╗
+  ██║   ██║██╔══██║██╔══██╗██║   ██║██║   ██║  ╚██╔╝  ██║     ██╔══╝
+  ╚██████╔╝██║  ██║██║  ██║╚██████╔╝╚██████╔╝   ██║   ███████╗███████╗
+   ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝  ╚═════╝    ╚═╝   ╚══════╝╚══════╝
 
 "@ -ForegroundColor Cyan
-    Write-Host "    S.E.N.T.I.N.E.L. — Scans & Evaluates services, Networks, Tasks, Infrastructure, Node Events & Logs" -ForegroundColor Cyan
+    Write-Host "    G.A.R.G.O.Y.L.E. — Guards Against Runtime Glitches On Your Log Events" -ForegroundColor Cyan
     Write-Host "    Service, Task & Event Log Monitor" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -718,7 +718,7 @@ function Build-HtmlReport {
 
     $html  = Get-TKHtmlHead `
         -Title      'Service & Task Health Report' `
-        -ScriptName 'S.E.N.T.I.N.E.L.' `
+        -ScriptName 'G.A.R.G.O.Y.L.E.' `
         -Subtitle   $MachineName `
         -MetaItems  ([ordered]@{
             'Machine'   = $MachineName
@@ -841,7 +841,7 @@ function Build-HtmlReport {
 
 "@
 
-    $html += Get-TKHtmlFoot -ScriptName 'S.E.N.T.I.N.E.L. v1.0'
+    $html += Get-TKHtmlFoot -ScriptName 'G.A.R.G.O.Y.L.E. v1.0'
     return $html
 }
 
@@ -886,7 +886,7 @@ function Export-HtmlReport {
 
     $machineName = if ($script:RemoteTarget) { $script:RemoteTarget } else { $env:COMPUTERNAME }
     $timestamp   = Get-Date -Format 'yyyyMMdd_HHmmss'
-    $reportName  = "SENTINEL_${timestamp}.html"
+    $reportName  = "GARGOYLE_${timestamp}.html"
     $reportPath  = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) $reportName
 
     Write-Host "  [*] Building HTML report..." -ForegroundColor $C.Progress
@@ -912,7 +912,7 @@ function Export-HtmlReport {
 # ─────────────────────────────────────────────────────────────────────────────
 
 if ($Unattended) {
-    Show-SentinelBanner
+    Show-GargoyleBanner
     $machineName = if ($script:RemoteTarget) { $script:RemoteTarget } else { $env:COMPUTERNAME }
     Write-Host "  [*] Unattended mode  -  Target: $machineName" -ForegroundColor $C.Progress
     Write-Host ""
@@ -928,7 +928,7 @@ if ($Unattended) {
 
     Export-HtmlReport -Services $services -Tasks $tasks -Events $events
     Write-Host ""
-    Write-Host "  [+] S.E.N.T.I.N.E.L. unattended run complete." -ForegroundColor $C.Success
+    Write-Host "  [+] G.A.R.G.O.Y.L.E. unattended run complete." -ForegroundColor $C.Success
     Write-Host ""
     if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }
     exit 0
@@ -960,13 +960,13 @@ function Invoke-RefreshAll {
 }
 
 # Initial data load
-Show-SentinelBanner
+Show-GargoyleBanner
 Invoke-RefreshAll
 
 $choice = ''
 
 do {
-    Show-SentinelBanner
+    Show-GargoyleBanner
 
     $targetLabel = if ($script:RemoteTarget) { $script:RemoteTarget } else { 'LOCAL' }
     $svcConcern  = if ($cachedServices) { ($cachedServices | Where-Object { $_.Concern }).Count } else { '?' }
@@ -974,7 +974,7 @@ do {
     $evtCount    = if ($cachedEvents)   { $cachedEvents.TotalCount } else { '?' }
 
     Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
-    Write-Host "  S.E.N.T.I.N.E.L. MENU   -   Target: $targetLabel" -ForegroundColor $C.Header
+    Write-Host "  G.A.R.G.O.Y.L.E. MENU   -   Target: $targetLabel" -ForegroundColor $C.Header
     Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host ""
 
@@ -1005,7 +1005,7 @@ do {
 
     switch ($choice) {
         '1' {
-            Show-SentinelBanner
+            Show-GargoyleBanner
             if (-not $cachedServices) {
                 Write-Host "  [*] Collecting service health..." -ForegroundColor $C.Progress
                 $cachedServices = Get-ServiceHealth
@@ -1016,7 +1016,7 @@ do {
             Read-Host | Out-Null
         }
         '2' {
-            Show-SentinelBanner
+            Show-GargoyleBanner
             if (-not $cachedTasks) {
                 Write-Host "  [*] Collecting task audit..." -ForegroundColor $C.Progress
                 $cachedTasks = Get-TaskAudit
@@ -1027,7 +1027,7 @@ do {
             Read-Host | Out-Null
         }
         '3' {
-            Show-SentinelBanner
+            Show-GargoyleBanner
             if (-not $cachedEvents) {
                 Write-Host "  [*] Collecting event log errors (this may take a moment)..." -ForegroundColor $C.Progress
                 $cachedEvents = Get-EventErrors
@@ -1038,7 +1038,7 @@ do {
             Read-Host | Out-Null
         }
         '4' {
-            Show-SentinelBanner
+            Show-GargoyleBanner
             Write-Section "RESTART STOPPED CRITICAL SERVICES"
             if (-not $cachedServices) {
                 Write-Host "  [*] Collecting service health..." -ForegroundColor $C.Progress
@@ -1053,7 +1053,7 @@ do {
             Read-Host | Out-Null
         }
         '5' {
-            Show-SentinelBanner
+            Show-GargoyleBanner
             Write-Section "EXPORT HTML REPORT"
             if (-not $cachedServices) {
                 Write-Host "  [*] Collecting service health..." -ForegroundColor $C.Progress
@@ -1073,7 +1073,7 @@ do {
             Read-Host | Out-Null
         }
         '6' {
-            Show-SentinelBanner
+            Show-GargoyleBanner
             Connect-RemoteTarget
             # Clear cached data so next action re-fetches from new target
             $cachedServices = $null
@@ -1089,7 +1089,7 @@ do {
             Read-Host | Out-Null
         }
         'R' {
-            Show-SentinelBanner
+            Show-GargoyleBanner
             Write-Section "REFRESH ALL DATA"
             Invoke-RefreshAll
             Write-Host ""
@@ -1098,7 +1098,7 @@ do {
         }
         'Q' {
             Write-Host ""
-            Write-Host "  Closing S.E.N.T.I.N.E.L." -ForegroundColor $C.Header
+            Write-Host "  Closing G.A.R.G.O.Y.L.E." -ForegroundColor $C.Header
             Write-Host ""
         }
         default {

@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-    O.R.A.C.L.E. — Observes, Reports & Audits Computer Logs & Environments
+    A.U.S.P.E.X. — Audits, Uncovers, Surveys Performance, Events & eXceptions
     System Diagnostic & Health Assessment Tool for PowerShell 5.1+
 
 .DESCRIPTION
@@ -10,8 +10,8 @@
     dark-themed HTML report with color-coded indicators to the Desktop.
 
 .USAGE
-    PS C:\> .\oracle.ps1                    # Must be run as Administrator
-    PS C:\> .\oracle.ps1 -Unattended        # Silent mode — no prompts, no banner
+    PS C:\> .\auspex.ps1                    # Must be run as Administrator
+    PS C:\> .\auspex.ps1 -Unattended        # Silent mode — no prompts, no banner
 
 .NOTES
     Version : 1.0
@@ -22,9 +22,9 @@
     R.U.N.E.P.R.E.S.S.     — Printer driver installation & configuration
     R.E.S.T.O.R.A.T.I.O.N. — Windows Update management
     C.O.N.J.U.R.E.         — Software deployment via winget / Chocolatey
-    O.R.A.C.L.E.           — System diagnostics & HTML report generation
+    A.U.S.P.E.X.           — System diagnostics & HTML report generation
     C.O.V.E.N.A.N.T.       — Machine onboarding & Entra ID domain join
-    R.E.L.I.C.             — Certificate health & SSL expiry monitoring
+    A.R.T.I.F.A.C.T.       — Certificate health & SSL expiry monitoring
     H.E.A.R.T.H.           — Toolkit setup & configuration wizard
 
     Color Schema
@@ -80,18 +80,18 @@ Assert-AdminPrivilege
 # BANNER DISPLAY
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Show-OracleBanner {
+function Show-AuspexBanner {
     Write-Host @"
 
-   ██████╗ ██████╗  █████╗  ██████╗██╗     ███████╗
-  ██╔═══██╗██╔══██╗██╔══██╗██╔════╝██║     ██╔════╝
-  ██║   ██║██████╔╝███████║██║     ██║     █████╗
-  ██║   ██║██╔══██╗██╔══██║██║     ██║     ██╔══╝
-  ╚██████╔╝██║  ██║██║  ██║╚██████╗███████╗███████╗
-   ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚══════╝
+   █████╗ ██╗   ██╗███████╗██████╗ ███████╗██╗  ██╗
+  ██╔══██╗██║   ██║██╔════╝██╔══██╗██╔════╝╚██╗██╔╝
+  ███████║██║   ██║███████╗██████╔╝█████╗   ╚███╔╝
+  ██╔══██║██║   ██║╚════██║██╔═══╝ ██╔══╝   ██╔██╗
+  ██║  ██║╚██████╔╝███████║██║     ███████╗██╔╝ ██╗
+  ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝     ╚══════╝╚═╝  ╚═╝
 
 "@ -ForegroundColor Cyan
-    Write-Host "    O.R.A.C.L.E. — Observes, Reports & Audits Computer Logs & Environments" -ForegroundColor Cyan
+    Write-Host "    A.U.S.P.E.X. — Audits, Uncovers, Surveys Performance, Events & eXceptions" -ForegroundColor Cyan
     Write-Host "    System Diagnostic & Health Assessment Tool" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -136,10 +136,10 @@ $ColorSchema = @{
 # DISPLAY BANNER
 # ─────────────────────────────────────────────────────────────────────────────
 
-if (-not $Unattended) { Show-OracleBanner }
+if (-not $Unattended) { Show-AuspexBanner }
 
 $reportTimestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-$reportFilename  = "ORACLE_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
+$reportFilename  = "AUSPEX_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
 $reportPath      = "$ReportOutputPath\$reportFilename"
 
 Write-Host "════════════════════════════════════════════════" -ForegroundColor $ColorSchema.Header
@@ -886,7 +886,7 @@ $tkNavItems = @(
 
 $htmlReport = (Get-TKHtmlHead `
     -Title      'System Diagnostic Report' `
-    -ScriptName 'O.R.A.C.L.E.' `
+    -ScriptName 'A.U.S.P.E.X.' `
     -Subtitle   $tkSubtitle `
     -MetaItems  $tkMetaItems `
     -NavItems   $tkNavItems) + @"
@@ -1082,7 +1082,7 @@ $htmlReport = (Get-TKHtmlHead `
     </div>
   </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'O.R.A.C.L.E. v1.0')
+"@ + (Get-TKHtmlFoot -ScriptName 'A.U.S.P.E.X. v1.0')
 
 try {
     $htmlReport | Out-File -FilePath $reportPath -Encoding UTF8 -Force

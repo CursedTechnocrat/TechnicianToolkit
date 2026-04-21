@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-    P.H.A.N.T.O.M. — Portable Home Archive: Navigates & Transfers Objects to new Machine
+    R.E.V.E.N.A.N.T. — Relocates, Extracts, Validates Environments, Networks, Accounts 'N Transfers
     Profile Migration Tool for PowerShell 5.1+
 
 .DESCRIPTION
@@ -10,10 +10,10 @@
     Can restore directly from an ARCHIVE ZIP in both interactive and unattended modes.
 
 .USAGE
-    PS C:\> .\phantom.ps1                                         # Must be run as Administrator
-    PS C:\> .\phantom.ps1 -Unattended -SourcePath "C:\Users\John" -DestPath "D:\Migration"
-    PS C:\> .\phantom.ps1 -Unattended -SourcePath "\\OldPC\C$\Users\John" -DestPath "C:\Users\John" -Items "1,2,3"
-    PS C:\> .\phantom.ps1 -Unattended -ArchiveZip "D:\Backup\John_20260101.zip" -DestPath "C:\Users\John"
+    PS C:\> .\revenant.ps1                                         # Must be run as Administrator
+    PS C:\> .\revenant.ps1 -Unattended -SourcePath "C:\Users\John" -DestPath "D:\Migration"
+    PS C:\> .\revenant.ps1 -Unattended -SourcePath "\\OldPC\C$\Users\John" -DestPath "C:\Users\John" -Items "1,2,3"
+    PS C:\> .\revenant.ps1 -Unattended -ArchiveZip "D:\Backup\John_20260101.zip" -DestPath "C:\Users\John"
 
 .NOTES
     Version : 1.2
@@ -24,13 +24,13 @@
     R.U.N.E.P.R.E.S.S.     — Printer driver installation & configuration
     R.E.S.T.O.R.A.T.I.O.N. — Windows Update management
     C.O.N.J.U.R.E.         — Software deployment via winget / Chocolatey
-    O.R.A.C.L.E.           — System diagnostics & HTML report generation
+    A.U.S.P.E.X.           — System diagnostics & HTML report generation
     C.O.V.E.N.A.N.T.       — Machine onboarding & Entra ID domain join
-    P.H.A.N.T.O.M.         — Profile migration & data transfer
+    R.E.V.E.N.A.N.T.       — Profile migration & data transfer
     C.I.P.H.E.R.           — BitLocker drive encryption management
     W.A.R.D.               — User account & local security audit
     A.R.C.H.I.V.E.         — Pre-reimaging profile backup
-    R.E.L.I.C.             — Certificate health & SSL expiry monitoring
+    A.R.T.I.F.A.C.T.       — Certificate health & SSL expiry monitoring
     H.E.A.R.T.H.           — Toolkit setup & configuration wizard
 
     Color Schema
@@ -140,19 +140,19 @@ function Add-MigrationRecord {
 # BANNER
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Show-PhantomBanner {
+function Show-RevenantBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host @"
 
-  ██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
-  ██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
-  ██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
-  ██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
-  ██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
-  ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
+  ██████╗ ███████╗██╗   ██╗███████╗███╗   ██╗ █████╗ ███╗   ██╗████████╗
+  ██╔══██╗██╔════╝██║   ██║██╔════╝████╗  ██║██╔══██╗████╗  ██║╚══██╔══╝
+  ██████╔╝█████╗  ██║   ██║█████╗  ██╔██╗ ██║███████║██╔██╗ ██║   ██║
+  ██╔══██╗██╔══╝  ╚██╗ ██╔╝██╔══╝  ██║╚██╗██║██╔══██║██║╚██╗██║   ██║
+  ██║  ██║███████╗ ╚████╔╝ ███████╗██║ ╚████║██║  ██║██║ ╚████║   ██║
+  ╚═╝  ╚═╝╚══════╝  ╚═══╝  ╚══════╝╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝
 
 "@ -ForegroundColor Cyan
-    Write-Host "    P.H.A.N.T.O.M. — Portable Home Archive: Navigates & Transfers Objects to new Machine" -ForegroundColor Cyan
+    Write-Host "    R.E.V.E.N.A.N.T. — Relocates, Extracts, Validates Environments, Networks, Accounts 'N Transfers" -ForegroundColor Cyan
     Write-Host "    Profile Migration & Data Transfer Tool" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -302,7 +302,7 @@ function Test-KnownFolderMove {
 # MAIN
 # ─────────────────────────────────────────────────────────────────────────────
 
-if (-not $Unattended) { Show-PhantomBanner }
+if (-not $Unattended) { Show-RevenantBanner }
 
 # ── SOURCE ────────────────────────────────────────────────────────────────────
 
@@ -328,7 +328,7 @@ if ($Unattended) {
             Write-Host "  [-] File does not appear to be a ZIP archive." -ForegroundColor $ColorSchema.Error
             exit 1
         }
-        $TempExtractDir = Join-Path $env:TEMP "PHANTOM_Extract_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+        $TempExtractDir = Join-Path $env:TEMP "REVENANT_Extract_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
         try {
             Write-Host "  [*] Extracting archive — this may take a moment..." -ForegroundColor $ColorSchema.Progress
             Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
@@ -418,7 +418,7 @@ if ($Unattended) {
             exit 1
         }
 
-        $TempExtractDir = Join-Path $env:TEMP "PHANTOM_Extract_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+        $TempExtractDir = Join-Path $env:TEMP "REVENANT_Extract_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
 
         try {
             Write-Host ""
@@ -470,12 +470,12 @@ $DestRoot = ""
 $_cfg = Get-TKConfig
 
 if ($Unattended) {
-    if ([string]::IsNullOrWhiteSpace($DestPath) -and -not [string]::IsNullOrWhiteSpace($_cfg.Phantom.DefaultDestination)) {
-        $DestPath = $_cfg.Phantom.DefaultDestination
+    if ([string]::IsNullOrWhiteSpace($DestPath) -and -not [string]::IsNullOrWhiteSpace($_cfg.Revenant.DefaultDestination)) {
+        $DestPath = $_cfg.Revenant.DefaultDestination
         Write-Host "  [*] No -DestPath provided — using config default: $DestPath" -ForegroundColor $ColorSchema.Info
     }
     if ([string]::IsNullOrWhiteSpace($DestPath)) {
-        Write-Host "  [-] -DestPath is required in unattended mode (or set Phantom.DefaultDestination in config.json)." -ForegroundColor $ColorSchema.Error
+        Write-Host "  [-] -DestPath is required in unattended mode (or set Revenant.DefaultDestination in config.json)." -ForegroundColor $ColorSchema.Error
         exit 1
     }
     $DestRoot = $DestPath.TrimEnd('\')
@@ -593,7 +593,7 @@ Write-Host "  MIGRATING" -ForegroundColor $ColorSchema.Header
 Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host ""
 
-$destMigration = Join-Path $DestRoot "PHANTOM_Migration"
+$destMigration = Join-Path $DestRoot "REVENANT_Migration"
 
 # ARCHIVE ZIPs use a flat folder structure (Desktop, Outlook, Chrome, etc. at root).
 # Live profiles use deep AppData paths. Build the item map accordingly.
@@ -659,7 +659,7 @@ if ($IsArchiveZip -and $TempExtractDir -and (Test-Path $TempExtractDir)) {
 
 # ── LOG ───────────────────────────────────────────────────────────────────────
 
-$logFile = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "PHANTOM_MigrationLog_$(Get-Date -Format 'yyyyMMdd_HHmmss').csv"
+$logFile = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "REVENANT_MigrationLog_$(Get-Date -Format 'yyyyMMdd_HHmmss').csv"
 
 try {
     $MigrationLog | Export-Csv -Path $logFile -NoTypeInformation -Encoding UTF8
@@ -703,7 +703,7 @@ if ($whatif -gt 0) { $summaryLine += "  |  WhatIf: $whatif" }
 Write-Host $summaryLine -ForegroundColor $ColorSchema.Header
 Write-Host ""
 Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
-Write-Host "  P.H.A.N.T.O.M. COMPLETE" -ForegroundColor $ColorSchema.Header
+Write-Host "  R.E.V.E.N.A.N.T. COMPLETE" -ForegroundColor $ColorSchema.Header
 Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host ""
 

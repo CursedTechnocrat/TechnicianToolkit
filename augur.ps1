@@ -19,7 +19,7 @@
     Tools Available
     ─────────────────────────────────────────────────────────────────
     G.R.I.M.O.I.R.E.       — Technician Toolkit hub and central launcher
-    O.R.A.C.L.E.           — System diagnostics & HTML report generation
+    A.U.S.P.E.X.           — System diagnostics & HTML report generation
     A.R.C.H.I.V.E.         — Pre-reimaging profile backup
     C.L.E.A.N.S.E.         — Disk cleanup — temp, update cache, browser caches
     A.U.G.U.R.             — Disk health assessment, SMART & reliability analysis

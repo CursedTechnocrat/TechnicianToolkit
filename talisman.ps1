@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-    A.E.G.I.S.  -  Azure Environment & Governance Inspection System
+    T.A.L.I.S.M.A.N.  -  Tenant Assessment, Logging, Infrastructure, Security, Monitoring & Access Navigator
     Azure subscription assessment and HTML report generator for PowerShell 5.1+
 
 .DESCRIPTION
@@ -13,9 +13,9 @@
     remediation recommendations.
 
 .USAGE
-    PS C:\> .\aegis.ps1
-    PS C:\> .\aegis.ps1 -SubscriptionId "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    PS C:\> .\aegis.ps1 -OutputPath "C:\Reports\azure.html" -NoOpen
+    PS C:\> .\talisman.ps1
+    PS C:\> .\talisman.ps1 -SubscriptionId "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    PS C:\> .\talisman.ps1 -OutputPath "C:\Reports\azure.html" -NoOpen
 
 .NOTES
     Version  : 2.2
@@ -27,18 +27,18 @@
     R.U.N.E.P.R.E.S.S.      -  Printer driver installation & configuration
     R.E.S.T.O.R.A.T.I.O.N.  -  Windows Update management
     C.O.N.J.U.R.E.          -  Software deployment via winget / Chocolatey
-    O.R.A.C.L.E.            -  System diagnostics & HTML report generation
+    A.U.S.P.E.X.            -  System diagnostics & HTML report generation
     C.O.V.E.N.A.N.T.        -  Machine onboarding & Entra ID domain join
-    P.H.A.N.T.O.M.          -  Profile migration & data transfer
+    R.E.V.E.N.A.N.T.        -  Profile migration & data transfer
     C.I.P.H.E.R.            -  BitLocker drive encryption management
     W.A.R.D.                -  User account & local security audit
     A.R.C.H.I.V.E.          -  Pre-reimaging profile backup
     S.I.G.I.L.              -  Security baseline & policy enforcement
-    S.P.E.C.T.E.R.          -  Remote machine execution via WinRM
+    S.H.A.D.E.              -  Remote machine execution via WinRM
     L.E.Y.L.I.N.E.          -  Network diagnostics & remediation
     F.O.R.G.E.              -  Driver update detection & installation
-    A.E.G.I.S.              -  Azure environment & governance inspection
-    R.E.L.I.C.              -  Certificate health & SSL expiry monitoring
+    T.A.L.I.S.M.A.N.        -  Azure environment & governance inspection
+    A.R.T.I.F.A.C.T.        -  Certificate health & SSL expiry monitoring
     H.E.A.R.T.H.            -  Toolkit setup & configuration wizard
 
     Color Schema
@@ -111,16 +111,16 @@ $C = @{
 Clear-Host
 Write-Host @"
 
-   █████╗ ███████╗ ██████╗ ██╗███████╗
-  ██╔══██╗██╔════╝██╔════╝ ██║██╔════╝
-  ███████║█████╗  ██║  ███╗██║███████╗
-  ██╔══██║██╔══╝  ██║   ██║██║╚════██║
-  ██║  ██║███████╗╚██████╔╝██║███████║
-  ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═╝╚══════╝
+  ████████╗ █████╗ ██╗     ██╗███████╗███╗   ███╗ █████╗ ███╗   ██╗
+  ╚══██╔══╝██╔══██╗██║     ██║██╔════╝████╗ ████║██╔══██╗████╗  ██║
+     ██║   ███████║██║     ██║███████╗██╔████╔██║███████║██╔██╗ ██║
+     ██║   ██╔══██║██║     ██║╚════██║██║╚██╔╝██║██╔══██║██║╚██╗██║
+     ██║   ██║  ██║███████╗██║███████║██║ ╚═╝ ██║██║  ██║██║ ╚████║
+     ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝╚══════╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝
 
 "@ -ForegroundColor Cyan
-Write-Host "  A.E.G.I.S.  -  Azure Environment & Governance Inspection System" -ForegroundColor Cyan
-Write-Host "  Azure Subscription Assessment & Report Generator  v2.0" -ForegroundColor Cyan
+Write-Host "  T.A.L.I.S.M.A.N.  -  Tenant Assessment, Logging, Infrastructure, Security, Monitoring & Access Navigator" -ForegroundColor Cyan
+Write-Host "  Azure Subscription Assessment & Report Generator  v2.2" -ForegroundColor Cyan
 Write-Host ""
 
 # -----------------------------------------------------------------------------
@@ -1038,7 +1038,7 @@ $defenderStatBox = if ($defenderPct -ne $null) {
 
 $htmlHead = Get-TKHtmlHead `
     -Title      "Azure Environment Assessment -- $orgName" `
-    -ScriptName 'A.E.G.I.S.' `
+    -ScriptName 'T.A.L.I.S.M.A.N.' `
     -Subtitle   "$orgName -- Cloud Infrastructure Review" `
     -MetaItems  ([ordered]@{
         'Report Date'     = $reportDate
@@ -1060,7 +1060,7 @@ $htmlHead = Get-TKHtmlHead `
         'Recommendations'
     )
 
-$htmlFoot = Get-TKHtmlFoot -ScriptName 'A.E.G.I.S. v2.2'
+$htmlFoot = Get-TKHtmlFoot -ScriptName 'T.A.L.I.S.M.A.N. v2.2'
 
 $html = $htmlHead + @"
 

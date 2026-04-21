@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-    V.A.U.L.T. — Validates Assets & User License Tracking
+    R.E.L.I.Q.U.A.R.Y. — Reports, Evaluates Licenses, Inventories, Quotas, Users, Access & Registration Yields
     Microsoft 365 License & Mailbox Audit Tool for PowerShell 5.1+
 
 .DESCRIPTION
@@ -11,8 +11,8 @@
     in the console or exported as a combined dark-themed HTML report.
 
 .USAGE
-    PS C:\> .\vault.ps1                    # Interactive menu
-    PS C:\> .\vault.ps1 -Unattended        # Auto-connect and export full audit report
+    PS C:\> .\reliquary.ps1                    # Interactive menu
+    PS C:\> .\reliquary.ps1 -Unattended        # Auto-connect and export full audit report
 
 .NOTES
     Version : 1.0
@@ -23,23 +23,23 @@
     R.U.N.E.P.R.E.S.S.     — Printer driver installation & configuration
     R.E.S.T.O.R.A.T.I.O.N. — Windows Update management
     C.O.N.J.U.R.E.         — Software deployment via winget / Chocolatey
-    O.R.A.C.L.E.           — System diagnostics & HTML report generation
+    A.U.S.P.E.X.           — System diagnostics & HTML report generation
     C.O.V.E.N.A.N.T.       — Machine onboarding & Entra ID domain join
-    P.H.A.N.T.O.M.         — Profile migration & data transfer
+    R.E.V.E.N.A.N.T.       — Profile migration & data transfer
     C.I.P.H.E.R.           — BitLocker drive encryption management
     W.A.R.D.               — User account & local security audit
     A.R.C.H.I.V.E.         — Pre-reimaging profile backup
     S.I.G.I.L.             — Security baseline & policy enforcement
-    S.P.E.C.T.E.R.         — Remote machine execution via WinRM
+    S.H.A.D.E.             — Remote machine execution via WinRM
     L.E.Y.L.I.N.E.         — Network diagnostics & remediation
     F.O.R.G.E.             — Driver update detection & installation
-    A.E.G.I.S.             — Azure environment assessment & reporting
-    B.A.S.T.I.O.N.         — Active Directory & identity management
+    T.A.L.I.S.M.A.N.       — Azure environment assessment & reporting
+    C.I.T.A.D.E.L.         — Active Directory & identity management
     L.A.N.T.E.R.N.         — Network discovery & asset inventory
     T.H.R.E.S.H.O.L.D.     — Disk & storage health monitoring
-    V.A.U.L.T.             — M365 license & mailbox auditing
-    S.E.N.T.I.N.E.L.       — Service & scheduled task monitoring
-    R.E.L.I.C.             — Certificate health & SSL expiry monitoring
+    R.E.L.I.Q.U.A.R.Y.     — M365 license & mailbox auditing
+    G.A.R.G.O.Y.L.E.       — Service & scheduled task monitoring
+    A.R.T.I.F.A.C.T.       — Certificate health & SSL expiry monitoring
     H.E.A.R.T.H.           — Toolkit setup & configuration wizard
 
     Color Schema
@@ -171,19 +171,19 @@ $SkuNames = @{
 # BANNER
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Show-VaultBanner {
+function Show-ReliquaryBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host @"
 
-  ██╗   ██╗ █████╗ ██╗   ██╗██╗  ████████╗
-  ██║   ██║██╔══██╗██║   ██║██║  ╚══██╔══╝
-  ██║   ██║███████║██║   ██║██║     ██║
-  ╚██╗ ██╔╝██╔══██║██║   ██║██║     ██║
-   ╚████╔╝ ██║  ██║╚██████╔╝███████╗██║
-    ╚═══╝  ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝
+  ██████╗ ███████╗██╗     ██╗ ██████╗ ██╗   ██╗ █████╗ ██████╗ ██╗   ██╗
+  ██╔══██╗██╔════╝██║     ██║██╔═══██╗██║   ██║██╔══██╗██╔══██╗╚██╗ ██╔╝
+  ██████╔╝█████╗  ██║     ██║██║   ██║██║   ██║███████║██████╔╝ ╚████╔╝
+  ██╔══██╗██╔══╝  ██║     ██║██║▄▄ ██║██║   ██║██╔══██║██╔══██╗  ╚██╔╝
+  ██║  ██║███████╗███████╗██║╚██████╔╝╚██████╔╝██║  ██║██║  ██║   ██║
+  ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝ ╚══▀▀═╝  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝
 
 "@ -ForegroundColor Cyan
-    Write-Host "  V.A.U.L.T. — Validates Assets & User License Tracking" -ForegroundColor Cyan
+    Write-Host "  R.E.L.I.Q.U.A.R.Y. — Reports, Evaluates Licenses, Inventories, Quotas, Users, Access & Registration Yields" -ForegroundColor Cyan
     Write-Host "  Microsoft 365 License & Mailbox Audit Tool  v1.0" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -225,7 +225,7 @@ function Install-GraphModule {
             }
         } else {
             Write-Warn "One or more Microsoft.Graph sub-modules are not installed."
-            Write-Info "The Microsoft.Graph module suite is required for V.A.U.L.T. to operate."
+            Write-Info "The Microsoft.Graph module suite is required for R.E.L.I.Q.U.A.R.Y. to operate."
             Write-Host ""
             $ans = Read-Host "  Install Microsoft.Graph for current user? [Y/N]"
             if ($ans -match '^[Yy]') {
@@ -587,7 +587,7 @@ function Show-SharedMailboxGuidance {
     Write-Section "SHARED MAILBOX AUDIT"
     Write-Warn "Shared mailbox auditing requires the Exchange Online Management module."
     Write-Host ""
-    Write-Info "V.A.U.L.T. connects to Microsoft Graph, which does not expose mailbox"
+    Write-Info "R.E.L.I.Q.U.A.R.Y. connects to Microsoft Graph, which does not expose mailbox"
     Write-Info "type details (Shared vs. User) in the same way as Exchange Online."
     Write-Host ""
     Write-Info "To audit shared mailboxes, run the following in a separate session:"
@@ -691,8 +691,8 @@ function Build-HtmlReport {
     $mfaClass    = if ($NoMfaData.Count      -gt 0) { 'err'  } else { 'ok' }
 
     $htmlHead = Get-TKHtmlHead `
-        -Title      'V.A.U.L.T. Audit Report' `
-        -ScriptName 'V.A.U.L.T.' `
+        -Title      'R.E.L.I.Q.U.A.R.Y. Audit Report' `
+        -ScriptName 'R.E.L.I.Q.U.A.R.Y.' `
         -Subtitle   "Microsoft 365 License &amp; User Security Audit -- $tenantDisplay" `
         -MetaItems  ([ordered]@{
             'Generated'    = $reportDate
@@ -707,7 +707,7 @@ function Build-HtmlReport {
             'Shared Mailbox'
         )
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'V.A.U.L.T. v1.0'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'R.E.L.I.Q.U.A.R.Y. v1.0'
 
     $html = $htmlHead + @"
 
@@ -839,7 +839,7 @@ function Export-HtmlReport {
 
     $html      = Build-HtmlReport -LicenseData $LicenseData -UnlicensedData $UnlicensedData -InactiveData $InactiveData -NoMfaData $NoMfaData
     $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-    $outPath   = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "VAULT_${timestamp}.html"
+    $outPath   = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "RELIQUARY_${timestamp}.html"
 
     try {
         $html | Out-File -FilePath $outPath -Encoding UTF8 -Force
@@ -856,7 +856,7 @@ function Export-HtmlReport {
 # ─────────────────────────────────────────────────────────────────────────────
 
 function Show-Menu {
-    Show-VaultBanner
+    Show-ReliquaryBanner
 
     $connStatus = if ($script:Connected) {
         "  Connected as : $($script:ConnectedAs)"
@@ -895,7 +895,7 @@ function Assert-Connected {
 # ENTRY POINT
 # ─────────────────────────────────────────────────────────────────────────────
 
-Show-VaultBanner
+Show-ReliquaryBanner
 Install-GraphModule
 
 # Check if already connected (e.g. token still cached from prior session)
