@@ -18,7 +18,7 @@
     PS C:\> .\aegis.ps1 -OutputPath "C:\Reports\azure.html" -NoOpen
 
 .NOTES
-    Version  : 2.1
+    Version  : 2.2
     All required Az modules are installed automatically on first run.
 
     Tools Available
@@ -773,9 +773,23 @@ if ($advisorRecs.Count -gt 0) {
     $advisorRows = [System.Text.StringBuilder]::new()
     foreach ($rec in ($advisorRecs | Sort-Object -Property @{E={switch($_.Impact){'High'{0}'Medium'{1}default{2}}}},Category | Select-Object -First 50)) {
         $impactClass = switch ($rec.Impact) { 'High' { 'tk-badge-err' } 'Medium' { 'tk-badge-warn' } default { 'tk-badge-ok' } }
-        $problem     = EscHtml ($rec.ShortDescription.Problem)
-        $resName     = EscHtml (($rec.ResourceId -split '/')[-1])
-        $cat         = EscHtml $rec.Category
+
+        # Az.Advisor 2.x flattened the schema: ShortDescription.Problem -> ShortDescriptionProblem,
+        # ResourceId -> ResourceMetadataResourceId. Read defensively so both schemas work.
+        $problemText =
+            if     ($rec.PSObject.Properties['ShortDescriptionProblem'] -and $rec.ShortDescriptionProblem) { $rec.ShortDescriptionProblem }
+            elseif ($rec.PSObject.Properties['ShortDescription']        -and $rec.ShortDescription)        { $rec.ShortDescription.Problem }
+            elseif ($rec.PSObject.Properties['Description']             -and $rec.Description)             { $rec.Description }
+            else                                                                                           { '(no description)' }
+
+        $resourceIdText =
+            if     ($rec.PSObject.Properties['ResourceMetadataResourceId'] -and $rec.ResourceMetadataResourceId) { $rec.ResourceMetadataResourceId }
+            elseif ($rec.PSObject.Properties['ResourceId']                 -and $rec.ResourceId)                 { $rec.ResourceId }
+            else                                                                                                 { '' }
+
+        $problem = EscHtml $problemText
+        $resName = if ($resourceIdText) { EscHtml (($resourceIdText -split '/')[-1]) } else { '' }
+        $cat     = EscHtml $rec.Category
         [void]$advisorRows.Append("<tr><td>$problem</td><td>$cat</td><td><span class='$impactClass'>$(EscHtml $rec.Impact)</span></td><td>$resName</td></tr>`n")
     }
     $advisorSection = @"
@@ -1015,7 +1029,7 @@ $htmlHead = Get-TKHtmlHead `
         'Recommendations'
     )
 
-$htmlFoot = Get-TKHtmlFoot -ScriptName 'A.E.G.I.S. v2.0'
+$htmlFoot = Get-TKHtmlFoot -ScriptName 'A.E.G.I.S. v2.2'
 
 $html = $htmlHead + @"
 
