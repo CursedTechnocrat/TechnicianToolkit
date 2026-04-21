@@ -228,14 +228,19 @@ Describe 'Param block compliance — -Unattended switch' {
 # GRIMOIRE registry integrity — every File entry must exist on disk
 # ─────────────────────────────────────────────────────────────────────────────
 Describe 'GRIMOIRE registry integrity' {
-    $GrimoirePath = Join-Path $PSScriptRoot '..\grimoire.ps1'
-    $ToolkitRoot  = Join-Path $PSScriptRoot '..'
-
-    It 'grimoire.ps1 exists' {
-        $GrimoirePath | Should -Exist
+    BeforeAll {
+        # Pester 5: BeforeAll-scoped variables are accessible to It bodies
+        # without $script: prefix. Discovery-scope vars (below) are not.
+        $grimoirePath = Join-Path $PSScriptRoot '..\grimoire.ps1'
     }
 
-    # Parse the $Tools array by extracting File = '...' values from the script text
+    It 'grimoire.ps1 exists' {
+        $grimoirePath | Should -Exist
+    }
+
+    # -ForEach cases must be built at discovery time.
+    $GrimoirePath = Join-Path $PSScriptRoot '..\grimoire.ps1'
+    $ToolkitRoot  = Join-Path $PSScriptRoot '..'
     $registryContent = Get-Content $GrimoirePath -Raw
     $registryCases   = [regex]::Matches($registryContent, "File\s*=\s*'([^']+)'") |
         ForEach-Object { $_.Groups[1].Value } |
