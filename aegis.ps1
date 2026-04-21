@@ -768,27 +768,58 @@ if ($vms.Count -gt 0) {
 
 # -- Advisor -------------------------------------------------------------------
 
+# Schema-agnostic field extraction for Az.Advisor recommendations.
+# Az.Advisor 1.x used nested ShortDescription.Problem / ResourceId;
+# Az.Advisor 2.x flattened to ShortDescriptionProblem / ResourceMetadataResourceId;
+# some builds expose ResourceMetadata.ResourceId or ImpactedValue instead.
+function Get-AdvisorProblemText {
+    param($Rec)
+    foreach ($name in 'ShortDescriptionProblem','Description','Problem') {
+        $p = $Rec.PSObject.Properties[$name]
+        if ($p -and $p.Value -and "$($p.Value)".Trim()) { return "$($p.Value)" }
+    }
+    # Nested: ShortDescription.Problem
+    $sd = $Rec.PSObject.Properties['ShortDescription']
+    if ($sd -and $sd.Value -and $sd.Value.PSObject.Properties['Problem'] -and $sd.Value.Problem) {
+        return "$($sd.Value.Problem)"
+    }
+    return ''
+}
+function Get-AdvisorResourceId {
+    param($Rec)
+    foreach ($name in 'ResourceMetadataResourceId','ResourceId','ImpactedValue') {
+        $p = $Rec.PSObject.Properties[$name]
+        if ($p -and $p.Value -and "$($p.Value)".Trim()) { return "$($p.Value)" }
+    }
+    # Nested: ResourceMetadata.ResourceId
+    $rm = $Rec.PSObject.Properties['ResourceMetadata']
+    if ($rm -and $rm.Value -and $rm.Value.PSObject.Properties['ResourceId'] -and $rm.Value.ResourceId) {
+        return "$($rm.Value.ResourceId)"
+    }
+    return ''
+}
+
 $advisorSection = ''
 if ($advisorRecs.Count -gt 0) {
+    # One-shot diagnostic: if the first record gives us neither description nor
+    # resource id, the schema is unknown - surface the actual property names so
+    # we can extend the extractor rather than silently rendering blank cells.
+    $sample = $advisorRecs[0]
+    if (-not (Get-AdvisorProblemText $sample) -and -not (Get-AdvisorResourceId $sample)) {
+        $propList = ($sample.PSObject.Properties | ForEach-Object { $_.Name }) -join ', '
+        Write-Warn "Advisor recommendation schema not recognized. Properties on first record:"
+        Write-Info "  $propList"
+    }
+
     $advisorRows = [System.Text.StringBuilder]::new()
     foreach ($rec in ($advisorRecs | Sort-Object -Property @{E={switch($_.Impact){'High'{0}'Medium'{1}default{2}}}},Category | Select-Object -First 50)) {
         $impactClass = switch ($rec.Impact) { 'High' { 'tk-badge-err' } 'Medium' { 'tk-badge-warn' } default { 'tk-badge-ok' } }
 
-        # Az.Advisor 2.x flattened the schema: ShortDescription.Problem -> ShortDescriptionProblem,
-        # ResourceId -> ResourceMetadataResourceId. Read defensively so both schemas work.
-        $problemText =
-            if     ($rec.PSObject.Properties['ShortDescriptionProblem'] -and $rec.ShortDescriptionProblem) { $rec.ShortDescriptionProblem }
-            elseif ($rec.PSObject.Properties['ShortDescription']        -and $rec.ShortDescription)        { $rec.ShortDescription.Problem }
-            elseif ($rec.PSObject.Properties['Description']             -and $rec.Description)             { $rec.Description }
-            else                                                                                           { '(no description)' }
+        $problemText    = Get-AdvisorProblemText $rec
+        $resourceIdText = Get-AdvisorResourceId  $rec
 
-        $resourceIdText =
-            if     ($rec.PSObject.Properties['ResourceMetadataResourceId'] -and $rec.ResourceMetadataResourceId) { $rec.ResourceMetadataResourceId }
-            elseif ($rec.PSObject.Properties['ResourceId']                 -and $rec.ResourceId)                 { $rec.ResourceId }
-            else                                                                                                 { '' }
-
-        $problem = EscHtml $problemText
-        $resName = if ($resourceIdText) { EscHtml (($resourceIdText -split '/')[-1]) } else { '' }
+        $problem = if ($problemText)    { EscHtml $problemText }                         else { '<span class="tk-badge-info">(no description)</span>' }
+        $resName = if ($resourceIdText) { EscHtml (($resourceIdText -split '/')[-1]) }   else { '-' }
         $cat     = EscHtml $rec.Category
         [void]$advisorRows.Append("<tr><td>$problem</td><td>$cat</td><td><span class='$impactClass'>$(EscHtml $rec.Impact)</span></td><td>$resName</td></tr>`n")
     }
