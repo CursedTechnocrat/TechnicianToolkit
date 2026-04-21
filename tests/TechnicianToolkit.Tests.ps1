@@ -131,20 +131,31 @@ Describe 'Write-TKError' {
 # Module exports
 # ─────────────────────────────────────────────────────────────────────────────
 Describe 'Module exports' {
-    $expectedFunctions = @(
-        'Write-Section', 'Write-Step', 'Write-Ok', 'Write-Warn', 'Write-Fail', 'Write-Info',
-        'EscHtml', 'Get-TKHtmlCss', 'Get-TKHtmlHead', 'Get-TKHtmlFoot',
-        'Test-IsAdmin', 'Assert-AdminPrivilege', 'Invoke-AdminElevation',
-        'Get-TKConfig', 'Set-TKConfig',
-        'Resolve-LogDirectory',
-        'Start-TKTranscript', 'Stop-TKTranscript',
-        'Write-TKError'
-    )
-
-    foreach ($fn in $expectedFunctions) {
-        It "exports $fn" {
-            Get-Command $fn -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
-        }
+    # Pester 5 data binding: -ForEach hashtable keys become variables in the
+    # test body. A plain `foreach { It { ... $fn } }` leaks the discovery-time
+    # loop variable out of scope by run phase — use -ForEach so $fn resolves.
+    It 'exports <fn>' -ForEach @(
+        @{ fn = 'Write-Section' }
+        @{ fn = 'Write-Step' }
+        @{ fn = 'Write-Ok' }
+        @{ fn = 'Write-Warn' }
+        @{ fn = 'Write-Fail' }
+        @{ fn = 'Write-Info' }
+        @{ fn = 'EscHtml' }
+        @{ fn = 'Get-TKHtmlCss' }
+        @{ fn = 'Get-TKHtmlHead' }
+        @{ fn = 'Get-TKHtmlFoot' }
+        @{ fn = 'Test-IsAdmin' }
+        @{ fn = 'Assert-AdminPrivilege' }
+        @{ fn = 'Invoke-AdminElevation' }
+        @{ fn = 'Get-TKConfig' }
+        @{ fn = 'Set-TKConfig' }
+        @{ fn = 'Resolve-LogDirectory' }
+        @{ fn = 'Start-TKTranscript' }
+        @{ fn = 'Stop-TKTranscript' }
+        @{ fn = 'Write-TKError' }
+    ) {
+        Get-Command $fn -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
     }
 }
 
@@ -152,16 +163,15 @@ Describe 'Module exports' {
 # Script syntax validation — all .ps1 files must parse without errors
 # ─────────────────────────────────────────────────────────────────────────────
 Describe 'PowerShell syntax — all scripts' {
-    $scripts = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Filter '*.ps1' -File
+    $scriptCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Filter '*.ps1' -File |
+        ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
 
-    foreach ($script in $scripts) {
-        It "$($script.Name) has no parse errors" {
-            $errors = $null
-            $null = [System.Management.Automation.Language.Parser]::ParseFile(
-                $script.FullName, [ref]$null, [ref]$errors
-            )
-            $errors.Count | Should -Be 0
-        }
+    It '<Name> has no parse errors' -ForEach $scriptCases {
+        $errors = $null
+        $null = [System.Management.Automation.Language.Parser]::ParseFile(
+            $FullName, [ref]$null, [ref]$errors
+        )
+        $errors.Count | Should -Be 0
     }
 }
 
@@ -171,24 +181,23 @@ Describe 'PowerShell syntax — all scripts' {
 # fail loudly (-ErrorAction Stop) rather than silently partially-executing.
 # ─────────────────────────────────────────────────────────────────────────────
 Describe 'Module bootstrap compliance — all tool scripts' {
-    $scripts = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Filter '*.ps1' -File
+    $scriptCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Filter '*.ps1' -File |
+        ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
 
-    foreach ($script in $scripts) {
-        It "$($script.Name) defines `$TKModulePath next to `$PSScriptRoot" {
-            $content = Get-Content $script.FullName -Raw
-            $content | Should -Match '\$TKModulePath\s*=\s*Join-Path\s+\$PSScriptRoot\s+''TechnicianToolkit\.psm1'''
-        }
+    It '<Name> defines $TKModulePath next to $PSScriptRoot' -ForEach $scriptCases {
+        $content = Get-Content $FullName -Raw
+        $content | Should -Match '\$TKModulePath\s*=\s*Join-Path\s+\$PSScriptRoot\s+''TechnicianToolkit\.psm1'''
+    }
 
-        It "$($script.Name) imports via `$TKModulePath with -ErrorAction Stop" {
-            $content = Get-Content $script.FullName -Raw
-            $content | Should -Match 'Import-Module\s+\$TKModulePath\s+-Force\s+-ErrorAction\s+Stop'
-        }
+    It '<Name> imports via $TKModulePath with -ErrorAction Stop' -ForEach $scriptCases {
+        $content = Get-Content $FullName -Raw
+        $content | Should -Match 'Import-Module\s+\$TKModulePath\s+-Force\s+-ErrorAction\s+Stop'
+    }
 
-        It "$($script.Name) no longer uses the silent-fail import" {
-            $content = Get-Content $script.FullName -Raw
-            # The old pattern (quoted path, no -ErrorAction) must be gone.
-            $content | Should -Not -Match 'Import-Module\s+"\$PSScriptRoot\\TechnicianToolkit\.psm1"\s+-Force\s*$'
-        }
+    It '<Name> no longer uses the silent-fail import' -ForEach $scriptCases {
+        $content = Get-Content $FullName -Raw
+        # The old pattern (quoted path, no -ErrorAction) must be gone.
+        $content | Should -Not -Match 'Import-Module\s+"\$PSScriptRoot\\TechnicianToolkit\.psm1"\s+-Force\s*$'
     }
 }
 
@@ -197,22 +206,21 @@ Describe 'Module bootstrap compliance — all tool scripts' {
 # Excludes grimoire.ps1 (hub launcher, not an interactive tool itself)
 # ─────────────────────────────────────────────────────────────────────────────
 Describe 'Param block compliance — -Unattended switch' {
-    $scripts = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Filter '*.ps1' -File |
-        Where-Object { $_.Name -ne 'grimoire.ps1' }
+    $scriptCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Filter '*.ps1' -File |
+        Where-Object { $_.Name -ne 'grimoire.ps1' } |
+        ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
 
-    foreach ($script in $scripts) {
-        It "$($script.Name) declares -Unattended" {
-            $errors = $null
-            $ast    = [System.Management.Automation.Language.Parser]::ParseFile(
-                $script.FullName, [ref]$null, [ref]$errors
-            )
-            $params = $ast.FindAll({
-                param($node)
-                $node -is [System.Management.Automation.Language.ParameterAst]
-            }, $true)
-            $paramNames = $params | ForEach-Object { $_.Name.VariablePath.UserPath }
-            $paramNames | Should -Contain 'Unattended'
-        }
+    It '<Name> declares -Unattended' -ForEach $scriptCases {
+        $errors = $null
+        $ast    = [System.Management.Automation.Language.Parser]::ParseFile(
+            $FullName, [ref]$null, [ref]$errors
+        )
+        $params = $ast.FindAll({
+            param($node)
+            $node -is [System.Management.Automation.Language.ParameterAst]
+        }, $true)
+        $paramNames = $params | ForEach-Object { $_.Name.VariablePath.UserPath }
+        $paramNames | Should -Contain 'Unattended'
     }
 }
 
@@ -228,15 +236,13 @@ Describe 'GRIMOIRE registry integrity' {
     }
 
     # Parse the $Tools array by extracting File = '...' values from the script text
-    $content   = Get-Content $GrimoirePath -Raw
-    $fileNames = [regex]::Matches($content, "File\s*=\s*'([^']+)'") |
+    $registryContent = Get-Content $GrimoirePath -Raw
+    $registryCases   = [regex]::Matches($registryContent, "File\s*=\s*'([^']+)'") |
         ForEach-Object { $_.Groups[1].Value } |
-        Select-Object -Unique
+        Select-Object -Unique |
+        ForEach-Object { @{ FileName = $_; FullPath = (Join-Path $ToolkitRoot $_) } }
 
-    foreach ($fileName in $fileNames) {
-        It "registered tool '$fileName' exists on disk" {
-            $fullPath = Join-Path $ToolkitRoot $fileName
-            $fullPath | Should -Exist
-        }
+    It "registered tool '<FileName>' exists on disk" -ForEach $registryCases {
+        $FullPath | Should -Exist
     }
 }
