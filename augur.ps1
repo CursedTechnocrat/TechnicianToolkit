@@ -368,9 +368,9 @@ catch {
 # ─────────────────────────────────────────────────────────────────────────────
 
 Write-Host ""
-Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
+Write-Host ("  " + ("=" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host "  A.U.G.U.R. ASSESSMENT COMPLETE" -ForegroundColor $ColorSchema.Header
-Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
+Write-Host ("  " + ("=" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host ""
 Write-Host "  Physical Disks : $($diskReport.Count) assessed" -ForegroundColor $ColorSchema.Info
 
@@ -410,6 +410,6 @@ if (-not $Unattended) {
 }
 
 Write-Host ""
-Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
+Write-Host ("  " + ("=" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host ""
 if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

@@ -89,11 +89,11 @@ function Show-Banner {
     $banner = @"
 
   ████████╗██╗  ██╗██████╗ ███████╗███████╗██╗  ██╗ ██████╗ ██╗     ██████╗
-  ╚══██╔══╝██║  ██║██╔══██╗██╔════╝██╔════╝██║  ██║██╔═══██╗██║     ██╔══██╗
+  ╚==██╔==╝██║  ██║██╔==██╗██╔====╝██╔====╝██║  ██║██╔===██╗██║     ██╔==██╗
      ██║   ███████║██████╔╝█████╗  ███████╗███████║██║   ██║██║     ██║  ██║
-     ██║   ██╔══██║██╔══██╗██╔══╝  ╚════██║██╔══██║██║   ██║██║     ██║  ██║
+     ██║   ██╔==██║██╔==██╗██╔==╝  ╚====██║██╔==██║██║   ██║██║     ██║  ██║
      ██║   ██║  ██║██║  ██║███████╗███████║██║  ██║╚██████╔╝███████╗██████╔╝
-     ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═════╝
+     ╚=╝   ╚=╝  ╚=╝╚=╝  ╚=╝╚======╝╚======╝╚=╝  ╚=╝ ╚=====╝ ╚======╝╚=====╝
 "@
     Write-Host $banner -ForegroundColor $C.Cyan
     Write-Host "  Tests Hardware Reliability, Evaluates Storage Health, & Optimizes/Logs Disk data" -ForegroundColor $C.Gray
@@ -204,7 +204,7 @@ function Show-DiskSummary {
     } else {
         Write-Host ("  {0,-30} {1,-6} {2,-10} {3,-12} {4,-12} {5}" -f `
             "Name", "Num", "Type", "Size", "Health", "OpStatus") -ForegroundColor $C.Gray
-        Write-Host ("  " + ("─" * 80)) -ForegroundColor $C.Gray
+        Write-Host ("  " + ("-" * 80)) -ForegroundColor $C.Gray
 
         foreach ($d in $diskInfo) {
             $hColor = Get-HealthColor -Status $d.HealthStatus
@@ -225,7 +225,7 @@ function Show-DiskSummary {
     } else {
         Write-Host ("  {0,-5} {1,-20} {2,-8} {3,-10} {4,-10} {5,-8} {6}" -f `
             "Drive", "Label", "FS", "Total", "Free", "% Free", "Status") -ForegroundColor $C.Gray
-        Write-Host ("  " + ("─" * 75)) -ForegroundColor $C.Gray
+        Write-Host ("  " + ("-" * 75)) -ForegroundColor $C.Gray
 
         foreach ($v in $volInfo) {
             $sColor = switch ($v.SpaceStatus) {
@@ -462,7 +462,7 @@ function Show-OldProfiles {
     }
 
     Write-Host ("  {0,-20} {1,-22} {2,-12} {3}" -f "Profile", "Last Modified", "Est. Size", "Path") -ForegroundColor $C.Gray
-    Write-Host ("  " + ("─" * 75)) -ForegroundColor $C.Gray
+    Write-Host ("  " + ("-" * 75)) -ForegroundColor $C.Gray
 
     foreach ($prof in $profiles) {
         $sizeStr = "Calculating..."
@@ -486,7 +486,7 @@ function Show-OldProfiles {
 
     Write-Host ""
     Write-Host ("  {0} profile(s) found older than 90 days." -f $profiles.Count) -ForegroundColor $C.Cyan
-    Write-Host "  Review before deletion — use ARCHIVE or PHANTOM for profile migration." -ForegroundColor $C.Gray
+    Write-Host "  Review before deletion  -  use ARCHIVE or PHANTOM for profile migration." -ForegroundColor $C.Gray
 }
 
 #endregion
@@ -724,7 +724,7 @@ function Show-Menu {
 
 if ($Unattended) {
     Show-Banner
-    Write-Host "  Running in Unattended mode — collecting data and generating report..." -ForegroundColor $C.Magenta
+    Write-Host "  Running in Unattended mode  -  collecting data and generating report..." -ForegroundColor $C.Magenta
     Write-Host ""
 
     Write-Host "  Collecting physical disk data..." -ForegroundColor $C.Gray
@@ -791,12 +791,12 @@ do {
         }
         'Q' {
             Show-Banner
-            Write-Host "  Exiting T.H.R.E.S.H.O.L.D. — Disk & Storage Health Monitor." -ForegroundColor $C.Cyan
+            Write-Host "  Exiting T.H.R.E.S.H.O.L.D.  -  Disk & Storage Health Monitor." -ForegroundColor $C.Cyan
             Write-Host ""
         }
         default {
             Write-Host ""
-            Write-Host "  Invalid selection. Please choose 1–5 or Q." -ForegroundColor $C.Yellow
+            Write-Host "  Invalid selection. Please choose 1-5 or Q." -ForegroundColor $C.Yellow
             Start-Sleep -Seconds 1
         }
     }

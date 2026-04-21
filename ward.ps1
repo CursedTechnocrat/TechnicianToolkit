@@ -304,9 +304,9 @@ if (-not $Unattended) { Show-WardBanner }
 $machineName      = $env:COMPUTERNAME
 $reportTimestamp  = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
-Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
+Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host "  COLLECTING ACCOUNT DATA" -ForegroundColor $ColorSchema.Header
-Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
+Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host ""
 
 Write-Host "  [*] Resolving Administrators group members..." -ForegroundColor $ColorSchema.Progress
@@ -319,9 +319,9 @@ Write-Host "  [+] Found $($accounts.Count) local user account(s)." -ForegroundCo
 Write-Host ""
 
 # Console summary
-Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
+Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host "  ACCOUNT OVERVIEW" -ForegroundColor $ColorSchema.Header
-Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
+Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host ""
 
 foreach ($acct in ($accounts | Sort-Object IsAdmin -Descending)) {
@@ -341,9 +341,9 @@ foreach ($acct in ($accounts | Sort-Object IsAdmin -Descending)) {
 $flagged = $accounts | Where-Object { $_.Flags }
 if ($flagged.Count -gt 0) {
     Write-Host ""
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Warning
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Warning
     Write-Host "  FLAGGED ACCOUNTS ($($flagged.Count))" -ForegroundColor $ColorSchema.Warning
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Warning
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Warning
     Write-Host ""
     foreach ($acct in $flagged) {
         Write-Host "  $($acct.Name)" -ForegroundColor $ColorSchema.Warning
@@ -369,9 +369,9 @@ catch {
 
 # Summary
 Write-Host ""
-Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
+Write-Host ("  " + ("=" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host "  AUDIT SUMMARY" -ForegroundColor $ColorSchema.Header
-Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
+Write-Host ("  " + ("=" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host ""
 
 $enabledCount  = ($accounts | Where-Object {  $_.Enabled } | Measure-Object).Count
@@ -385,9 +385,9 @@ Write-Host "  Disabled       : $disabledCount" -ForegroundColor $ColorSchema.Inf
 Write-Host "  Administrators : $adminCount" -ForegroundColor $ColorSchema.Warning
 Write-Host "  Flagged        : $flaggedCount" -ForegroundColor $(if ($flaggedCount -gt 0) { $ColorSchema.Warning } else { $ColorSchema.Success })
 Write-Host ""
-Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
+Write-Host ("  " + ("=" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host "  W.A.R.D. AUDIT COMPLETE" -ForegroundColor $ColorSchema.Header
-Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
+Write-Host ("  " + ("=" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host ""
 
 if (-not $Unattended) { Read-Host "  Press Enter to exit" }

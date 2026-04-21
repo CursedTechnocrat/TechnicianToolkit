@@ -608,9 +608,9 @@ if ($Unattended) {
             Write-Host ""
         }
 
-        Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+        Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
         Write-Host "  ACTIONS" -ForegroundColor $C.Header
-        Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+        Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
         Write-Host ""
         Write-Host "  [1] Run discovery          (ping sweep /24 subnet)" -ForegroundColor $C.Info
         Write-Host "  [2] Show discovered hosts  (console table)" -ForegroundColor $C.Info

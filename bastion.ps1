@@ -942,7 +942,7 @@ function Invoke-LockoutForensics {
         Write-Host "  [!!] Found $($events.Count) lockout event(s) for '$($user.SamAccountName)':" -ForegroundColor $C.Warning
         Write-Host ""
         Write-Host ("  {0,-22} {1,-32} {2}" -f "Timestamp", "Source Machine (Caller)", "Domain Controller") -ForegroundColor $C.Header
-        Write-Host ("  " + ("─" * 82)) -ForegroundColor $C.Header
+        Write-Host ("  " + ("-" * 82)) -ForegroundColor $C.Header
 
         foreach ($evt in $events) {
             $timestamp     = $evt.TimeCreated.ToString("yyyy-MM-dd HH:mm:ss")
@@ -954,9 +954,9 @@ function Invoke-LockoutForensics {
         }
 
         Write-Host ""
-        Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+        Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
         Write-Host "  REMEDIATION TIPS" -ForegroundColor $C.Header
-        Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+        Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
         Write-Host ""
         Write-Host "  The 'Source Machine' column shows where the bad credentials originated." -ForegroundColor $C.Info
         Write-Host "  Common causes:" -ForegroundColor $C.Info
@@ -1040,7 +1040,7 @@ function Show-PasswordExpiryReport {
         if ([int]::TryParse($raw, [ref]$parsed) -and $parsed -gt 0) {
             $thresholdDays = $parsed
         } else {
-            Write-Host "  [!] Invalid input — using default of 30 days." -ForegroundColor $C.Warning
+            Write-Host "  [!] Invalid input  -  using default of 30 days." -ForegroundColor $C.Warning
         }
     }
 
@@ -1056,7 +1056,7 @@ function Show-PasswordExpiryReport {
     Write-Host "  [!!] $($users.Count) user(s) with passwords expiring within $thresholdDays days:" -ForegroundColor $C.Warning
     Write-Host ""
     Write-Host ("  {0,-22} {1,-28} {2,-14} {3}" -f "Username", "Display Name", "Expires On", "Days Left") -ForegroundColor $C.Header
-    Write-Host ("  " + ("─" * 78)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 78)) -ForegroundColor $C.Header
 
     foreach ($u in $users) {
         $color    = switch ($u.Status) {
@@ -1092,7 +1092,7 @@ function Export-PasswordExpiryReport {
     Write-Host ""
     $users = Get-ExpiringPasswords -ThresholdDays $thresholdDays
     if ($users.Count -eq 0) {
-        Write-Host "  [+] No users with passwords expiring within $thresholdDays days — nothing to export." -ForegroundColor $C.Success
+        Write-Host "  [+] No users with passwords expiring within $thresholdDays days  -  nothing to export." -ForegroundColor $C.Success
         Write-Host ""
         return
     }
@@ -1210,20 +1210,20 @@ function Show-Menu {
 
     # Domain-join warning
     if (-not (Test-DomainJoined)) {
-        Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Warning
+        Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Warning
         Write-Host "  WARNING: This machine does not appear to be domain-joined." -ForegroundColor $C.Warning
         Write-Host "  AD operations require a domain-joined machine or a domain" -ForegroundColor $C.Warning
         Write-Host "  controller accessible on the network." -ForegroundColor $C.Warning
-        Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Warning
+        Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Warning
         Write-Host ""
     } else {
         Write-Host "  Domain : $env:USERDNSDOMAIN" -ForegroundColor $C.Info
         Write-Host ""
     }
 
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host "  MAIN MENU" -ForegroundColor $C.Header
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host ""
     Write-Host "  [1] Search users" -ForegroundColor $C.Info
     Write-Host "  [2] View user details" -ForegroundColor $C.Info
@@ -1254,11 +1254,11 @@ if (-not (Assert-ADModule)) {
 if ($Unattended) {
     switch ($Action) {
         'StaleReport' {
-            Write-Host "[*] B.A.S.T.I.O.N. — Running unattended stale accounts report..." -ForegroundColor $C.Progress
+            Write-Host "[*] B.A.S.T.I.O.N.  -  Running unattended stale accounts report..." -ForegroundColor $C.Progress
             Export-StaleReport
         }
         'PasswordExpiryReport' {
-            Write-Host "[*] B.A.S.T.I.O.N. — Running unattended password expiry report..." -ForegroundColor $C.Progress
+            Write-Host "[*] B.A.S.T.I.O.N.  -  Running unattended password expiry report..." -ForegroundColor $C.Progress
             Export-PasswordExpiryReport
         }
     }

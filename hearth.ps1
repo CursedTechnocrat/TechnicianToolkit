@@ -155,18 +155,18 @@ function Show-HearthBanner {
     Clear-Host
     Write-Host ""
     Write-Host "  ██╗  ██╗███████╗ █████╗ ██████╗ ████████╗██╗  ██╗" -ForegroundColor $C.Header
-    Write-Host "  ██║  ██║██╔════╝██╔══██╗██╔══██╗╚══██╔══╝██║  ██║" -ForegroundColor $C.Header
+    Write-Host "  ██║  ██║██╔====╝██╔==██╗██╔==██╗╚==██╔==╝██║  ██║" -ForegroundColor $C.Header
     Write-Host "  ███████║█████╗  ███████║██████╔╝   ██║   ███████║" -ForegroundColor $C.Header
-    Write-Host "  ██╔══██║██╔══╝  ██╔══██║██╔══██╗   ██║   ██╔══██║" -ForegroundColor $C.Header
+    Write-Host "  ██╔==██║██╔==╝  ██╔==██║██╔==██╗   ██║   ██╔==██║" -ForegroundColor $C.Header
     Write-Host "  ██║  ██║███████╗██║  ██║██║  ██║   ██║   ██║  ██║" -ForegroundColor $C.Header
-    Write-Host "  ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝" -ForegroundColor $C.Header
+    Write-Host "  ╚=╝  ╚=╝╚======╝╚=╝  ╚=╝╚=╝  ╚=╝   ╚=╝   ╚=╝  ╚=╝" -ForegroundColor $C.Header
     Write-Host ""
-    Write-Host "  H.E.A.R.T.H. — Hub for Environment, Admin Runtime & Toolkit Hardening" -ForegroundColor $C.Header
+    Write-Host "  H.E.A.R.T.H.  -  Hub for Environment, Admin Runtime & Toolkit Hardening" -ForegroundColor $C.Header
     Write-Host "  Toolkit Setup & Configuration Wizard" -ForegroundColor $C.Info
     Write-Host ""
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host "  TechnicianToolkit  |  HEARTH v1.1  |  Run as Administrator" -ForegroundColor $C.Info
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host ""
 }
 
@@ -194,7 +194,7 @@ function Invoke-PathValidation {
 
     Write-Host ""
     Write-Host "  [!] Path not found: $Path" -ForegroundColor $C.Warning
-    Write-Host -NoNewline "      Path not found — create it? (Y/N): " -ForegroundColor $C.Warning
+    Write-Host -NoNewline "      Path not found  -  create it? (Y/N): " -ForegroundColor $C.Warning
     $answer = (Read-Host).Trim().ToUpper()
 
     if ($answer -eq 'Y') {
@@ -205,11 +205,11 @@ function Invoke-PathValidation {
         }
         catch {
             Write-Host "  [!] Could not create directory: $_" -ForegroundColor $C.Warning
-            Write-Host "      Saving value anyway — verify the path manually." -ForegroundColor $C.Info
+            Write-Host "      Saving value anyway  -  verify the path manually." -ForegroundColor $C.Info
             return $false
         }
     } else {
-        Write-Host "      Saving value anyway — verify the path manually." -ForegroundColor $C.Info
+        Write-Host "      Saving value anyway  -  verify the path manually." -ForegroundColor $C.Info
         return $false
     }
 }
@@ -236,9 +236,9 @@ function Save-FieldValue {
 
 function Show-CurrentConfig {
     Write-Host ""
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host "  CURRENT CONFIGURATION" -ForegroundColor $C.Header
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host ""
 
     foreach ($field in $Fields) {
@@ -256,7 +256,7 @@ function Show-CurrentConfig {
     }
 
     Write-Host ""
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host ""
 }
 
@@ -266,9 +266,9 @@ function Show-CurrentConfig {
 
 function Invoke-SetupWizard {
     Write-Host ""
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host "  SETUP WIZARD" -ForegroundColor $C.Header
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host "  Step through each setting. Press Enter to keep the current value." -ForegroundColor $C.Info
     Write-Host ""
 
@@ -277,9 +277,9 @@ function Invoke-SetupWizard {
         $stepNum++
         $currentValue = Get-FieldValue -Field $field
 
-        Write-Host ("  " + ("─" * 40)) -ForegroundColor $C.Header
-        Write-Host "  Step $stepNum of $($Fields.Count) — $($field.DisplayName)" -ForegroundColor $C.Header
-        Write-Host ("  " + ("─" * 40)) -ForegroundColor $C.Header
+        Write-Host ("  " + ("-" * 40)) -ForegroundColor $C.Header
+        Write-Host "  Step $stepNum of $($Fields.Count)  -  $($field.DisplayName)" -ForegroundColor $C.Header
+        Write-Host ("  " + ("-" * 40)) -ForegroundColor $C.Header
         Write-Host ""
         Write-Host "      Description : $($field.Description)" -ForegroundColor $C.Info
         Write-Host "      Example     : $($field.Hint)" -ForegroundColor $C.Info
@@ -308,9 +308,9 @@ function Invoke-SetupWizard {
         Write-Host ""
     }
 
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host "  Setup wizard complete. Run option [4] to verify your environment." -ForegroundColor $C.Success
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host ""
 }
 
@@ -321,9 +321,9 @@ function Invoke-SetupWizard {
 function Invoke-EditField {
     do {
         Write-Host ""
-        Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+        Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
         Write-Host "  EDIT A SINGLE SETTING" -ForegroundColor $C.Header
-        Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+        Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
         Write-Host ""
 
         $index = 0
@@ -332,7 +332,7 @@ function Invoke-EditField {
             $value = Get-FieldValue -Field $field
 
             Write-Host -NoNewline "  [$index] $($field.DisplayName)" -ForegroundColor $C.Info
-            Write-Host -NoNewline "  —  " -ForegroundColor $C.Info
+            Write-Host -NoNewline "   -   " -ForegroundColor $C.Info
 
             if ([string]::IsNullOrWhiteSpace($value)) {
                 Write-Host "(not configured)" -ForegroundColor $C.Warning
@@ -357,9 +357,9 @@ function Invoke-EditField {
         $currentValue = Get-FieldValue -Field $field
 
         Write-Host ""
-        Write-Host ("  " + ("─" * 40)) -ForegroundColor $C.Header
+        Write-Host ("  " + ("-" * 40)) -ForegroundColor $C.Header
         Write-Host "  $($field.DisplayName)" -ForegroundColor $C.Header
-        Write-Host ("  " + ("─" * 40)) -ForegroundColor $C.Header
+        Write-Host ("  " + ("-" * 40)) -ForegroundColor $C.Header
         Write-Host ""
         Write-Host "      Description : $($field.Description)" -ForegroundColor $C.Info
         Write-Host "      Example     : $($field.Hint)" -ForegroundColor $C.Info
@@ -398,39 +398,39 @@ function Invoke-EditField {
 
 function Invoke-EnvironmentCheck {
     Write-Host ""
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host "  ENVIRONMENT CHECKS" -ForegroundColor $C.Header
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host ""
 
     # 1. PowerShell Version
     $psVersion = $PSVersionTable.PSVersion.Major
     if ($psVersion -ge 5) {
-        Write-Host "  [+] PowerShell Version         — $($PSVersionTable.PSVersion.ToString())" -ForegroundColor $C.Success
+        Write-Host "  [+] PowerShell Version          -  $($PSVersionTable.PSVersion.ToString())" -ForegroundColor $C.Success
     } else {
-        Write-Host "  [-] PowerShell Version         — $($PSVersionTable.PSVersion.ToString()) (5.1+ required)" -ForegroundColor $C.Error
+        Write-Host "  [-] PowerShell Version          -  $($PSVersionTable.PSVersion.ToString()) (5.1+ required)" -ForegroundColor $C.Error
     }
 
     # 2. Running as Administrator
     $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
     if ($isAdmin) {
-        Write-Host "  [+] Running as Administrator   — Yes" -ForegroundColor $C.Success
+        Write-Host "  [+] Running as Administrator    -  Yes" -ForegroundColor $C.Success
     } else {
-        Write-Host "  [-] Running as Administrator   — No (required for most tools)" -ForegroundColor $C.Error
+        Write-Host "  [-] Running as Administrator    -  No (required for most tools)" -ForegroundColor $C.Error
     }
 
     # 3. TechnicianToolkit.psm1 found
     if (Test-Path "$ScriptPath\TechnicianToolkit.psm1") {
-        Write-Host "  [+] TechnicianToolkit.psm1     — Found" -ForegroundColor $C.Success
+        Write-Host "  [+] TechnicianToolkit.psm1      -  Found" -ForegroundColor $C.Success
     } else {
-        Write-Host "  [-] TechnicianToolkit.psm1     — Not found in $ScriptPath" -ForegroundColor $C.Error
+        Write-Host "  [-] TechnicianToolkit.psm1      -  Not found in $ScriptPath" -ForegroundColor $C.Error
     }
 
     # 4. config.json exists (informational)
     if (Test-Path "$ScriptPath\config.json") {
-        Write-Host "  [+] config.json                — Found" -ForegroundColor $C.Success
+        Write-Host "  [+] config.json                 -  Found" -ForegroundColor $C.Success
     } else {
-        Write-Host "  [!] config.json                — Not found (will be created on first save)" -ForegroundColor $C.Warning
+        Write-Host "  [!] config.json                 -  Not found (will be created on first save)" -ForegroundColor $C.Warning
     }
 
     # 5. Log directory accessible
@@ -441,62 +441,62 @@ function Invoke-EnvironmentCheck {
             try {
                 [System.IO.File]::WriteAllText($testFile, 'test')
                 Remove-Item -Path $testFile -Force -ErrorAction SilentlyContinue
-                Write-Host "  [+] Log directory accessible   — $($cfg.LogDirectory)" -ForegroundColor $C.Success
+                Write-Host "  [+] Log directory accessible    -  $($cfg.LogDirectory)" -ForegroundColor $C.Success
             }
             catch {
-                Write-Host "  [!] Log directory not writable — $($cfg.LogDirectory)" -ForegroundColor $C.Warning
+                Write-Host "  [!] Log directory not writable  -  $($cfg.LogDirectory)" -ForegroundColor $C.Warning
             }
         } else {
-            Write-Host "  [!] Log directory not found    — $($cfg.LogDirectory)" -ForegroundColor $C.Warning
+            Write-Host "  [!] Log directory not found     -  $($cfg.LogDirectory)" -ForegroundColor $C.Warning
         }
     } else {
-        Write-Host "  [!] Log directory              — Not configured" -ForegroundColor $C.Warning
+        Write-Host "  [!] Log directory               -  Not configured" -ForegroundColor $C.Warning
     }
 
     # 6. winget available (for CONJURE)
     $winget = Get-Command winget -ErrorAction SilentlyContinue
     if ($winget) {
-        Write-Host "  [+] winget                     — Available ($($winget.Source))" -ForegroundColor $C.Success
+        Write-Host "  [+] winget                      -  Available ($($winget.Source))" -ForegroundColor $C.Success
     } else {
-        Write-Host "  [!] winget                     — Not found (required for CONJURE)" -ForegroundColor $C.Warning
+        Write-Host "  [!] winget                      -  Not found (required for CONJURE)" -ForegroundColor $C.Warning
     }
 
     # 7. Chocolatey available (for CONJURE)
     $choco = Get-Command choco -ErrorAction SilentlyContinue
     if ($choco) {
-        Write-Host "  [+] Chocolatey (choco)         — Available" -ForegroundColor $C.Success
+        Write-Host "  [+] Chocolatey (choco)          -  Available" -ForegroundColor $C.Success
     } else {
-        Write-Host "  [!] Chocolatey (choco)         — Not found (optional for CONJURE)" -ForegroundColor $C.Warning
+        Write-Host "  [!] Chocolatey (choco)          -  Not found (optional for CONJURE)" -ForegroundColor $C.Warning
     }
 
     # 8. RSAT ActiveDirectory module (for BASTION)
     $adModule = Get-Module -ListAvailable -Name ActiveDirectory -ErrorAction SilentlyContinue
     if ($adModule) {
-        Write-Host "  [+] RSAT: ActiveDirectory      — Available ($($adModule[0].Version))" -ForegroundColor $C.Success
+        Write-Host "  [+] RSAT: ActiveDirectory       -  Available ($($adModule[0].Version))" -ForegroundColor $C.Success
     } else {
-        Write-Host "  [!] RSAT: ActiveDirectory      — Not found (required for BASTION)" -ForegroundColor $C.Warning
+        Write-Host "  [!] RSAT: ActiveDirectory       -  Not found (required for BASTION)" -ForegroundColor $C.Warning
     }
 
     # 9. Microsoft.Graph module (for VAULT)
     $graphModule = Get-Module -ListAvailable -Name Microsoft.Graph -ErrorAction SilentlyContinue
     if ($graphModule) {
-        Write-Host "  [+] Microsoft.Graph module     — Available ($($graphModule[0].Version))" -ForegroundColor $C.Success
+        Write-Host "  [+] Microsoft.Graph module      -  Available ($($graphModule[0].Version))" -ForegroundColor $C.Success
     } else {
-        Write-Host "  [!] Microsoft.Graph module     — Not found (required for VAULT)" -ForegroundColor $C.Warning
+        Write-Host "  [!] Microsoft.Graph module      -  Not found (required for VAULT)" -ForegroundColor $C.Warning
     }
 
     # 10. Az module (for AEGIS)
     $azModule = Get-Module -ListAvailable -Name Az -ErrorAction SilentlyContinue
     if ($azModule) {
-        Write-Host "  [+] Az module                  — Available ($($azModule[0].Version))" -ForegroundColor $C.Success
+        Write-Host "  [+] Az module                   -  Available ($($azModule[0].Version))" -ForegroundColor $C.Success
     } else {
-        Write-Host "  [!] Az module                  — Not found (required for AEGIS)" -ForegroundColor $C.Warning
+        Write-Host "  [!] Az module                   -  Not found (required for AEGIS)" -ForegroundColor $C.Warning
     }
 
     Write-Host ""
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host "  Environment check complete." -ForegroundColor $C.Info
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host ""
 }
 
@@ -506,9 +506,9 @@ function Invoke-EnvironmentCheck {
 
 function Invoke-ResetConfig {
     Write-Host ""
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host "  RESET CONFIGURATION" -ForegroundColor $C.Header
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host ""
     Write-Host "  [!] This will delete config.json and clear all settings." -ForegroundColor $C.Warning
     Write-Host ""
@@ -538,9 +538,9 @@ function Invoke-ResetConfig {
 # ─────────────────────────────────────────────────────────────────────────────
 
 function Show-HearthMenu {
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host "  MAIN MENU" -ForegroundColor $C.Header
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host ""
     Write-Host "  [1] Run setup wizard           (step through all settings)" -ForegroundColor $C.Info
     Write-Host "  [2] View current configuration" -ForegroundColor $C.Info
@@ -549,7 +549,7 @@ function Show-HearthMenu {
     Write-Host "  [5] Reset configuration        (clear all settings)" -ForegroundColor $C.Warning
     Write-Host "  [Q] Quit" -ForegroundColor $C.Warning
     Write-Host ""
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host ""
 }
 

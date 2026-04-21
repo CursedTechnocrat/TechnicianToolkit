@@ -125,7 +125,7 @@ $Tools = @(
         Name        = 'F.O.R.G.E.'
         File        = 'forge.ps1'
         Version     = '1.0'
-        Description = 'Driver detection & installation — problem devices, Windows Update, local packages'
+        Description = 'Driver detection & installation  -  problem devices, Windows Update, local packages'
         Color       = 'Yellow'
         Category    = 'Deployment & Onboarding'
     },
@@ -143,7 +143,7 @@ $Tools = @(
         Name        = 'H.E.A.R.T.H.'
         File        = 'hearth.ps1'
         Version     = '1.1'
-        Description = 'Toolkit setup wizard — org name, log path, Teams webhook, and tool defaults'
+        Description = 'Toolkit setup wizard  -  org name, log path, Teams webhook, and tool defaults'
         Color       = 'White'
         Category    = 'Deployment & Onboarding'
     },
@@ -162,7 +162,7 @@ $Tools = @(
         Name        = 'W.A.R.D.'
         File        = 'ward.ps1'
         Version     = '1.0'
-        Description = 'User account audit — roles, last logon, flags, HTML report'
+        Description = 'User account audit  -  roles, last logon, flags, HTML report'
         Color       = 'Yellow'
         Category    = 'Diagnostics & Reporting'
     },
@@ -171,7 +171,7 @@ $Tools = @(
         Name        = 'T.H.R.E.S.H.O.L.D.'
         File        = 'threshold.ps1'
         Version     = '1.0'
-        Description = 'Disk space monitor — volume usage, low-space alerts, temp cleanup, old profile detection'
+        Description = 'Disk space monitor  -  volume usage, low-space alerts, temp cleanup, old profile detection'
         Color       = 'Yellow'
         Category    = 'Diagnostics & Reporting'
     },
@@ -180,7 +180,7 @@ $Tools = @(
         Name        = 'S.E.N.T.I.N.E.L.'
         File        = 'sentinel.ps1'
         Version     = '1.0'
-        Description = 'Service & task monitor — critical services, scheduled tasks, event log errors'
+        Description = 'Service & task monitor  -  critical services, scheduled tasks, event log errors'
         Color       = 'Red'
         Category    = 'Diagnostics & Reporting'
     },
@@ -189,7 +189,7 @@ $Tools = @(
         Name        = 'A.U.G.U.R.'
         File        = 'augur.ps1'
         Version     = '1.1'
-        Description = 'Disk wear & health — SMART status, physical disk reliability, HTML report'
+        Description = 'Disk wear & health  -  SMART status, physical disk reliability, HTML report'
         Color       = 'Yellow'
         Category    = 'Diagnostics & Reporting'
     },
@@ -198,7 +198,7 @@ $Tools = @(
         Name        = 'C.L.E.A.N.S.E.'
         File        = 'cleanse.ps1'
         Version     = '1.2'
-        Description = 'Disk cleanup — temp files, Windows Update cache, browser caches, Recycle Bin'
+        Description = 'Disk cleanup  -  temp files, Windows Update cache, browser caches, Recycle Bin'
         Color       = 'Magenta'
         Category    = 'Diagnostics & Reporting'
     },
@@ -208,7 +208,7 @@ $Tools = @(
         Name        = 'C.I.P.H.E.R.'
         File        = 'cipher.ps1'
         Version     = '1.0'
-        Description = 'BitLocker drive encryption — enable, disable, backup keys'
+        Description = 'BitLocker drive encryption  -  enable, disable, backup keys'
         Color       = 'Green'
         Category    = 'Security'
     },
@@ -217,7 +217,7 @@ $Tools = @(
         Name        = 'S.I.G.I.L.'
         File        = 'sigil.ps1'
         Version     = '1.0'
-        Description = 'Security baseline enforcement — telemetry, UAC, firewall, audit policy'
+        Description = 'Security baseline enforcement  -  telemetry, UAC, firewall, audit policy'
         Color       = 'Red'
         Category    = 'Security'
     },
@@ -226,7 +226,7 @@ $Tools = @(
         Name        = 'B.A.S.T.I.O.N.'
         File        = 'bastion.ps1'
         Version     = '1.0'
-        Description = 'Active Directory management — search, unlock, reset passwords, group membership'
+        Description = 'Active Directory management  -  search, unlock, reset passwords, group membership'
         Color       = 'Blue'
         Category    = 'Security'
     },
@@ -235,7 +235,7 @@ $Tools = @(
         Name        = 'R.E.L.I.C.'
         File        = 'relic.ps1'
         Version     = '1.0'
-        Description = 'Certificate health monitor — local cert stores, SSL/TLS expiry, HTML report'
+        Description = 'Certificate health monitor  -  local cert stores, SSL/TLS expiry, HTML report'
         Color       = 'Yellow'
         Category    = 'Security'
     },
@@ -245,7 +245,7 @@ $Tools = @(
         Name        = 'L.E.Y.L.I.N.E.'
         File        = 'leyline.ps1'
         Version     = '1.0'
-        Description = 'Network diagnostics & remediation — adapters, ping, DNS, port tests'
+        Description = 'Network diagnostics & remediation  -  adapters, ping, DNS, port tests'
         Color       = 'Cyan'
         Category    = 'Network & Remote'
     },
@@ -254,7 +254,7 @@ $Tools = @(
         Name        = 'S.P.E.C.T.E.R.'
         File        = 'specter.ps1'
         Version     = '1.0'
-        Description = 'Remote execution via WinRM — run toolkit tools on a remote machine'
+        Description = 'Remote execution via WinRM  -  run toolkit tools on a remote machine'
         Color       = 'White'
         Category    = 'Network & Remote'
     },
@@ -263,7 +263,7 @@ $Tools = @(
         Name        = 'L.A.N.T.E.R.N.'
         File        = 'lantern.ps1'
         Version     = '1.0'
-        Description = 'Network discovery & asset inventory — subnet sweep, DNS, MAC, port scan'
+        Description = 'Network discovery & asset inventory  -  subnet sweep, DNS, MAC, port scan'
         Color       = 'Cyan'
         Category    = 'Network & Remote'
     },
@@ -273,7 +273,7 @@ $Tools = @(
         Name        = 'A.E.G.I.S.'
         File        = 'aegis.ps1'
         Version     = '1.0'
-        Description = 'Azure environment assessment — security posture, RBAC, backup coverage, HTML report'
+        Description = 'Azure environment assessment  -  security posture, RBAC, backup coverage, HTML report'
         Color       = 'Cyan'
         Category    = 'Cloud & Identity'
     },
@@ -282,7 +282,7 @@ $Tools = @(
         Name        = 'V.A.U.L.T.'
         File        = 'vault.ps1'
         Version     = '1.0'
-        Description = 'M365 license & mailbox audit — SKU inventory, unlicensed users, MFA status'
+        Description = 'M365 license & mailbox audit  -  SKU inventory, unlicensed users, MFA status'
         Color       = 'Green'
         Category    = 'Cloud & Identity'
     },
@@ -301,7 +301,7 @@ $Tools = @(
         Name        = 'A.R.C.H.I.V.E.'
         File        = 'archive.ps1'
         Version     = '1.0'
-        Description = 'Pre-reimaging profile backup — ZIP to local or network share'
+        Description = 'Pre-reimaging profile backup  -  ZIP to local or network share'
         Color       = 'Magenta'
         Category    = 'Data & Migration'
     }
@@ -315,22 +315,22 @@ function Show-Banner {
     [Console]::Clear()
     Write-Host ""
     Write-Host "  ██████╗ ██████╗ ██╗███╗   ███╗ ██████╗ ██╗██████╗ ███████╗" -ForegroundColor $ColorSchema.Header
-    Write-Host " ██╔════╝ ██╔══██╗██║████╗ ████║██╔═══██╗██║██╔══██╗██╔════╝" -ForegroundColor $ColorSchema.Header
+    Write-Host " ██╔====╝ ██╔==██╗██║████╗ ████║██╔===██╗██║██╔==██╗██╔====╝" -ForegroundColor $ColorSchema.Header
     Write-Host " ██║  ███╗██████╔╝██║██╔████╔██║██║   ██║██║██████╔╝█████╗  " -ForegroundColor $ColorSchema.Header
-    Write-Host " ██║   ██║██╔══██╗██║██║╚██╔╝██║██║   ██║██║██╔══██╗██╔══╝  " -ForegroundColor $ColorSchema.Header
-    Write-Host " ╚██████╔╝██║  ██║██║██║ ╚═╝ ██║╚██████╔╝██║██║  ██║███████╗" -ForegroundColor $ColorSchema.Header
-    Write-Host "  ╚═════╝ ╚═╝  ╚═╝╚═╝╚═╝     ╚═╝ ╚═════╝ ╚═╝╚═╝  ╚═╝╚══════╝" -ForegroundColor $ColorSchema.Header
+    Write-Host " ██║   ██║██╔==██╗██║██║╚██╔╝██║██║   ██║██║██╔==██╗██╔==╝  " -ForegroundColor $ColorSchema.Header
+    Write-Host " ╚██████╔╝██║  ██║██║██║ ╚=╝ ██║╚██████╔╝██║██║  ██║███████╗" -ForegroundColor $ColorSchema.Header
+    Write-Host "  ╚=====╝ ╚=╝  ╚=╝╚=╝╚=╝     ╚=╝ ╚=====╝ ╚=╝╚=╝  ╚=╝╚======╝" -ForegroundColor $ColorSchema.Header
     Write-Host ""
     Write-Host "  General Repository for Integrated Management and" -ForegroundColor $ColorSchema.Info
     Write-Host "  Orchestration of IT Resources & Executables" -ForegroundColor $ColorSchema.Info
     Write-Host ""
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
     $toolCount = $Tools.Count
     Write-Host "  Technician Toolkit  |  Hub v1.2  |  $toolCount tools  |  Run as Administrator" -ForegroundColor $ColorSchema.Info
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
     if ($WhatIf) {
         Write-Host ""
-        Write-Host "  *** DRY RUN MODE — tools that support -WhatIf will preview actions only ***" -ForegroundColor Cyan
+        Write-Host "  *** DRY RUN MODE  -  tools that support -WhatIf will preview actions only ***" -ForegroundColor Cyan
     }
     Write-Host ""
 }
@@ -347,9 +347,9 @@ function Show-Menu {
         $categoryTools = $Tools | Where-Object { $_.Category -eq $category }
         if (-not $categoryTools) { continue }
 
-        Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
+        Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
         Write-Host "  $category" -ForegroundColor $ColorSchema.Header
-        Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
+        Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
         Write-Host ""
 
         foreach ($tool in $categoryTools) {
@@ -360,10 +360,10 @@ function Show-Menu {
         }
     }
 
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
     Write-Host "  [Q]  Exit GRIMOIRE" -ForegroundColor $ColorSchema.Warning
     Write-Host ""
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
     Write-Host ""
 }
 
@@ -392,7 +392,7 @@ function Invoke-Tool {
             if ($parseErrors.Count -gt 0) {
                 Remove-Item -Path $ToolPath -Force -ErrorAction SilentlyContinue
                 Write-Host ""
-                Write-Host "  [!!] $($Tool.File) failed syntax validation after download — file removed." -ForegroundColor $ColorSchema.Error
+                Write-Host "  [!!] $($Tool.File) failed syntax validation after download  -  file removed." -ForegroundColor $ColorSchema.Error
                 Write-Host "       $($parseErrors[0].Message)" -ForegroundColor $ColorSchema.Error
                 Write-Host ""
                 Pause-ForKey
@@ -436,9 +436,9 @@ function Invoke-Tool {
     }
 
     Write-Host ""
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
     Write-Host "  $($Tool.Name) has finished. Returning to GRIMOIRE..." -ForegroundColor $ColorSchema.Accent
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
     Pause-ForKey
 }
 

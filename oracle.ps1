@@ -784,7 +784,7 @@ $hw = $reportData['Hardware']
 $os = $reportData['OS']
 $health = $reportData['Health']
 $batteryHtml = if ($health.Battery) {
-    "<p><strong>Battery:</strong> $($health.Battery.Charge)% — $($health.Battery.Status)</p>"
+    "<p><strong>Battery:</strong> $($health.Battery.Charge)%  -  $($health.Battery.Status)</p>"
 } else {
     "<p><strong>Battery:</strong> N/A (desktop or not detected)</p>"
 }
@@ -834,7 +834,7 @@ $securityTable = ConvertTo-HtmlTable -Objects $reportData['Security'] -EmptyMess
 
 $tkConfig   = Get-TKConfig
 $tkOrgName  = if (-not [string]::IsNullOrWhiteSpace($tkConfig.OrgName)) { EscHtml $tkConfig.OrgName } else { $null }
-$tkSubtitle = if ($tkOrgName) { "$tkOrgName — $env:COMPUTERNAME" } else { $env:COMPUTERNAME }
+$tkSubtitle = if ($tkOrgName) { "$tkOrgName  -  $env:COMPUTERNAME" } else { $env:COMPUTERNAME }
 
 $tkMetaItems = [ordered]@{
     'Machine'    = $env:COMPUTERNAME
@@ -1020,7 +1020,7 @@ $htmlReport = (Get-TKHtmlHead `
     <div class="tk-card">
       <div class="tk-card-header">
         <span class="tk-section-tag">PART 8</span>
-        <h2 class="tk-section-title">Event Log — Errors &amp; Critical (Last 24h)</h2>
+        <h2 class="tk-section-title">Event Log  -  Errors &amp; Critical (Last 24h)</h2>
         <span style="margin-left:auto;">$eventBadge</span>
       </div>
       <div style="padding:20px;">$eventsTable</div>
@@ -1071,9 +1071,9 @@ Write-Host ""
 # SUMMARY
 # ─────────────────────────────────────────────────────────────────────────────
 
-Write-Host "════════════════════════════════════════════════" -ForegroundColor $ColorSchema.Header
+Write-Host "================================================" -ForegroundColor $ColorSchema.Header
 Write-Host "     PROBE COMPLETE" -ForegroundColor $ColorSchema.Header
-Write-Host "════════════════════════════════════════════════" -ForegroundColor $ColorSchema.Header
+Write-Host "================================================" -ForegroundColor $ColorSchema.Header
 Write-Host ""
 Write-Host "  Machine    : $env:COMPUTERNAME" -ForegroundColor $ColorSchema.Info
 Write-Host "  OS         : $($reportData['OS'].Caption)" -ForegroundColor $ColorSchema.Info
@@ -1085,13 +1085,13 @@ $raidCtrlCount  = $reportData['Storage'].RaidControllers.Count
 if ($storageUnhealthy -gt 0) {
     Write-Host "  Storage    : $storageUnhealthy degraded disk(s) detected!" -ForegroundColor $ColorSchema.Error
 } else {
-    Write-Host "  Storage    : $physDiskCount disk(s) — all healthy" -ForegroundColor $ColorSchema.Success
+    Write-Host "  Storage    : $physDiskCount disk(s)  -  all healthy" -ForegroundColor $ColorSchema.Success
 }
 if ($raidCtrlCount -gt 0) {
     if ($raidCtrlUnhealthy -gt 0) {
         Write-Host "  RAID       : $raidCtrlUnhealthy controller(s) reporting issues!" -ForegroundColor $ColorSchema.Error
     } else {
-        Write-Host "  RAID       : $raidCtrlCount controller(s) — all OK" -ForegroundColor $ColorSchema.Success
+        Write-Host "  RAID       : $raidCtrlCount controller(s)  -  all OK" -ForegroundColor $ColorSchema.Success
     }
 } else {
     Write-Host "  RAID       : No hardware RAID controllers detected" -ForegroundColor $ColorSchema.Info
@@ -1139,9 +1139,9 @@ if (-not $Unattended) {
 }
 
 Write-Host ""
-Write-Host "════════════════════════════════════════════════" -ForegroundColor $ColorSchema.Header
+Write-Host "================================================" -ForegroundColor $ColorSchema.Header
 Write-Host "  SCRIPT EXECUTION COMPLETED" -ForegroundColor $ColorSchema.Header
-Write-Host "════════════════════════════════════════════════" -ForegroundColor $ColorSchema.Header
+Write-Host "================================================" -ForegroundColor $ColorSchema.Header
 Write-Host ""
 if ($Transcript) { Stop-TKTranscript }
 if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

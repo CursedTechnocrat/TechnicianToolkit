@@ -441,7 +441,7 @@ $sslRows
 
     $cfg = Get-TKConfig
     $orgSubtitle = if (-not [string]::IsNullOrWhiteSpace($cfg.OrgName)) {
-        "$(HtmlEncode $cfg.OrgName) — $MachineName"
+        "$(HtmlEncode $cfg.OrgName)  -  $MachineName"
     } else {
         $MachineName
     }
@@ -538,7 +538,7 @@ if ($Unattended) {
     Show-RelicBanner
 
     $machineName = $env:COMPUTERNAME
-    Write-Host "  [*] Unattended mode — Machine: $machineName" -ForegroundColor $C.Progress
+    Write-Host "  [*] Unattended mode  -  Machine: $machineName" -ForegroundColor $C.Progress
     Write-Host ""
 
     # Local cert audit
@@ -573,9 +573,9 @@ if ($Unattended) {
 
     # Console summary
     Write-Host ""
-    Write-Host ("  " + ("═" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("=" * 62)) -ForegroundColor $C.Header
     Write-Host "  R.E.L.I.C. AUDIT SUMMARY" -ForegroundColor $C.Header
-    Write-Host ("  " + ("═" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("=" * 62)) -ForegroundColor $C.Header
     Write-Host ""
     Write-Host "  Total Certificates : $($localCerts.Count)" -ForegroundColor $C.Info
     Write-Host "  Expired            : $expiredCount" -ForegroundColor $(if ($expiredCount -gt 0) { $C.Error } else { $C.Info })
@@ -593,9 +593,9 @@ if ($Unattended) {
         Write-Host "  SSL Critical       : $sslCrit"    -ForegroundColor $(if ($sslCrit    -gt 0) { $C.Error   } else { $C.Info })
     }
     Write-Host ""
-    Write-Host ("  " + ("═" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("=" * 62)) -ForegroundColor $C.Header
     Write-Host "  R.E.L.I.C. UNATTENDED RUN COMPLETE" -ForegroundColor $C.Header
-    Write-Host ("  " + ("═" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("=" * 62)) -ForegroundColor $C.Header
     Write-Host ""
 
     if ($Transcript) { Stop-TKTranscript }
@@ -614,13 +614,13 @@ $choice = ''
 do {
     Show-RelicBanner
 
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host "  MAIN MENU" -ForegroundColor $C.Header
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host ""
     Write-Host "  [1] Audit local certificate stores" -ForegroundColor $C.Info
     Write-Host "  [2] Check SSL certificate expiry on remote hosts" -ForegroundColor $C.Info
-    Write-Host "  [3] Full audit — local stores + SSL + HTML report" -ForegroundColor $C.Info
+    Write-Host "  [3] Full audit  -  local stores + SSL + HTML report" -ForegroundColor $C.Info
     Write-Host "  [Q] Quit" -ForegroundColor $C.Info
     Write-Host ""
     Write-Host -NoNewline "  Enter selection: " -ForegroundColor $C.Header
@@ -712,7 +712,7 @@ do {
 
             # SSL targets
             Write-Host ""
-            Write-Host "  Enter SSL/TLS target hosts (optional — press Enter to skip)." -ForegroundColor $C.Info
+            Write-Host "  Enter SSL/TLS target hosts (optional  -  press Enter to skip)." -ForegroundColor $C.Info
             Write-Host "  Format: hostname or hostname:port (comma-separated, or a file path)" -ForegroundColor $C.Info
             Write-Host ""
             Write-Host -NoNewline "  Targets: " -ForegroundColor $C.Header

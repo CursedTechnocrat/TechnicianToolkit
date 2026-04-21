@@ -887,7 +887,7 @@ function Export-HtmlReport {
 if ($Unattended) {
     Show-SentinelBanner
     $machineName = if ($script:RemoteTarget) { $script:RemoteTarget } else { $env:COMPUTERNAME }
-    Write-Host "  [*] Unattended mode — Target: $machineName" -ForegroundColor $C.Progress
+    Write-Host "  [*] Unattended mode  -  Target: $machineName" -ForegroundColor $C.Progress
     Write-Host ""
 
     Write-Host "  [*] Collecting service health..." -ForegroundColor $C.Progress
@@ -946,9 +946,9 @@ do {
     $taskFailed  = if ($cachedTasks)    { ($cachedTasks | Where-Object { $_.FlagReason -like 'Failed*' }).Count } else { '?' }
     $evtCount    = if ($cachedEvents)   { $cachedEvents.TotalCount } else { '?' }
 
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
-    Write-Host "  S.E.N.T.I.N.E.L. MENU  —  Target: $targetLabel" -ForegroundColor $C.Header
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
+    Write-Host "  S.E.N.T.I.N.E.L. MENU   -   Target: $targetLabel" -ForegroundColor $C.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host ""
 
     $svcColor = if ($svcConcern -gt 0) { $C.Error } else { $C.Success }
