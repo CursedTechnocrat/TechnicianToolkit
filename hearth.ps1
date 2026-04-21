@@ -15,7 +15,7 @@
     PS C:\> .\hearth.ps1 -Unattended        # Display current config and run environment checks silently
 
 .NOTES
-    Version : 1.0
+    Version : 1.1
 
     Tools Available
     ─────────────────────────────────────────────────────────────────
@@ -106,6 +106,14 @@ $Fields = @(
         IsPath      = $true
     },
     [PSCustomObject]@{
+        DisplayName = 'Teams Webhook URL'
+        Key         = 'TeamsWebhook'
+        Section     = ''
+        Description = 'Teams incoming webhook URL for error notifications'
+        Hint        = 'https://outlook.office.com/webhook/...'
+        IsPath      = $false
+    },
+    [PSCustomObject]@{
         DisplayName = 'ARCHIVE Default Destination'
         Key         = 'DefaultDestination'
         Section     = 'Archive'
@@ -157,7 +165,7 @@ function Show-HearthBanner {
     Write-Host "  Toolkit Setup & Configuration Wizard" -ForegroundColor $C.Info
     Write-Host ""
     Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
-    Write-Host "  TechnicianToolkit  |  HEARTH v1.0  |  Run as Administrator" -ForegroundColor $C.Info
+    Write-Host "  TechnicianToolkit  |  HEARTH v1.1  |  Run as Administrator" -ForegroundColor $C.Info
     Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
     Write-Host ""
 }

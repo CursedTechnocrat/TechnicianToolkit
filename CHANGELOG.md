@@ -20,6 +20,27 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **PSScriptAnalyzer settings** (`.github/PSScriptAnalyzerSettings.psd1`) — suppresses intentional patterns (non-exported verb names, `Write-Host` in a console tool).
 - **Pester test suite** (`tests/TechnicianToolkit.Tests.ps1`) — covers `EscHtml`, `Test-IsAdmin`, `Write-TKError`, module exports, and a syntax-validation sweep of all `.ps1` files.
 
+- **`-WhatIf` for PHANTOM** — preview what profile data would be copied (file count, size, destination) without performing any transfers. Compatible with all item types (folder and file). WhatIf items appear in the migration summary with a distinct Cyan color and count.
+- **`-WhatIf` for PURGE** — preview which cleanup categories would be cleaned without deleting any files. Category sizes are shown in the selection menu; WhatIf mode replaces the "Total Space Freed" summary line with a "DRY RUN" notice.
+- **HEARTH TeamsWebhook field** — the setup wizard now prompts for and saves the Teams incoming webhook URL as step 3 of the wizard, making it configurable without hand-editing `config.json`.
+- **CLAUDE.md** — developer guide covering architecture, module pattern, test commands, key conventions, and the DWARF/THRESHOLD distinction.
+- **GRIMOIRE registry validation test** — new Pester test block parses every `File = '...'` entry from `grimoire.ps1` and verifies the corresponding `.ps1` file exists on disk.
+- **Param block compliance test** — new Pester test block verifies that every tool script (excluding `grimoire.ps1`) declares a `-Unattended` parameter.
+- **Version bumps** — `hearth.ps1`, `phantom.ps1`, `purge.ps1`, and `grimoire.ps1` bumped from 1.0 to 1.1.
+
+### Changed
+- **GRIMOIRE THRESHOLD description** — updated from "Disk & storage health — physical disk status, volume space, cleanup, old profiles" to "Disk space monitor — volume usage, low-space alerts, temp cleanup, old profile detection" to clearly distinguish it from DWARF's SMART/hardware focus.
+- **GRIMOIRE HEARTH description** — updated to mention Teams webhook configuration.
+- **README Diagnostics & Reporting table** — THRESHOLD description updated to match GRIMOIRE; DWARF and PURGE rows added (keys 22 and 23).
+- **README THRESHOLD description** — clarified as "Disk space monitor" to distinguish from DWARF.
+- **README HEARTH section** — wizard now described as covering seven fields including Teams webhook URL.
+- **README PHANTOM section** — updated to document OneDrive KFM awareness, ARCHIVE ZIP restore, and `-WhatIf` support.
+- **README Quick Launch** — DWARF and PURGE one-liners added.
+- **README Usage** — DWARF and PURGE direct-run entries added with disambiguating comments.
+- **README Configuration** — added config key reference table (OrgName, LogDirectory, TeamsWebhook, Archive, Phantom, Covenant); DWARF and PURGE rows added; HEARTH row updated.
+- **README Logging** — DWARF and PURGE log output rows added.
+- **README License** — replaced placeholder with MIT reference.
+
 ### Fixed
 - **SIGIL unattended mode bug** — `-Unattended -Categories` was silently a no-op because `$selectedKeys` was never populated in the unattended branch. Categories are now correctly parsed and applied.
 - **`Get-TKConfig` defaults** — added `TeamsWebhook` to the defaults object so callers never receive null for the new key.

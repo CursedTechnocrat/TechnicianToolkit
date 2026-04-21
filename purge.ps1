@@ -12,9 +12,10 @@
 .USAGE
     PS C:\> .\purge.ps1                    # Must be run as Administrator
     PS C:\> .\purge.ps1 -Unattended        # Silent mode — cleans all categories, no prompts
+    PS C:\> .\purge.ps1 -WhatIf            # Preview what would be cleaned, without deleting anything
 
 .NOTES
-    Version : 1.0
+    Version : 1.1
 
     Tools Available
     ─────────────────────────────────────────────────────────────────
@@ -34,7 +35,7 @@
     Gray     Information and details
 #>
 
-param([switch]$Unattended)
+param([switch]$Unattended, [switch]$WhatIf)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # INITIALIZATION
@@ -227,6 +228,10 @@ $totalFreed   = 0L
 function Run-Category {
     param([bool]$ShouldRun, [string]$Label, [scriptblock]$Action)
     if (-not $ShouldRun) { return }
+    if ($WhatIf) {
+        Write-Host ("  [~] WhatIf: Would clean {0}" -f $Label) -ForegroundColor $ColorSchema.Warning
+        return
+    }
     Write-Host "  [*] Cleaning $Label..." -ForegroundColor $ColorSchema.Progress
     $freed = & $Action
     $totalFreed += $freed
@@ -272,7 +277,11 @@ Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host "  PURGE COMPLETE" -ForegroundColor $ColorSchema.Header
 Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host ""
-Write-Host "  Total Space Freed : $(Format-Bytes $totalFreed)" -ForegroundColor $ColorSchema.Success
+if ($WhatIf) {
+    Write-Host "  Mode              : DRY RUN — no files were deleted" -ForegroundColor $ColorSchema.Warning
+} else {
+    Write-Host "  Total Space Freed : $(Format-Bytes $totalFreed)" -ForegroundColor $ColorSchema.Success
+}
 Write-Host ""
 Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host ""

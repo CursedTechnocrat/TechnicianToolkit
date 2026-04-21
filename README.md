@@ -19,7 +19,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | Running through Kaseya VSA LiveConnect | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
 | Need a guided, menu-driven workflow | **This repo** — full prompts and confirmations at every step |
 | Need fire-and-forget with parameter-only input | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
-| Need tools with no LiveConnect counterpart (COVENANT, PHANTOM, CIPHER, ARCHIVE, SPECTER, RUNEPRESS, LEYLINE, FORGE, AEGIS, BASTION, LANTERN, THRESHOLD, VAULT, SENTINEL, RELIC, HEARTH) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
+| Need tools with no LiveConnect counterpart (COVENANT, PHANTOM, CIPHER, ARCHIVE, SPECTER, RUNEPRESS, LEYLINE, FORGE, AEGIS, BASTION, LANTERN, THRESHOLD, DWARF, PURGE, VAULT, SENTINEL, RELIC, HEARTH) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
 
 ---
 
@@ -62,8 +62,10 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 |---|--------|---------|---------|
 | 7 | **oracle.ps1** | **O.R.A.C.L.E.** — Observes, Reports & Audits Computer Logs & Environments | System diagnostics, health assessment, and HTML report generation |
 | 8 | **ward.ps1** | **W.A.R.D.** — Watches Accounts, Reviews Roles & Detects anomalies | Local user account audit with role, last logon, flags, and HTML report |
-| 9 | **threshold.ps1** | **T.H.R.E.S.H.O.L.D.** — Tests Hardware Reliability, Evaluates Storage Health, & Optimizes/Logs Disk data | Disk & storage health — physical disk status, volume space, cleanup, old profiles, HTML report |
+| 9 | **threshold.ps1** | **T.H.R.E.S.H.O.L.D.** — Tests Hardware Reliability, Evaluates Storage Health, & Optimizes/Logs Disk data | Disk space monitor — volume usage, low-space alerts, temp cleanup, old profile detection, HTML report |
 | 10 | **sentinel.ps1** | **S.E.N.T.I.N.E.L.** — Scans & Evaluates services, Networks, Tasks, Infrastructure, Node Events & Logs | Service, task & event log monitor — health check local or remote machine, HTML report |
+| 22 | **dwarf.ps1** | **D.W.A.R.F.** — Detects Wear, Audits Reliability & Forecasts Failures | Physical disk health — SMART status, wear prediction, failure forecast, hardware reliability, HTML report |
+| 23 | **purge.ps1** | **P.U.R.G.E.** — Purges Unwanted Remnants, Garbage & Ephemeral data | Disk cleanup — user & system temp, Windows Update cache, browser caches, Recycle Bin |
 
 ### Security
 
@@ -180,8 +182,8 @@ Automates Windows Update detection, installation, and reboot handling with minim
 
 Interactive setup wizard for the Technician Toolkit — configure all settings without hand-editing JSON.
 
-- Step-by-step wizard covers all six configuration fields with descriptions, hints, and live validation
-- Configures: organization name, log/report directory, ARCHIVE default destination, PHANTOM default destination, COVENANT default timezone and local admin username
+- Step-by-step wizard covers all seven configuration fields with descriptions, hints, and live validation
+- Configures: organization name, log/report directory, Teams webhook URL, ARCHIVE default destination, PHANTOM default destination, COVENANT default timezone and local admin username
 - Path fields validate on entry — prompts to create missing directories automatically
 - View current configuration with color-coded status: green = configured, yellow = empty or path not found
 - Edit individual fields without re-running the full wizard
@@ -249,6 +251,38 @@ Audits Windows services, scheduled tasks, and recent event log errors — locall
 - Supports remote execution via WinRM with `-Target HOSTNAME`
 - Dark-themed HTML health report with color-coded service status badges
 - `-Unattended` for silent report export; `-Unattended -Target HOSTNAME` for remote
+
+---
+
+### D.W.A.R.F.
+
+Inspects every physical disk in the system for hardware-level reliability issues and SMART failure prediction.
+
+- Physical disk health status — Healthy, Warning, Unhealthy — sourced from SMART and WMI
+- Disk operational status and media type (SSD / HDD / Unspecified) via `Get-PhysicalDisk`
+- SMART failure prediction flag — surfaces any disk with a predicted imminent failure
+- Bus type and model details for every physical disk
+- Volume integrity status across all lettered volumes
+- Dark-themed HTML report with color-coded disk status badges
+- `-Unattended` for silent scan and HTML export
+
+> **DWARF vs THRESHOLD:** DWARF answers "is this drive about to fail?" (SMART/hardware).
+> THRESHOLD answers "is this drive running out of space?" (volume usage/cleanup).
+
+---
+
+### P.U.R.G.E.
+
+Frees disk space by cleaning common junk accumulation points across the system.
+
+- User temp folders (`%TEMP%`, `%LOCALAPPDATA%\Temp`)
+- System temp folder (`C:\Windows\Temp`)
+- Windows Update download cache (`SoftwareDistribution\Download`) — stops and restarts the service safely
+- Recycle Bin — all users
+- Browser caches — Chrome, Edge, and Firefox across all user profiles
+- Shows estimated space for each category before cleaning; reports total freed space at the end
+- `-Unattended` cleans all categories silently
+- `-WhatIf` previews what would be cleaned without deleting anything
 
 ---
 
@@ -418,6 +452,9 @@ Migrates user profile data from a source machine or profile to a destination usi
 - Migrates: Desktop, Documents, Downloads, Pictures, Videos, Music
 - Migrates: Outlook profiles & data files, email signatures
 - Migrates: Chrome bookmarks, Edge bookmarks, Firefox profiles
+- OneDrive for Business detection with Known Folder Move awareness
+- Restore from an A.R.C.H.I.V.E. ZIP as the source
+- `-WhatIf` previews what would be copied (with file count and size) without performing any transfers
 - Generates a timestamped CSV migration log in the script directory
 
 ---
@@ -529,6 +566,12 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\threshold.
 # S.E.N.T.I.N.E.L. — Service, task & event log monitor
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\sentinel.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/sentinel.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
+# D.W.A.R.F. — Physical disk health & SMART status
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\dwarf.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/dwarf.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
+# P.U.R.G.E. — Disk cleanup (temp, update cache, browser caches, Recycle Bin)
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\purge.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/purge.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
 # ── Security ─────────────────────────────────────────────────────────────────
 
 # C.I.P.H.E.R. — BitLocker encryption management
@@ -599,8 +642,10 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 # Diagnostics & Reporting
 .\oracle.ps1        # System diagnostics and HTML health report
 .\ward.ps1          # User account audit and HTML report
-.\threshold.ps1     # Disk and storage health monitor
+.\threshold.ps1     # Disk space monitor — volume usage, low-space alerts, cleanup
 .\sentinel.ps1      # Service, task, and event log monitor
+.\dwarf.ps1         # Physical disk health — SMART status, wear prediction, failure forecast
+.\purge.ps1         # Disk cleanup — temp files, update cache, browser caches, Recycle Bin
 
 # Security
 .\cipher.ps1        # BitLocker drive encryption management
@@ -630,6 +675,16 @@ All scripts must be run as Administrator.
 
 The toolkit uses an optional `config.json` file in the toolkit directory. All scripts function without it — it only pre-fills common values to reduce prompts. Use **H.E.A.R.T.H.** (`hearth.ps1`) to configure settings interactively.
 
+| Key | Description |
+|-----|-------------|
+| `OrgName` | Organization name shown in HTML report headers |
+| `LogDirectory` | Directory where HTML reports and transcripts are saved |
+| `TeamsWebhook` | Incoming webhook URL for Teams error notifications (used by `Write-TKError`) |
+| `Archive.DefaultDestination` | Default backup path for ARCHIVE |
+| `Phantom.DefaultDestination` | Default migration destination for PHANTOM |
+| `Covenant.DefaultTimezone` | Default Windows timezone ID for COVENANT |
+| `Covenant.DefaultLocalAdminUser` | Default local administrator account name for COVENANT |
+
 | Script | Configurable Variables |
 |--------|------------------------|
 | **grimoire.ps1** | None — tool list is defined in the `$Tools` array in the script |
@@ -638,11 +693,13 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **runepress.ps1** | `$ExtractRoot` — driver extraction staging folder (defaults to `.\ExtractedDrivers`) |
 | **forge.ps1** | None — driver sources scanned from current folder automatically |
 | **restoration.ps1** | None — power settings are detected and restored automatically |
-| **hearth.ps1** | None — all settings entered via the interactive wizard; `config.json` is the output |
+| **hearth.ps1** | None — all settings entered via the interactive wizard; `config.json` is the output (see config key table above) |
 | **oracle.ps1** | `$ReportOutputPath` — folder where the HTML report is saved (defaults to script directory; accepts any local or UNC path) |
 | **ward.ps1** | None — audit runs automatically; stale threshold is 90 days (editable in script) |
 | **threshold.ps1** | None — thresholds are Warning < 15% free, Critical < 5% free (editable in script); old profile threshold is 90 days |
 | **sentinel.ps1** | None — critical service list editable in script; `-Target` accepts any WinRM-reachable hostname |
+| **dwarf.ps1** | None — scans all physical disks automatically; `-Unattended` for silent HTML export |
+| **purge.ps1** | None — categories selected interactively or all cleaned with `-Unattended`; `-WhatIf` for dry run |
 | **cipher.ps1** | None — drive and action selected interactively at runtime |
 | **sigil.ps1** | None — categories selected interactively; screensaver timeout editable in script (default 600 s) |
 | **bastion.ps1** | None — user search and action selected interactively; stale threshold is 90 days (editable in script) |
@@ -685,6 +742,8 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **vault.ps1** | Log directory — `VAULT_<timestamp>.html` (combined license & mailbox report) |
 | **phantom.ps1** | Script directory — `PHANTOM_MigrationLog_<timestamp>.csv` |
 | **archive.ps1** | Script directory — `ARCHIVE_Log_<timestamp>.csv`; manifest inside ZIP |
+| **dwarf.ps1** | Log directory — `DWARF_<timestamp>.html` (dark-themed HTML report) |
+| **purge.ps1** | Console only — cleanup summary printed at completion; no log file |
 
 ---
 
@@ -708,4 +767,4 @@ These scripts modify system settings and may install software, updates, or chang
 
 ## License
 
-[Add license information here]
+MIT License — see [LICENSE](LICENSE) for details.
