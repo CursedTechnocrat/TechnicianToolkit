@@ -183,6 +183,7 @@ function Set-BaselineReg {
     catch {
         Write-Host "    [-] $Label — failed: $_" -ForegroundColor $ColorSchema.Error
         Add-ActionRecord -Category $Category -Setting $Label -Status "Failed" -Detail $_
+        Write-TKError -ScriptName 'sigil' -Message "Baseline setting '$Label' ($Category) failed at '$Path!$Name': $($_.Exception.Message)" -Category "Baseline/$Category"
     }
 }
 
@@ -480,7 +481,9 @@ function Apply-RemoteDesktop {
                 Disable-NetFirewallRule -DisplayGroup "Remote Desktop" -ErrorAction SilentlyContinue
                 Add-ActionRecord -Category "Remote Desktop" -Setting "Disable RDP firewall rules" -Status "Applied"
             }
-            catch { }
+            catch {
+                # Group may not exist on Windows Home / Core editions — safe to swallow.
+            }
         }
     }
 

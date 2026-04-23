@@ -21,7 +21,8 @@
 
 param(
     [switch]$Unattended,
-    [switch]$AutoReboot
+    [switch]$AutoReboot,
+    [switch]$Transcript
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -98,7 +99,11 @@ $ColorSchema = @{
 
 $transcriptPath = $null
 try {
-    $transcriptPath = "$env:TEMP\RESTORATION_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+    # When -Transcript is set, route the session log into the configured
+    # LogDirectory; otherwise keep the long-standing %TEMP% default so an
+    # unattended run always leaves a local log behind.
+    $transcriptRoot = if ($Transcript) { Resolve-LogDirectory -FallbackPath $PSScriptRoot } else { $env:TEMP }
+    $transcriptPath = Join-Path $transcriptRoot "RESTORATION_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
     Start-Transcript -Path $transcriptPath | Out-Null
 }
 catch {

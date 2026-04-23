@@ -211,6 +211,7 @@ function Copy-ProfileFolder {
         Write-Progress -Activity "Copying $Label" -Completed
         Write-Host "    [-] $Label — failed: $_" -ForegroundColor $ColorSchema.Error
         Add-MigrationRecord -Item $Label -Status "Failed" -Detail $_
+        Write-TKError -ScriptName 'revenant' -Message "Folder migration '$Label' failed ('$SourcePath' -> '$DestPath'): $($_.Exception.Message)" -Category 'Migration'
     }
 }
 
@@ -242,6 +243,7 @@ function Copy-ProfileFile {
     catch {
         Write-Host "    [-] $Label — failed: $_" -ForegroundColor $ColorSchema.Error
         Add-MigrationRecord -Item $Label -Status "Failed" -Detail $_
+        Write-TKError -ScriptName 'revenant' -Message "File migration '$Label' failed ('$SourceFile' -> '$DestFolder'): $($_.Exception.Message)" -Category 'Migration'
     }
 }
 

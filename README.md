@@ -19,7 +19,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | Running through Kaseya VSA LiveConnect | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
 | Need a guided, menu-driven workflow | **This repo** — full prompts and confirmations at every step |
 | Need fire-and-forget with parameter-only input | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
-| Need tools with no LiveConnect counterpart (COVENANT, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GARGOYLE, ARTIFACT, HEARTH) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
+| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GARGOYLE, ARTIFACT, HEARTH, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
 
 ---
 
@@ -66,6 +66,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | 13 | **gargoyle.ps1** | **G.A.R.G.O.Y.L.E.** — Guards Against Runtime Glitches On Your Log Events | Service, task & event log monitor — health check local or remote machine, HTML report |
 | 14 | **augur.ps1** | **A.U.G.U.R.** — Analyzes, Uncovers & Gauges Unit Reliability | Physical disk health — SMART status, wear prediction, failure forecast, hardware reliability, HTML report |
 | 15 | **cleanse.ps1** | **C.L.E.A.N.S.E.** — Cleans Leftover, Ephemeral And Neglected System Entries | Disk cleanup — user & system temp, Windows Update cache, browser caches, Recycle Bin |
+| 16 | **scryer.ps1** | **S.C.R.Y.E.R.** — System Consolidated Report Yielding Exhaustive Results | Unified diagnostic report — system info, users, disks, SMART, services in one HTML |
 
 ### Security
 
@@ -286,6 +287,22 @@ Frees disk space by cleaning common junk accumulation points across the system.
 
 ---
 
+### S.C.R.Y.E.R.
+
+Produces a single consolidated HTML report covering the most commonly requested diagnostic checks — designed for machine handoffs, ticket attachments, and audit records.
+
+- Section 1 — **System overview**: OS caption, build, install date, CPU, memory, uptime
+- Section 2 — **User accounts**: local user inventory with enabled/disabled status and admin flagging
+- Section 3 — **Disk space**: volume usage with warning/critical thresholds on free space
+- Section 4 — **Disk health**: SMART status and physical disk reliability via `Get-PhysicalDisk`
+- Section 5 — **Services & scheduled tasks**: critical service state and non-Microsoft tasks
+- Single dark-themed HTML report with summary cards and nav anchors for each section
+- `-Unattended` for silent run; `-OutputPath <dir>` to redirect the report destination
+
+> **SCRYER vs individual diagnostic tools:** SCRYER is a one-shot snapshot that rolls five checks into one file. Reach for AUSPEX, WARD, THRESHOLD, AUGUR, or GARGOYLE when you want a deeper single-domain report.
+
+---
+
 ## Security
 
 ### C.I.P.H.E.R.
@@ -383,7 +400,7 @@ Connects to a remote Windows machine via WinRM and runs Technician Toolkit scrip
 - **Run R.E.S.T.O.R.A.T.I.O.N.** — installs Windows Updates on target (reboot warning shown)
 - **Run S.I.G.I.L.** — applies full security baseline on target, retrieves CSV log
 - **Interactive session** — opens a full `Enter-PSSession` shell on the target
-- All output files retrieved to `SPECTER_<MachineName>\` in the script directory
+- All output files retrieved to `SHADE_<MachineName>\` in the script directory
 - Remote staging folder cleaned up automatically after each operation
 - Target machine prerequisite: `Enable-PSRemoting -Force` (run as Administrator)
 
@@ -572,6 +589,9 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\augur.ps1"
 # C.L.E.A.N.S.E. — Disk cleanup (temp, update cache, browser caches, Recycle Bin)
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\cleanse.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/cleanse.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
+# S.C.R.Y.E.R. — Unified diagnostic HTML report
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\scryer.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/scryer.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
 # ── Security ─────────────────────────────────────────────────────────────────
 
 # C.I.P.H.E.R. — BitLocker encryption management
@@ -646,6 +666,7 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\gargoyle.ps1      # Service, task, and event log monitor
 .\augur.ps1         # Physical disk health — SMART status, wear prediction, failure forecast
 .\cleanse.ps1       # Disk cleanup — temp files, update cache, browser caches, Recycle Bin
+.\scryer.ps1        # Unified diagnostic report — system, users, disks, SMART, services in one HTML
 
 # Security
 .\cipher.ps1        # BitLocker drive encryption management
@@ -700,6 +721,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **gargoyle.ps1** | None — critical service list editable in script; `-Target` accepts any WinRM-reachable hostname |
 | **augur.ps1** | None — scans all physical disks automatically; `-Unattended` for silent HTML export |
 | **cleanse.ps1** | None — categories selected interactively or all cleaned with `-Unattended`; `-WhatIf` for dry run |
+| **scryer.ps1** | `-OutputPath` — directory to write `SCRYER_Report_<timestamp>.html` (defaults to configured log directory) |
 | **cipher.ps1** | None — drive and action selected interactively at runtime |
 | **sigil.ps1** | None — categories selected interactively; screensaver timeout editable in script (default 600 s) |
 | **citadel.ps1** | None — user search and action selected interactively; stale threshold is 90 days (editable in script) |
@@ -725,25 +747,26 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **conjure.ps1** | Console — per-package status table printed at completion |
 | **runepress.ps1** | Script directory — `RUNEPRESS_InstallLog_<timestamp>.csv` |
 | **forge.ps1** | Script directory — `FORGE_DriverReport_<timestamp>.csv` |
-| **restoration.ps1** | `%TEMP%\RESTORATION_<timestamp>.log` (PowerShell transcript of the full session) |
+| **restoration.ps1** | `RESTORATION_<timestamp>.log` — PowerShell transcript of the full session. Default path is `%TEMP%`; with `-Transcript` it is written to the configured log directory instead. |
 | **hearth.ps1** | Console only — settings persisted to `config.json` |
-| **auspex.ps1** | `$ReportOutputPath` — `ORACLE_<timestamp>.html` (defaults to Desktop; configurable) |
+| **auspex.ps1** | Log directory — `AUSPEX_<timestamp>.html` (dark-themed HTML report) |
 | **ward.ps1** | Log directory — `WARD_<timestamp>.html` (dark-themed HTML report) |
 | **threshold.ps1** | Log directory — `THRESHOLD_<timestamp>.html` (dark-themed HTML report) |
-| **gargoyle.ps1** | Log directory — `SENTINEL_<timestamp>.html` (dark-themed HTML health report) |
-| **cipher.ps1** | Console only — no log file |
-| **sigil.ps1** | Log directory — `SIGIL_BaselineLog_<timestamp>.csv` |
-| **citadel.ps1** | Log directory — `BASTION_Stale_<timestamp>.html`; `BASTION_PwdExpiry_<timestamp>.html` |
-| **artifact.ps1** | Log directory — `RELIC_<timestamp>.html` (cert inventory & SSL results) |
-| **leyline.ps1** | Console only — no log file |
-| **shade.ps1** | Script directory — `SPECTER_<MachineName>\` folder containing retrieved output files |
-| **lantern.ps1** | Log directory — `LANTERN_<timestamp>.html` and `LANTERN_<timestamp>.csv` |
-| **talisman.ps1** | `-OutputPath` (default `%TEMP%`) — `azure-assessment-<timestamp>.html`; auto-opens in browser |
-| **reliquary.ps1** | Log directory — `VAULT_<timestamp>.html` (combined license & mailbox report) |
-| **revenant.ps1** | Script directory — `PHANTOM_MigrationLog_<timestamp>.csv` |
-| **archive.ps1** | Script directory — `ARCHIVE_Log_<timestamp>.csv`; manifest inside ZIP |
+| **gargoyle.ps1** | Log directory — `GARGOYLE_<timestamp>.html` (dark-themed HTML health report) |
 | **augur.ps1** | Log directory — `AUGUR_<timestamp>.html` (dark-themed HTML report) |
 | **cleanse.ps1** | Console only — cleanup summary printed at completion; no log file |
+| **scryer.ps1** | `-OutputPath` (defaults to log directory) — `SCRYER_Report_<timestamp>.html` (unified diagnostic report) |
+| **cipher.ps1** | Console only — no log file |
+| **sigil.ps1** | Log directory — `SIGIL_BaselineLog_<timestamp>.csv` |
+| **citadel.ps1** | Log directory — `CITADEL_Stale_<timestamp>.html`; `CITADEL_PwdExpiry_<timestamp>.html` |
+| **artifact.ps1** | Log directory — `ARTIFACT_<timestamp>.html` (cert inventory & SSL results) |
+| **leyline.ps1** | Console only — no log file |
+| **shade.ps1** | Script directory — `SHADE_<MachineName>\` folder containing retrieved output files |
+| **lantern.ps1** | Log directory — `LANTERN_<timestamp>.html` and `LANTERN_<timestamp>.csv` |
+| **talisman.ps1** | `-OutputPath` (default `%TEMP%`) — `azure-assessment-<timestamp>.html`; auto-opens in browser |
+| **reliquary.ps1** | Log directory — `RELIQUARY_<timestamp>.html` (combined license & mailbox report) |
+| **revenant.ps1** | Log directory — `REVENANT_MigrationLog_<timestamp>.csv` |
+| **archive.ps1** | Script directory — `ARCHIVE_Log_<timestamp>.csv`; manifest inside ZIP |
 
 ---
 

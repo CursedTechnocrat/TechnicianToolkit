@@ -186,7 +186,9 @@ updates the file.
 4. Add the script's filename to the Quick Launch and Usage sections in `README.md`.
 5. The syntax-validation and module-bootstrap compliance Pester tests will cover it automatically.
 
-## Tool Distinctions: THRESHOLD vs AUGUR
+## Tool Distinctions
+
+### THRESHOLD vs AUGUR
 
 Both tools deal with disk health but cover different layers:
 
@@ -196,3 +198,14 @@ Both tools deal with disk health but cover different layers:
 | **A.U.G.U.R.** | Physical hardware health — SMART status, wear prediction, failure forecasting, bus/media type |
 
 Run THRESHOLD for "is this drive running out of space?"; run AUGUR for "is this drive about to die?".
+
+### SCRYER vs the single-domain diagnostic tools
+
+S.C.R.Y.E.R. (`scryer.ps1`) is a one-shot consolidated report that rolls five diagnostic passes (system overview, local users, disk space, SMART health, services & tasks) into a single HTML file. It exists for ticket attachments and machine handoffs where one snapshot is more useful than five separate reports.
+
+| Question | Reach for |
+|----------|-----------|
+| "Give me one file summarising this machine." | **SCRYER** |
+| Deep dive on any one of: system health, users, free space, disk reliability, services | AUSPEX / WARD / THRESHOLD / AUGUR / GARGOYLE respectively |
+
+SCRYER's per-section depth is intentionally shallower than the dedicated tools — it samples each domain rather than reproducing the full report.

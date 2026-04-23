@@ -377,6 +377,19 @@ Describe 'Legacy tool names must not reappear' {
         $hits = Select-String -Path $FullName -SimpleMatch -Pattern $script:LegacyAcronyms -ErrorAction SilentlyContinue
         $hits | Should -BeNullOrEmpty -Because "retired acronym found in $Name"
     }
+
+    # Second form: bare underscore-prefixed filenames (e.g. `SPECTER_<MachineName>`,
+    # `PHANTOM_MigrationLog_*.csv`). The v3.0 rename changed every tool's emitted
+    # filename prefix, and the README logging table drifted without this catch
+    # because the dotted form above didn't match the bare-prefix form.
+    It '<Name> contains no retired filename prefixes' -ForEach $files {
+        $prefixPatterns = @(
+            'ORACLE_', 'SENTINEL_', 'BASTION_', 'VAULT_',
+            'PHANTOM_', 'SPECTER_', 'AEGIS_', 'RELIC_'
+        )
+        $hits = Select-String -Path $FullName -SimpleMatch -Pattern $prefixPatterns -ErrorAction SilentlyContinue
+        $hits | Should -BeNullOrEmpty -Because "retired filename prefix found in $Name"
+    }
 }
 
 # ─────────────────────────────────────────────────────────────────────────────

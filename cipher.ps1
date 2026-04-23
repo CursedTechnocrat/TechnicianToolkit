@@ -305,6 +305,7 @@ function Enable-DriveEncryption {
     }
     catch {
         Write-Host "  [-] Failed to enable BitLocker: $_" -ForegroundColor $ColorSchema.Error
+        Write-TKError -ScriptName 'cipher' -Message "Enable-BitLocker failed on '$($vol.MountPoint)': $($_.Exception.Message)" -Category 'BitLocker Enable'
     }
 
     Write-Host ""
@@ -344,6 +345,7 @@ function Disable-DriveEncryption {
     }
     catch {
         Write-Host "  [-] Failed to disable BitLocker: $_" -ForegroundColor $ColorSchema.Error
+        Write-TKError -ScriptName 'cipher' -Message "Disable-BitLocker failed on '$($vol.MountPoint)': $($_.Exception.Message)" -Category 'BitLocker Disable'
     }
 
     Write-Host ""
@@ -396,6 +398,7 @@ function Backup-RecoveryKey {
     catch {
         Write-Host "  [-] Backup failed: $_" -ForegroundColor $ColorSchema.Error
         Write-Host "  [!!] Ensure this machine is domain-joined or Entra ID-joined and connected." -ForegroundColor $ColorSchema.Warning
+        Write-TKError -ScriptName 'cipher' -Message "Recovery key backup failed on '$($vol.MountPoint)': $($_.Exception.Message)" -Category 'BitLocker KeyBackup'
     }
 
     Write-Host ""
@@ -485,6 +488,7 @@ function Resume-DriveProtection {
     }
     catch {
         Write-Host "  [-] Resume failed: $_" -ForegroundColor $ColorSchema.Error
+        Write-TKError -ScriptName 'cipher' -Message "Resume-BitLocker failed on '$($vol.MountPoint)': $($_.Exception.Message)" -Category 'BitLocker Resume'
     }
 
     Write-Host ""

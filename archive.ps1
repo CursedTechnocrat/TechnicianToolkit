@@ -557,6 +557,7 @@ try {
 catch {
     Write-Host "  [-] Compression failed: $_" -ForegroundColor $ColorSchema.Error
     Add-ArchiveRecord -Item "ZIP Archive" -Status "Failed" -Detail $_
+    Write-TKError -ScriptName 'archive' -Message "ZIP creation failed for '$zipPath': $($_.Exception.Message)" -Category 'Compression'
 }
 finally {
     Write-Host "  [*] Cleaning up staging folder..." -ForegroundColor $ColorSchema.Progress

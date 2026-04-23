@@ -19,7 +19,11 @@
 
 #>
 
-param([switch]$Unattended, [switch]$WhatIf)
+param(
+    [switch]$Unattended,
+    [switch]$WhatIf,
+    [switch]$Transcript
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # INITIALIZATION
@@ -54,6 +58,8 @@ if (-not (Test-Path $TKModulePath)) {
 }
 Import-Module $TKModulePath -Force -ErrorAction Stop
 Invoke-AdminElevation -ScriptFile $PSCommandPath
+
+if ($Transcript) { Start-TKTranscript -LogRoot (Resolve-LogDirectory -FallbackPath $PSScriptRoot) }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # COLOR SCHEMA
@@ -290,4 +296,5 @@ Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host ""
 
 if (-not $Unattended) { Read-Host "  Press Enter to exit" }
+if ($Transcript) { Stop-TKTranscript }
 if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

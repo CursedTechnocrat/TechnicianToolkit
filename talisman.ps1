@@ -319,7 +319,9 @@ foreach ($vault in $recoveryVaults) {
                 })
             }
         }
-    } catch {}
+    } catch {
+        # Vault contents can 403 if the signed-in principal lacks Backup Reader RBAC.
+    }
 }
 $unbackedVms = @($vms | Where-Object { $backedUpVmNames -notcontains $_.Name } | Select-Object -ExpandProperty Name)
 Write-Ok "Found $($recoveryVaults.Count) vaults, $($backedUpVmNames.Count) protected VMs, $($unbackedVms.Count) unprotected"

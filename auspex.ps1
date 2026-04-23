@@ -679,7 +679,9 @@ try {
         }
     }
 }
-catch {}
+catch {
+    # SecurityCenter2 namespace is absent on Server SKUs and some Core editions.
+}
 
 $reportData['Security'] = $avProducts
 
