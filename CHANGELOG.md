@@ -35,6 +35,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `forge.ps1` — Windows Update driver scan/install failure.
   - `runepress.ps1` — pnputil driver install (ZIP path), EXE launch failure, and msiexec launch failure.
   - `restoration.ps1` — `Install-WindowsUpdate` failure.
+- **New tool: `G.O.L.E.M.`** (`golem.ps1`, Cloud & Identity key 42) — Governs & Observes Licensed Endpoint Management. Connects to Microsoft Graph and audits the Intune-managed device estate: device inventory with OS / ownership / compliance / join-type breakdown, compliance state summary, stale-device detection at 30 / 60 / 90-day buckets, and configuration-profile assignment coverage. Dark-themed HTML report with `OrgName` prefix support. Telemetry wired on Graph auth failure and Intune query failure. Complements `R.E.L.I.Q.U.A.R.Y.` (M365 licensing / MFA / shared mailboxes) by covering the device-management side of the same tenant.
 - **Parameter validation added to nine string inputs across eight tools** so obvious mis-inputs fail at bind-time instead of deeper in the script:
   - `cipher.ps1` `-Drive` — drive-letter pattern `^[A-Za-z]:?$`.
   - `gargoyle.ps1` `-Target` and `leyline.ps1` `-Target` — hostname / hostname:port pattern with empty-string default preserved.

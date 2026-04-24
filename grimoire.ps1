@@ -297,6 +297,15 @@ $Tools = @(
         Color       = 'Green'
         Category    = 'Cloud & Identity'
     },
+    [PSCustomObject]@{
+        Key         = '42'
+        Name        = 'G.O.L.E.M.'
+        File        = 'golem.ps1'
+        Version     = '3.0'
+        Description = 'Intune / MDM compliance audit  -  managed devices, compliance state, stale devices, config profiles'
+        Color       = 'Yellow'
+        Category    = 'Cloud & Identity'
+    },
     # ── Data & Migration (50–59) ─────────────────────────────────────
     [PSCustomObject]@{
         Key         = '50'
