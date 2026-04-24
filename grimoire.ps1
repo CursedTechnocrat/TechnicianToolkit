@@ -360,6 +360,15 @@ $Tools = @(
         Color       = 'Red'
         Category    = 'Cloud & Identity'
     },
+    [PSCustomObject]@{
+        Key         = '44'
+        Name        = 'C.O.N.C.L.A.V.E.'
+        File        = 'conclave.ps1'
+        Version     = '3.0'
+        Description = 'Microsoft Teams audit  -  orphan teams, public teams, guest membership, large teams, stale teams'
+        Color       = 'Magenta'
+        Category    = 'Cloud & Identity'
+    },
     # ── Data & Migration (50–59) ─────────────────────────────────────
     [PSCustomObject]@{
         Key         = '50'

@@ -19,7 +19,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | Running through Kaseya VSA LiveConnect | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
 | Need a guided, menu-driven workflow | **This repo** — full prompts and confirmations at every step |
 | Need fire-and-forget with parameter-only input | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
-| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL, ANVIL, TALON, TOTEM, PYRE) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
+| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, CONCLAVE, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL, ANVIL, TALON, TOTEM, PYRE) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
 
 ---
 
@@ -98,6 +98,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | 41 | **reliquary.ps1** | **R.E.L.I.Q.U.A.R.Y.** — Reports, Evaluates Licenses, Inventories, Quotas, Users, Access & Registration Yields | Microsoft 365 license & mailbox audit — license assignments, MFA status, shared mailboxes, HTML report |
 | 42 | **golem.ps1** | **G.O.L.E.M.** — Governs & Observes Licensed Endpoint Management | Intune / MDM compliance audit — managed devices, compliance state, stale devices, configuration profiles, HTML report |
 | 43 | **wraith.ps1** | **W.R.A.I.T.H.** — Watches Registrations, Access, Identities, Tokens & Hygiene | Entra ID identity hygiene audit — guests, privileged roles, password-never-expires, stale admins, disabled-but-licensed, HTML report |
+| 44 | **conclave.ps1** | **C.O.N.C.L.A.V.E.** — Consolidates Organisational Networks, Chats, Licenses, Access, Visibility & Entitlements | Microsoft Teams audit — orphan teams, public teams, guest membership, large teams, stale teams, HTML report |
 
 ### Data & Migration
 
@@ -577,6 +578,22 @@ Connects to Microsoft Graph and audits Entra ID identity hygiene — the securit
 
 ---
 
+### C.O.N.C.L.A.V.E.
+
+Connects to Microsoft Graph and audits the M365 Teams estate. Complements RELIQUARY (licensing), GOLEM (devices), and WRAITH (identity) with the collaboration layer — orphan teams, external-access blind spots, and governance stragglers that survive every tenant cleanup pass.
+
+- Enumerates every team-backed M365 group (`resourceProvisioningOptions/Any(x:x eq 'Team')`) with owner list, member list, guest count (filtered on `userType eq 'Guest'`), visibility, sensitivity labels, creation and last-renewed dates
+- **Orphan teams**: zero owners OR every owner disabled — the #1 governance issue in long-running tenants
+- **Public teams**: visibility = `Public`, meaning any tenant user can join without approval; flagged regardless of content
+- **Teams with guest members**: sorted by guest count descending so external-access blast radius is front-of-page
+- **Large teams**: ≥ 250 members by default (editable constant); governance candidates (should these be channels of a smaller team, or split?)
+- **Stale teams**: M365-group `RenewedDateTime` older than 365 days (editable) — indicates the owner has not confirmed ongoing use if a group-expiration policy is set
+- Dark-themed HTML report with OrgName prefix, six summary cards, and six per-category tables
+- Telemetry via `Write-TKError` on auth and group-query failures
+- `-Unattended` auto-connect + export
+
+---
+
 ## Data & Migration
 
 ### R.E.V.E.N.A.N.T.
@@ -659,9 +676,9 @@ Outlook data-file discovery that inventories every PST (and optionally OST) on t
 | WinRM enabled on target machine | `shade.ps1`, `gargoyle.ps1` (remote mode) |
 | RSAT ActiveDirectory module | `citadel.ps1` (auto-installed if missing) |
 | Az PowerShell modules | `talisman.ps1` (auto-installed if missing) |
-| Microsoft.Graph modules | `reliquary.ps1`, `golem.ps1`, `wraith.ps1` (auto-installed if missing) |
+| Microsoft.Graph modules | `reliquary.ps1`, `golem.ps1`, `wraith.ps1`, `conclave.ps1` (auto-installed if missing) |
 | Azure subscription + appropriate RBAC | `talisman.ps1` |
-| Microsoft 365 tenant + Global Reader or equivalent | `reliquary.ps1`, `golem.ps1`, `wraith.ps1` |
+| Microsoft 365 tenant + Global Reader or equivalent | `reliquary.ps1`, `golem.ps1`, `wraith.ps1`, `conclave.ps1` |
 | Microsoft Intune licence + DeviceManagement Graph permissions | `golem.ps1` |
 | RoleManagement.Read.Directory + AuditLog.Read.All Graph scopes | `wraith.ps1` |
 | On-premises Active Directory domain membership | `citadel.ps1` |
@@ -798,6 +815,9 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\golem.ps1"
 # W.R.A.I.T.H. — Entra ID identity hygiene audit
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\wraith.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/wraith.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
+# C.O.N.C.L.A.V.E. — Microsoft Teams audit
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\conclave.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/conclave.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
 # ── Data & Migration ─────────────────────────────────────────────────────────
 
 # R.E.V.E.N.A.N.T. — Profile migration
@@ -868,6 +888,7 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\reliquary.ps1     # Microsoft 365 license and mailbox audit
 .\golem.ps1         # Intune / MDM compliance audit and HTML report
 .\wraith.ps1        # Entra ID identity hygiene audit and HTML report
+.\conclave.ps1      # Microsoft Teams audit and HTML report
 
 # Data & Migration
 .\revenant.ps1       # Profile migration and data transfer
@@ -926,6 +947,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **reliquary.ps1** | None — tenant and report scope selected interactively at runtime |
 | **golem.ps1** | None — tenant, device scope, and report scope selected interactively at runtime |
 | **wraith.ps1** | None — tenant and audit scope selected interactively at runtime |
+| **conclave.ps1** | None — tenant selected interactively; large-team and stale thresholds (250 members, 365 days) are editable constants in the script |
 | **revenant.ps1** | `config.json` — `Revenant.DefaultDestination`; source, items, and destination also selectable interactively |
 | **archive.ps1** | `config.json` — `Archive.DefaultDestination`; profile, items, and destination also selectable interactively |
 | **tether.ps1** | None — reads HKCU OneDrive and User Shell Folders registry and enumerates Desktop / Documents / Pictures for the currently logged-on user |
@@ -969,6 +991,7 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **reliquary.ps1** | Log directory — `RELIQUARY_<timestamp>.html` (combined license & mailbox report) |
 | **golem.ps1** | Log directory — `GOLEM_<timestamp>.html` (Intune / MDM compliance report) |
 | **wraith.ps1** | Log directory — `WRAITH_<timestamp>.html` (Entra ID identity hygiene report) |
+| **conclave.ps1** | Log directory — `CONCLAVE_<timestamp>.html` (Teams estate audit report) |
 | **revenant.ps1** | Log directory — `REVENANT_MigrationLog_<timestamp>.csv` |
 | **archive.ps1** | Script directory — `ARCHIVE_Log_<timestamp>.csv`; manifest inside ZIP |
 | **tether.ps1** | Log directory — `TETHER_<timestamp>.html` (OneDrive KFM readiness report) |
