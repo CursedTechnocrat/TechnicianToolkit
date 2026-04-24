@@ -25,6 +25,7 @@ param(
     [switch]$Unattended,
     [ValidateSet('Status','FlushDNS','Renew','ResetStack','PortTest','Trace','ARPScan')]
     [string]$Action = 'Status',
+    [ValidatePattern('^$|^[A-Za-z0-9][A-Za-z0-9._-]{0,252}(:[0-9]{1,5})?$|^[A-Za-z0-9]$')]
     [string]$Target = '',
     [switch]$Transcript
 )

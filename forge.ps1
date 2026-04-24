@@ -212,6 +212,7 @@ function Invoke-WindowsUpdateDrivers {
     catch {
         Write-Host "  [-] Windows Update driver scan failed: $_" -ForegroundColor $C.Error
         Write-Host "  [!!] Ensure the machine has internet access and PSWindowsUpdate can be installed." -ForegroundColor $C.Warning
+        Write-TKError -ScriptName 'forge' -Message "Windows Update driver scan/install failed: $($_.Exception.Message)" -Category 'Driver WindowsUpdate'
     }
     Write-Host ""
 }

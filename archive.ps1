@@ -23,6 +23,7 @@ param(
     [switch]$Unattended,
     [switch]$WhatIf,
     [string]$Username    = "",
+    [ValidatePattern('^(?i:A)$|^\s*\d{1,2}(\s*,\s*\d{1,2})*\s*$')]
     [string]$Items       = "A",
     [string]$Destination = "",
     [switch]$Transcript

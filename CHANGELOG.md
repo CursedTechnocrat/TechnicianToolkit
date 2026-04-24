@@ -29,6 +29,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `restoration.ps1` — lists every pending update that would be installed and short-circuits the reboot decision so a dry run never reboots the machine.
   - `runepress.ps1` — previews each driver install at the call site it would hit (pnputil / EXE silent / msiexec) and skips the network-printer stage entirely, leaving no ports, printers, or extracted staging folders behind.
 - **`OrgName` now appears in the subtitle of seven HTML reports that previously ignored it** — `threshold`, `augur`, `gargoyle`, `lantern`, `reliquary`, `scryer`, and `citadel` (both the stale and password-expiry reports). Each tool now calls `Get-TKConfig`, HTML-escapes `OrgName`, and prepends it to its existing subtitle string when configured. Unconfigured deployments see no change. `talisman.ps1` continues to display the Azure subscription name in place of an org name, which matches the Azure-focused scope of that tool.
+- **`Write-TKError` wired into five more tools' highest-impact failure paths** (12 new call sites). Combined with earlier rounds the toolkit now surfaces telemetry on every incident-worthy failure rather than only the domain-join and data-safety paths:
+  - `citadel.ps1` — `Unlock-ADAccount`, `Set-ADAccountPassword`, `Enable-ADAccount`, `Disable-ADAccount`, `Add-ADGroupMember`, `Remove-ADGroupMember`.
+  - `conjure.ps1` — per-package install failure inside the winget/Chocolatey loop.
+  - `forge.ps1` — Windows Update driver scan/install failure.
+  - `runepress.ps1` — pnputil driver install (ZIP path), EXE launch failure, and msiexec launch failure.
+  - `restoration.ps1` — `Install-WindowsUpdate` failure.
+- **Parameter validation added to nine string inputs across eight tools** so obvious mis-inputs fail at bind-time instead of deeper in the script:
+  - `cipher.ps1` `-Drive` — drive-letter pattern `^[A-Za-z]:?$`.
+  - `gargoyle.ps1` `-Target` and `leyline.ps1` `-Target` — hostname / hostname:port pattern with empty-string default preserved.
+  - `talisman.ps1` `-TenantId` and `-SubscriptionId` — GUID pattern.
+  - `archive.ps1` `-Items`, `revenant.ps1` `-Items`, `sigil.ps1` `-Categories` — `"A"` or a comma-separated list of one/two-digit numbers.
+  - `covenant.ps1` `-NewComputerName` — Windows NetBIOS hostname rules (1–15 chars, alphanumerics and hyphens, no leading/trailing hyphen).
+  - `scryer.ps1` `-OutputPath` — `ValidateScript` that accepts empty string, an existing path, or a path whose parent exists (so the tool can create a new output directory).
 
 ### Changed
 - **README logging table corrected for seven tools** whose emitted filename prefixes drifted at the v2→v3 rename and were never updated. `auspex.ps1`, `gargoyle.ps1`, `citadel.ps1`, `artifact.ps1`, `shade.ps1`, `reliquary.ps1`, and `revenant.ps1` now show the prefixes their source actually produces (`AUSPEX_`, `GARGOYLE_`, `CITADEL_Stale_`/`CITADEL_PwdExpiry_`, `ARTIFACT_`, `SHADE_`, `RELIQUARY_`, `REVENANT_MigrationLog_`).

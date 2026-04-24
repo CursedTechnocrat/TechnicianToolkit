@@ -443,6 +443,7 @@ function Unlock-UserAccount {
         Write-Host "  [+] Account '$($u.SamAccountName)' has been unlocked successfully." -ForegroundColor $C.Success
     } catch {
         Write-Host "  [-] Failed to unlock account: $_" -ForegroundColor $C.Error
+        Write-TKError -ScriptName 'citadel' -Message "Unlock-ADAccount failed for '$($u.SamAccountName)': $($_.Exception.Message)" -Category 'AD Unlock'
     }
 
     Write-Host ""
@@ -501,6 +502,7 @@ function Reset-UserPassword {
     } catch {
         Write-Host "  [-] Password reset failed: $_" -ForegroundColor $C.Error
         Write-Host "  [!!] Ensure the password meets your domain's complexity requirements." -ForegroundColor $C.Warning
+        Write-TKError -ScriptName 'citadel' -Message "Password reset failed for '$($user.SamAccountName)': $($_.Exception.Message)" -Category 'AD Password Reset'
     }
 
     Write-Host ""
@@ -544,6 +546,7 @@ function Set-AccountState {
                 Write-Host "  [+] Account enabled successfully." -ForegroundColor $C.Success
             } catch {
                 Write-Host "  [-] Failed to enable account: $_" -ForegroundColor $C.Error
+                Write-TKError -ScriptName 'citadel' -Message "Enable-ADAccount failed for '$($u.SamAccountName)': $($_.Exception.Message)" -Category 'AD Account Enable'
             }
         }
         "2" {
@@ -553,6 +556,7 @@ function Set-AccountState {
                 Write-Host "  [+] Account disabled successfully." -ForegroundColor $C.Success
             } catch {
                 Write-Host "  [-] Failed to disable account: $_" -ForegroundColor $C.Error
+                Write-TKError -ScriptName 'citadel' -Message "Disable-ADAccount failed for '$($u.SamAccountName)': $($_.Exception.Message)" -Category 'AD Account Disable'
             }
         }
         default {
@@ -679,6 +683,7 @@ function Manage-GroupMembership {
             } catch {
                 Write-Host "  [-] Failed to add user to group: $_" -ForegroundColor $C.Error
                 Write-Host "  [!!] The user may already be a member of this group." -ForegroundColor $C.Warning
+                Write-TKError -ScriptName 'citadel' -Message "Add-ADGroupMember failed ('$($user.SamAccountName)' -> '$($targetGroup.Name)'): $($_.Exception.Message)" -Category 'AD Group Add'
             }
         }
         "2" {
@@ -689,6 +694,7 @@ function Manage-GroupMembership {
             } catch {
                 Write-Host "  [-] Failed to remove user from group: $_" -ForegroundColor $C.Error
                 Write-Host "  [!!] The user may not be a member of this group." -ForegroundColor $C.Warning
+                Write-TKError -ScriptName 'citadel' -Message "Remove-ADGroupMember failed ('$($user.SamAccountName)' from '$($targetGroup.Name)'): $($_.Exception.Message)" -Category 'AD Group Remove'
             }
         }
         default {

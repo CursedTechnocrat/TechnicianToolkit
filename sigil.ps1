@@ -25,6 +25,7 @@
 
 param(
     [switch]$Unattended,
+    [ValidatePattern('^(?i:A)$|^\s*\d{1,2}(\s*,\s*\d{1,2})*\s*$')]
     [string]$Categories = "A",
     [switch]$WhatIf,
     [switch]$Transcript

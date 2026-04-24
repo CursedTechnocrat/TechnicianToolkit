@@ -27,6 +27,7 @@ param(
     [switch]$WhatIf,
     [ValidateSet('Status','Enable','Disable','Suspend','Resume','BackupAD','BackupEntraID')]
     [string]$Action = "Status",
+    [ValidatePattern('^[A-Za-z]:?$')]
     [string]$Drive  = "C",
     [switch]$Transcript
 )

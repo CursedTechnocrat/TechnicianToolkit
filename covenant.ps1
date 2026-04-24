@@ -27,6 +27,7 @@
 param(
     [switch]$Unattended,
     [switch]$WhatIf,
+    [ValidatePattern('^$|^[A-Za-z0-9]$|^[A-Za-z0-9][A-Za-z0-9-]{0,13}[A-Za-z0-9]$')]
     [string]$NewComputerName = "",
     [string]$Timezone        = "",
     [string]$LocalAdminUser  = "",

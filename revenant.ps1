@@ -25,6 +25,7 @@ param(
     [ValidateScript({ [string]::IsNullOrWhiteSpace($_) -or (Test-Path -LiteralPath $_) })]
     [string]$SourcePath = "",
     [string]$DestPath   = "",
+    [ValidatePattern('^(?i:A)$|^\s*\d{1,2}(\s*,\s*\d{1,2})*\s*$')]
     [string]$Items      = "A",
     [ValidateScript({ [string]::IsNullOrWhiteSpace($_) -or (Test-Path -LiteralPath $_) })]
     [string]$ArchiveZip = "",

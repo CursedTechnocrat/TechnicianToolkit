@@ -25,7 +25,9 @@
 
 param(
     [switch]$Unattended,
+    [ValidatePattern('^$|^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')]
     [string]$TenantId        = '',
+    [ValidatePattern('^$|^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')]
     [string]$SubscriptionId  = '',
     [string]$OutputPath      = "$env:TEMP\azure-assessment-$(Get-Date -Format 'yyyyMMdd-HHmmss').html",
     [switch]$NoOpen,

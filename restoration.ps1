@@ -248,6 +248,7 @@ try {
 }
 catch {
     Write-Host "[-] Error installing updates: $_" -ForegroundColor $ColorSchema.Error
+    Write-TKError -ScriptName 'restoration' -Message "Windows Update install failed: $($_.Exception.Message)" -Category 'Windows Update'
 }
 
 Write-Host ""

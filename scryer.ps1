@@ -21,6 +21,11 @@
 
 param(
     [switch]$Unattended,
+    [ValidateScript({
+        [string]::IsNullOrWhiteSpace($_) -or
+        (Test-Path -LiteralPath $_) -or
+        (Test-Path -LiteralPath (Split-Path -Parent $_))
+    })]
     [string]$OutputPath = "",
     [switch]$Transcript
 )

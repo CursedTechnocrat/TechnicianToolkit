@@ -323,6 +323,7 @@ function Install-Software {
         catch {
             Write-Host "[ERROR] Error installing $item : $($_.Exception.Message)" -ForegroundColor $Colors.Error
             Add-InstallationRecord -Software $item -Status "FAILED"
+            Write-TKError -ScriptName 'conjure' -Message "Package install failed ('$item' via $PackageManager): $($_.Exception.Message)" -Category 'Package Install'
         }
 
         Start-Sleep -Seconds 1

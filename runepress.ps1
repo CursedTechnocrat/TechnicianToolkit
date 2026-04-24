@@ -277,6 +277,7 @@ function Install-ZipDriver {
     }
     catch {
         Write-Host "ERROR: Failed to run pnputil: $($_.Exception.Message)" -ForegroundColor Red
+        Write-TKError -ScriptName 'runepress' -Message "pnputil failed for '$($SelectedInf.FullName)' (from ZIP '$($ZipFile.Name)'): $($_.Exception.Message)" -Category 'Printer Driver Install'
         return $false
     }
 
@@ -329,6 +330,7 @@ function Install-ExeDriver {
             Status = "Failed (launch error)"
             Time   = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
         }
+        Write-TKError -ScriptName 'runepress' -Message "EXE printer driver launch failed ('$($ExeFile.FullName)'): $($_.Exception.Message)" -Category 'Printer Driver Install'
         return $false
     }
 
@@ -393,6 +395,7 @@ function Install-MsiDriver {
             Status = "Failed (launch error)"
             Time   = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
         }
+        Write-TKError -ScriptName 'runepress' -Message "msiexec printer driver launch failed ('$($MsiFile.FullName)'): $($_.Exception.Message)" -Category 'Printer Driver Install'
         return $false
     }
 
