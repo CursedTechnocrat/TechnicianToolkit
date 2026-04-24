@@ -19,7 +19,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | Running through Kaseya VSA LiveConnect | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
 | Need a guided, menu-driven workflow | **This repo** — full prompts and confirmations at every step |
 | Need fire-and-forget with parameter-only input | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
-| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL, ANVIL) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
+| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL, ANVIL, TALON) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
 
 ---
 
@@ -78,6 +78,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | 21 | **sigil.ps1** | **S.I.G.I.L.** — Secures Infrastructure: Governs via Integrated Lockdown | Security baseline enforcement — telemetry, UAC, firewall, audit policy, password policy |
 | 22 | **citadel.ps1** | **C.I.T.A.D.E.L.** — Centralizes Identity, Tasks, Accounts, Directories, Entitlements & Logons | Active Directory user & group management — unlock, reset, lockout forensics, stale & expiry reports |
 | 23 | **artifact.ps1** | **A.R.T.I.F.A.C.T.** — Audits, Reports Trust, Identity, Fingerprints, Authority, Certificates & TLS | Certificate health monitor — local cert stores, SSL/TLS expiry, HTML report |
+| 24 | **talon.ps1** | **T.A.L.O.N.** — Tracks Anomalies & Locates Otherwise-silent Nastiness | Persistence / autoruns audit — Run keys, startup folders, services, tasks, WMI subscriptions, IFEO hijacks, Winlogon, HTML report |
 
 ### Network & Remote
 
@@ -414,6 +415,25 @@ Monitors certificate health across the local machine and remote hosts — surfac
 
 ---
 
+### T.A.L.O.N.
+
+Sweeps the standard Windows persistence surfaces and inventories every entry so a technician can answer "what runs on this machine without me asking it to?" Every entry is enriched with signature status (Microsoft-signed / 3rd-party signed / unsigned / tampered) and target-on-disk check (present / missing / n-a). Does not attempt to judge malice — visibility is the job.
+
+- **Surfaces covered**:
+  - Run / RunOnce keys (HKCU, HKLM, WOW6432Node)
+  - Startup folders (per-user + All Users), with `.lnk` target resolution
+  - Non-Microsoft services with auto-start
+  - Scheduled Tasks outside the `\Microsoft\` subtree, one row per action
+  - WMI event subscriptions (`__EventFilter`, `__EventConsumer`, `__FilterToConsumerBinding` under `root\subscription`) — high-signal persistence surface
+  - Image File Execution Options (IFEO) `Debugger` hijacks
+  - Winlogon `Shell`, `Userinit`, and `AppInit_DLLs` hijack points
+- Per-entry enrichment: resolves the binary path (handles quoted and unquoted command lines with environment-variable expansion), runs `Get-AuthenticodeSignature`, and flags Microsoft-signed entries distinctly from third-party signed
+- Dark-themed HTML report with six summary cards (total / MS-signed / 3rd-party / unsigned / missing-targets) and one detail table per surface
+- Nav bar auto-generated from the categories found so large machines paginate naturally
+- Auto-elevates; read-only audit with no state changes
+
+---
+
 ## Network & Remote
 
 ### L.E.Y.L.I.N.E.
@@ -716,6 +736,9 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\citadel.ps
 # A.R.T.I.F.A.C.T. — Certificate health monitor
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\artifact.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/artifact.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
+# T.A.L.O.N. — Persistence / autoruns audit
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\talon.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/talon.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
 # ── Network & Remote ─────────────────────────────────────────────────────────
 
 # L.E.Y.L.I.N.E. — Network diagnostics & remediation
@@ -797,6 +820,7 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\sigil.ps1         # Security baseline enforcement
 .\citadel.ps1       # Active Directory user and group management
 .\artifact.ps1         # Certificate health and SSL expiry monitor
+.\talon.ps1          # Persistence / autoruns audit
 
 # Network & Remote
 .\leyline.ps1       # Network diagnostics and remediation
@@ -856,6 +880,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **sigil.ps1** | None — categories selected interactively; screensaver timeout editable in script (default 600 s) |
 | **citadel.ps1** | None — user search and action selected interactively; stale threshold is 90 days (editable in script) |
 | **artifact.ps1** | None — stores and targets selected interactively or via `-Targets` parameter |
+| **talon.ps1** | None — every persistence surface is enumerated unconditionally |
 | **leyline.ps1** | None — all tests run interactively; no persistent config |
 | **shade.ps1** | None — target, credentials, and operation selected interactively at runtime |
 | **lantern.ps1** | `$script:ScanPorts` — list of TCP ports checked during scan (editable in script) |
@@ -896,6 +921,7 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **sigil.ps1** | Log directory — `SIGIL_BaselineLog_<timestamp>.csv` |
 | **citadel.ps1** | Log directory — `CITADEL_Stale_<timestamp>.html`; `CITADEL_PwdExpiry_<timestamp>.html` |
 | **artifact.ps1** | Log directory — `ARTIFACT_<timestamp>.html` (cert inventory & SSL results) |
+| **talon.ps1** | Log directory — `TALON_<timestamp>.html` (persistence / autoruns audit) |
 | **leyline.ps1** | Console only — no log file |
 | **shade.ps1** | Script directory — `SHADE_<MachineName>\` folder containing retrieved output files |
 | **lantern.ps1** | Log directory — `LANTERN_<timestamp>.html` and `LANTERN_<timestamp>.csv` |

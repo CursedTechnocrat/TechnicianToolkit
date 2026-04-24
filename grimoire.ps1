@@ -268,6 +268,15 @@ $Tools = @(
         Color       = 'Yellow'
         Category    = 'Security'
     },
+    [PSCustomObject]@{
+        Key         = '24'
+        Name        = 'T.A.L.O.N.'
+        File        = 'talon.ps1'
+        Version     = '3.0'
+        Description = 'Persistence / autoruns audit  -  Run keys, startup folders, services, tasks, WMI, IFEO, Winlogon'
+        Color       = 'Red'
+        Category    = 'Security'
+    },
     # ── Network & Remote (30–39) ─────────────────────────────────────
     [PSCustomObject]@{
         Key         = '30'
