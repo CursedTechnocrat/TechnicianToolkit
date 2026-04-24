@@ -369,6 +369,15 @@ $Tools = @(
         Color       = 'Magenta'
         Category    = 'Cloud & Identity'
     },
+    [PSCustomObject]@{
+        Key         = '45'
+        Name        = 'G.R.O.V.E.'
+        File        = 'grove.ps1'
+        Version     = '3.0'
+        Description = 'SharePoint Online audit  -  site inventory, storage, external sharing, ownerless and stale sites'
+        Color       = 'Green'
+        Category    = 'Cloud & Identity'
+    },
     # ── Data & Migration (50–59) ─────────────────────────────────────
     [PSCustomObject]@{
         Key         = '50'

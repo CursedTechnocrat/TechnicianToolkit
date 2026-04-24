@@ -148,12 +148,14 @@ $script:BuiltInRecipes = @{
     }
     'TenantSweep' = @{
         Name        = 'Cloud Tenant Posture'
-        Description = 'Full tenant posture in one sign-in sequence: Azure, M365 licensing, Intune, Entra ID hygiene.'
+        Description = 'Full tenant posture in one sign-in sequence: Azure, M365 licensing, Intune, Entra ID hygiene, Teams, SharePoint.'
         Steps       = @(
             @{ Label = 'Azure assessment';          Tool = 'talisman.ps1';  Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'M365 license audit';        Tool = 'reliquary.ps1'; Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Intune / MDM compliance';   Tool = 'golem.ps1';     Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Entra ID identity hygiene'; Tool = 'wraith.ps1';    Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Microsoft Teams audit';     Tool = 'conclave.ps1';  Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'SharePoint Online audit';   Tool = 'grove.ps1';     Args = @('-Unattended'); StopOnError = $false }
         )
     }
 }
