@@ -231,6 +231,15 @@ $Tools = @(
         Color       = 'Yellow'
         Category    = 'Diagnostics & Reporting'
     },
+    [PSCustomObject]@{
+        Key         = '18'
+        Name        = 'P.Y.R.E.'
+        File        = 'pyre.ps1'
+        Version     = '3.0'
+        Description = 'Laptop battery health audit  -  design vs current capacity, cycle count, replacement verdict'
+        Color       = 'Red'
+        Category    = 'Diagnostics & Reporting'
+    },
     # ── Security (20–29) ─────────────────────────────────────────────
     [PSCustomObject]@{
         Key         = '20'

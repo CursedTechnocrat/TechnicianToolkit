@@ -19,7 +19,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | Running through Kaseya VSA LiveConnect | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
 | Need a guided, menu-driven workflow | **This repo** — full prompts and confirmations at every step |
 | Need fire-and-forget with parameter-only input | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
-| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL, ANVIL, TALON, TOTEM) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
+| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL, ANVIL, TALON, TOTEM, PYRE) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
 
 ---
 
@@ -69,6 +69,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | 15 | **cleanse.ps1** | **C.L.E.A.N.S.E.** — Cleans Leftover, Ephemeral And Neglected System Entries | Disk cleanup — user & system temp, Windows Update cache, browser caches, Recycle Bin |
 | 16 | **scryer.ps1** | **S.C.R.Y.E.R.** — System Consolidated Report Yielding Exhaustive Results | Unified diagnostic report — system info, users, disks, SMART, services in one HTML |
 | 17 | **anvil.ps1** | **A.N.V.I.L.** — Audits & Notates Vendor Inventory & Lifecycle | BIOS / UEFI / firmware audit — system identity, Secure Boot posture, vendor update channels, pending Windows Update firmware, HTML report |
+| 18 | **pyre.ps1** | **P.Y.R.E.** — Power-Yield Reliability Evaluator | Laptop battery health audit — design vs current capacity, cycle count, red/yellow/green replacement verdict, HTML report |
 
 ### Security
 
@@ -312,6 +313,18 @@ BIOS / UEFI / firmware audit that answers the technician's question "is this mac
 - Readiness verdict: red / yellow / green based on firmware type, Secure Boot state, BIOS age (≥ 2 years flagged), vendor tooling presence, and WU backlog
 - Dark-themed HTML report with OrgName prefix and six summary cards
 - Auto-elevates and telemeters WU failures via `Write-TKError`
+
+---
+
+### P.Y.R.E.
+
+Laptop battery health audit. Surfaces the three numbers that matter for a retirement decision (design capacity, current full-charge capacity, cycle count) and applies industry-consensus thresholds so a technician can answer "is this battery still worth it, or are we buying a replacement?"
+
+- **Data source**: `ROOT\WMI` battery classes — `BatteryStaticData` (design capacity), `BatteryFullChargedCapacity` (current full charge), `BatteryCycleCount` (cycles), `BatteryStatus` (instantaneous voltage, charge/discharge rate). Merges on `InstanceName` so multi-battery laptops emit one row per cell. Joins to `Win32_Battery` for the user-friendly name and chemistry.
+- **Thresholds**: capacity health ≥ 80% green / 60-80% yellow / < 60% red; cycle count < 300 green / 300-500 yellow / ≥ 500 red. Worst value across both dimensions drives the verdict.
+- **Verdict**: HEALTHY / REPLACEMENT SOON / REPLACE NOW / DATA INCOMPLETE / NO BATTERY (explicit desktop/VM case).
+- **Dark HTML report** with six summary cards (verdict, battery count, best/worst health, max cycles, thresholds reference) and a full per-battery detail table with Wh values and colour-coded badges.
+- Auto-elevates; read-only.
 
 ---
 
@@ -737,6 +750,9 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\scryer.ps1
 # A.N.V.I.L. — BIOS / UEFI / firmware audit
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\anvil.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/anvil.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
+# P.Y.R.E. — Laptop battery health audit
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\pyre.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/pyre.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
 # ── Security ─────────────────────────────────────────────────────────────────
 
 # C.I.P.H.E.R. — BitLocker encryption management
@@ -832,6 +848,7 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\cleanse.ps1       # Disk cleanup — temp files, update cache, browser caches, Recycle Bin
 .\scryer.ps1        # Unified diagnostic report — system, users, disks, SMART, services in one HTML
 .\anvil.ps1         # BIOS / UEFI / firmware audit and HTML report
+.\pyre.ps1          # Laptop battery health audit
 
 # Security
 .\cipher.ps1        # BitLocker drive encryption management
@@ -895,6 +912,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **cleanse.ps1** | None — categories selected interactively or all cleaned with `-Unattended`; `-WhatIf` for dry run |
 | **scryer.ps1** | `-OutputPath` — directory to write `SCRYER_Report_<timestamp>.html` (defaults to configured log directory) |
 | **anvil.ps1** | None — system identity, UEFI state, vendor channels, and Windows Update pending firmware are all auto-detected |
+| **pyre.ps1** | None — ROOT\WMI battery classes and Win32_Battery are queried unconditionally; thresholds (80/60 pct, 300/500 cycles) are editable constants in the script |
 | **cipher.ps1** | None — drive and action selected interactively at runtime |
 | **sigil.ps1** | None — categories selected interactively; screensaver timeout editable in script (default 600 s) |
 | **citadel.ps1** | None — user search and action selected interactively; stale threshold is 90 days (editable in script) |
@@ -937,6 +955,7 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **cleanse.ps1** | Console only — cleanup summary printed at completion; no log file |
 | **scryer.ps1** | `-OutputPath` (defaults to log directory) — `SCRYER_Report_<timestamp>.html` (unified diagnostic report) |
 | **anvil.ps1** | Log directory — `ANVIL_<timestamp>.html` (BIOS / UEFI / firmware audit report) |
+| **pyre.ps1** | Log directory — `PYRE_<timestamp>.html` (laptop battery health audit) |
 | **cipher.ps1** | Console only — no log file |
 | **sigil.ps1** | Log directory — `SIGIL_BaselineLog_<timestamp>.csv` |
 | **citadel.ps1** | Log directory — `CITADEL_Stale_<timestamp>.html`; `CITADEL_PwdExpiry_<timestamp>.html` |
