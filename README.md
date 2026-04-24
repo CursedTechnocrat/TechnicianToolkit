@@ -19,7 +19,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | Running through Kaseya VSA LiveConnect | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
 | Need a guided, menu-driven workflow | **This repo** — full prompts and confirmations at every step |
 | Need fire-and-forget with parameter-only input | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
-| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
+| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
 
 ---
 
@@ -55,6 +55,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | 4 | **forge.ps1** | **F.O.R.G.E.** — Finds Outdated Resources & Generates Equipment-updates | Driver detection & installation — problem devices, Windows Update drivers, local packages |
 | 5 | **restoration.ps1** | **R.E.S.T.O.R.A.T.I.O.N.** — Renews Every System Through Orderly Rite — Automating The Installation Of New updates | Automated Windows Update management and maintenance |
 | 6 | **hearth.ps1** | **H.E.A.R.T.H.** — Hub for Environment, Admin Runtime & Toolkit Hardening | Toolkit setup wizard — configure org name, log paths, and default values |
+| 7 | **ritual.ps1** | **R.I.T.U.A.L.** — Runs Integrated Tool Usage in Automation Loops | Workflow orchestrator — runs named recipes (Onboard, Retire, HealthCheck, TenantSweep) or custom PSD1 files, with rollup HTML report |
 
 ### Diagnostics & Reporting
 
@@ -199,6 +200,24 @@ Interactive setup wizard for the Technician Toolkit — configure all settings w
 - Configuration reset with `YES` confirmation guard
 - All settings persisted to `config.json` in the toolkit directory
 - `-Unattended` displays current config and runs environment checks silently
+
+---
+
+### R.I.T.U.A.L.
+
+Workflow orchestrator. Runs an ordered sequence of toolkit scripts as a single named recipe and rolls the results up into one HTML report with per-step status, duration, and clickable links to each child report.
+
+- **Built-in recipes** (pass via `-Recipe <Name>`):
+  - `Onboard` — new machine bring-up: COVENANT → SIGIL → CONJURE → CIPHER → AUSPEX → ARTIFACT
+  - `Retire` — pre-reimage workflow: TETHER → EXHUME → ARCHIVE → CLEANSE
+  - `HealthCheck` — quarterly machine review: AUSPEX → WARD → THRESHOLD → AUGUR → GARGOYLE → ARTIFACT
+  - `TenantSweep` — cloud posture in one sign-in: TALISMAN → RELIQUARY → GOLEM → WRAITH
+- **Custom recipes** via `-RecipeFile path\to\recipe.psd1` — a hashtable with `Name`, `Description`, and an ordered `Steps` array (each step specifies `Tool`, `Args`, `StopOnError`, `Label`)
+- Per-step log-directory snapshot — any new files produced during a step are attributed to that step and linked from the rollup report
+- Default behaviour: abort on first failure. Pass `-ContinueOnError` to run every step regardless, unless the step's own `StopOnError = $true` overrides
+- Interactive menu lists every built-in recipe with its step summary; `-Recipe` or `-RecipeFile` triggers a headless run and exits with `0` on full success, `1` on any failure
+- Rollup HTML saved as `RITUAL_<timestamp>.html` with summary cards (outcome, total / succeeded / failed / skipped / duration) and step-by-step results
+- Auto-elevates to Administrator (inherits the requirements of the tools it orchestrates)
 
 ---
 
@@ -639,6 +658,9 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\restoratio
 # H.E.A.R.T.H. — Toolkit setup wizard
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\hearth.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/hearth.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
+# R.I.T.U.A.L. — Workflow orchestrator (runs recipes of other tools)
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\ritual.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/ritual.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
 # ── Diagnostics & Reporting ──────────────────────────────────────────────────
 
 # A.U.S.P.E.X. — System diagnostics and HTML report
@@ -740,6 +762,7 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\forge.ps1         # Driver detection and installation
 .\restoration.ps1   # Windows Update management
 .\hearth.ps1        # Toolkit setup wizard
+.\ritual.ps1        # Workflow orchestrator — runs sequences of other tools
 
 # Diagnostics & Reporting
 .\auspex.ps1        # System diagnostics and HTML health report
@@ -801,6 +824,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **forge.ps1** | None — driver sources scanned from current folder automatically; `-WhatIf` previews Windows Update and local driver installs |
 | **restoration.ps1** | None — power settings are detected and restored automatically; `-WhatIf` lists available updates without installing |
 | **hearth.ps1** | None — all settings entered via the interactive wizard; `config.json` is the output (see config key table above) |
+| **ritual.ps1** | `-Recipe {Onboard\|Retire\|HealthCheck\|TenantSweep}` — named recipe to run; `-RecipeFile <path.psd1>` — custom recipe file; `-ContinueOnError` — tolerate per-step failures |
 | **auspex.ps1** | `$ReportOutputPath` — folder where the HTML report is saved (defaults to script directory; accepts any local or UNC path) |
 | **ward.ps1** | None — audit runs automatically; stale threshold is 90 days (editable in script) |
 | **threshold.ps1** | None — thresholds are Warning < 15% free, Critical < 5% free (editable in script); old profile threshold is 90 days |
@@ -839,6 +863,7 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **forge.ps1** | Script directory — `FORGE_DriverReport_<timestamp>.csv` |
 | **restoration.ps1** | `RESTORATION_<timestamp>.log` — PowerShell transcript of the full session. Default path is `%TEMP%`; with `-Transcript` it is written to the configured log directory instead. |
 | **hearth.ps1** | Console only — settings persisted to `config.json` |
+| **ritual.ps1** | Log directory — `RITUAL_<timestamp>.html` (rollup report with per-step status, duration, and links to each child report) |
 | **auspex.ps1** | Log directory — `AUSPEX_<timestamp>.html` (dark-themed HTML report) |
 | **ward.ps1** | Log directory — `WARD_<timestamp>.html` (dark-themed HTML report) |
 | **threshold.ps1** | Log directory — `THRESHOLD_<timestamp>.html` (dark-themed HTML report) |

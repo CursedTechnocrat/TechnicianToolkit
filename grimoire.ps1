@@ -149,6 +149,15 @@ $Tools = @(
         Color       = 'White'
         Category    = 'Deployment & Onboarding'
     },
+    [PSCustomObject]@{
+        Key         = '7'
+        Name        = 'R.I.T.U.A.L.'
+        File        = 'ritual.ps1'
+        Version     = '3.0'
+        Description = 'Workflow orchestrator  -  runs named recipes (Onboard, Retire, HealthCheck, TenantSweep) or custom PSD1 files'
+        Color       = 'Magenta'
+        Category    = 'Deployment & Onboarding'
+    },
     # ── Diagnostics & Reporting (10–19) ─────────────────────────────
     [PSCustomObject]@{
         Key         = '10'
