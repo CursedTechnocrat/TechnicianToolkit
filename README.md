@@ -69,7 +69,8 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | 15 | **cleanse.ps1** | **C.L.E.A.N.S.E.** — Cleans Leftover, Ephemeral And Neglected System Entries | Disk cleanup — user & system temp, Windows Update cache, browser caches, Recycle Bin |
 | 16 | **scryer.ps1** | **S.C.R.Y.E.R.** — System Consolidated Report Yielding Exhaustive Results | Unified diagnostic report — system info, users, disks, SMART, services in one HTML |
 | 17 | **anvil.ps1** | **A.N.V.I.L.** — Audits & Notates Vendor Inventory & Lifecycle | BIOS / UEFI / firmware audit — system identity, Secure Boot posture, vendor update channels, pending Windows Update firmware, HTML report |
-| 18 | **pyre.ps1** | **P.Y.R.E.** — Power-Yield Reliability Evaluator | Laptop battery health audit — design vs current capacity, cycle count, red/yellow/green replacement verdict, HTML report |
+| 18 | **pyre.ps1** | **P.Y.R.E.** — Power-Yield Reliability Evaluator | Laptop battery health audit — design vs current capacity, cycle count, red/yellow/green replacement verdict, `powercfg /batteryreport` enrichment, HTML report |
+| 19 | **codex.ps1** | **C.O.D.E.X.** — Compiles Output Documents into an EXhibit | Toolkit report index — scans the log directory for existing HTML reports, groups by tool, emits one rollup with relative links |
 
 ### Security
 
@@ -326,7 +327,20 @@ Laptop battery health audit. Surfaces the three numbers that matter for a retire
 - **Thresholds**: capacity health ≥ 80% green / 60-80% yellow / < 60% red; cycle count < 300 green / 300-500 yellow / ≥ 500 red. Worst value across both dimensions drives the verdict.
 - **Verdict**: HEALTHY / REPLACEMENT SOON / REPLACE NOW / DATA INCOMPLETE / NO BATTERY (explicit desktop/VM case).
 - **Dark HTML report** with six summary cards (verdict, battery count, best/worst health, max cycles, thresholds reference) and a full per-battery detail table with Wh values and colour-coded badges.
+- **`powercfg /batteryreport` enrichment**: also runs `powercfg /batteryreport /xml` and parses the result to surface data the live `ROOT\WMI` classes do not expose — per-battery serial number and manufacture date, full-charge capacity history (degradation trend over the lifetime of the machine), Windows runtime estimates at both current full charge and original design capacity (so the technician can quote the runtime lost to wear), and aggregated AC vs DC time totals across the runtime history. The full Microsoft-formatted HTML is saved alongside `PYRE_*.html` and linked from the new section.
 - Auto-elevates; read-only.
+
+---
+
+### C.O.D.E.X.
+
+Toolkit report index builder. Walks the configured log directory, finds every TechnicianToolkit-generated HTML report (filename ending in `_YYYYMMDD_HHMMSS.html`), groups them by tool prefix, and emits a single dark-themed HTML rollup with relative links to each child report.
+
+- **Data source**: filesystem only — `Get-ChildItem` over the configured log directory (or a `-LogDir` override), filtered to files matching `<TOOL>_YYYYMMDD_HHMMSS.html`. Files outside that pattern are skipped on purpose so browser-saved pages or hand-renamed copies don't pollute the index. CODEX excludes its own outputs from the scan.
+- **Grouping**: by tool prefix (first underscore-delimited segment) so PYRE, AUSPEX, AUGUR, etc. each get their own section. Variants like `PYRE_battery_report_*` and `CITADEL_StaleAccounts_*` are surfaced as a separate badge inside the parent tool's section.
+- **Filtering**: optional `-DaysBack <int>` limits the index to reports younger than N days.
+- **Dark HTML report** with six summary cards (total reports, distinct tools, last-7-days count, total disk size, newest, oldest) and one section per tool with a per-report table (timestamp, variant, file link, size). Links are relative to the log directory so the rollup stays clickable when the folder is zipped or moved to a ticket attachment.
+- Distinct from `R.I.T.U.A.L.` — RITUAL composes a fresh recipe run and produces a rollup of *what it just ran*; CODEX answers "what reports already exist on disk?" for ad-hoc work that didn't go through a recipe.
 
 ---
 
@@ -787,6 +801,9 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\anvil.ps1"
 # P.Y.R.E. — Laptop battery health audit
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\pyre.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/pyre.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
+# C.O.D.E.X. — Toolkit report index (rolls up existing HTML reports)
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\codex.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/codex.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
 # ── Security ─────────────────────────────────────────────────────────────────
 
 # C.I.P.H.E.R. — BitLocker encryption management
@@ -889,6 +906,7 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\scryer.ps1        # Unified diagnostic report — system, users, disks, SMART, services in one HTML
 .\anvil.ps1         # BIOS / UEFI / firmware audit and HTML report
 .\pyre.ps1          # Laptop battery health audit
+.\codex.ps1         # Toolkit report index — rolls up existing HTML reports into one bound exhibit
 
 # Security
 .\cipher.ps1        # BitLocker drive encryption management
@@ -955,6 +973,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **scryer.ps1** | `-OutputPath` — directory to write `SCRYER_Report_<timestamp>.html` (defaults to configured log directory) |
 | **anvil.ps1** | None — system identity, UEFI state, vendor channels, and Windows Update pending firmware are all auto-detected |
 | **pyre.ps1** | None — ROOT\WMI battery classes and Win32_Battery are queried unconditionally; thresholds (80/60 pct, 300/500 cycles) are editable constants in the script |
+| **codex.ps1** | `LogDirectory` (read) — defines which directory CODEX scans for existing HTML reports; CLI overrides via `-LogDir`. Optional `-DaysBack <int>` filter and pattern-strict file matching are constants in the script |
 | **cipher.ps1** | None — drive and action selected interactively at runtime |
 | **sigil.ps1** | None — categories selected interactively; screensaver timeout editable in script (default 600 s) |
 | **citadel.ps1** | None — user search and action selected interactively; stale threshold is 90 days (editable in script) |
@@ -999,7 +1018,8 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **cleanse.ps1** | Console only — cleanup summary printed at completion; no log file |
 | **scryer.ps1** | `-OutputPath` (defaults to log directory) — `SCRYER_Report_<timestamp>.html` (unified diagnostic report) |
 | **anvil.ps1** | Log directory — `ANVIL_<timestamp>.html` (BIOS / UEFI / firmware audit report) |
-| **pyre.ps1** | Log directory — `PYRE_<timestamp>.html` (laptop battery health audit) |
+| **pyre.ps1** | Log directory — `PYRE_<timestamp>.html` (laptop battery health audit), `PYRE_battery_report_<timestamp>.xml` (parsed `powercfg` data), `PYRE_battery_report_<timestamp>.html` (full Microsoft `powercfg /batteryreport` HTML) |
+| **codex.ps1** | Log directory — `CODEX_<timestamp>.html` (rollup index of every other report in the log directory; CODEX excludes its own outputs from the index) |
 | **cipher.ps1** | Console only — no log file |
 | **sigil.ps1** | Log directory — `SIGIL_BaselineLog_<timestamp>.csv` |
 | **citadel.ps1** | Log directory — `CITADEL_Stale_<timestamp>.html`; `CITADEL_PwdExpiry_<timestamp>.html` |

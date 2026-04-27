@@ -211,3 +211,14 @@ S.C.R.Y.E.R. (`scryer.ps1`) is a one-shot consolidated report that rolls five di
 | Deep dive on any one of: system health, users, free space, disk reliability, services | AUSPEX / WARD / THRESHOLD / AUGUR / GARGOYLE respectively |
 
 SCRYER's per-section depth is intentionally shallower than the dedicated tools — it samples each domain rather than reproducing the full report.
+
+### RITUAL vs CODEX
+
+Both tools produce a rollup HTML that links out to other tool reports — they answer different questions.
+
+| Question | Reach for |
+|----------|-----------|
+| "Run an ordered sequence of tools and give me one rollup of the run." | **RITUAL** (executes a recipe, captures status / duration / artifacts per step) |
+| "I've already run a bunch of tools ad-hoc — give me one index of what's on disk." | **CODEX** (filesystem scan only, no execution; relative links so the rollup stays clickable when zipped) |
+
+RITUAL produces a record *of an execution* — step status, durations, errors. CODEX produces a record *of a directory* — what reports exist, when, and how big they are. Use RITUAL when you control the run; use CODEX when the reports already exist.

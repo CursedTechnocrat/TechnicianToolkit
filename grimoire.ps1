@@ -61,6 +61,11 @@ Invoke-AdminElevation -ScriptFile $PSCommandPath
 $ScriptPath      = (Get-Location).Path
 $DownloadedFiles = [System.Collections.Generic.List[string]]::new()
 
+# Counts non-CODEX tool runs in the current Grimoire session. Drives the
+# "roll up reports" hint on the main category menu so the [X] shortcut
+# becomes visually prominent after the user has run multiple tools.
+$script:ToolRunCount = 0
+
 $ColorSchema = @{
     Header  = 'Cyan'
     Accent  = 'Magenta'
@@ -235,9 +240,18 @@ $Tools = @(
         Key         = '18'
         Name        = 'P.Y.R.E.'
         File        = 'pyre.ps1'
-        Version     = '3.0'
-        Description = 'Laptop battery health audit  -  design vs current capacity, cycle count, replacement verdict'
+        Version     = '3.1'
+        Description = 'Laptop battery health audit  -  design vs current capacity, cycle count, replacement verdict, powercfg /batteryreport enrichment'
         Color       = 'Red'
+        Category    = 'Diagnostics & Reporting'
+    },
+    [PSCustomObject]@{
+        Key         = '19'
+        Name        = 'C.O.D.E.X.'
+        File        = 'codex.ps1'
+        Version     = '1.0'
+        Description = 'Toolkit report index  -  scans log directory for existing HTML reports, groups by tool, emits a single rollup with relative links'
+        Color       = 'Blue'
         Category    = 'Diagnostics & Reporting'
     },
     # ── Security (20–29) ─────────────────────────────────────────────
@@ -462,6 +476,17 @@ function Show-Menu {
 
     Write-Host ""
     Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
+
+    # CODEX is registered in Diagnostics & Reporting (key 19) for completeness,
+    # but is also surfaced here as a top-level shortcut so the rollup is one
+    # keystroke away after a multi-tool session. The hint and colour shift
+    # once the session has produced something worth indexing (>= 2 runs).
+    if ($script:ToolRunCount -ge 2) {
+        Write-Host "  [X]  Roll up reports (C.O.D.E.X.)" -NoNewline -ForegroundColor $ColorSchema.Accent
+        Write-Host "  -  $($script:ToolRunCount) tool run(s) this session" -ForegroundColor $ColorSchema.Info
+    } else {
+        Write-Host "  [X]  Roll up reports (C.O.D.E.X.)" -ForegroundColor $ColorSchema.Menu
+    }
     Write-Host "  [Q]  Exit GRIMOIRE" -ForegroundColor $ColorSchema.Warning
     Write-Host ""
     Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
@@ -561,6 +586,11 @@ function Invoke-Tool {
         Write-Host "       $($_.Exception.Message)" -ForegroundColor $ColorSchema.Error
     }
 
+    # Track non-CODEX tool runs so the main-menu rollup hint can highlight
+    # once the session has produced multiple reports. CODEX itself doesn't
+    # contribute -- it's the indexer, not an indexable diagnostic.
+    if ($Tool.Name -ne 'C.O.D.E.X.') { $script:ToolRunCount++ }
+
     Write-Host ""
     Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
     Write-Host "  $($Tool.Name) has finished. Returning to GRIMOIRE..." -ForegroundColor $ColorSchema.Accent
@@ -592,11 +622,25 @@ do {
         break
     }
 
+    # Top-level shortcut: roll up every existing HTML report in the log
+    # directory via CODEX without drilling into the Diagnostics category.
+    if ($CatSelection -eq 'X') {
+        $codexTool = $Tools | Where-Object { $_.File -eq 'codex.ps1' } | Select-Object -First 1
+        if ($codexTool) {
+            Invoke-Tool -Tool $codexTool
+        } else {
+            Write-Host ""
+            Write-Host "  [!!] CODEX is not registered in this Grimoire build." -ForegroundColor $ColorSchema.Warning
+            Start-Sleep -Seconds 1
+        }
+        continue
+    }
+
     $SelectedCategory = $CategoryKeys[$CatSelection]
 
     if (-not $SelectedCategory) {
         Write-Host ""
-        Write-Host "  [!!] Invalid selection. Enter a category letter or Q to quit." -ForegroundColor $ColorSchema.Warning
+        Write-Host "  [!!] Invalid selection. Enter a category letter, [X] to roll up reports, or [Q] to quit." -ForegroundColor $ColorSchema.Warning
         Start-Sleep -Seconds 1
         continue
     }
