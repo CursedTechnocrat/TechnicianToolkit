@@ -14,12 +14,20 @@
     cycles), and emits a dark-themed HTML report with a red / yellow /
     green replacement recommendation.
 
+    Also runs `powercfg /batteryreport` to capture data the live WMI
+    classes do not expose: per-battery serial number and manufacture
+    date, the full-charge capacity history (degradation trend), and
+    Windows' own runtime estimates for active use and connected standby
+    at both current full charge and original design capacity. The full
+    Microsoft-formatted HTML report is saved alongside PYRE's report and
+    linked from it.
+
 .USAGE
     PS C:\> .\pyre.ps1                    # Interactive run
     PS C:\> .\pyre.ps1 -Unattended        # Silent: export HTML and exit
 
 .NOTES
-    Version : 3.0
+    Version : 3.1
 
 #>
 
@@ -81,7 +89,7 @@ function Show-PyreBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
     Write-Host "  P.Y.R.E. — Power-Yield Reliability Evaluator" -ForegroundColor Cyan
-    Write-Host "  Laptop Battery Health Audit Tool  v3.0" -ForegroundColor Cyan
+    Write-Host "  Laptop Battery Health Audit Tool  v3.1" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -207,6 +215,176 @@ function Convert-BatteryStatus {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# POWERCFG /BATTERYREPORT ENRICHMENT
+# ─────────────────────────────────────────────────────────────────────────────
+
+# powercfg expresses durations as ISO-8601 (PT4H22M3S). Parse to a minute
+# count so totals can sum and format consistently. Returns 0 for null/empty
+# input so callers don't have to null-check before adding to a running total.
+function Convert-IsoDurationToMinutes {
+    param([string]$Iso)
+    if ([string]::IsNullOrWhiteSpace($Iso)) { return 0 }
+    try {
+        $ts = [System.Xml.XmlConvert]::ToTimeSpan($Iso)
+        return [int]$ts.TotalMinutes
+    } catch {
+        return 0
+    }
+}
+
+# Friendly time formatter for minute counts. Days appear once over 24h so a
+# week of standby shows as "7d 2h 15m" instead of "170h 15m".
+function Format-Minutes {
+    param([int]$Minutes)
+    if ($Minutes -le 0) { return '0 min' }
+    $d = [int][math]::Floor($Minutes / 1440)
+    $h = [int][math]::Floor(($Minutes - $d * 1440) / 60)
+    $m = $Minutes - $d * 1440 - $h * 60
+    if ($d -gt 0) { return ('{0}d {1}h {2}m' -f $d, $h, $m) }
+    if ($h -gt 0) { return ('{0}h {1}m' -f $h, $m) }
+    return ('{0}m' -f $m)
+}
+
+# Runs powercfg /batteryreport twice -- once as XML for parsing, once as HTML
+# so the operator can drill into the full Microsoft-formatted report. The XML
+# carries data the ROOT\WMI classes do not expose: per-battery serial numbers,
+# manufacture dates, full-charge capacity history (degradation over time),
+# and runtime estimates at both current full charge and original design.
+function Invoke-PowerCfgBatteryReport {
+    param(
+        [Parameter(Mandatory)] [string]$LogDir,
+        [Parameter(Mandatory)] [string]$Timestamp
+    )
+
+    $xmlPath  = Join-Path $LogDir "PYRE_battery_report_${Timestamp}.xml"
+    $htmlPath = Join-Path $LogDir "PYRE_battery_report_${Timestamp}.html"
+
+    $result = [PSCustomObject]@{
+        XmlPath         = $xmlPath
+        HtmlPath        = $htmlPath
+        HtmlAvailable   = $false
+        Available       = $false
+        Error           = $null
+        Batteries       = @()
+        Estimates       = $null
+        CapacityHistory = @()
+        UsageSummary    = $null
+    }
+
+    try {
+        $null = & powercfg.exe /batteryreport /xml /output $xmlPath 2>&1
+        if ($LASTEXITCODE -ne 0 -or -not (Test-Path $xmlPath)) {
+            $result.Error = "powercfg /batteryreport /xml exit code $LASTEXITCODE"
+            return $result
+        }
+    } catch {
+        $result.Error = "powercfg invocation failed: $($_.Exception.Message)"
+        return $result
+    }
+
+    # The HTML output is a nice-to-have for technicians who want the full
+    # Microsoft report. Don't fail the function if it errors -- the XML
+    # already gave us everything we need to enrich our own report.
+    try {
+        $null = & powercfg.exe /batteryreport /output $htmlPath 2>&1
+        if ($LASTEXITCODE -eq 0 -and (Test-Path $htmlPath)) {
+            $result.HtmlAvailable = $true
+        }
+    } catch { }
+
+    try {
+        $xml = [xml](Get-Content $xmlPath -Raw -ErrorAction Stop)
+    } catch {
+        $result.Error = "could not read powercfg XML: $($_.Exception.Message)"
+        return $result
+    }
+
+    $report = $xml.BatteryReport
+    if (-not $report) {
+        $result.Error = 'powercfg XML had no BatteryReport root element.'
+        return $result
+    }
+
+    # Per-battery static info -- Win32_Battery doesn't expose serial number
+    # or manufacture date, so operators currently have to crack the case to
+    # read the label. The XML report has both.
+    $batteries = @()
+    if ($report.Batteries -and $report.Batteries.Battery) {
+        foreach ($b in @($report.Batteries.Battery)) {
+            $batteries += [PSCustomObject]@{
+                Id                 = [string]$b.Id
+                Manufacturer       = [string]$b.Manufacturer
+                SerialNumber       = [string]$b.SerialNumber
+                ManufactureDate    = [string]$b.ManufactureDate
+                Chemistry          = [string]$b.Chemistry
+                DesignCapacity     = if ($b.DesignCapacity)     { [int64]$b.DesignCapacity }     else { $null }
+                FullChargeCapacity = if ($b.FullChargeCapacity) { [int64]$b.FullChargeCapacity } else { $null }
+            }
+        }
+    }
+    $result.Batteries = @($batteries)
+
+    # Runtime estimates -- powercfg's predicted Active and ConnectedStandby
+    # runtime, calculated against both current full charge and the original
+    # design capacity. The gap between the two is the runtime the user has
+    # already lost to wear, expressed in minutes a technician can quote.
+    $rt = $report.RuntimeEstimates
+    if ($rt) {
+        $atFull   = $rt.FullChargeCapacity
+        $atDesign = $rt.DesignCapacity
+        $result.Estimates = [PSCustomObject]@{
+            ActiveAtFull    = if ($atFull   -and $atFull.ActiveRuntime)      { Convert-IsoDurationToMinutes $atFull.ActiveRuntime }      else { $null }
+            StandbyAtFull   = if ($atFull   -and $atFull.ConnectedStandby)   { Convert-IsoDurationToMinutes $atFull.ConnectedStandby }   else { $null }
+            ActiveAtDesign  = if ($atDesign -and $atDesign.ActiveRuntime)    { Convert-IsoDurationToMinutes $atDesign.ActiveRuntime }    else { $null }
+            StandbyAtDesign = if ($atDesign -and $atDesign.ConnectedStandby) { Convert-IsoDurationToMinutes $atDesign.ConnectedStandby } else { $null }
+        }
+    }
+
+    # Battery capacity history -- one entry per measurement period showing
+    # how full-charge capacity has drifted relative to design. Useful to see
+    # whether degradation is accelerating before deciding to replace.
+    $history = @()
+    if ($report.HistoryEntries -and $report.HistoryEntries.HistoryEntry) {
+        foreach ($h in @($report.HistoryEntries.HistoryEntry)) {
+            $history += [PSCustomObject]@{
+                StartDate          = [string]$h.StartDate
+                EndDate            = [string]$h.EndDate
+                DesignCapacity     = if ($h.DesignCapacity)     { [int64]$h.DesignCapacity }     else { $null }
+                FullChargeCapacity = if ($h.FullChargeCapacity) { [int64]$h.FullChargeCapacity } else { $null }
+                CycleCount         = if ($h.CycleCount)         { [int]$h.CycleCount }            else { $null }
+            }
+        }
+    }
+    # Most recent entries first; cap at 12 so the table stays readable on a
+    # machine that's been reporting daily for years.
+    $result.CapacityHistory = @($history | Sort-Object EndDate -Descending | Select-Object -First 12)
+
+    # Aggregate active/standby/AC/DC time across the runtime history so a
+    # technician can answer "is this laptop actually run on battery much?"
+    # at a glance, without having to load the full powercfg HTML.
+    if ($report.RuntimeHistory -and $report.RuntimeHistory.RuntimeEntry) {
+        $entries = @($report.RuntimeHistory.RuntimeEntry)
+        $totActDc = 0; $totActAc = 0; $totCsDc = 0; $totCsAc = 0
+        foreach ($e in $entries) {
+            $totActDc += (Convert-IsoDurationToMinutes $e.ActiveDcTime)
+            $totActAc += (Convert-IsoDurationToMinutes $e.ActiveAcTime)
+            $totCsDc  += (Convert-IsoDurationToMinutes $e.CsDcTime)
+            $totCsAc  += (Convert-IsoDurationToMinutes $e.CsAcTime)
+        }
+        $result.UsageSummary = [PSCustomObject]@{
+            EntryCount   = $entries.Count
+            ActiveDcMin  = $totActDc
+            ActiveAcMin  = $totActAc
+            StandbyDcMin = $totCsDc
+            StandbyAcMin = $totCsAc
+        }
+    }
+
+    $result.Available = $true
+    return $result
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # VERDICT
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -295,7 +473,7 @@ function Get-Verdict {
 # ─────────────────────────────────────────────────────────────────────────────
 
 function Build-HtmlReport {
-    param([array]$Batteries, $Verdict)
+    param([array]$Batteries, $Verdict, $PowerCfg)
 
     $reportDate = Get-Date -Format 'MMMM d, yyyy HH:mm'
     $machine    = $env:COMPUTERNAME
@@ -348,13 +526,118 @@ function Build-HtmlReport {
             'Verdict'   = $Verdict.Verdict
             'Batteries' = $Batteries.Count
         }) `
-        -NavItems   @('Verdict', 'Batteries')
+        -NavItems   @('Verdict', 'Batteries', 'powercfg Report')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'P.Y.R.E. v3.0'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'P.Y.R.E. v3.1'
 
     $bestCard  = if ($null -ne $bestHealth)  { "$bestHealth%"  } else { 'n/a' }
     $worstCard = if ($null -ne $worstHealth) { "$worstHealth%" } else { 'n/a' }
     $cycCard   = if ($null -ne $maxCycles)   { "$maxCycles" } else { 'n/a' }
+
+    # ── powercfg /batteryreport enrichment section ──
+    $pcSection = [System.Text.StringBuilder]::new()
+    [void]$pcSection.Append("`n  <div class=""tk-section"">`n")
+    [void]$pcSection.Append("    <div class=""tk-card-header""><span class=""tk-section-title"">powercfg Battery Report</span><span class=""tk-section-num"">historical data</span></div>`n")
+
+    if (-not $PowerCfg -or -not $PowerCfg.Available) {
+        $msg = if ($PowerCfg -and $PowerCfg.Error) { $PowerCfg.Error } else { 'powercfg /batteryreport did not produce a parseable XML report.' }
+        [void]$pcSection.Append("    <div class=""tk-card""><div class=""tk-info-box"">")
+        [void]$pcSection.Append("<span class=""tk-info-label"">powercfg unavailable</span> $(EscHtml $msg)")
+        [void]$pcSection.Append("</div></div>`n")
+    } else {
+        # Per-battery serial / manufacture-date table.
+        if ($PowerCfg.Batteries.Count -gt 0) {
+            $bRows = [System.Text.StringBuilder]::new()
+            foreach ($pb in $PowerCfg.Batteries) {
+                $design = if ($pb.DesignCapacity)     { "$([math]::Round($pb.DesignCapacity / 1000, 1)) Wh" } else { 'n/a' }
+                $full   = if ($pb.FullChargeCapacity) { "$([math]::Round($pb.FullChargeCapacity / 1000, 1)) Wh" } else { 'n/a' }
+                $mfg    = if ([string]::IsNullOrWhiteSpace($pb.ManufactureDate)) { 'n/a' } else { EscHtml $pb.ManufactureDate }
+                $serial = if ([string]::IsNullOrWhiteSpace($pb.SerialNumber))    { 'n/a' } else { EscHtml $pb.SerialNumber }
+                [void]$bRows.Append("<tr><td>$(EscHtml $pb.Id)</td><td>$(EscHtml $pb.Manufacturer)</td><td class=""tk-mono"">$serial</td><td>$mfg</td><td>$(EscHtml $pb.Chemistry)</td><td>$design</td><td>$full</td></tr>`n")
+            }
+            [void]$pcSection.Append("    <div class=""tk-card"">`n")
+            [void]$pcSection.Append("      <div class=""tk-card-label"">Battery identification</div>`n")
+            [void]$pcSection.Append("      <table class=""tk-table"">`n")
+            [void]$pcSection.Append("        <thead><tr><th>Battery ID</th><th>Manufacturer</th><th>Serial</th><th>Manufactured</th><th>Chemistry</th><th>Design</th><th>Full Charge</th></tr></thead>`n")
+            [void]$pcSection.Append("        <tbody>$($bRows.ToString())</tbody>`n")
+            [void]$pcSection.Append("      </table>`n")
+            [void]$pcSection.Append("    </div>`n")
+        }
+
+        # Runtime estimates -- the headline number for "how much battery have you lost?"
+        if ($PowerCfg.Estimates) {
+            $e = $PowerCfg.Estimates
+            $activeFull   = if ($null -ne $e.ActiveAtFull)    { Format-Minutes $e.ActiveAtFull }    else { 'n/a' }
+            $activeDes    = if ($null -ne $e.ActiveAtDesign)  { Format-Minutes $e.ActiveAtDesign }  else { 'n/a' }
+            $standbyFull  = if ($null -ne $e.StandbyAtFull)   { Format-Minutes $e.StandbyAtFull }   else { 'n/a' }
+            $standbyDes   = if ($null -ne $e.StandbyAtDesign) { Format-Minutes $e.StandbyAtDesign } else { 'n/a' }
+            $lostActive   = if ($null -ne $e.ActiveAtFull -and $null -ne $e.ActiveAtDesign) { Format-Minutes ([math]::Max(0, $e.ActiveAtDesign - $e.ActiveAtFull)) } else { 'n/a' }
+
+            [void]$pcSection.Append("    <div class=""tk-card"">`n")
+            [void]$pcSection.Append("      <div class=""tk-card-label"">Runtime estimates (Windows-modeled)</div>`n")
+            [void]$pcSection.Append("      <table class=""tk-table"">`n")
+            [void]$pcSection.Append("        <thead><tr><th>Scenario</th><th>At full charge</th><th>At design capacity</th></tr></thead>`n")
+            [void]$pcSection.Append("        <tbody>`n")
+            [void]$pcSection.Append("          <tr><td>Active use</td><td>$activeFull</td><td>$activeDes</td></tr>`n")
+            [void]$pcSection.Append("          <tr><td>Connected standby</td><td>$standbyFull</td><td>$standbyDes</td></tr>`n")
+            [void]$pcSection.Append("        </tbody>`n")
+            [void]$pcSection.Append("      </table>`n")
+            [void]$pcSection.Append("      <div class=""tk-info-box"" style=""margin-top:14px;""><span class=""tk-info-label"">Active runtime lost to wear</span>$lostActive (full charge vs design)</div>`n")
+            [void]$pcSection.Append("    </div>`n")
+        }
+
+        # Capacity history -- the degradation trend.
+        if ($PowerCfg.CapacityHistory.Count -gt 0) {
+            $hRows = [System.Text.StringBuilder]::new()
+            foreach ($h in $PowerCfg.CapacityHistory) {
+                $period = "$(EscHtml $h.StartDate) &rarr; $(EscHtml $h.EndDate)"
+                $design = if ($h.DesignCapacity)     { "$([math]::Round($h.DesignCapacity / 1000, 1)) Wh" } else { 'n/a' }
+                $full   = if ($h.FullChargeCapacity) { "$([math]::Round($h.FullChargeCapacity / 1000, 1)) Wh" } else { 'n/a' }
+                $pct    = if ($h.DesignCapacity -and $h.FullChargeCapacity -and $h.DesignCapacity -gt 0) {
+                    $p = [math]::Round(($h.FullChargeCapacity / $h.DesignCapacity) * 100, 1)
+                    $cls = if ($p -ge $script:CapOkPct) { 'ok' } elseif ($p -ge $script:CapWarnPct) { 'warn' } else { 'err' }
+                    "<span class=""tk-badge-$cls"">$p%</span>"
+                } else { "<span class=""tk-badge-info"">n/a</span>" }
+                $cyc    = if ($null -ne $h.CycleCount) { [string]$h.CycleCount } else { 'n/a' }
+                [void]$hRows.Append("<tr><td>$period</td><td>$design</td><td>$full</td><td>$pct</td><td>$cyc</td></tr>`n")
+            }
+            [void]$pcSection.Append("    <div class=""tk-card"">`n")
+            [void]$pcSection.Append("      <div class=""tk-card-label"">Full-charge capacity history (most recent $($PowerCfg.CapacityHistory.Count) entries)</div>`n")
+            [void]$pcSection.Append("      <table class=""tk-table"">`n")
+            [void]$pcSection.Append("        <thead><tr><th>Period</th><th>Design</th><th>Full Charge</th><th>Health %</th><th>Cycles</th></tr></thead>`n")
+            [void]$pcSection.Append("        <tbody>$($hRows.ToString())</tbody>`n")
+            [void]$pcSection.Append("      </table>`n")
+            [void]$pcSection.Append("    </div>`n")
+        }
+
+        # AC vs DC time totals -- "is this thing actually run on battery?"
+        if ($PowerCfg.UsageSummary) {
+            $u = $PowerCfg.UsageSummary
+            $totalDc = $u.ActiveDcMin + $u.StandbyDcMin
+            $totalAc = $u.ActiveAcMin + $u.StandbyAcMin
+            $totalAll = $totalDc + $totalAc
+            $dcPct = if ($totalAll -gt 0) { [math]::Round(($totalDc / $totalAll) * 100, 1) } else { 0 }
+            [void]$pcSection.Append("    <div class=""tk-card"">`n")
+            [void]$pcSection.Append("      <div class=""tk-card-label"">Recent usage ($($u.EntryCount) periods recorded)</div>`n")
+            [void]$pcSection.Append("      <table class=""tk-table"">`n")
+            [void]$pcSection.Append("        <thead><tr><th>Mode</th><th>On battery (DC)</th><th>Plugged in (AC)</th></tr></thead>`n")
+            [void]$pcSection.Append("        <tbody>`n")
+            [void]$pcSection.Append("          <tr><td>Active</td><td>$(Format-Minutes $u.ActiveDcMin)</td><td>$(Format-Minutes $u.ActiveAcMin)</td></tr>`n")
+            [void]$pcSection.Append("          <tr><td>Connected standby</td><td>$(Format-Minutes $u.StandbyDcMin)</td><td>$(Format-Minutes $u.StandbyAcMin)</td></tr>`n")
+            [void]$pcSection.Append("        </tbody>`n")
+            [void]$pcSection.Append("      </table>`n")
+            [void]$pcSection.Append("      <div class=""tk-info-box"" style=""margin-top:14px;""><span class=""tk-info-label"">Time on battery</span>$dcPct% of recorded runtime</div>`n")
+            [void]$pcSection.Append("    </div>`n")
+        }
+
+        # Link out to the full Microsoft-formatted HTML report.
+        if ($PowerCfg.HtmlAvailable) {
+            $href = EscHtml ([System.IO.Path]::GetFileName($PowerCfg.HtmlPath))
+            [void]$pcSection.Append("    <div class=""tk-card""><div class=""tk-info-box""><span class=""tk-info-label"">Full Microsoft report</span><a class=""tk-mono"" href=""$href"">$href</a> (saved alongside this report)</div></div>`n")
+        }
+    }
+    [void]$pcSection.Append("  </div>`n")
+    $powerCfgBlock = $pcSection.ToString()
 
     $html = $htmlHead + @"
 
@@ -386,7 +669,7 @@ function Build-HtmlReport {
       </div>
     </div>
   </div>
-
+$powerCfgBlock
 "@ + $htmlFoot
 
     return $html
@@ -437,10 +720,34 @@ if ($verdict.Issues.Count -eq 0 -and $verdict.Warns.Count -eq 0) {
 }
 Write-Host ""
 
-Write-Step "Generating HTML report..."
-$html      = Build-HtmlReport -Batteries $batteries -Verdict $verdict
 $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-$outPath   = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "PYRE_${timestamp}.html"
+$logDir    = Resolve-LogDirectory -FallbackPath $ScriptPath
+
+Write-Section "POWERCFG BATTERY REPORT"
+if ($batteries.Count -eq 0) {
+    Write-Info "  Skipping powercfg /batteryreport (no battery hardware)."
+    $powerCfg = $null
+} else {
+    Write-Step "Running powercfg /batteryreport (XML + HTML)..."
+    $powerCfg = Invoke-PowerCfgBatteryReport -LogDir $logDir -Timestamp $timestamp
+    if ($powerCfg.Available) {
+        Write-Ok "powercfg XML parsed: $($powerCfg.XmlPath)"
+        if ($powerCfg.HtmlAvailable) { Write-Ok "powercfg HTML saved: $($powerCfg.HtmlPath)" }
+        if ($powerCfg.Estimates) {
+            $e = $powerCfg.Estimates
+            if ($null -ne $e.ActiveAtFull)   { Write-Host ("    Active runtime (full charge)  : {0}" -f (Format-Minutes $e.ActiveAtFull))   -ForegroundColor $C.Info }
+            if ($null -ne $e.ActiveAtDesign) { Write-Host ("    Active runtime (design)       : {0}" -f (Format-Minutes $e.ActiveAtDesign)) -ForegroundColor $C.Info }
+        }
+        Write-Host ("    Capacity history entries      : {0}" -f $powerCfg.CapacityHistory.Count) -ForegroundColor $C.Info
+    } else {
+        Write-Warn "  powercfg /batteryreport unavailable: $($powerCfg.Error)"
+    }
+}
+Write-Host ""
+
+Write-Step "Generating HTML report..."
+$html    = Build-HtmlReport -Batteries $batteries -Verdict $verdict -PowerCfg $powerCfg
+$outPath = Join-Path $logDir "PYRE_${timestamp}.html"
 
 try {
     [System.IO.File]::WriteAllText($outPath, $html, [System.Text.Encoding]::UTF8)

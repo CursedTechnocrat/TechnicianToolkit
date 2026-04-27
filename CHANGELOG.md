@@ -8,6 +8,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **`P.Y.R.E.` enriched with `powercfg /batteryreport` data (v3.1).** PYRE now runs `powercfg /batteryreport /xml` and parses the XML to surface data the live `ROOT\WMI` classes do not expose: per-battery serial number and manufacture date, the full-charge capacity history (degradation trend over the machine's lifetime), Windows' own runtime estimates for active use and connected standby at both current full charge and original design capacity (so the technician can quote the runtime the user has lost to wear), and aggregated AC-vs-DC time totals across the runtime history. A second `powercfg /batteryreport` run produces the full Microsoft-formatted HTML, saved alongside `PYRE_*.html` and linked from the new `powercfg Battery Report` section. Falls back gracefully with an in-report explanation when powercfg is unavailable (no battery / locked-down policy / older Windows).
 - **`Format-Bytes` helper** in `TechnicianToolkit.psm1`. Unifies the byte-to-human-readable formatter that was previously duplicated in `cleanse.ps1` and `threshold.ps1`. Supports B/KB/MB/GB/TB with two-decimal precision.
 - **Pester coverage for HTML report helpers.** New `Describe 'HTML report helpers'` block exercises `Get-TKHtmlHead` / `Get-TKHtmlFoot` — document structure, CSS embedding, meta-bar / nav-bar rendering, HTML-escape of special characters in the title, and round-trip tag balance.
 - **Pester coverage for `Format-Bytes`** — B, KB, MB, GB, TB, and zero-byte cases.
