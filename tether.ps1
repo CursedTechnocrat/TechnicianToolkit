@@ -207,7 +207,7 @@ function Get-FolderVolume {
     $results = foreach ($f in $KfmStatus) {
         $count = 0
         $bytes = 0
-        $error = $null
+        $errMsg = $null
 
         if ($f.Path -and (Test-Path -LiteralPath $f.Path)) {
             try {
@@ -216,10 +216,10 @@ function Get-FolderVolume {
                 $bytes = ($items | Measure-Object -Property Length -Sum).Sum
                 if (-not $bytes) { $bytes = 0 }
             } catch {
-                $error = $_.Exception.Message
+                $errMsg = $_.Exception.Message
             }
         } else {
-            $error = 'Path does not exist'
+            $errMsg = 'Path does not exist'
         }
 
         [PSCustomObject]@{
@@ -228,7 +228,7 @@ function Get-FolderVolume {
             FileCount = $count
             Bytes     = $bytes
             Size      = Format-Bytes $bytes
-            Error     = $error
+            Error     = $errMsg
         }
     }
 
