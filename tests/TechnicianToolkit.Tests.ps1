@@ -93,8 +93,8 @@ Describe 'HTML report helpers' {
         It 'renders a nav bar when NavItems are supplied' {
             $html = Get-TKHtmlHead -Title 'X' -ScriptName 'X' -NavItems @('Alpha','Beta')
             $html | Should -Match 'class=''tk-nav'''
-            $html | Should -Match '>Alpha<'
-            $html | Should -Match '>Beta<'
+            $html | Should -Match 'Alpha</a>'
+            $html | Should -Match 'Beta</a>'
         }
     }
 
