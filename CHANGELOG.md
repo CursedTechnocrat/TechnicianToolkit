@@ -67,6 +67,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **`revenant.ps1` source-path parameters validated** — `-SourcePath` and `-ArchiveZip` now carry `[ValidateScript]` attributes that reject non-existent paths at parameter-bind time rather than failing deeper in the script.
 - **`grimoire.ps1` self-delete guarded against git checkouts.** The cleanup that removes `$PSCommandPath` after a one-shot hub session now skips when a `.git` directory is present next to the script, so running GRIMOIRE from a cloned working tree no longer silently deletes the file.
 
+### Removed
+- **Eight v3.0 deprecation stubs deleted** (`aegis.ps1`, `bastion.ps1`, `oracle.ps1`, `phantom.ps1`, `relic.ps1`, `sentinel.ps1`, `specter.ps1`, `vault.ps1`). Each was a thin forwarder to its renamed replacement (`talisman`, `citadel`, `auspex`, `revenant`, `artifact`, `gargoyle`, `shade`, `reliquary`) that emitted a `Write-Warning` so pinned runbooks would surface the rename. They have lived through two release cycles and are now retired as previously announced. Any caller still pinned to the legacy filename will now fail to launch with a "command not found" — the deliberate trade-off for removing the dead-weight files. Replace pinned references with the renamed scripts. The Pester `Deprecation stub forwarding` block is replaced by a `Deprecation stubs removed` block that asserts the legacy filenames stay deleted, and the `Legacy tool names must not reappear` test no longer needs to whitelist them.
+
 ---
 
 ## [3.0.0] - 2026-04-21

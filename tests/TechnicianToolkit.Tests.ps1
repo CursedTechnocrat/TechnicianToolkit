@@ -340,9 +340,10 @@ Describe 'GRIMOIRE registry integrity' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Legacy-name regression — the v3.0 rename retired eight tool acronyms.
-# New source or documentation must never reintroduce them. Deprecation stubs
-# and CHANGELOG (which documents the rename) are exempt.
+# Legacy-name regression — the v3.0 rename retired eight tool acronyms; the
+# v3.1 cleanup deleted their forwarding stubs. New source or documentation
+# must never reintroduce the retired names. CHANGELOG (which documents the
+# rename) is exempt.
 # ─────────────────────────────────────────────────────────────────────────────
 Describe 'Legacy tool names must not reappear' {
     # Pester 5 scoping: the pattern list must be defined in BeforeAll so it
@@ -356,11 +357,6 @@ Describe 'Legacy tool names must not reappear' {
         )
     }
 
-    # Discovery time: enumerate files as -ForEach test cases
-    $legacyStubs = @(
-        'oracle.ps1','sentinel.ps1','bastion.ps1','vault.ps1',
-        'phantom.ps1','specter.ps1','aegis.ps1','relic.ps1'
-    )
     # Files that are *about* the rename legitimately mention the retired names.
     $allowlist = @('CHANGELOG.md', 'TechnicianToolkit.Tests.ps1')
 
@@ -368,7 +364,6 @@ Describe 'Legacy tool names must not reappear' {
     $files = Get-ChildItem -Path $root -Recurse -File -Include '*.ps1','*.md' |
         Where-Object {
             $_.FullName -notmatch [regex]::Escape([IO.Path]::DirectorySeparatorChar + '.git' + [IO.Path]::DirectorySeparatorChar) -and
-            $_.Name -notin $legacyStubs -and
             $_.Name -notin $allowlist
         } |
         ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
@@ -421,39 +416,20 @@ Describe '-WhatIf declared on destructive tools' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Deprecation stub integrity — each legacy-name stub must forward every
-# argument to its renamed replacement and show a one-line deprecation warning.
+# Deprecation stubs removed — the eight v3.0 forwarding stubs were retired in
+# v3.1. Their filenames must not reappear in the working tree (any reintroduction
+# would resurrect a name we have explicitly deleted).
 # ─────────────────────────────────────────────────────────────────────────────
-Describe 'Deprecation stub forwarding' {
-    # Stub -> expected forwarding target (set at v3.0 rename).
-    $stubCases = @(
-        @{ Stub = 'oracle.ps1';   Target = 'auspex.ps1'    }
-        @{ Stub = 'sentinel.ps1'; Target = 'gargoyle.ps1'  }
-        @{ Stub = 'bastion.ps1';  Target = 'citadel.ps1'   }
-        @{ Stub = 'vault.ps1';    Target = 'reliquary.ps1' }
-        @{ Stub = 'phantom.ps1';  Target = 'revenant.ps1'  }
-        @{ Stub = 'specter.ps1';  Target = 'shade.ps1'     }
-        @{ Stub = 'aegis.ps1';    Target = 'talisman.ps1'  }
-        @{ Stub = 'relic.ps1';    Target = 'artifact.ps1'  }
+Describe 'Deprecation stubs removed' {
+    $retiredStubs = @(
+        'oracle.ps1','sentinel.ps1','bastion.ps1','vault.ps1',
+        'phantom.ps1','specter.ps1','aegis.ps1','relic.ps1'
     ) | ForEach-Object {
-        $_ + @{ StubPath = (Join-Path $PSScriptRoot "..\$($_.Stub)") }
+        @{ Name = $_; FullPath = (Join-Path $PSScriptRoot "..\$_") }
     }
 
-    It '<Stub> forwards to <Target>' -ForEach $stubCases {
-        $content = Get-Content $StubPath -Raw
-        # Forwarding site: `& $target @fwd` where $target = Join-Path ... '<target>.ps1'
-        $content | Should -Match ([regex]::Escape("Join-Path `$PSScriptRoot '$Target'"))
-        $content | Should -Match '&\s+\$target\s+@fwd'
-    }
-
-    It '<Stub> emits a deprecation warning' -ForEach $stubCases {
-        $content = Get-Content $StubPath -Raw
-        $content | Should -Match 'Write-Warning\s+"[^"]*deprecated'
-    }
-
-    It '<Stub> captures remaining args via ValueFromRemainingArguments' -ForEach $stubCases {
-        $content = Get-Content $StubPath -Raw
-        $content | Should -Match 'ValueFromRemainingArguments'
+    It '<Name> no longer exists' -ForEach $retiredStubs {
+        $FullPath | Should -Not -Exist
     }
 }
 
