@@ -8,6 +8,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Pester `Tier-mapper data tables` Describe block** asserting the verdict-driving reference tables in PALADIN, BEACON, and PORTAL stay correctly populated. The block walks each script via the PowerShell AST, locates the named hashtable assignment / function definition, and re-evaluates just that node in the test scope (avoids dot-sourcing the tools whole, which would launch their main flow). Coverage:
+  - **PALADIN** -- `$AsrRuleNames` covers >= 16 well-known ASR GUIDs, the abused-driver and LSASS-credential-theft GUIDs map to recognisable names, and every key is lowercase (so `Get-MpPreference`'s lowercase output looks them up cleanly).
+  - **PALADIN** -- `Get-AsrActionLabel` returns the expected label for action codes 0 / 1 / 2 / 6 and falls back to `Unknown (<n>)` for unmapped codes.
+  - **BEACON** -- `$AuthStrength` classifies open / shared / WEP as Insecure, WPA1 family as Weak, and WPA2 / WPA3 / OWE as Strong.
+  - **BEACON** -- `$CipherStrength` classifies none / WEP as Insecure, TKIP as Weak, AES and GCMP as Strong.
+  - **PORTAL** -- `$AuthStrength` classifies Pap as Insecure, Chap as Weak, MSChapv2 as Acceptable, Eap and MachineCertificate as Strong.
+  - **PORTAL** -- `$EncryptionStrength` classifies NoEncryption as Insecure, Optional as Weak, Required and Maximum as Strong.
 - **`R.I.T.U.A.L.` recipe estate expanded** to use the new endpoint-audit tools.
   - **`HealthCheck` recipe gained PALADIN** as a final step (now seven steps: AUSPEX -> WARD -> THRESHOLD -> AUGUR -> GARGOYLE -> ARTIFACT -> PALADIN). The quarterly machine review covers the Defender posture by default.
   - **New `SecuritySweep` recipe** (five steps: SIGIL -> TALON -> TOTEM -> PALADIN -> ARTIFACT). Read-only security posture rollup that pairs with the existing `TenantSweep`: SecuritySweep covers the endpoint, TenantSweep covers the cloud control plane.
