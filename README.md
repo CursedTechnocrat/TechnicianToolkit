@@ -19,7 +19,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | Running through Kaseya VSA LiveConnect | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
 | Need a guided, menu-driven workflow | **This repo** — full prompts and confirmations at every step |
 | Need fire-and-forget with parameter-only input | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
-| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, CONCLAVE, GROVE, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL, ANVIL, TALON, TOTEM, PYRE) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
+| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, CONCLAVE, GROVE, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL, ANVIL, TALON, TOTEM, PYRE, PALADIN) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
 
 ---
 
@@ -82,6 +82,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | 23 | **artifact.ps1** | **A.R.T.I.F.A.C.T.** — Audits, Reports Trust, Identity, Fingerprints, Authority, Certificates & TLS | Certificate health monitor — local cert stores, SSL/TLS expiry, HTML report |
 | 24 | **talon.ps1** | **T.A.L.O.N.** — Tracks Anomalies & Locates Otherwise-silent Nastiness | Persistence / autoruns audit — Run keys, startup folders, services, tasks, WMI subscriptions, IFEO hijacks, Winlogon, HTML report |
 | 25 | **totem.ps1** | **T.O.T.E.M.** — Trusted Observer of Transparent Execution Modules | TPM health audit — presence, spec version, ownership, readiness, BitLocker dependency, endorsement key, HTML report |
+| 26 | **paladin.ps1** | **P.A.L.A.D.I.N.** — Protection Auditor: Logs Antivirus, Defender, Intrusions & Notifications | AV / Microsoft Defender health audit — core state, real-time / cloud / sample, signature freshness, scan history, threats, exclusions, ASR rules, third-party AV, service health, recent events, HTML report |
 
 ### Network & Remote
 
@@ -478,6 +479,27 @@ TPM health audit gating the four questions that matter for modern Windows manage
 
 ---
 
+### P.A.L.A.D.I.N.
+
+Antivirus and Microsoft Defender health audit. Answers the four questions that decide whether a Windows endpoint is actually protected: "Is real-time protection on?" "Are signatures fresh?" "Are there unresolved threats hiding in history?" "Is the policy surface (exclusions, ASR rules, cloud submission) configured to block, audit, or just shrug?"
+
+- **Defender core state** via `Get-MpComputerStatus`: antivirus / antispyware / AM service enabled, AM running mode (Normal / Passive / EDR Block Mode), engine and product versions, real-time / behavior / IOAV / on-access / NIS toggles, tamper protection
+- **Cloud and sample posture** via `Get-MpPreference`: MAPS reporting tier, sample submission consent, cloud block level, cloud extended timeout, PUA protection mode
+- **Signatures**: AV / antispyware / NIS signature versions, last-updated timestamps, age in days; configurable yellow / red thresholds via `-SignatureMaxAgeDays`
+- **Scan history**: last quick scan and last full scan with start / end / age; flags machines that have never had a full scan
+- **Threat history** via `Get-MpThreat`: every threat the engine has ever logged with severity badge, active vs resolved state, detection count, affected resources; unresolved high / severe entries drive the verdict
+- **Recent detections** via `Get-MpThreatDetection`: last 50 detections with process name, user, resource, cleanup-success flag
+- **Exclusions inventory**: path, extension, process, and IP exclusions surfaced as separate tables so a technician can spot over-broad scope
+- **Attack Surface Reduction rules**: every configured ASR GUID resolved to its friendly name, with mode (Block / Audit / Warn / Not Configured); audit-only rules drive a yellow finding
+- **Third-party AV products** via the `root\SecurityCenter2` namespace: each registered AV with its packed `productState` decoded into real-time and up-to-date flags; flags concurrent third-party real-time alongside Defender
+- **Service health** for `WinDefend`, `WdNisSvc`, `Sense`, `WdFilter`, `SecurityHealthService`, and `mpssvc`; critical services not running drive a red finding
+- **Recent Defender events** from `Microsoft-Windows-Windows Defender/Operational` (configurable lookback via `-EventDays`)
+- **Red / yellow / green verdict** with explicit remediation hints. `Write-TKError` telemetry fires on `Get-MpComputerStatus` failure and on each unresolved high / severe threat
+- Dark-themed HTML report with six summary cards (posture, real-time, tamper, signature age, threats, AM mode)
+- Auto-elevates; read-only audit
+
+---
+
 ## Network & Remote
 
 ### L.E.Y.L.I.N.E.
@@ -824,6 +846,9 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\talon.ps1"
 # T.O.T.E.M. — TPM health audit
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\totem.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/totem.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
+# P.A.L.A.D.I.N. — AV / Defender health audit
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\paladin.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/paladin.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
 # ── Network & Remote ─────────────────────────────────────────────────────────
 
 # L.E.Y.L.I.N.E. — Network diagnostics & remediation
@@ -915,6 +940,7 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\artifact.ps1         # Certificate health and SSL expiry monitor
 .\talon.ps1          # Persistence / autoruns audit
 .\totem.ps1          # TPM health audit
+.\paladin.ps1        # AV / Microsoft Defender health audit
 
 # Network & Remote
 .\leyline.ps1       # Network diagnostics and remediation
@@ -980,6 +1006,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **artifact.ps1** | None — stores and targets selected interactively or via `-Targets` parameter |
 | **talon.ps1** | None — every persistence surface is enumerated unconditionally |
 | **totem.ps1** | None — reads TPM state, BitLocker protectors, and endorsement key info unconditionally |
+| **paladin.ps1** | `-EventDays <int>` — Defender event-log lookback window (default 7, range 1-90); `-SignatureMaxAgeDays <int>` — yellow / red threshold for signature age (default 7, doubles for the red tier); read-only otherwise |
 | **leyline.ps1** | None — all tests run interactively; no persistent config |
 | **shade.ps1** | None — target, credentials, and operation selected interactively at runtime |
 | **lantern.ps1** | `$script:ScanPorts` — list of TCP ports checked during scan (editable in script) |
@@ -1026,6 +1053,7 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **artifact.ps1** | Log directory — `ARTIFACT_<timestamp>.html` (cert inventory & SSL results) |
 | **talon.ps1** | Log directory — `TALON_<timestamp>.html` (persistence / autoruns audit) |
 | **totem.ps1** | Log directory — `TOTEM_<timestamp>.html` (TPM health audit) |
+| **paladin.ps1** | Log directory — `PALADIN_<timestamp>.html` (AV / Defender health audit) |
 | **leyline.ps1** | Console only — no log file |
 | **shade.ps1** | Script directory — `SHADE_<MachineName>\` folder containing retrieved output files |
 | **lantern.ps1** | Log directory — `LANTERN_<timestamp>.html` and `LANTERN_<timestamp>.csv` |

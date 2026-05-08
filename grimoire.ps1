@@ -309,6 +309,15 @@ $Tools = @(
         Color       = 'Cyan'
         Category    = 'Security'
     },
+    [PSCustomObject]@{
+        Key         = '26'
+        Name        = 'P.A.L.A.D.I.N.'
+        File        = 'paladin.ps1'
+        Version     = '3.0'
+        Description = 'AV / Microsoft Defender health audit  -  state, signatures, scans, threats, exclusions, ASR rules, services'
+        Color       = 'Magenta'
+        Category    = 'Security'
+    },
     # ── Network & Remote (30–39) ─────────────────────────────────────
     [PSCustomObject]@{
         Key         = '30'
