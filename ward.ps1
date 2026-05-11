@@ -14,7 +14,7 @@
     PS C:\> .\ward.ps1 -Unattended        # Silent mode — no prompts, no banner
 
 .NOTES
-    Version : 3.0
+    Version : 3.5
 
 #>
 
@@ -290,7 +290,7 @@ function Build-HtmlReport {
     </div>
   </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'W.A.R.D. v3.0')
+"@ + (Get-TKHtmlFoot -ScriptName 'W.A.R.D. v3.5')
 
     return $html
 }

@@ -15,7 +15,7 @@
     PS C:\> .\artifact.ps1 -Unattended -Targets "srv1.contoso.com,srv2.contoso.com:8443"
 
 .NOTES
-    Version : 3.0
+    Version : 3.5
 
 #>
 
@@ -446,7 +446,7 @@ $sslRows
         }) `
         -NavItems   @('Local Certificates', 'SSL/TLS Checks')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'A.R.T.I.F.A.C.T. v3.0'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'A.R.T.I.F.A.C.T. v3.5'
 
     $html = $htmlHead + @"
 

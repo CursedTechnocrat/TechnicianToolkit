@@ -12,14 +12,18 @@
     log directory are captured and rolled up into a single HTML summary.
 
     Built-in recipes:
-      Onboard      -- New machine bring-up:
-                      COVENANT -> SIGIL -> CONJURE -> CIPHER -> AUSPEX -> ARTIFACT
-      Retire       -- Pre-reimage / pre-disposal:
-                      TETHER -> EXHUME -> ARCHIVE -> CLEANSE
-      HealthCheck  -- Quarterly machine review:
-                      AUSPEX -> WARD -> THRESHOLD -> AUGUR -> GARGOYLE -> ARTIFACT
-      TenantSweep  -- Cloud tenant posture (one sign-in, four reports):
-                      TALISMAN -> RELIQUARY -> GOLEM -> WRAITH
+      Onboard       -- New machine bring-up:
+                       COVENANT -> SIGIL -> CONJURE -> CIPHER -> AUSPEX -> ARTIFACT
+      Retire        -- Pre-reimage / pre-disposal:
+                       TETHER -> EXHUME -> ARCHIVE -> CLEANSE
+      HealthCheck   -- Quarterly machine review:
+                       AUSPEX -> WARD -> THRESHOLD -> AUGUR -> GARGOYLE -> ARTIFACT -> PALADIN
+      SecuritySweep -- Endpoint security posture (read-only):
+                       SIGIL -> TALON -> TOTEM -> PALADIN -> ARTIFACT
+      NetworkSweep  -- Endpoint network posture (read-only):
+                       LEYLINE -> LANTERN -> BEACON -> PORTAL
+      TenantSweep   -- Cloud tenant posture (one sign-in, six reports):
+                       TALISMAN -> RELIQUARY -> GOLEM -> WRAITH -> CONCLAVE -> GROVE
 
 .USAGE
     PS C:\> .\ritual.ps1                                    # Interactive menu
@@ -28,14 +32,14 @@
     PS C:\> .\ritual.ps1 -Recipe Retire -ContinueOnError    # Ignore per-step failures
 
 .NOTES
-    Version : 3.0
+    Version : 3.5
 
 #>
 
 param(
     [switch]$Unattended,
     [switch]$Transcript,
-    [ValidateSet('Onboard','Retire','HealthCheck','TenantSweep')]
+    [ValidateSet('Onboard','Retire','HealthCheck','SecuritySweep','NetworkSweep','TenantSweep')]
     [string]$Recipe = '',
     [ValidateScript({ [string]::IsNullOrWhiteSpace($_) -or (Test-Path -LiteralPath $_) })]
     [string]$RecipeFile = '',
@@ -95,7 +99,7 @@ function Show-RitualBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
     Write-Host "  R.I.T.U.A.L. — Runs Integrated Tool Usage in Automation Loops" -ForegroundColor Cyan
-    Write-Host "  Workflow Orchestrator for the Technician Toolkit  v3.0" -ForegroundColor Cyan
+    Write-Host "  Workflow Orchestrator for the Technician Toolkit  v3.5" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -144,6 +148,28 @@ $script:BuiltInRecipes = @{
             @{ Label = 'Disk hardware (SMART)';     Tool = 'augur.ps1';     Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Services & tasks';          Tool = 'gargoyle.ps1';  Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Certificate health';        Tool = 'artifact.ps1';  Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'AV / Defender health';      Tool = 'paladin.ps1';   Args = @('-Unattended'); StopOnError = $false }
+        )
+    }
+    'SecuritySweep' = @{
+        Name        = 'Endpoint Security Posture'
+        Description = 'Read-only security posture sweep: baseline, persistence, TPM, AV/Defender, certificates.'
+        Steps       = @(
+            @{ Label = 'Security baseline drift';   Tool = 'sigil.ps1';     Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Persistence / autoruns';    Tool = 'talon.ps1';     Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'TPM health';                Tool = 'totem.ps1';     Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'AV / Defender health';      Tool = 'paladin.ps1';   Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Certificate health';        Tool = 'artifact.ps1';  Args = @('-Unattended'); StopOnError = $false }
+        )
+    }
+    'NetworkSweep' = @{
+        Name        = 'Endpoint Network Posture'
+        Description = 'Read-only network posture sweep: live diagnostics, LAN discovery, Wi-Fi profiles, VPN tunnels.'
+        Steps       = @(
+            @{ Label = 'Network diagnostics';       Tool = 'leyline.ps1';   Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'LAN discovery';             Tool = 'lantern.ps1';   Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Wi-Fi profile audit';       Tool = 'beacon.ps1';    Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'VPN / Always-On audit';     Tool = 'portal.ps1';    Args = @('-Unattended'); StopOnError = $false }
         )
     }
     'TenantSweep' = @{
@@ -370,7 +396,7 @@ function Build-RollupHtml {
         }) `
         -NavItems   @('Overall', 'Steps')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'R.I.T.U.A.L. v3.0'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'R.I.T.U.A.L. v3.5'
 
     $html = $htmlHead + @"
 

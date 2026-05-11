@@ -15,7 +15,7 @@
     PS C:\> .\archive.ps1 -WhatIf                                                   # Preview actions without staging or compressing
 
 .NOTES
-    Version : 3.0
+    Version : 3.5
 
 #>
 

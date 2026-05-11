@@ -16,7 +16,7 @@
     PS C:\> .\anvil.ps1 -Unattended        # Silent: export HTML and exit
 
 .NOTES
-    Version : 3.0
+    Version : 3.5
 
 #>
 
@@ -78,7 +78,7 @@ function Show-AnvilBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
     Write-Host "  A.N.V.I.L. — Audits & Notates Vendor Inventory & Lifecycle" -ForegroundColor Cyan
-    Write-Host "  BIOS / UEFI / Firmware Audit Tool  v3.0" -ForegroundColor Cyan
+    Write-Host "  BIOS / UEFI / Firmware Audit Tool  v3.5" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -376,7 +376,7 @@ function Build-HtmlReport {
         }) `
         -NavItems   @('Verdict', 'System Identity', 'UEFI / Secure Boot', 'Vendor Channels', 'Pending Updates')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'A.N.V.I.L. v3.0'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'A.N.V.I.L. v3.5'
 
     $html = $htmlHead + @"
 

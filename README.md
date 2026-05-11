@@ -19,7 +19,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | Running through Kaseya VSA LiveConnect | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
 | Need a guided, menu-driven workflow | **This repo** — full prompts and confirmations at every step |
 | Need fire-and-forget with parameter-only input | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
-| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, CONCLAVE, GROVE, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL, ANVIL, TALON, TOTEM, PYRE) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
+| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, CONCLAVE, GROVE, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL, ANVIL, TALON, TOTEM, PYRE, PALADIN, BEACON, PORTAL) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
 
 ---
 
@@ -55,7 +55,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | 4 | **forge.ps1** | **F.O.R.G.E.** — Finds Outdated Resources & Generates Equipment-updates | Driver detection & installation — problem devices, Windows Update drivers, local packages |
 | 5 | **restoration.ps1** | **R.E.S.T.O.R.A.T.I.O.N.** — Renews Every System Through Orderly Rite — Automating The Installation Of New updates | Automated Windows Update management and maintenance |
 | 6 | **hearth.ps1** | **H.E.A.R.T.H.** — Hub for Environment, Admin Runtime & Toolkit Hardening | Toolkit setup wizard — configure org name, log paths, and default values |
-| 7 | **ritual.ps1** | **R.I.T.U.A.L.** — Runs Integrated Tool Usage in Automation Loops | Workflow orchestrator — runs named recipes (Onboard, Retire, HealthCheck, TenantSweep) or custom PSD1 files, with rollup HTML report |
+| 7 | **ritual.ps1** | **R.I.T.U.A.L.** — Runs Integrated Tool Usage in Automation Loops | Workflow orchestrator — runs named recipes (Onboard, Retire, HealthCheck, SecuritySweep, NetworkSweep, TenantSweep) or custom PSD1 files, with rollup HTML report |
 
 ### Diagnostics & Reporting
 
@@ -82,6 +82,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | 23 | **artifact.ps1** | **A.R.T.I.F.A.C.T.** — Audits, Reports Trust, Identity, Fingerprints, Authority, Certificates & TLS | Certificate health monitor — local cert stores, SSL/TLS expiry, HTML report |
 | 24 | **talon.ps1** | **T.A.L.O.N.** — Tracks Anomalies & Locates Otherwise-silent Nastiness | Persistence / autoruns audit — Run keys, startup folders, services, tasks, WMI subscriptions, IFEO hijacks, Winlogon, HTML report |
 | 25 | **totem.ps1** | **T.O.T.E.M.** — Trusted Observer of Transparent Execution Modules | TPM health audit — presence, spec version, ownership, readiness, BitLocker dependency, endorsement key, HTML report |
+| 26 | **paladin.ps1** | **P.A.L.A.D.I.N.** — Protection Auditor: Logs Antivirus, Defender, Intrusions & Notifications | AV / Microsoft Defender health audit — core state, real-time / cloud / sample, signature freshness, scan history, threats, exclusions, ASR rules, third-party AV, service health, recent events, HTML report |
 
 ### Network & Remote
 
@@ -90,6 +91,8 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | 30 | **leyline.ps1** | **L.E.Y.L.I.N.E.** — Locates, Examines & Yields Latency, Infrastructure, Network & Endpoints | Network diagnostics & remediation — adapters, ping, DNS, port tests, IP renew, stack reset |
 | 31 | **shade.ps1** | **S.H.A.D.E.** — Summons Hosts for Administrative Deployment & Execution | Remote machine execution via WinRM — run toolkit tools without physical access |
 | 32 | **lantern.ps1** | **L.A.N.T.E.R.N.** — Locates & Audits Network Topology, Enumerating Resources & Nodes | Network discovery — subnet ping sweep, DNS lookup, MAC addresses, port scan, HTML report |
+| 33 | **beacon.ps1** | **B.E.A.C.O.N.** — Broadcasts, Encryption, Authentication & Connections Of Networks | Wi-Fi profile audit — saved profiles via XML export, authentication/cipher tier, auto-connect risk, hidden SSID, MAC randomisation, optional key cleartext, HTML report |
+| 34 | **portal.ps1** | **P.O.R.T.A.L.** — Profiles, Observes & Reports Tunnels, Authentication & Links | VPN / Always-On VPN audit — built-in user and all-user connections, auth/encryption tier, app triggers, NRPT, tunnel interfaces, third-party clients (Cisco / Palo Alto / Pulse / OpenVPN / WireGuard / Tailscale / WARP / etc.), HTML report |
 
 ### Cloud & Identity
 
@@ -217,8 +220,10 @@ Workflow orchestrator. Runs an ordered sequence of toolkit scripts as a single n
 - **Built-in recipes** (pass via `-Recipe <Name>`):
   - `Onboard` — new machine bring-up: COVENANT → SIGIL → CONJURE → CIPHER → AUSPEX → ARTIFACT
   - `Retire` — pre-reimage workflow: TETHER → EXHUME → ARCHIVE → CLEANSE
-  - `HealthCheck` — quarterly machine review: AUSPEX → WARD → THRESHOLD → AUGUR → GARGOYLE → ARTIFACT
-  - `TenantSweep` — cloud posture in one sign-in: TALISMAN → RELIQUARY → GOLEM → WRAITH
+  - `HealthCheck` — quarterly machine review: AUSPEX → WARD → THRESHOLD → AUGUR → GARGOYLE → ARTIFACT → PALADIN
+  - `SecuritySweep` — endpoint security posture (read-only): SIGIL → TALON → TOTEM → PALADIN → ARTIFACT
+  - `NetworkSweep` — endpoint network posture (read-only): LEYLINE → LANTERN → BEACON → PORTAL
+  - `TenantSweep` — cloud posture in one sign-in: TALISMAN → RELIQUARY → GOLEM → WRAITH → CONCLAVE → GROVE
 - **Custom recipes** via `-RecipeFile path\to\recipe.psd1` — a hashtable with `Name`, `Description`, and an ordered `Steps` array (each step specifies `Tool`, `Args`, `StopOnError`, `Label`)
 - Per-step log-directory snapshot — any new files produced during a step are attributed to that step and linked from the rollup report
 - Default behaviour: abort on first failure. Pass `-ContinueOnError` to run every step regardless, unless the step's own `StopOnError = $true` overrides
@@ -478,6 +483,27 @@ TPM health audit gating the four questions that matter for modern Windows manage
 
 ---
 
+### P.A.L.A.D.I.N.
+
+Antivirus and Microsoft Defender health audit. Answers the four questions that decide whether a Windows endpoint is actually protected: "Is real-time protection on?" "Are signatures fresh?" "Are there unresolved threats hiding in history?" "Is the policy surface (exclusions, ASR rules, cloud submission) configured to block, audit, or just shrug?"
+
+- **Defender core state** via `Get-MpComputerStatus`: antivirus / antispyware / AM service enabled, AM running mode (Normal / Passive / EDR Block Mode), engine and product versions, real-time / behavior / IOAV / on-access / NIS toggles, tamper protection
+- **Cloud and sample posture** via `Get-MpPreference`: MAPS reporting tier, sample submission consent, cloud block level, cloud extended timeout, PUA protection mode
+- **Signatures**: AV / antispyware / NIS signature versions, last-updated timestamps, age in days; configurable yellow / red thresholds via `-SignatureMaxAgeDays`
+- **Scan history**: last quick scan and last full scan with start / end / age; flags machines that have never had a full scan
+- **Threat history** via `Get-MpThreat`: every threat the engine has ever logged with severity badge, active vs resolved state, detection count, affected resources; unresolved high / severe entries drive the verdict
+- **Recent detections** via `Get-MpThreatDetection`: last 50 detections with process name, user, resource, cleanup-success flag
+- **Exclusions inventory**: path, extension, process, and IP exclusions surfaced as separate tables so a technician can spot over-broad scope
+- **Attack Surface Reduction rules**: every configured ASR GUID resolved to its friendly name, with mode (Block / Audit / Warn / Not Configured); audit-only rules drive a yellow finding
+- **Third-party AV products** via the `root\SecurityCenter2` namespace: each registered AV with its packed `productState` decoded into real-time and up-to-date flags; flags concurrent third-party real-time alongside Defender
+- **Service health** for `WinDefend`, `WdNisSvc`, `Sense`, `WdFilter`, `SecurityHealthService`, and `mpssvc`; critical services not running drive a red finding
+- **Recent Defender events** from `Microsoft-Windows-Windows Defender/Operational` (configurable lookback via `-EventDays`)
+- **Red / yellow / green verdict** with explicit remediation hints. `Write-TKError` telemetry fires on `Get-MpComputerStatus` failure and on each unresolved high / severe threat
+- Dark-themed HTML report with six summary cards (posture, real-time, tamper, signature age, threats, AM mode)
+- Auto-elevates; read-only audit
+
+---
+
 ## Network & Remote
 
 ### L.E.Y.L.I.N.E.
@@ -524,6 +550,37 @@ Discovers all live hosts on the local /24 subnet and produces a network asset in
 - CSV export of the full host inventory
 - Dark-themed HTML report saved to the script directory
 - `-Unattended -Action Sweep` for silent sweep and report export
+
+---
+
+### B.E.A.C.O.N.
+
+Wi-Fi profile audit. Answers "what wireless networks does this machine know, and which of them silently auto-connect to surfaces an attacker could spoof?"
+
+- **Profile inventory** via `netsh wlan export profile ... key=clear` to a per-run temp folder, parsed from the locale-stable WLAN profile XML schema (avoids the brittle locale-dependent text output of `netsh wlan show profile`)
+- **Per profile**: SSID, hidden flag, connection type (ESS / IBSS), connection mode (auto / manual), autoSwitch, authentication (Open / WEP / WPA / WPA2-PSK / WPA2-Enterprise / WPA3-SAE / OWE / etc.), encryption (none / WEP / TKIP / AES / GCMP), 802.1X usage, MAC randomization, key material (masked by default; cleartext only when `-IncludeKey` is supplied)
+- **Adapter inventory** via `Get-NetAdapter -Physical` filtered to `Native 802.11`: name, status, link speed, MAC, driver version and date
+- **Filtered tables**: open / weak profiles (broken WEP, deprecated TKIP, open-auth) and auto-connecting profiles (with risk tier badges)
+- **Red / yellow / green verdict**: red on open auto-connect, WEP, deprecated cipher; yellow on TKIP, autoSwitch, hidden+auto, MAC randomization off, > 25 saved profiles
+- Privacy posture banner in the HTML report makes it explicit whether keys were rendered in cleartext
+- Dark-themed HTML report with six summary cards
+- Auto-elevates; read-only audit; temp folder is wiped after parsing
+
+---
+
+### P.O.R.T.A.L.
+
+VPN and Always-On VPN audit. Answers "what tunnels can leave this machine, are they configured to leak credentials, and is split-tunnel routing covered by NRPT?"
+
+- **Built-in Windows VPNs** via `Get-VpnConnection` (user scope) and `Get-VpnConnection -AllUserConnection` (all-user / Always-On candidate scope): name, server, tunnel type (PPTP / L2TP / SSTP / IKEv2 / Automatic), authentication methods (PAP / CHAP / MS-CHAPv2 / EAP / MachineCertificate), encryption level (NoEncryption / Optional / Required / Maximum), split-tunnel flag, connection state, profile type
+- **Always-On VPN app triggers** via `Get-VpnConnectionTrigger`: which applications and DNS suffixes auto-launch each VPN
+- **Name Resolution Policy Table** via `Get-DnsClientNrptPolicy`: namespace -> DNS server mappings, IPsec-required flag, DirectAccess servers
+- **Active VPN tunnel interfaces** via `Get-NetIPInterface` filtered to interfaces matching `VPN`/`Wintun`/`WireGuard`/`Tailscale`/`GlobalProtect`/`AnyConnect`/`PPP`
+- **Third-party VPN clients** via service-table probing: Cisco AnyConnect / Cisco Secure Client (`vpnagent`, `csc_vpnagent`), Palo Alto GlobalProtect (`PanGPS`, `PanGPA`), Ivanti / Pulse (`JuniperNetworksTunnelService`, `PulseService`), OpenVPN (interactive, legacy, GUI), WireGuard (manager + per-config tunnels), Tailscale, ZeroTier, Cloudflare WARP, NordVPN, Proton VPN, F5 BIG-IP Edge Client
+- **Red / yellow / green verdict**: red on PAP authentication or NoEncryption (Write-TKError telemetry fires for both -- credentials in cleartext / traffic in cleartext are immediate findings); yellow on CHAP, Optional encryption, split-tunnel without matching NRPT, multiple competing third-party VPN vendors
+- Special-case `NONE CONFIGURED` posture statement when zero built-in VPNs and zero third-party clients are detected -- not a finding, just an inventory result
+- Dark-themed HTML report with six summary cards and six detail sections
+- Auto-elevates; read-only audit
 
 ---
 
@@ -824,6 +881,9 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\talon.ps1"
 # T.O.T.E.M. — TPM health audit
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\totem.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/totem.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
+# P.A.L.A.D.I.N. — AV / Defender health audit
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\paladin.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/paladin.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
 # ── Network & Remote ─────────────────────────────────────────────────────────
 
 # L.E.Y.L.I.N.E. — Network diagnostics & remediation
@@ -834,6 +894,12 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\shade.ps1"
 
 # L.A.N.T.E.R.N. — Network discovery & asset inventory
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\lantern.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/lantern.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
+# B.E.A.C.O.N. — Wi-Fi profile audit
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\beacon.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/beacon.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
+# P.O.R.T.A.L. — VPN / Always-On VPN audit
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\portal.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/portal.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # ── Cloud & Identity ─────────────────────────────────────────────────────────
 
@@ -915,11 +981,14 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\artifact.ps1         # Certificate health and SSL expiry monitor
 .\talon.ps1          # Persistence / autoruns audit
 .\totem.ps1          # TPM health audit
+.\paladin.ps1        # AV / Microsoft Defender health audit
 
 # Network & Remote
 .\leyline.ps1       # Network diagnostics and remediation
 .\shade.ps1       # Remote execution via WinRM
 .\lantern.ps1       # Network discovery and asset inventory
+.\beacon.ps1        # Wi-Fi profile audit
+.\portal.ps1        # VPN / Always-On VPN audit
 
 # Cloud & Identity
 .\talisman.ps1      # Azure environment assessment and HTML report
@@ -963,7 +1032,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **forge.ps1** | None — driver sources scanned from current folder automatically; `-WhatIf` previews Windows Update and local driver installs |
 | **restoration.ps1** | None — power settings are detected and restored automatically; `-WhatIf` lists available updates without installing |
 | **hearth.ps1** | None — all settings entered via the interactive wizard; `config.json` is the output (see config key table above) |
-| **ritual.ps1** | `-Recipe {Onboard\|Retire\|HealthCheck\|TenantSweep}` — named recipe to run; `-RecipeFile <path.psd1>` — custom recipe file; `-ContinueOnError` — tolerate per-step failures |
+| **ritual.ps1** | `-Recipe {Onboard\|Retire\|HealthCheck\|SecuritySweep\|NetworkSweep\|TenantSweep}` — named recipe to run; `-RecipeFile <path.psd1>` — custom recipe file; `-ContinueOnError` — tolerate per-step failures |
 | **auspex.ps1** | `$ReportOutputPath` — folder where the HTML report is saved (defaults to script directory; accepts any local or UNC path) |
 | **ward.ps1** | None — audit runs automatically; stale threshold is 90 days (editable in script) |
 | **threshold.ps1** | None — thresholds are Warning < 15% free, Critical < 5% free (editable in script); old profile threshold is 90 days |
@@ -980,9 +1049,12 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **artifact.ps1** | None — stores and targets selected interactively or via `-Targets` parameter |
 | **talon.ps1** | None — every persistence surface is enumerated unconditionally |
 | **totem.ps1** | None — reads TPM state, BitLocker protectors, and endorsement key info unconditionally |
+| **paladin.ps1** | `-EventDays <int>` — Defender event-log lookback window (default 7, range 1-90); `-SignatureMaxAgeDays <int>` — yellow / red threshold for signature age (default 7, doubles for the red tier); read-only otherwise |
 | **leyline.ps1** | None — all tests run interactively; no persistent config |
 | **shade.ps1** | None — target, credentials, and operation selected interactively at runtime |
 | **lantern.ps1** | `$script:ScanPorts` — list of TCP ports checked during scan (editable in script) |
+| **beacon.ps1** | `-IncludeKey` — opt-in switch to render WLAN profile pre-shared keys in cleartext (default: masked); read-only otherwise |
+| **portal.ps1** | None — enumerates VPN connections, NRPT, tunnel interfaces, and third-party VPN client services unconditionally; the third-party client catalog is an editable `$ThirdPartyClients` array in the script |
 | **talisman.ps1** | `-SubscriptionId` — target a specific Azure subscription; `-OutputPath` — HTML report destination; `-NoOpen` — suppress auto-open after export |
 | **reliquary.ps1** | None — tenant and report scope selected interactively at runtime |
 | **golem.ps1** | None — tenant, device scope, and report scope selected interactively at runtime |
@@ -1026,9 +1098,12 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **artifact.ps1** | Log directory — `ARTIFACT_<timestamp>.html` (cert inventory & SSL results) |
 | **talon.ps1** | Log directory — `TALON_<timestamp>.html` (persistence / autoruns audit) |
 | **totem.ps1** | Log directory — `TOTEM_<timestamp>.html` (TPM health audit) |
+| **paladin.ps1** | Log directory — `PALADIN_<timestamp>.html` (AV / Defender health audit) |
 | **leyline.ps1** | Console only — no log file |
 | **shade.ps1** | Script directory — `SHADE_<MachineName>\` folder containing retrieved output files |
 | **lantern.ps1** | Log directory — `LANTERN_<timestamp>.html` and `LANTERN_<timestamp>.csv` |
+| **beacon.ps1** | Log directory — `BEACON_<timestamp>.html` (Wi-Fi profile audit). Per-profile XMLs are exported to a temp folder and deleted after parsing |
+| **portal.ps1** | Log directory — `PORTAL_<timestamp>.html` (VPN / Always-On VPN audit) |
 | **talisman.ps1** | `-OutputPath` (default `%TEMP%`) — `azure-assessment-<timestamp>.html`; auto-opens in browser |
 | **reliquary.ps1** | Log directory — `RELIQUARY_<timestamp>.html` (combined license & mailbox report) |
 | **golem.ps1** | Log directory — `GOLEM_<timestamp>.html` (Intune / MDM compliance report) |

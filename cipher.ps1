@@ -18,7 +18,7 @@
     PS C:\> .\cipher.ps1 -Unattended -Action BackupAD -Drive C     # Backup recovery key to AD
 
 .NOTES
-    Version : 3.0
+    Version : 3.5
 
 #>
 

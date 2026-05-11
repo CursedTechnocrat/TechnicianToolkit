@@ -17,7 +17,7 @@
     PS C:\> .\threshold.ps1 -Unattended             # Run health check and export HTML report silently
 
 .NOTES
-    Version : 3.0
+    Version : 3.5
 
 #>
 
@@ -91,7 +91,7 @@ function Show-Banner {
 "@
     Write-Host $banner -ForegroundColor $C.Cyan
     Write-Host "  Tests Hardware Reliability, Evaluates Storage Health, & Optimizes/Logs Disk data" -ForegroundColor $C.Gray
-    Write-Host "  Disk & Storage Health Monitor  |  v3.0" -ForegroundColor $C.Gray
+    Write-Host "  Disk & Storage Health Monitor  |  v3.5" -ForegroundColor $C.Gray
     Write-Host ""
 }
 
@@ -589,7 +589,7 @@ function Build-HtmlReport {
         -MetaItems  ([ordered]@{
             'Host'      = $hostname
             'Generated' = $timestamp
-            'Tool'      = 'Disk & Storage Health Monitor v3.0'
+            'Tool'      = 'Disk & Storage Health Monitor v3.5'
         }) `
         -NavItems   @('Physical Disks', 'Volume Space', 'Recommendations')
 
@@ -686,7 +686,7 @@ $recommendations
 
 "@
 
-    $html += Get-TKHtmlFoot -ScriptName 'T.H.R.E.S.H.O.L.D. v3.0'
+    $html += Get-TKHtmlFoot -ScriptName 'T.H.R.E.S.H.O.L.D. v3.5'
 
     $html | Out-File -FilePath $outputPath -Encoding UTF8 -Force
     return $outputPath

@@ -18,7 +18,7 @@
     PS C:\> .\wraith.ps1 -Unattended        # Silent mode — auto-connect and export HTML
 
 .NOTES
-    Version : 3.0
+    Version : 3.5
 
 #>
 
@@ -90,7 +90,7 @@ function Show-WraithBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
     Write-Host "  W.R.A.I.T.H. — Watches Registrations, Access, Identities, Tokens & Hygiene" -ForegroundColor Cyan
-    Write-Host "  Entra ID Identity Hygiene Audit Tool  v3.0" -ForegroundColor Cyan
+    Write-Host "  Entra ID Identity Hygiene Audit Tool  v3.5" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -568,7 +568,7 @@ function Build-HtmlReport {
         }) `
         -NavItems   @('Guests', 'Privileged Roles', 'Password Never Expires', 'Stale Admins', 'Disabled but Licensed')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'W.R.A.I.T.H. v3.0'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'W.R.A.I.T.H. v3.5'
 
     $html = $htmlHead + @"
 

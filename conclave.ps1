@@ -17,7 +17,7 @@
     PS C:\> .\conclave.ps1 -Unattended        # Silent: auto-connect + export HTML
 
 .NOTES
-    Version : 3.0
+    Version : 3.5
 
 #>
 
@@ -90,7 +90,7 @@ function Show-ConclaveBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
     Write-Host "  C.O.N.C.L.A.V.E. — Consolidates Organisational Networks, Chats, Licenses, Access, Visibility & Entitlements" -ForegroundColor Cyan
-    Write-Host "  Microsoft Teams Audit Tool  v3.0" -ForegroundColor Cyan
+    Write-Host "  Microsoft Teams Audit Tool  v3.5" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -382,7 +382,7 @@ function Build-HtmlReport {
         }) `
         -NavItems   @('Teams Inventory', 'Orphan Teams', 'Public Teams', 'Guest Members', 'Large Teams', 'Stale Teams')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'C.O.N.C.L.A.V.E. v3.0'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'C.O.N.C.L.A.V.E. v3.5'
 
     $orphClass  = if ($Orphans.Count -gt 0) { 'err' } else { 'ok' }
     $pubClass   = if ($Public.Count  -gt 0) { 'warn' } else { 'ok' }

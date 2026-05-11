@@ -18,7 +18,7 @@
     PS C:\> .\talisman.ps1 -OutputPath "C:\Reports\azure.html" -NoOpen
 
 .NOTES
-    Version  : 3.0
+    Version  : 3.5
     All required Az modules are installed automatically on first run.
 
 #>
@@ -94,7 +94,7 @@ Write-Host @"
 
 "@ -ForegroundColor Cyan
 Write-Host "  T.A.L.I.S.M.A.N.  -  Tenant Assessment, Logging, Infrastructure, Security, Monitoring & Access Navigator" -ForegroundColor Cyan
-Write-Host "  Azure Subscription Assessment & Report Generator  v3.0" -ForegroundColor Cyan
+Write-Host "  Azure Subscription Assessment & Report Generator  v3.5" -ForegroundColor Cyan
 Write-Host ""
 
 # -----------------------------------------------------------------------------
@@ -1036,7 +1036,7 @@ $htmlHead = Get-TKHtmlHead `
         'Recommendations'
     )
 
-$htmlFoot = Get-TKHtmlFoot -ScriptName 'T.A.L.I.S.M.A.N. v3.0'
+$htmlFoot = Get-TKHtmlFoot -ScriptName 'T.A.L.I.S.M.A.N. v3.5'
 
 $html = $htmlHead + @"
 

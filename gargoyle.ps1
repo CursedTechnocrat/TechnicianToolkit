@@ -15,7 +15,7 @@
     PS C:\> .\gargoyle.ps1 -Unattended -Target HOSTNAME  # Remote machine report
 
 .NOTES
-    Version : 3.0
+    Version : 3.5
 
 #>
 
@@ -689,7 +689,7 @@ function Build-HtmlReport {
         -MetaItems  ([ordered]@{
             'Machine'   = $MachineName
             'Generated' = $ReportTimestamp
-            'Tool'      = 'Service, Task & Event Log Monitor v3.0'
+            'Tool'      = 'Service, Task & Event Log Monitor v3.5'
         }) `
         -NavItems   @('Critical Services', 'Scheduled Tasks', 'Event Log Errors')
 
@@ -807,7 +807,7 @@ function Build-HtmlReport {
 
 "@
 
-    $html += Get-TKHtmlFoot -ScriptName 'G.A.R.G.O.Y.L.E. v3.0'
+    $html += Get-TKHtmlFoot -ScriptName 'G.A.R.G.O.Y.L.E. v3.5'
     return $html
 }
 

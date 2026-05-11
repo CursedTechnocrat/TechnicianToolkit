@@ -15,7 +15,7 @@
     PS C:\> .\reliquary.ps1 -Unattended        # Auto-connect and export full audit report
 
 .NOTES
-    Version : 3.0
+    Version : 3.5
 
 #>
 
@@ -151,7 +151,7 @@ function Show-ReliquaryBanner {
 
 "@ -ForegroundColor Cyan
     Write-Host "  R.E.L.I.Q.U.A.R.Y. — Reports, Evaluates Licenses, Inventories, Quotas, Users, Access & Registration Yields" -ForegroundColor Cyan
-    Write-Host "  Microsoft 365 License & Mailbox Audit Tool  v3.0" -ForegroundColor Cyan
+    Write-Host "  Microsoft 365 License & Mailbox Audit Tool  v3.5" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -677,7 +677,7 @@ function Build-HtmlReport {
             'Shared Mailbox'
         )
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'R.E.L.I.Q.U.A.R.Y. v3.0'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'R.E.L.I.Q.U.A.R.Y. v3.5'
 
     $html = $htmlHead + @"
 

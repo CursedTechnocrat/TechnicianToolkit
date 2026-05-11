@@ -14,7 +14,7 @@
     PS C:\> .\citadel.ps1 -Unattended -Action StaleReport   # Export stale accounts HTML report silently
 
 .NOTES
-    Version : 3.0
+    Version : 3.5
 
 #>
 
@@ -867,7 +867,7 @@ function Export-StaleReport {
   </table>
 </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'C.I.T.A.D.E.L. v3.0')
+"@ + (Get-TKHtmlFoot -ScriptName 'C.I.T.A.D.E.L. v3.5')
 
     $reportFilename = "CITADEL_Stale_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
     $reportPath     = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) $reportFilename
@@ -1179,7 +1179,7 @@ function Export-PasswordExpiryReport {
   </table>
 </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'C.I.T.A.D.E.L. v3.0')
+"@ + (Get-TKHtmlFoot -ScriptName 'C.I.T.A.D.E.L. v3.5')
 
     $reportFilename = "CITADEL_PwdExpiry_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
     $reportPath     = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) $reportFilename

@@ -222,3 +222,36 @@ Both tools produce a rollup HTML that links out to other tool reports — they a
 | "I've already run a bunch of tools ad-hoc — give me one index of what's on disk." | **CODEX** (filesystem scan only, no execution; relative links so the rollup stays clickable when zipped) |
 
 RITUAL produces a record *of an execution* — step status, durations, errors. CODEX produces a record *of a directory* — what reports exist, when, and how big they are. Use RITUAL when you control the run; use CODEX when the reports already exist.
+
+### PALADIN vs SIGIL
+
+Both touch Microsoft Defender, but they sit on opposite sides of the audit/enforce divide.
+
+| Question | Reach for |
+|----------|-----------|
+| "Show me the current AV state, signatures, threats, exclusions, and ASR posture — I just want to read it." | **PALADIN** (read-only audit; never writes) |
+| "Bring this machine into line with our security baseline — set the registry, enable the firewall rules, configure audit policy." | **SIGIL** (state-changing enforcement; supports `-WhatIf`) |
+
+PALADIN is the diagnostic tool you run to decide whether enforcement is needed; SIGIL is the tool that does the enforcing. They compose: SIGIL hardens the machine, PALADIN later confirms the AV side held.
+
+### BEACON vs LANTERN
+
+Both tools live in Network & Remote, but cover different layers of the network stack.
+
+| Question | Reach for |
+|----------|-----------|
+| "What Wi-Fi networks does this machine remember, and which of them auto-connect?" | **BEACON** (saved WLAN profile inventory: SSID, auth, cipher, autoSwitch, key material) |
+| "What hosts are alive on the LAN this machine is currently sitting on?" | **LANTERN** (subnet ping sweep + DNS / MAC / port scan of discovered hosts) |
+
+BEACON looks inward at the wireless config baked into the machine; LANTERN looks outward at the LAN segment the machine is attached to. BEACON runs the same regardless of where the machine is plugged in; LANTERN's output is wholly dependent on the network it sits on at audit time.
+
+### PORTAL vs LEYLINE
+
+Both touch network connectivity but answer fundamentally different questions.
+
+| Question | Reach for |
+|----------|-----------|
+| "What tunnels can leave this machine, and are any of them configured to leak credentials?" | **PORTAL** (built-in VPNs, Always-On triggers, NRPT, third-party VPN clients — inventory + auth/encryption tier verdict) |
+| "Why can't this machine reach `<host>` right now?" | **LEYLINE** (live diagnostics: adapter state, ping, DNS, port test, IP renew, stack reset) |
+
+PORTAL is a static configuration audit (read-only, identifies risky settings before they bite). LEYLINE is a live troubleshooting tool (can trigger remediation actions like `ipconfig /renew` and `netsh winsock reset`). Run PORTAL during onboarding and quarterly review; run LEYLINE when something is broken right now.

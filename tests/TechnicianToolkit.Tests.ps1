@@ -451,3 +451,163 @@ Describe 'No duplicated helper functions' {
         $content | Should -Not -Match '(?m)^\s*function\s+Format-Bytes\b'
     }
 }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Tier-mapper data tables — the verdict logic in PALADIN / BEACON / PORTAL
+# leans on small reference hashtables (and one tiny helper for ASR action
+# codes). This block extracts those tables via AST lookup and asserts on
+# their contents, so a careless rename or removal fails CI loudly.
+#
+# We don't dot-source the tools whole because they have side-effects (they
+# launch their main flow on import). Instead we walk the AST, find the
+# specific assignment / function-definition node by name, and re-evaluate
+# just that node in the test scope.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'Tier-mapper data tables' {
+    BeforeAll {
+        $script:ToolkitRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
+        $script:PaladinPath = Join-Path $script:ToolkitRoot 'paladin.ps1'
+        $script:BeaconPath  = Join-Path $script:ToolkitRoot 'beacon.ps1'
+        $script:PortalPath  = Join-Path $script:ToolkitRoot 'portal.ps1'
+
+        function Import-ScriptHashtable {
+            param([string]$ScriptPath, [string]$VarName)
+            $errs = $null
+            $ast = [System.Management.Automation.Language.Parser]::ParseFile(
+                $ScriptPath, [ref]$null, [ref]$errs
+            )
+            $assign = $ast.FindAll({
+                param($n)
+                $n -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+                $n.Left -is [System.Management.Automation.Language.VariableExpressionAst] -and
+                $n.Left.VariablePath.UserPath -eq $VarName
+            }, $true) | Select-Object -First 1
+            if (-not $assign) { return $null }
+            return & ([scriptblock]::Create($assign.Right.Extent.Text))
+        }
+
+        function Get-ScriptFunctionScriptBlock {
+            param([string]$ScriptPath, [string]$FuncName)
+            $errs = $null
+            $ast = [System.Management.Automation.Language.Parser]::ParseFile(
+                $ScriptPath, [ref]$null, [ref]$errs
+            )
+            $fn = $ast.FindAll({
+                param($n)
+                $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq $FuncName
+            }, $true) | Select-Object -First 1
+            if (-not $fn) { return $null }
+            # Returns a scriptblock that, when dot-sourced, defines the function in the caller's scope.
+            return [scriptblock]::Create($fn.Extent.Text)
+        }
+    }
+
+    Context 'PALADIN: $AsrRuleNames hashtable' {
+        It 'covers at least 16 well-known ASR rule GUIDs' {
+            $asr = Import-ScriptHashtable -ScriptPath $script:PaladinPath -VarName 'AsrRuleNames'
+            $asr | Should -Not -BeNullOrEmpty
+            $asr.Count | Should -BeGreaterOrEqual 16
+        }
+        It 'maps the abused-driver GUID to a recognisable name' {
+            $asr = Import-ScriptHashtable -ScriptPath $script:PaladinPath -VarName 'AsrRuleNames'
+            $asr['56a863a9-875e-4185-98a7-b882c64b5ce5'] | Should -Match 'vulnerable signed drivers'
+        }
+        It 'maps the LSASS-credential-theft GUID' {
+            $asr = Import-ScriptHashtable -ScriptPath $script:PaladinPath -VarName 'AsrRuleNames'
+            $asr['9e6c4e1f-7d60-472f-ba1a-a39ef669e4b2'] | Should -Match 'LSASS'
+        }
+        It 'uses lowercase GUID keys (matches the case from Get-MpPreference output)' {
+            $asr = Import-ScriptHashtable -ScriptPath $script:PaladinPath -VarName 'AsrRuleNames'
+            foreach ($k in $asr.Keys) {
+                $k | Should -Match '^[0-9a-f-]+$' -Because "ASR keys must be lowercase to match Get-MpPreference output (saw '$k')"
+            }
+        }
+    }
+
+    Context 'PALADIN: Get-AsrActionLabel function' {
+        BeforeAll {
+            # Extract the function definition AST from paladin.ps1 and dot-source
+            # it so this Context can call the function directly.
+            $sb = Get-ScriptFunctionScriptBlock -ScriptPath $script:PaladinPath -FuncName 'Get-AsrActionLabel'
+            . $sb
+        }
+        It 'maps action 0 to Not Configured' {
+            Get-AsrActionLabel -Action 0 | Should -Be 'Not Configured'
+        }
+        It 'maps action 1 to Block' {
+            Get-AsrActionLabel -Action 1 | Should -Be 'Block'
+        }
+        It 'maps action 2 to Audit' {
+            Get-AsrActionLabel -Action 2 | Should -Be 'Audit'
+        }
+        It 'maps action 6 to Warn' {
+            Get-AsrActionLabel -Action 6 | Should -Be 'Warn'
+        }
+        It 'falls back to "Unknown (<n>)" for unmapped codes' {
+            Get-AsrActionLabel -Action 99 | Should -Be 'Unknown (99)'
+        }
+    }
+
+    Context 'BEACON: $AuthStrength hashtable (Wi-Fi)' {
+        It 'classifies open / shared / WEP as Insecure' {
+            $auth = Import-ScriptHashtable -ScriptPath $script:BeaconPath -VarName 'AuthStrength'
+            $auth['open']   | Should -Be 'Insecure'
+            $auth['shared'] | Should -Be 'Insecure'
+            $auth['WEP']    | Should -Be 'Insecure'
+        }
+        It 'classifies WPA1 (WPA / WPAPSK) as Weak' {
+            $auth = Import-ScriptHashtable -ScriptPath $script:BeaconPath -VarName 'AuthStrength'
+            $auth['WPA']    | Should -Be 'Weak'
+            $auth['WPAPSK'] | Should -Be 'Weak'
+        }
+        It 'classifies WPA2 personal+enterprise / WPA3 / OWE as Strong' {
+            $auth = Import-ScriptHashtable -ScriptPath $script:BeaconPath -VarName 'AuthStrength'
+            $auth['WPA2']    | Should -Be 'Strong'
+            $auth['WPA2PSK'] | Should -Be 'Strong'
+            $auth['WPA3SAE'] | Should -Be 'Strong'
+            $auth['WPA3ENT'] | Should -Be 'Strong'
+            $auth['OWE']     | Should -Be 'Strong'
+        }
+    }
+
+    Context 'BEACON: $CipherStrength hashtable (Wi-Fi)' {
+        It 'classifies cipher tiers correctly' {
+            $c = Import-ScriptHashtable -ScriptPath $script:BeaconPath -VarName 'CipherStrength'
+            $c['none'] | Should -Be 'Insecure'
+            $c['WEP']  | Should -Be 'Insecure'
+            $c['TKIP'] | Should -Be 'Weak'
+            $c['AES']  | Should -Be 'Strong'
+            $c['GCMP'] | Should -Be 'Strong'
+        }
+    }
+
+    Context 'PORTAL: $AuthStrength hashtable (VPN)' {
+        It 'classifies PAP as Insecure (cleartext credentials)' {
+            $a = Import-ScriptHashtable -ScriptPath $script:PortalPath -VarName 'AuthStrength'
+            $a['Pap'] | Should -Be 'Insecure'
+        }
+        It 'classifies CHAP as Weak' {
+            $a = Import-ScriptHashtable -ScriptPath $script:PortalPath -VarName 'AuthStrength'
+            $a['Chap'] | Should -Be 'Weak'
+        }
+        It 'classifies MS-CHAPv2 as Acceptable' {
+            $a = Import-ScriptHashtable -ScriptPath $script:PortalPath -VarName 'AuthStrength'
+            $a['MSChapv2'] | Should -Be 'Acceptable'
+        }
+        It 'classifies EAP and MachineCertificate as Strong' {
+            $a = Import-ScriptHashtable -ScriptPath $script:PortalPath -VarName 'AuthStrength'
+            $a['Eap']                | Should -Be 'Strong'
+            $a['MachineCertificate'] | Should -Be 'Strong'
+        }
+    }
+
+    Context 'PORTAL: $EncryptionStrength hashtable (VPN)' {
+        It 'classifies encryption levels correctly' {
+            $e = Import-ScriptHashtable -ScriptPath $script:PortalPath -VarName 'EncryptionStrength'
+            $e['NoEncryption'] | Should -Be 'Insecure'
+            $e['Optional']     | Should -Be 'Weak'
+            $e['Required']     | Should -Be 'Strong'
+            $e['Maximum']      | Should -Be 'Strong'
+        }
+    }
+}
