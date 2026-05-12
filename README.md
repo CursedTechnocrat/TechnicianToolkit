@@ -19,7 +19,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | Running through Kaseya VSA LiveConnect | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
 | Need a guided, menu-driven workflow | **This repo** — full prompts and confirmations at every step |
 | Need fire-and-forget with parameter-only input | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
-| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, CONCLAVE, GROVE, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL, ANVIL, TALON, TOTEM, PYRE, PALADIN, BEACON, PORTAL) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
+| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, CONCLAVE, GROVE, TENDRIL, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL, ANVIL, TALON, TOTEM, PYRE, PALADIN, BEACON, PORTAL) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
 
 ---
 
@@ -104,6 +104,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | 43 | **wraith.ps1** | **W.R.A.I.T.H.** — Watches Registrations, Access, Identities, Tokens & Hygiene | Entra ID identity hygiene audit — guests, privileged roles, password-never-expires, stale admins, disabled-but-licensed, HTML report |
 | 44 | **conclave.ps1** | **C.O.N.C.L.A.V.E.** — Consolidates Organisational Networks, Chats, Licenses, Access, Visibility & Entitlements | Microsoft Teams audit — orphan teams, public teams, guest membership, large teams, stale teams, HTML report |
 | 45 | **grove.ps1** | **G.R.O.V.E.** — Gathers, Reports On, & Verifies Estates | SharePoint Online audit — site inventory, storage, external sharing, ownerless sites, stale sites, HTML report |
+| 46 | **tendril.ps1** | **T.E.N.D.R.I.L.** — Traces Entitlements, Nested Dependencies, Roles, Integrations & Licenses | Entra ID group dependency audit — "what breaks if we delete this group?" — group-based licensing, Conditional Access, enterprise apps, directory roles, nested membership, AUs, Intune, SharePoint, Exchange, Azure RBAC, HTML report |
 
 ### Data & Migration
 
@@ -763,12 +764,14 @@ Outlook data-file discovery that inventories every PST (and optionally OST) on t
 | BitLocker-capable Windows edition (Pro/Enterprise) | `cipher.ps1` |
 | WinRM enabled on target machine | `shade.ps1`, `gargoyle.ps1` (remote mode) |
 | RSAT ActiveDirectory module | `citadel.ps1` (auto-installed if missing) |
-| Az PowerShell modules | `talisman.ps1` (auto-installed if missing) |
-| Microsoft.Graph modules | `reliquary.ps1`, `golem.ps1`, `wraith.ps1`, `conclave.ps1`, `grove.ps1` (auto-installed if missing) |
+| Az PowerShell modules | `talisman.ps1`, `tendril.ps1` (optional, auto-installed if -IncludeAzureRbac) |
+| Microsoft.Graph modules | `reliquary.ps1`, `golem.ps1`, `wraith.ps1`, `conclave.ps1`, `grove.ps1`, `tendril.ps1` (auto-installed if missing) |
+| ExchangeOnlineManagement module | `tendril.ps1` (optional, auto-installed if -IncludeExchange) |
+| PnP.PowerShell module | `tendril.ps1` (optional, auto-installed if -IncludeSharePoint) |
 | Azure subscription + appropriate RBAC | `talisman.ps1` |
-| Microsoft 365 tenant + Global Reader or equivalent | `reliquary.ps1`, `golem.ps1`, `wraith.ps1`, `conclave.ps1`, `grove.ps1` |
-| Microsoft Intune licence + DeviceManagement Graph permissions | `golem.ps1` |
-| RoleManagement.Read.Directory + AuditLog.Read.All Graph scopes | `wraith.ps1` |
+| Microsoft 365 tenant + Global Reader or equivalent | `reliquary.ps1`, `golem.ps1`, `wraith.ps1`, `conclave.ps1`, `grove.ps1`, `tendril.ps1` |
+| Microsoft Intune licence + DeviceManagement Graph permissions | `golem.ps1`, `tendril.ps1` |
+| RoleManagement.Read.Directory + AuditLog.Read.All Graph scopes | `wraith.ps1`, `tendril.ps1` |
 | On-premises Active Directory domain membership | `citadel.ps1` |
 
 ---
@@ -921,6 +924,9 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\conclave.p
 # G.R.O.V.E. — SharePoint Online audit
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\grove.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/grove.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
+# T.E.N.D.R.I.L. — Entra ID group dependency audit
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\tendril.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/tendril.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
 # ── Data & Migration ─────────────────────────────────────────────────────────
 
 # R.E.V.E.N.A.N.T. — Profile migration
@@ -997,6 +1003,7 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\wraith.ps1        # Entra ID identity hygiene audit and HTML report
 .\conclave.ps1      # Microsoft Teams audit and HTML report
 .\grove.ps1         # SharePoint Online audit and HTML report
+.\tendril.ps1       # Entra ID group dependency audit and HTML report
 
 # Data & Migration
 .\revenant.ps1       # Profile migration and data transfer
@@ -1061,6 +1068,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **wraith.ps1** | None — tenant and audit scope selected interactively at runtime |
 | **conclave.ps1** | None — tenant selected interactively; large-team and stale thresholds (250 members, 365 days) are editable constants in the script |
 | **grove.ps1** | None — tenant selected interactively; large-site and stale thresholds (100 GB, 180 days) are editable constants in the script |
+| **tendril.ps1** | `-GroupName` / `-GroupId` — target group (one required, prompted otherwise); `-IncludeSharePoint` + `-SharePointAdminUrl` — scan tenant SP sites via PnP (capped by `-SharePointSiteLimit`, default 200); `-IncludeExchange` — scan EXO transport rules, delegations, role groups, DL nesting; `-IncludeAzureRbac` — scan every visible subscription via Az; `-OutputPath` — HTML report destination; `-NoOpen` — suppress auto-open |
 | **revenant.ps1** | `config.json` — `Revenant.DefaultDestination`; source, items, and destination also selectable interactively |
 | **archive.ps1** | `config.json` — `Archive.DefaultDestination`; profile, items, and destination also selectable interactively |
 | **tether.ps1** | None — reads HKCU OneDrive and User Shell Folders registry and enumerates Desktop / Documents / Pictures for the currently logged-on user |
@@ -1110,6 +1118,7 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **wraith.ps1** | Log directory — `WRAITH_<timestamp>.html` (Entra ID identity hygiene report) |
 | **conclave.ps1** | Log directory — `CONCLAVE_<timestamp>.html` (Teams estate audit report) |
 | **grove.ps1** | Log directory — `GROVE_<timestamp>.html` (SharePoint Online estate audit) |
+| **tendril.ps1** | Log directory — `TENDRIL_<GroupName>_<timestamp>.html` (Entra ID group dependency audit) |
 | **revenant.ps1** | Log directory — `REVENANT_MigrationLog_<timestamp>.csv` |
 | **archive.ps1** | Script directory — `ARCHIVE_Log_<timestamp>.csv`; manifest inside ZIP |
 | **tether.ps1** | Log directory — `TETHER_<timestamp>.html` (OneDrive KFM readiness report) |

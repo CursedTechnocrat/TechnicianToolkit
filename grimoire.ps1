@@ -419,6 +419,15 @@ $Tools = @(
         Color       = 'Green'
         Category    = 'Cloud & Identity'
     },
+    [PSCustomObject]@{
+        Key         = '46'
+        Name        = 'T.E.N.D.R.I.L.'
+        File        = 'tendril.ps1'
+        Version     = '1.0'
+        Description = 'Entra ID group dependency audit  -  what breaks if we delete this group? Licensing, CA, apps, roles, AUs, Intune, SP, EXO, Azure RBAC'
+        Color       = 'Blue'
+        Category    = 'Cloud & Identity'
+    },
     # ── Data & Migration (50–59) ─────────────────────────────────────
     [PSCustomObject]@{
         Key         = '50'
