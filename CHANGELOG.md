@@ -7,6 +7,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Technician notes — new shared-module feature in `TechnicianToolkit.psm1`.** Four exported functions let any tool capture session notes and hand them off to a ticketing system: `Add-TKNote -Text <string> -Category <Info|Action|Warning|Issue|Resolution> [-ScriptName <string>]` records a timestamped entry into a module-scoped buffer; `Get-TKNote` returns the buffer oldest-first; `Clear-TKNote` resets it; `Export-TKNoteReport -Path <file> [-Title] [-ScriptName] [-Ticket] [-Technician] [-Summary]` renders the notes to a dark-themed HTML report built on the shared `Get-TKHtmlHead` / `Get-TKHtmlFoot` template. The report carries four summary cards (total notes / actions / issues / resolutions), a colour-badged notes table (category → `tk-badge-*` tier), and a `Ticket Summary` section containing a plain-text block sized for pasting straight into a ticket comment field. The note buffer lives for one imported-module instance (one tool run) and resets on every `Import-Module -Force`.
+- **Pester coverage for technician notes** — new `Describe 'Technician notes'` block exercising buffer add / read / clear, default category, `[ValidateSet]` rejection of an invalid category, insertion order, and `Export-TKNoteReport` (file creation, balanced HTML document, HTML-escape of note text, ticket reference passthrough). The four new functions were also added to the `Module exports` test list.
+
+### Changed
+- **`C.O.V.E.N.A.N.T.` Entra ID join gained an explicit MFA step (v3.6).** The interactive Entra ID branch of the domain-join stage now asks whether the joining account requires MFA, and if so prompts for the method (Microsoft Authenticator push / verification code, SMS code, phone call, hardware / FIDO2 key), explains that a Windows security prompt will appear, and pauses for the technician to confirm readiness before `dsregcmd /join` runs. The method is recorded in the onboarding action log as the `Entra MFA` step. Replaces the previous passive "a browser prompt may appear" note. `-WhatIf` previews the new step; the summary status colouring recognises the `Configured` status.
+
 ---
 
 ## [3.5.0] - 2026-05-11
