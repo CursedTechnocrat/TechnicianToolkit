@@ -239,8 +239,79 @@ Describe 'Module exports' {
         @{ fn = 'Start-TKTranscript' }
         @{ fn = 'Stop-TKTranscript' }
         @{ fn = 'Write-TKError' }
+        @{ fn = 'Add-TKNote' }
+        @{ fn = 'Get-TKNote' }
+        @{ fn = 'Clear-TKNote' }
+        @{ fn = 'Export-TKNoteReport' }
     ) {
         Get-Command $fn -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Technician notes — Add-TKNote / Get-TKNote / Clear-TKNote / Export-TKNoteReport
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'Technician notes' {
+    BeforeEach { Clear-TKNote }
+
+    It 'starts the session with no notes' {
+        @(Get-TKNote).Count | Should -Be 0
+    }
+    It 'records a note' {
+        Add-TKNote -Text 'first note'
+        $n = @(Get-TKNote)
+        $n.Count   | Should -Be 1
+        $n[0].Text | Should -Be 'first note'
+    }
+    It 'defaults the category to Info' {
+        Add-TKNote -Text 'x'
+        (@(Get-TKNote))[0].Category | Should -Be 'Info'
+    }
+    It 'rejects an invalid category' {
+        { Add-TKNote -Text 'x' -Category 'Bogus' } | Should -Throw
+    }
+    It 'preserves insertion order' {
+        Add-TKNote -Text 'one'
+        Add-TKNote -Text 'two'
+        $n = @(Get-TKNote)
+        $n[0].Text | Should -Be 'one'
+        $n[1].Text | Should -Be 'two'
+    }
+    It 'Clear-TKNote empties the buffer' {
+        Add-TKNote -Text 'x'
+        Clear-TKNote
+        @(Get-TKNote).Count | Should -Be 0
+    }
+
+    Context 'Export-TKNoteReport' {
+        It 'writes an HTML file and returns its path' {
+            Add-TKNote -Text 'did a thing' -Category Action
+            $out = Join-Path $TestDrive 'notes.html'
+            Export-TKNoteReport -Path $out -ScriptName 'T.E.S.T.' | Should -Be $out
+            $out | Should -Exist
+        }
+        It 'produces a balanced HTML document' {
+            Add-TKNote -Text 'note body'
+            $out = Join-Path $TestDrive 'notes2.html'
+            Export-TKNoteReport -Path $out
+            $doc = Get-Content $out -Raw
+            $doc | Should -Match '^<!DOCTYPE html>'
+            $doc | Should -Match '</html>'
+        }
+        It 'escapes HTML-special characters in note text' {
+            Add-TKNote -Text '<script>alert(1)</script>'
+            $out = Join-Path $TestDrive 'notes3.html'
+            Export-TKNoteReport -Path $out
+            $doc = Get-Content $out -Raw
+            $doc | Should -Not -Match '<script>alert'
+            $doc | Should -Match '&lt;script&gt;'
+        }
+        It 'includes the ticket reference when supplied' {
+            Add-TKNote -Text 'x'
+            $out = Join-Path $TestDrive 'notes4.html'
+            Export-TKNoteReport -Path $out -Ticket 'INC0099'
+            (Get-Content $out -Raw) | Should -Match 'INC0099'
+        }
     }
 }
 

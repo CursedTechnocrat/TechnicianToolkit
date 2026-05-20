@@ -20,7 +20,7 @@
     PS C:\> .\covenant.ps1 -Unattended -DomainJoinType "AD" -ADDomain "corp.contoso.com" -ADOUPath "OU=Workstations,DC=corp,DC=contoso,DC=com"
 
 .NOTES
-    Version : 3.5
+    Version : 3.6
 
 #>
 
@@ -319,6 +319,7 @@ if ($Unattended) {
         if ($WhatIf) {
             Write-Host ""
             Write-Host "  [~] Would collect Entra ID credentials (UPN + password)" -ForegroundColor Cyan
+            Write-Host "  [~] Would prompt for the account's MFA method and pause to complete the MFA challenge" -ForegroundColor Cyan
             Write-Host "  [~] Would run: dsregcmd /join to join this device to your Entra ID tenant" -ForegroundColor Cyan
             Write-Host ""
             Add-ActionRecord -Step "Entra ID Join" -Status "WhatIf" -Detail "Would join device to Entra ID"
@@ -344,10 +345,55 @@ if ($Unattended) {
         # Collect password securely
         $securePassword = Read-Host "  Enter password" -AsSecureString
 
+        # ── MULTI-FACTOR AUTHENTICATION ──────────────────────────────────────
+        Write-Host ""
+        Write-Host "  ─────────────────────────────────────────" -ForegroundColor $ColorSchema.Header
+        Write-Host "   MULTI-FACTOR AUTHENTICATION" -ForegroundColor $ColorSchema.Header
+        Write-Host "  ─────────────────────────────────────────" -ForegroundColor $ColorSchema.Header
+        Write-Host ""
+        Write-Host "  Most Entra ID tenants require MFA before a device can be joined." -ForegroundColor $ColorSchema.Info
+        Write-Host ""
+
+        $mfaAnswer   = Read-Host "  Does '$upn' require MFA to sign in? (Y/N)"
+        $mfaRequired = ($mfaAnswer -eq 'Y' -or $mfaAnswer -eq 'y')
+        $mfaMethod   = "None"
+
+        if ($mfaRequired) {
+            Write-Host ""
+            Write-Host "  Select the MFA method this account will use:" -ForegroundColor $ColorSchema.Info
+            Write-Host "    [1] Microsoft Authenticator — push approval" -ForegroundColor $ColorSchema.Info
+            Write-Host "    [2] Microsoft Authenticator — verification code" -ForegroundColor $ColorSchema.Info
+            Write-Host "    [3] SMS text message code" -ForegroundColor $ColorSchema.Info
+            Write-Host "    [4] Phone call approval" -ForegroundColor $ColorSchema.Info
+            Write-Host "    [5] Hardware / FIDO2 security key" -ForegroundColor $ColorSchema.Info
+            Write-Host ""
+            $mfaSel = Read-Host "  Enter choice (1-5)"
+            $mfaMethod = switch ($mfaSel) {
+                '1'     { 'Microsoft Authenticator (push approval)' }
+                '2'     { 'Microsoft Authenticator (verification code)' }
+                '3'     { 'SMS text message code' }
+                '4'     { 'Phone call approval' }
+                '5'     { 'Hardware / FIDO2 security key' }
+                default { 'Unspecified MFA method' }
+            }
+            Write-Host ""
+            Write-Host "    MFA method : $mfaMethod" -ForegroundColor $ColorSchema.Info
+            Write-Host ""
+            Write-Host "  [!!] A Windows security prompt will appear once the join starts." -ForegroundColor $ColorSchema.Warning
+            Write-Host "       Complete the MFA challenge in that prompt to finish the join —" -ForegroundColor $ColorSchema.Warning
+            Write-Host "       approve the request or enter the verification code when asked." -ForegroundColor $ColorSchema.Warning
+            Write-Host ""
+            Read-Host "  Press Enter when you are ready to start the join and complete MFA" | Out-Null
+            Add-ActionRecord -Step "Entra MFA" -Status "Configured" -Detail "Method: $mfaMethod"
+        }
+        else {
+            Write-Host ""
+            Write-Host "    [*] Account reported as not MFA-protected — continuing with password only." -ForegroundColor $ColorSchema.Info
+            Add-ActionRecord -Step "Entra MFA" -Status "Skipped" -Detail "Account reported as not MFA-protected"
+        }
+
         Write-Host ""
         Write-Host "    Preparing credentials and initiating Entra ID join..." -ForegroundColor $ColorSchema.Progress
-        Write-Host "    (Note: if your account requires MFA or Conditional Access, a browser" -ForegroundColor $ColorSchema.Info
-        Write-Host "     prompt may appear. Complete it to continue the join.)" -ForegroundColor $ColorSchema.Info
         Write-Host ""
 
         # Convert SecureString to plain text briefly for credential storage
@@ -868,7 +914,7 @@ Write-Host ""
 
 foreach ($record in $ActionLog) {
     $color = switch -Regex ($record.Status) {
-        'Joined|Created|Mapped|Set|Updated' { $ColorSchema.Success }
+        'Joined|Created|Mapped|Set|Updated|Configured' { $ColorSchema.Success }
         'Skipped'                           { $ColorSchema.Info    }
         'Pending Reboot'                    { $ColorSchema.Warning }
         'WhatIf'                            { 'Cyan'               }

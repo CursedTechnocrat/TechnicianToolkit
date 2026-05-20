@@ -80,6 +80,9 @@ Key functions exported by `TechnicianToolkit.psm1`:
 | `Resolve-LogDirectory` | Return configured log dir or fallback path |
 | `Start-TKTranscript` / `Stop-TKTranscript` | PowerShell transcript wrappers |
 | `Write-TKError` | Log error to file and optionally POST to Teams webhook |
+| `Add-TKNote` | Record a timestamped technician note (category: Info/Action/Warning/Issue/Resolution) |
+| `Get-TKNote` / `Clear-TKNote` | Read / reset the session note buffer |
+| `Export-TKNoteReport` | Write the session's notes to a ticket-ready HTML report (with a plain-text paste block) |
 | `EscHtml` | HTML-escape a string for use in report templates |
 | `Get-TKHtmlCss` | Returns the shared `<style>` block — rarely called directly |
 | `Get-TKHtmlHead` | Returns `<!DOCTYPE html>…<div class="tk-main">` with shared CSS, page header, and nav bar |
