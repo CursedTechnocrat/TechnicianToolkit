@@ -151,12 +151,15 @@ Manages software deployment using the Windows Package Manager (winget) or Chocol
 
 - Supports both winget and Chocolatey package managers (user selectable at runtime)
 - Installs required and optional software packages defined at the top of the script
+- **All operator prompts are front-loaded** — package manager, operation, Adobe edition, optional-software selection, and any custom package IDs are gathered up front, then the install/upgrade work runs start-to-finish with no further input (no babysitting the machine)
+- **Custom packages** — after the curated optional list, the operator can type their own comma-separated winget/Chocolatey package IDs to install alongside the built-ins (passed through verbatim to the selected manager)
+- **Adobe Acrobat edition prompt** — choose Reader (`Adobe.Acrobat.Reader.64-bit`) or Pro (`Adobe.Acrobat.Pro`) at runtime; under Chocolatey, which has no Acrobat Pro package, a Pro request installs Reader with a note to sign in and run the in-app upgrade against a Pro license
 - Upgrade-all mode for keeping existing packages current
 - Tracks and displays installation status per package
 
-**Default required packages:** Microsoft Teams, Microsoft 365, 7-Zip, Google Chrome, Adobe Acrobat Reader, Zoom
+**Default required packages:** Microsoft Teams, Microsoft 365, 7-Zip, Google Chrome, Zoom, plus Adobe Acrobat (Reader or Pro — prompted at runtime)
 
-**Default optional packages:** Zoom Outlook Plugin, Mozilla Firefox, Dell Command Update
+**Default optional packages:** Zoom Outlook Plugin, Mozilla Firefox, Dell Command Update, Asana, Google Earth Pro
 
 ---
 
