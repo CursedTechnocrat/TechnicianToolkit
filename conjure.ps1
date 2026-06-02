@@ -14,7 +14,7 @@
     PS C:\> .\conjure.ps1 -Unattended     # Unattended mode — Required packages only, no prompts
 
 .NOTES
-    Version : 3.5
+    Version : 3.6
 
 #>
 
@@ -66,12 +66,13 @@ Import-Module $TKModulePath -Force -ErrorAction Stop
 
 if ($Transcript) { Start-TKTranscript -LogRoot (Resolve-LogDirectory -FallbackPath $ScriptPath) }
 
+# Adobe Acrobat is handled separately — the operator chooses Reader or Pro up front
+# (see Select-AdobeEdition) and the chosen package is appended to the required list.
 $RequiredSoftware = @(
     "Microsoft.Teams",
     "Microsoft.Office",
     "7zip.7zip",
     "Google.Chrome",
-    "Adobe.Acrobat.Reader.64-bit",
     "Zoom.Zoom"
 )
 
@@ -79,7 +80,8 @@ $OptionalSoftware = @(
     "Zoom.ZoomOutlookPlugin",
     "Mozilla.Firefox",
     "Dell.CommandUpdate",
-    "Asana.Asana"
+    "Asana.Asana",
+    "Google.EarthPro"
 )
 
 # Chocolatey package IDs (mapped to the same software as above)
@@ -88,7 +90,6 @@ $RequiredSoftwareChoco = @(
     "microsoft365apps",
     "7zip",
     "googlechrome",
-    "adobereader",
     "zoom"
 )
 
@@ -96,8 +97,14 @@ $OptionalSoftwareChoco = @(
     "zoom-outlook",
     "firefox",
     "dell-command-update",
-    "asana"
+    "asana",
+    "googleearthpro"
 )
+
+# Adobe Acrobat package IDs per manager / edition
+$AdobeReaderWinget = "Adobe.Acrobat.Reader.64-bit"
+$AdobeProWinget    = "Adobe.Acrobat.Pro"
+$AdobeReaderChoco  = "adobereader"
 
 $PackageManager = "winget"
 
@@ -366,6 +373,46 @@ function Update-AllSoftware {
     }
 }
 
+function Select-AdobeEdition {
+    # Prompts for the Adobe Acrobat edition and returns the package ID to install
+    # for the currently selected package manager. Reader and Pro are both available
+    # on winget; Chocolatey's community repo has no Acrobat Pro package, so a Pro
+    # request there falls back to Reader with an explanatory note.
+    $isChoco = ($script:PackageManager -eq "chocolatey")
+
+    Write-Host ""
+    Write-Host "========================================" -ForegroundColor $Colors.Header
+    Write-Host "ADOBE ACROBAT EDITION" -ForegroundColor $Colors.Header
+    Write-Host "========================================" -ForegroundColor $Colors.Header
+    Write-Host ""
+    Write-Host "  [1] Adobe Acrobat Reader (free)" -ForegroundColor $Colors.Info
+    Write-Host "  [2] Adobe Acrobat Pro (licensed)" -ForegroundColor $Colors.Info
+    Write-Host ""
+
+    $choice = Read-Host "Enter your choice (1/2)"
+
+    switch ($choice) {
+        "2" {
+            if ($isChoco) {
+                Write-Host "[!!] Chocolatey's community repo has no Adobe Acrobat Pro package." -ForegroundColor $Colors.Warning
+                Write-Host "     Installing Adobe Acrobat Reader instead. If the user holds an Acrobat Pro" -ForegroundColor $Colors.Warning
+                Write-Host "     license, have them sign in to Reader and run the in-app upgrade to activate Pro." -ForegroundColor $Colors.Warning
+                return $script:AdobeReaderChoco
+            }
+            Write-Host "[OK] Selected: Adobe Acrobat Pro" -ForegroundColor $Colors.Success
+            return $script:AdobeProWinget
+        }
+        "1" {
+            Write-Host "[OK] Selected: Adobe Acrobat Reader" -ForegroundColor $Colors.Success
+            if ($isChoco) { return $script:AdobeReaderChoco } else { return $script:AdobeReaderWinget }
+        }
+        default {
+            Write-Host "[!!] Invalid choice. Defaulting to Adobe Acrobat Reader" -ForegroundColor $Colors.Warning
+            if ($isChoco) { return $script:AdobeReaderChoco } else { return $script:AdobeReaderWinget }
+        }
+    }
+}
+
 function Select-OptionalSoftware {
     param(
         [string[]]$SoftwareList = $OptionalSoftware
@@ -463,8 +510,76 @@ function Show-InstallationSummary {
 
 if (-not $Unattended) { Show-Banner }
 
+# ---------------------------------------------------------------------------
+# PHASE 1 — OPERATOR INPUT (front-loaded)
+# All prompts are gathered here so the long-running install/upgrade work in
+# PHASE 2 can run start-to-finish without anyone babysitting the machine.
+# ---------------------------------------------------------------------------
+
 # Select package manager
 if (-not $Unattended) { Select-PackageManager }
+
+# Choose operation
+if ($Unattended) {
+    Write-Host "[*] Unattended mode: installing required packages only" -ForegroundColor $Colors.Info
+    $operation = "1"
+}
+else {
+    Write-Host ""
+    Write-Host "Choose operation:" -ForegroundColor $Colors.Header
+    Write-Host "  [1] Install software" -ForegroundColor $Colors.Info
+    Write-Host "  [2] Upgrade all software" -ForegroundColor $Colors.Info
+    Write-Host "  [3] Install and then Upgrade" -ForegroundColor $Colors.Info
+    Write-Host ""
+    $operation = Read-Host "Enter your choice (1/2/3)"
+}
+
+if ($operation -notin @("1", "2", "3")) {
+    Write-Host "[ERROR] Invalid choice. Exiting." -ForegroundColor $Colors.Error
+    if (-not $Unattended) { Read-Host "Press Enter to exit" }
+    exit 1
+}
+
+$doInstall = ($operation -eq "1" -or $operation -eq "3")
+$doUpgrade = ($operation -eq "2" -or $operation -eq "3")
+
+# Resolve the correct package lists based on selected manager
+$ActiveRequired = if ($PackageManager -eq "chocolatey") { @($RequiredSoftwareChoco) } else { @($RequiredSoftware) }
+$ActiveOptional = if ($PackageManager -eq "chocolatey") { @($OptionalSoftwareChoco) } else { @($OptionalSoftware) }
+
+$optionalList = New-Object System.Collections.ArrayList
+
+if ($doInstall) {
+    Write-Host "[OK] Selected: Install Mode" -ForegroundColor $Colors.Success
+
+    # Adobe Acrobat edition (Reader or Pro) — appended to the required list
+    if ($Unattended) {
+        $AdobePackage = if ($PackageManager -eq "chocolatey") { $AdobeReaderChoco } else { $AdobeReaderWinget }
+    }
+    else {
+        $AdobePackage = Select-AdobeEdition
+    }
+    $ActiveRequired += $AdobePackage
+
+    # Optional software selection (interactive mode only)
+    if (-not $Unattended) {
+        $optionalList = Select-OptionalSoftware -SoftwareList $ActiveOptional
+    }
+}
+
+if ($doUpgrade -and -not $doInstall) {
+    Write-Host "[OK] Selected: Upgrade Mode" -ForegroundColor $Colors.Success
+}
+elseif ($doUpgrade) {
+    Write-Host "[OK] Will upgrade all packages after install" -ForegroundColor $Colors.Success
+}
+
+Write-Host ""
+Write-Host "[*] All selections captured — beginning unattended execution. No further input required." -ForegroundColor $Colors.Accent
+
+# ---------------------------------------------------------------------------
+# PHASE 2 — EXECUTION (no operator prompts)
+# ---------------------------------------------------------------------------
 
 # Check that the selected package manager is available
 if ($PackageManager -eq "chocolatey") {
@@ -482,67 +597,18 @@ else {
     }
 }
 
-# Resolve the correct package lists based on selected manager
-$ActiveRequired = if ($PackageManager -eq "chocolatey") { $RequiredSoftwareChoco } else { $RequiredSoftware }
-$ActiveOptional = if ($PackageManager -eq "chocolatey") { $OptionalSoftwareChoco } else { $OptionalSoftware }
+if ($doInstall) {
+    # Install required software
+    Install-Software -SoftwareList $ActiveRequired -Type "Required"
 
-if ($Unattended) {
-    Write-Host "[*] Unattended mode: installing required packages only" -ForegroundColor $Colors.Info
-    $operation = "1"
-}
-else {
-    Write-Host ""
-    Write-Host "Choose operation:" -ForegroundColor $Colors.Header
-    Write-Host "  [1] Install software" -ForegroundColor $Colors.Info
-    Write-Host "  [2] Upgrade all software" -ForegroundColor $Colors.Info
-    Write-Host "  [3] Install and then Upgrade" -ForegroundColor $Colors.Info
-    Write-Host ""
-    $operation = Read-Host "Enter your choice (1/2/3)"
+    # Install any optional software selected up front
+    if ($optionalList.Count -gt 0) {
+        Install-Software -SoftwareList $optionalList -Type "Optional"
+    }
 }
 
-switch ($operation) {
-    "1" {
-        Write-Host "[OK] Selected: Install Mode" -ForegroundColor $Colors.Success
-
-        # Install required software
-        Install-Software -SoftwareList $ActiveRequired -Type "Required"
-
-        # Ask for optional software (interactive mode only)
-        if (-not $Unattended) {
-            $optionalList = Select-OptionalSoftware -SoftwareList $ActiveOptional
-
-            if ($optionalList.Count -gt 0) {
-                Install-Software -SoftwareList $optionalList -Type "Optional"
-            }
-        }
-    }
-    "2" {
-        Write-Host "[OK] Selected: Upgrade Mode" -ForegroundColor $Colors.Success
-        Update-AllSoftware
-    }
-    "3" {
-        Write-Host "[OK] Selected: Install and Upgrade Mode" -ForegroundColor $Colors.Success
-
-        # Install required software
-        Install-Software -SoftwareList $ActiveRequired -Type "Required"
-
-        # Ask for optional software (interactive mode only)
-        if (-not $Unattended) {
-            $optionalList = Select-OptionalSoftware -SoftwareList $ActiveOptional
-
-            if ($optionalList.Count -gt 0) {
-                Install-Software -SoftwareList $optionalList -Type "Optional"
-            }
-        }
-
-        # Then upgrade
-        Update-AllSoftware
-    }
-    default {
-        Write-Host "[ERROR] Invalid choice. Exiting." -ForegroundColor $Colors.Error
-        if (-not $Unattended) { Read-Host "Press Enter to exit" }
-        exit 1
-    }
+if ($doUpgrade) {
+    Update-AllSoftware
 }
 
 # Show summary
