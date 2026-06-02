@@ -413,6 +413,48 @@ function Select-AdobeEdition {
     }
 }
 
+function Read-CustomPackages {
+    # Lets the operator add their own package IDs on top of the curated optional
+    # list. IDs are package-manager-specific, so whatever is typed is passed
+    # through verbatim to the selected manager (winget -e --id <id> / choco install <id>).
+    $custom = New-Object System.Collections.ArrayList
+
+    $mgrName = if ($script:PackageManager -eq "chocolatey") { "Chocolatey" } else { "Winget" }
+    $example = if ($script:PackageManager -eq "chocolatey") { "notepadplusplus, vlc" } else { "Notepad++.Notepad++, VideoLAN.VLC" }
+
+    Write-Host ""
+    Write-Host "========================================" -ForegroundColor $Colors.Header
+    Write-Host "CUSTOM PACKAGES" -ForegroundColor $Colors.Header
+    Write-Host "========================================" -ForegroundColor $Colors.Header
+    Write-Host ""
+    Write-Host "Enter any additional $mgrName package IDs to install." -ForegroundColor $Colors.Info
+    Write-Host "Separate multiple IDs with commas (e.g. $example)." -ForegroundColor $Colors.Info
+    Write-Host "Leave blank and press Enter to skip." -ForegroundColor $Colors.Info
+    Write-Host ""
+
+    $userInput = Read-Host "Custom $mgrName package IDs"
+
+    if (-not [string]::IsNullOrWhiteSpace($userInput)) {
+        $ids = $userInput -split ','
+        foreach ($id in $ids) {
+            $trimmed = $id.Trim()
+            if (-not [string]::IsNullOrWhiteSpace($trimmed)) {
+                [void]$custom.Add($trimmed)
+            }
+        }
+    }
+
+    if ($custom.Count -gt 0) {
+        $customDisplay = $custom -join ', '
+        Write-Host "[OK] Custom packages queued: $customDisplay" -ForegroundColor $Colors.Success
+    }
+    else {
+        Write-Host "[!!] No custom packages entered" -ForegroundColor $Colors.Warning
+    }
+
+    return $custom
+}
+
 function Select-OptionalSoftware {
     param(
         [string[]]$SoftwareList = $OptionalSoftware
@@ -548,6 +590,7 @@ $ActiveRequired = if ($PackageManager -eq "chocolatey") { @($RequiredSoftwareCho
 $ActiveOptional = if ($PackageManager -eq "chocolatey") { @($OptionalSoftwareChoco) } else { @($OptionalSoftware) }
 
 $optionalList = New-Object System.Collections.ArrayList
+$customList   = New-Object System.Collections.ArrayList
 
 if ($doInstall) {
     Write-Host "[OK] Selected: Install Mode" -ForegroundColor $Colors.Success
@@ -561,9 +604,10 @@ if ($doInstall) {
     }
     $ActiveRequired += $AdobePackage
 
-    # Optional software selection (interactive mode only)
+    # Optional software selection + operator-supplied custom IDs (interactive mode only)
     if (-not $Unattended) {
         $optionalList = Select-OptionalSoftware -SoftwareList $ActiveOptional
+        $customList   = Read-CustomPackages
     }
 }
 
@@ -604,6 +648,11 @@ if ($doInstall) {
     # Install any optional software selected up front
     if ($optionalList.Count -gt 0) {
         Install-Software -SoftwareList $optionalList -Type "Optional"
+    }
+
+    # Install any operator-supplied custom package IDs
+    if ($customList.Count -gt 0) {
+        Install-Software -SoftwareList $customList -Type "Custom"
     }
 }
 
