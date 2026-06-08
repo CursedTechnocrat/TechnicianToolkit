@@ -18,7 +18,7 @@
     PS C:\> .\cipher.ps1 -Unattended -Action BackupAD -Drive C     # Backup recovery key to AD
 
 .NOTES
-    Version : 3.5
+    Version : 3.6
 
 #>
 
@@ -165,6 +165,27 @@ function Select-Drive {
     }
 }
 
+# Turns BitLocker protection ON for a volume that is already encrypted but has
+# ProtectionStatus = Off (an unsecured "clear" key is exposing the volume key).
+# Resume-BitLocker only handles volumes that were suspended via Suspend-BitLocker;
+# on a volume that is unprotected for any other reason it throws FVE_E_KEY_REQUIRED
+# (0x8031001D, "you cannot delete the last key"). manage-bde -protectors -enable is
+# the documented path: it removes the unsecured key and enforces the remaining
+# protectors. Returns $true if ProtectionStatus is On afterwards.
+function Enable-DriveProtection {
+    param([Parameter(Mandatory)][string]$MountPoint)
+
+    try {
+        Resume-BitLocker -MountPoint $MountPoint -ErrorAction Stop | Out-Null
+    }
+    catch {
+        & manage-bde.exe -protectors -enable $MountPoint 2>&1 | Out-Null
+    }
+
+    $check = Get-BitLockerVolume -MountPoint $MountPoint -ErrorAction SilentlyContinue
+    return ($check -and $check.ProtectionStatus -eq 'On')
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # ACTION FUNCTIONS
 # ─────────────────────────────────────────────────────────────────────────────
@@ -216,11 +237,12 @@ function Enable-DriveEncryption {
             Write-Host ""
             Write-Host "  [!!] BitLocker protection is OFF — encryption exists but keys are exposed." -ForegroundColor $ColorSchema.Warning
             Write-Host "  [*] Activating BitLocker protection..." -ForegroundColor $ColorSchema.Progress
-            try {
-                Resume-BitLocker -MountPoint $vol.MountPoint -ErrorAction Stop | Out-Null
+            if (Enable-DriveProtection -MountPoint $vol.MountPoint) {
                 Write-Host "  [+] BitLocker protection is now ON." -ForegroundColor $ColorSchema.Success
-            } catch {
-                Write-Host "  [-] Failed to activate protection: $_" -ForegroundColor $ColorSchema.Error
+            } else {
+                Write-Host "  [-] Failed to activate protection — the volume still has an exposed key." -ForegroundColor $ColorSchema.Error
+                Write-Host "      Confirm a usable protector exists, then run: manage-bde -protectors -enable $($vol.MountPoint)" -ForegroundColor $ColorSchema.Warning
+                Write-TKError -ScriptName 'cipher' -Message "Activate protection failed on '$($vol.MountPoint)' — ProtectionStatus still Off after Resume-BitLocker and manage-bde -protectors -enable." -Category 'BitLocker Enable'
             }
         } else {
             Write-Host "  [+] BitLocker protection is ON." -ForegroundColor $ColorSchema.Success
@@ -299,7 +321,7 @@ function Enable-DriveEncryption {
         $volCheck = Get-BitLockerVolume -MountPoint $vol.MountPoint -ErrorAction SilentlyContinue
         if ($volCheck -and $volCheck.ProtectionStatus -ne "On") {
             Write-Host "  [*] Activating BitLocker protection..." -ForegroundColor $ColorSchema.Progress
-            Resume-BitLocker -MountPoint $vol.MountPoint -ErrorAction SilentlyContinue | Out-Null
+            [void](Enable-DriveProtection -MountPoint $vol.MountPoint)
         }
 
         Write-Host "  [+] Encryption started on $($vol.MountPoint). BitLocker protection is ON." -ForegroundColor $ColorSchema.Success
