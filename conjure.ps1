@@ -66,47 +66,40 @@ Import-Module $TKModulePath -Force -ErrorAction Stop
 
 if ($Transcript) { Start-TKTranscript -LogRoot (Resolve-LogDirectory -FallbackPath $ScriptPath) }
 
+# Single source of truth for the deployment catalog. Each entry carries a friendly
+# Name plus the package ID for every supported manager, so the winget and Chocolatey
+# IDs can never drift out of alignment. Add or remove a package in exactly one place;
+# Get-PackageId resolves an entry to the ID for the manager selected at runtime.
+$RequiredCatalog = @(
+    [PSCustomObject]@{ Name = 'Microsoft Teams'; Winget = 'Microsoft.Teams';  Choco = 'microsoft-teams' }
+    [PSCustomObject]@{ Name = 'Microsoft 365';   Winget = 'Microsoft.Office'; Choco = 'microsoft365apps' }
+    [PSCustomObject]@{ Name = '7-Zip';           Winget = '7zip.7zip';        Choco = '7zip' }
+    [PSCustomObject]@{ Name = 'Google Chrome';   Winget = 'Google.Chrome';    Choco = 'googlechrome' }
+    [PSCustomObject]@{ Name = 'Zoom';            Winget = 'Zoom.Zoom';        Choco = 'zoom' }
+)
+
+$OptionalCatalog = @(
+    [PSCustomObject]@{ Name = 'Zoom Outlook Plugin'; Winget = 'Zoom.ZoomOutlookPlugin'; Choco = 'zoom-outlook' }
+    [PSCustomObject]@{ Name = 'Mozilla Firefox';     Winget = 'Mozilla.Firefox';        Choco = 'firefox' }
+    [PSCustomObject]@{ Name = 'Dell Command Update'; Winget = 'Dell.CommandUpdate';      Choco = 'dell-command-update' }
+    [PSCustomObject]@{ Name = 'Asana';               Winget = 'Asana.Asana';             Choco = 'asana' }
+    [PSCustomObject]@{ Name = 'Google Earth Pro';    Winget = 'Google.EarthPro';         Choco = 'googleearthpro' }
+)
+
 # Adobe Acrobat is handled separately — the operator chooses Reader or Pro up front
 # (see Select-AdobeEdition) and the chosen package is appended to the required list.
-$RequiredSoftware = @(
-    "Microsoft.Teams",
-    "Microsoft.Office",
-    "7zip.7zip",
-    "Google.Chrome",
-    "Zoom.Zoom"
-)
-
-$OptionalSoftware = @(
-    "Zoom.ZoomOutlookPlugin",
-    "Mozilla.Firefox",
-    "Dell.CommandUpdate",
-    "Asana.Asana",
-    "Google.EarthPro"
-)
-
-# Chocolatey package IDs (mapped to the same software as above)
-$RequiredSoftwareChoco = @(
-    "microsoft-teams",
-    "microsoft365apps",
-    "7zip",
-    "googlechrome",
-    "zoom"
-)
-
-$OptionalSoftwareChoco = @(
-    "zoom-outlook",
-    "firefox",
-    "dell-command-update",
-    "asana",
-    "googleearthpro"
-)
-
-# Adobe Acrobat package IDs per manager / edition
-$AdobeReaderWinget = "Adobe.Acrobat.Reader.64-bit"
-$AdobeProWinget    = "Adobe.Acrobat.Pro"
-$AdobeReaderChoco  = "adobereader"
+# Chocolatey's community repo has no Acrobat Pro package, so the Pro entry's Choco
+# slot intentionally falls back to Reader (Select-AdobeEdition prints a note for it).
+$AdobeReader = [PSCustomObject]@{ Name = 'Adobe Acrobat Reader'; Winget = 'Adobe.Acrobat.Reader.64-bit'; Choco = 'adobereader' }
+$AdobePro    = [PSCustomObject]@{ Name = 'Adobe Acrobat Pro';    Winget = 'Adobe.Acrobat.Pro';           Choco = 'adobereader' }
 
 $PackageManager = "winget"
+
+# Resolve a catalog entry to the package ID for the manager selected at runtime.
+function Get-PackageId {
+    param([Parameter(Mandatory)][PSObject]$Entry)
+    if ($script:PackageManager -eq "chocolatey") { return $Entry.Choco } else { return $Entry.Winget }
+}
 
 # ===========================
 # COLORS
@@ -397,18 +390,18 @@ function Select-AdobeEdition {
                 Write-Host "[!!] Chocolatey's community repo has no Adobe Acrobat Pro package." -ForegroundColor $Colors.Warning
                 Write-Host "     Installing Adobe Acrobat Reader instead. If the user holds an Acrobat Pro" -ForegroundColor $Colors.Warning
                 Write-Host "     license, have them sign in to Reader and run the in-app upgrade to activate Pro." -ForegroundColor $Colors.Warning
-                return $script:AdobeReaderChoco
+                return (Get-PackageId -Entry $script:AdobeReader)
             }
             Write-Host "[OK] Selected: Adobe Acrobat Pro" -ForegroundColor $Colors.Success
-            return $script:AdobeProWinget
+            return (Get-PackageId -Entry $script:AdobePro)
         }
         "1" {
             Write-Host "[OK] Selected: Adobe Acrobat Reader" -ForegroundColor $Colors.Success
-            if ($isChoco) { return $script:AdobeReaderChoco } else { return $script:AdobeReaderWinget }
+            return (Get-PackageId -Entry $script:AdobeReader)
         }
         default {
             Write-Host "[!!] Invalid choice. Defaulting to Adobe Acrobat Reader" -ForegroundColor $Colors.Warning
-            if ($isChoco) { return $script:AdobeReaderChoco } else { return $script:AdobeReaderWinget }
+            return (Get-PackageId -Entry $script:AdobeReader)
         }
     }
 }
@@ -457,7 +450,7 @@ function Read-CustomPackages {
 
 function Select-OptionalSoftware {
     param(
-        [string[]]$SoftwareList = $OptionalSoftware
+        [string[]]$SoftwareList = @()
     )
 
     Write-Host ""
@@ -585,9 +578,9 @@ if ($operation -notin @("1", "2", "3")) {
 $doInstall = ($operation -eq "1" -or $operation -eq "3")
 $doUpgrade = ($operation -eq "2" -or $operation -eq "3")
 
-# Resolve the correct package lists based on selected manager
-$ActiveRequired = if ($PackageManager -eq "chocolatey") { @($RequiredSoftwareChoco) } else { @($RequiredSoftware) }
-$ActiveOptional = if ($PackageManager -eq "chocolatey") { @($OptionalSoftwareChoco) } else { @($OptionalSoftware) }
+# Resolve the catalog to package IDs for the selected manager
+$ActiveRequired = @($RequiredCatalog | ForEach-Object { Get-PackageId -Entry $_ })
+$ActiveOptional = @($OptionalCatalog | ForEach-Object { Get-PackageId -Entry $_ })
 
 $optionalList = New-Object System.Collections.ArrayList
 $customList   = New-Object System.Collections.ArrayList
@@ -597,7 +590,7 @@ if ($doInstall) {
 
     # Adobe Acrobat edition (Reader or Pro) — appended to the required list
     if ($Unattended) {
-        $AdobePackage = if ($PackageManager -eq "chocolatey") { $AdobeReaderChoco } else { $AdobeReaderWinget }
+        $AdobePackage = Get-PackageId -Entry $AdobeReader
     }
     else {
         $AdobePackage = Select-AdobeEdition
