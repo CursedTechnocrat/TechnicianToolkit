@@ -6,8 +6,8 @@
 .DESCRIPTION
     Manages BitLocker drive encryption across all volumes on the local machine.
     Check encryption status, enable or disable encryption, back up recovery keys
-    to Active Directory or Entra ID, view recovery key IDs, and suspend or resume
-    BitLocker protection.
+    to Active Directory or Entra ID, view recovery key IDs, suspend or resume
+    BitLocker protection, and export a status + recovery-key report to PDF.
 
 .USAGE
     PS C:\> .\cipher.ps1                                           # Must be run as Administrator
@@ -16,19 +16,22 @@
     PS C:\> .\cipher.ps1 -Unattended -Action Disable -Drive C      # Disable BitLocker on C:
     PS C:\> .\cipher.ps1 -Unattended -Action Suspend -Drive C      # Suspend BitLocker on C:
     PS C:\> .\cipher.ps1 -Unattended -Action BackupAD -Drive C     # Backup recovery key to AD
+    PS C:\> .\cipher.ps1 -Unattended -Action Export                # Export status + recovery keys to PDF
+    PS C:\> .\cipher.ps1 -Unattended -Action Export -OutputPath D:\Reports
 
 .NOTES
-    Version : 3.6
+    Version : 3.7
 
 #>
 
 param(
     [switch]$Unattended,
     [switch]$WhatIf,
-    [ValidateSet('Status','Enable','Disable','Suspend','Resume','BackupAD','BackupEntraID')]
+    [ValidateSet('Status','Enable','Disable','Suspend','Resume','BackupAD','BackupEntraID','Export')]
     [string]$Action = "Status",
     [ValidatePattern('^[A-Za-z]:?$')]
     [string]$Drive  = "C",
+    [string]$OutputPath,
     [switch]$Transcript
 )
 
@@ -184,6 +187,42 @@ function Enable-DriveProtection {
 
     $check = Get-BitLockerVolume -MountPoint $MountPoint -ErrorAction SilentlyContinue
     return ($check -and $check.ProtectionStatus -eq 'On')
+}
+
+# Renders an HTML file to PDF using headless Microsoft Edge (or Chrome as a
+# fallback) — both ship Chromium's --print-to-pdf, so no third-party tooling is
+# required. Returns $true if the PDF was produced, $false if no browser is
+# available (the caller keeps the HTML in that case).
+function Convert-HtmlToPdf {
+    param(
+        [Parameter(Mandatory)][string]$HtmlPath,
+        [Parameter(Mandatory)][string]$PdfPath
+    )
+
+    $bases = @($env:ProgramFiles, ${env:ProgramFiles(x86)}) | Where-Object { $_ }
+    $candidates = foreach ($b in $bases) {
+        Join-Path $b 'Microsoft\Edge\Application\msedge.exe'
+        Join-Path $b 'Google\Chrome\Application\chrome.exe'
+    }
+    $browser = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if (-not $browser) { return $false }
+
+    $uri = 'file:///' + ($HtmlPath -replace '\\', '/')
+    $browserArgs = @(
+        '--headless'
+        '--disable-gpu'
+        '--no-pdf-header-footer'
+        "--print-to-pdf=`"$PdfPath`""
+        "`"$uri`""
+    )
+    try {
+        Start-Process -FilePath $browser -ArgumentList $browserArgs -WindowStyle Hidden -Wait -PassThru -ErrorAction Stop | Out-Null
+    } catch {
+        return $false
+    }
+    # The PDF is flushed to disk a moment after the process exits — give it time.
+    for ($i = 0; $i -lt 10 -and -not (Test-Path $PdfPath); $i++) { Start-Sleep -Milliseconds 300 }
+    return (Test-Path $PdfPath)
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -456,6 +495,135 @@ function Show-RecoveryKey {
     }
 }
 
+function Export-EncryptionReport {
+    param([switch]$SkipConfirm)
+
+    Write-Host ""
+    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
+    Write-Host "  EXPORT ENCRYPTION REPORT (PDF)" -ForegroundColor $ColorSchema.Header
+    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
+    Write-Host ""
+    Write-Host "  [!!] This report includes the 48-digit RECOVERY PASSWORDS for every" -ForegroundColor $ColorSchema.Warning
+    Write-Host "       drive that has one. Anyone who opens the PDF can unlock those" -ForegroundColor $ColorSchema.Warning
+    Write-Host "       drives — store it somewhere secure (not on the encrypted drive)." -ForegroundColor $ColorSchema.Warning
+
+    if ($WhatIf) {
+        Write-Host ""
+        Write-Host "  [~] Would build an HTML + PDF encryption report (including recovery keys)." -ForegroundColor Cyan
+        Write-Host ""
+        return
+    }
+
+    if (-not $SkipConfirm) {
+        Write-Host ""
+        Write-Host -NoNewline "  Generate report with recovery keys? (Y/N): " -ForegroundColor $ColorSchema.Warning
+        if ((Read-Host).Trim().ToUpper() -ne "Y") {
+            Write-Host "  [*] Export cancelled." -ForegroundColor $ColorSchema.Info
+            Write-Host ""
+            return
+        }
+    }
+
+    try {
+        $volumes = @(Get-BitLockerVolume -ErrorAction Stop)
+    } catch {
+        Write-Host ""
+        Write-Host "  [-] Unable to retrieve BitLocker information: $_" -ForegroundColor $ColorSchema.Error
+        Write-TKError -ScriptName 'cipher' -Message "Export report: Get-BitLockerVolume failed: $($_.Exception.Message)" -Category 'BitLocker Export'
+        Write-Host ""
+        return
+    }
+
+    $reportDir = if (-not [string]::IsNullOrWhiteSpace($OutputPath)) { $OutputPath }
+                 else { Resolve-LogDirectory -FallbackPath $PSScriptRoot }
+    if (-not (Test-Path $reportDir)) { New-Item -ItemType Directory -Path $reportDir -Force | Out-Null }
+
+    $stamp    = Get-Date -Format 'yyyyMMdd_HHmmss'
+    $htmlPath = Join-Path $reportDir "CIPHER_Report_$stamp.html"
+    $pdfPath  = Join-Path $reportDir "CIPHER_Report_$stamp.pdf"
+
+    Write-Host ""
+    Write-Host "  [*] Building report..." -ForegroundColor $ColorSchema.Progress
+
+    $cfg       = Get-TKConfig
+    $orgPrefix = if (-not [string]::IsNullOrWhiteSpace($cfg.OrgName)) { "$(EscHtml $cfg.OrgName) — " } else { '' }
+
+    $html = Get-TKHtmlHead -Title 'BitLocker Encryption Report' `
+        -ScriptName 'C.I.P.H.E.R.' `
+        -Subtitle "$orgPrefix$env:COMPUTERNAME" `
+        -MetaItems ([ordered]@{
+            'Generated' = (Get-Date -Format 'yyyy-MM-dd HH:mm')
+            'Run As'    = "$env:USERDOMAIN\$env:USERNAME"
+            'Volumes'   = $volumes.Count
+        }) `
+        -NavItems @('Drive Status', 'Recovery Keys')
+
+    $html += @"
+<div class="tk-section" id="s01">
+  <div class="tk-section-title"><span class="tk-section-num">01</span> Drive Status</div>
+  <div class="tk-info-box"><span class="tk-info-label">SENSITIVE</span> This document contains BitLocker recovery passwords. Anyone who reads it can unlock the listed drives — handle it as a secret.</div>
+  <div class="tk-card">
+    <table class="tk-table">
+      <thead><tr><th>Drive</th><th>Volume Status</th><th>Protection</th><th>Encryption</th><th>Key Protectors</th></tr></thead>
+      <tbody>
+"@
+    foreach ($vol in $volumes) {
+        $protBadge = if ($vol.ProtectionStatus -eq 'On') { "<span class='tk-badge-ok'>On</span>" } else { "<span class='tk-badge-warn'>Off</span>" }
+        $keyTypes  = if ($vol.KeyProtector.Count -gt 0) { ($vol.KeyProtector | ForEach-Object { $_.KeyProtectorType }) -join ', ' } else { 'None' }
+        $html += "<tr><td class='tk-mono'>$(EscHtml $vol.MountPoint)</td><td>$(EscHtml $vol.VolumeStatus)</td><td>$protBadge</td><td>$(EscHtml ([string]$vol.EncryptionPercentage))%</td><td>$(EscHtml $keyTypes)</td></tr>"
+    }
+    $html += @"
+      </tbody>
+    </table>
+  </div>
+</div>
+<div class="tk-section" id="s02">
+  <div class="tk-section-title"><span class="tk-section-num">02</span> Recovery Keys</div>
+  <div class="tk-card">
+    <table class="tk-table">
+      <thead><tr><th>Drive</th><th>Key Protector ID</th><th>Recovery Password</th></tr></thead>
+      <tbody>
+"@
+    $anyKeys = $false
+    foreach ($vol in $volumes) {
+        foreach ($key in ($vol.KeyProtector | Where-Object { $_.KeyProtectorType -eq 'RecoveryPassword' })) {
+            $anyKeys = $true
+            $html += "<tr><td class='tk-mono'>$(EscHtml $vol.MountPoint)</td><td class='tk-mono'>$(EscHtml $key.KeyProtectorId)</td><td class='tk-mono'>$(EscHtml $key.RecoveryPassword)</td></tr>"
+        }
+    }
+    if (-not $anyKeys) {
+        $html += "<tr><td colspan='3'>No recovery password protectors found on any volume.</td></tr>"
+    }
+    $html += @"
+      </tbody>
+    </table>
+  </div>
+</div>
+"@
+    $html += Get-TKHtmlFoot -ScriptName 'C.I.P.H.E.R. v3.7'
+
+    try {
+        $html | Out-File -FilePath $htmlPath -Encoding UTF8 -ErrorAction Stop
+    } catch {
+        Write-Host "  [-] Failed to write report: $_" -ForegroundColor $ColorSchema.Error
+        Write-TKError -ScriptName 'cipher' -Message "Export report: writing HTML failed: $($_.Exception.Message)" -Category 'BitLocker Export'
+        Write-Host ""
+        return
+    }
+
+    Write-Host "  [*] Converting to PDF..." -ForegroundColor $ColorSchema.Progress
+    if (Convert-HtmlToPdf -HtmlPath $htmlPath -PdfPath $pdfPath) {
+        Remove-Item -Path $htmlPath -Force -ErrorAction SilentlyContinue
+        Write-Host "  [+] PDF report saved: $pdfPath" -ForegroundColor $ColorSchema.Success
+    } else {
+        Write-Host "  [!!] Microsoft Edge / Chrome not found — could not render PDF." -ForegroundColor $ColorSchema.Warning
+        Write-Host "  [+] HTML report saved: $htmlPath" -ForegroundColor $ColorSchema.Success
+        Write-Host "      Open it and choose Print -> Save as PDF to produce a PDF." -ForegroundColor $ColorSchema.Info
+    }
+
+    Write-Host ""
+}
+
 function Suspend-DriveProtection {
     Write-Host ""
     Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
@@ -556,6 +724,7 @@ if ($Unattended) {
                 Write-Host "  [-] Failed: $_" -ForegroundColor $ColorSchema.Error
             }
         }
+        "Export"      { Export-EncryptionReport -SkipConfirm }
         "BackupAD"    {
             try {
                 $vol = Get-BitLockerVolume -MountPoint $mountPoint -ErrorAction Stop
@@ -602,6 +771,7 @@ if ($Unattended) {
         Write-Host "  [4] Show recovery key" -ForegroundColor $ColorSchema.Info
         Write-Host "  [5] Suspend BitLocker protection" -ForegroundColor $ColorSchema.Info
         Write-Host "  [6] Resume BitLocker protection" -ForegroundColor $ColorSchema.Info
+        Write-Host "  [7] Export encryption report  (PDF)" -ForegroundColor $ColorSchema.Info
         Write-Host "  [R] Refresh drive status" -ForegroundColor $ColorSchema.Info
         Write-Host "  [Q] Quit" -ForegroundColor $ColorSchema.Info
         Write-Host ""
@@ -615,6 +785,7 @@ if ($Unattended) {
             "4" { Show-RecoveryKey }
             "5" { Suspend-DriveProtection }
             "6" { Resume-DriveProtection }
+            "7" { Export-EncryptionReport }
             "R" { }
             "Q" {
                 Write-Host ""
@@ -623,7 +794,7 @@ if ($Unattended) {
             }
             default {
                 Write-Host ""
-                Write-Host "  [!!] Invalid selection. Enter 1-6, R, or Q." -ForegroundColor $ColorSchema.Warning
+                Write-Host "  [!!] Invalid selection. Enter 1-7, R, or Q." -ForegroundColor $ColorSchema.Warning
                 Start-Sleep -Seconds 1
             }
         }

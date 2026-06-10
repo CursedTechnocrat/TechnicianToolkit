@@ -76,7 +76,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 
 | # | Script | Acronym | Purpose |
 |---|--------|---------|---------|
-| 20 | **cipher.ps1** | **C.I.P.H.E.R.** — Configures & Implements Policy-based Hardware Encryption & Recovery | BitLocker drive encryption management — enable, disable, key backup |
+| 20 | **cipher.ps1** | **C.I.P.H.E.R.** — Configures & Implements Policy-based Hardware Encryption & Recovery | BitLocker drive encryption management — enable, disable, key backup, PDF export |
 | 21 | **sigil.ps1** | **S.I.G.I.L.** — Secures Infrastructure: Governs via Integrated Lockdown | Security baseline enforcement — telemetry, UAC, firewall, audit policy, password policy |
 | 22 | **citadel.ps1** | **C.I.T.A.D.E.L.** — Centralizes Identity, Tasks, Accounts, Directories, Entitlements & Logons | Active Directory user & group management — unlock, reset, lockout forensics, stale & expiry reports |
 | 23 | **artifact.ps1** | **A.R.T.I.F.A.C.T.** — Audits, Reports Trust, Identity, Fingerprints, Authority, Certificates & TLS | Certificate health monitor — local cert stores, SSL/TLS expiry, HTML report |
@@ -398,6 +398,7 @@ Manages BitLocker drive encryption across all volumes with an interactive menu-d
 - View recovery key ID and password for any encrypted drive
 - Suspend BitLocker for BIOS/firmware updates (auto-resumes after reboot)
 - Resume suspended BitLocker protection
+- Export a drive-status + recovery-key report to PDF (rendered via headless Edge/Chrome; falls back to HTML if neither is installed). Unattended: `-Action Export [-OutputPath <dir>]`
 
 ---
 
@@ -1053,7 +1054,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **anvil.ps1** | None — system identity, UEFI state, vendor channels, and Windows Update pending firmware are all auto-detected |
 | **pyre.ps1** | None — ROOT\WMI battery classes and Win32_Battery are queried unconditionally; thresholds (80/60 pct, 300/500 cycles) are editable constants in the script |
 | **codex.ps1** | `LogDirectory` (read) — defines which directory CODEX scans for existing HTML reports; CLI overrides via `-LogDir`. Optional `-DaysBack <int>` filter and pattern-strict file matching are constants in the script |
-| **cipher.ps1** | None — drive and action selected interactively at runtime |
+| **cipher.ps1** | `LogDirectory` (read) — Export action writes the PDF report there unless `-OutputPath` overrides it. `OrgName` is shown in the report header. Drive and action are selected interactively at runtime |
 | **sigil.ps1** | None — categories selected interactively; screensaver timeout editable in script (default 600 s) |
 | **citadel.ps1** | None — user search and action selected interactively; stale threshold is 90 days (editable in script) |
 | **artifact.ps1** | None — stores and targets selected interactively or via `-Targets` parameter |
@@ -1103,7 +1104,7 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **anvil.ps1** | Log directory — `ANVIL_<timestamp>.html` (BIOS / UEFI / firmware audit report) |
 | **pyre.ps1** | Log directory — `PYRE_<timestamp>.html` (laptop battery health audit), `PYRE_battery_report_<timestamp>.xml` (parsed `powercfg` data), `PYRE_battery_report_<timestamp>.html` (full Microsoft `powercfg /batteryreport` HTML) |
 | **codex.ps1** | Log directory — `CODEX_<timestamp>.html` (rollup index of every other report in the log directory; CODEX excludes its own outputs from the index) |
-| **cipher.ps1** | Console only — no log file |
+| **cipher.ps1** | Console only by default; the Export action writes `CIPHER_Report_<timestamp>.pdf` (status + recovery keys) to `-OutputPath` or the log directory, keeping `.html` if no Edge/Chrome is available to render it |
 | **sigil.ps1** | Log directory — `SIGIL_BaselineLog_<timestamp>.csv` |
 | **citadel.ps1** | Log directory — `CITADEL_Stale_<timestamp>.html`; `CITADEL_PwdExpiry_<timestamp>.html` |
 | **artifact.ps1** | Log directory — `ARTIFACT_<timestamp>.html` (cert inventory & SSL results) |
