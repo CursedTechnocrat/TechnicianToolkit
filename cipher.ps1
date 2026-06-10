@@ -20,7 +20,7 @@
     PS C:\> .\cipher.ps1 -Unattended -Action Export -OutputPath D:\Reports
 
 .NOTES
-    Version : 3.7
+    Version : 3.8
 
 #>
 
@@ -169,24 +169,51 @@ function Select-Drive {
 }
 
 # Turns BitLocker protection ON for a volume that is already encrypted but has
-# ProtectionStatus = Off (an unsecured "clear" key is exposing the volume key).
-# Resume-BitLocker only handles volumes that were suspended via Suspend-BitLocker;
-# on a volume that is unprotected for any other reason it throws FVE_E_KEY_REQUIRED
-# (0x8031001D, "you cannot delete the last key"). manage-bde -protectors -enable is
-# the documented path: it removes the unsecured key and enforces the remaining
-# protectors. Returns $true if ProtectionStatus is On afterwards.
+# Turns BitLocker protection ON for a volume that is already encrypted but has
+# ProtectionStatus = Off — typically an OEM "device encryption waiting" state
+# where the volume carries a TPM protector plus an unsecured clear key, so the
+# volume key is exposed. Resume-BitLocker only handles volumes suspended via
+# Suspend-BitLocker; on these it throws FVE_E_KEY_REQUIRED (0x8031001D, "you
+# cannot delete the last key"), so we fall back to manage-bde -protectors -enable,
+# which removes the unsecured key and enforces the remaining protectors.
+#
+# Verification is deliberate: Get-BitLockerVolume can briefly report a stale
+# ProtectionStatus right after an external manage-bde process flips it, so we
+# treat manage-bde's exit code as authoritative and also poll the status. Returns
+# $true if protection ends up On. On genuine failure the manage-bde output and
+# exit code are left in $script:LastEnableOutput / $script:LastEnableExit so the
+# caller can surface them.
 function Enable-DriveProtection {
     param([Parameter(Mandatory)][string]$MountPoint)
 
+    $script:LastEnableOutput = ''
+    $script:LastEnableExit   = $null
+
+    # Resume-BitLocker cleanly resumes a volume suspended via Suspend-BitLocker.
     try {
         Resume-BitLocker -MountPoint $MountPoint -ErrorAction Stop | Out-Null
-    }
-    catch {
-        & manage-bde.exe -protectors -enable $MountPoint 2>&1 | Out-Null
-    }
+        if (Test-ProtectionOn -MountPoint $MountPoint) { return $true }
+    } catch { }
 
-    $check = Get-BitLockerVolume -MountPoint $MountPoint -ErrorAction SilentlyContinue
-    return ($check -and $check.ProtectionStatus -eq 'On')
+    # Otherwise enforce protectors / remove the unsecured clear key via manage-bde.
+    $script:LastEnableOutput = (& manage-bde.exe -protectors -enable $MountPoint 2>&1 | Out-String).Trim()
+    $script:LastEnableExit   = $LASTEXITCODE
+
+    if (Test-ProtectionOn -MountPoint $MountPoint) { return $true }
+    return ($script:LastEnableExit -eq 0)
+}
+
+# Returns $true if the volume's ProtectionStatus is On. ProtectionStatus can lag
+# the actual FVE change by a moment (especially after a separate manage-bde
+# process), so poll briefly rather than reading it once.
+function Test-ProtectionOn {
+    param([Parameter(Mandatory)][string]$MountPoint)
+    for ($i = 0; $i -lt 6; $i++) {
+        $v = Get-BitLockerVolume -MountPoint $MountPoint -ErrorAction SilentlyContinue
+        if ($v -and $v.ProtectionStatus -eq 'On') { return $true }
+        Start-Sleep -Milliseconds 500
+    }
+    return $false
 }
 
 # Renders an HTML file to PDF using headless Microsoft Edge (or Chrome as a
@@ -279,9 +306,12 @@ function Enable-DriveEncryption {
             if (Enable-DriveProtection -MountPoint $vol.MountPoint) {
                 Write-Host "  [+] BitLocker protection is now ON." -ForegroundColor $ColorSchema.Success
             } else {
-                Write-Host "  [-] Failed to activate protection — the volume still has an exposed key." -ForegroundColor $ColorSchema.Error
-                Write-Host "      Confirm a usable protector exists, then run: manage-bde -protectors -enable $($vol.MountPoint)" -ForegroundColor $ColorSchema.Warning
-                Write-TKError -ScriptName 'cipher' -Message "Activate protection failed on '$($vol.MountPoint)' — ProtectionStatus still Off after Resume-BitLocker and manage-bde -protectors -enable." -Category 'BitLocker Enable'
+                Write-Host "  [-] Failed to activate protection on $($vol.MountPoint)." -ForegroundColor $ColorSchema.Error
+                if ($script:LastEnableOutput) {
+                    Write-Host "      manage-bde (exit $($script:LastEnableExit)): $($script:LastEnableOutput)" -ForegroundColor $ColorSchema.Warning
+                }
+                Write-Host "      Run manually to inspect: manage-bde -protectors -enable $($vol.MountPoint)" -ForegroundColor $ColorSchema.Warning
+                Write-TKError -ScriptName 'cipher' -Message "Activate protection failed on '$($vol.MountPoint)' (manage-bde exit $($script:LastEnableExit)): $($script:LastEnableOutput)" -Category 'BitLocker Enable'
             }
         } else {
             Write-Host "  [+] BitLocker protection is ON." -ForegroundColor $ColorSchema.Success
@@ -600,7 +630,7 @@ function Export-EncryptionReport {
   </div>
 </div>
 "@
-    $html += Get-TKHtmlFoot -ScriptName 'C.I.P.H.E.R. v3.7'
+    $html += Get-TKHtmlFoot -ScriptName 'C.I.P.H.E.R. v3.8'
 
     try {
         $html | Out-File -FilePath $htmlPath -Encoding UTF8 -ErrorAction Stop
