@@ -1038,7 +1038,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 |--------|------------------------|
 | **grimoire.ps1** | None — tool list is defined in the `$Tools` array in the script |
 | **covenant.ps1** | `config.json` — `Covenant.DefaultTimezone`, `Covenant.DefaultLocalAdminUser` |
-| **conjure.ps1** | `$RequiredSoftware` / `$RequiredSoftwareChoco` — required package IDs; `$OptionalSoftware` / `$OptionalSoftwareChoco` — optional package IDs; `$PackageManager` — default manager (`winget` or `choco`) |
+| **conjure.ps1** | `$RequiredCatalog` / `$OptionalCatalog` — single-source package catalog (each entry has `Name` / `Winget` / `Choco`); `$AdobeReader` / `$AdobePro` — Adobe edition entries; `$PackageManager` — default manager (`winget` or `choco`) |
 | **runepress.ps1** | `$ExtractRoot` — driver extraction staging folder (defaults to `.\ExtractedDrivers`); `-WhatIf` for dry run |
 | **forge.ps1** | None — driver sources scanned from current folder automatically; `-WhatIf` previews Windows Update and local driver installs |
 | **restoration.ps1** | None — power settings are detected and restored automatically; `-WhatIf` lists available updates without installing |
