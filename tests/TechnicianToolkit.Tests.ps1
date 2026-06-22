@@ -225,6 +225,7 @@ Describe 'Module exports' {
         @{ fn = 'Write-Warn' }
         @{ fn = 'Write-Fail' }
         @{ fn = 'Write-Info' }
+        @{ fn = 'Show-TKReportResult' }
         @{ fn = 'EscHtml' }
         @{ fn = 'Format-Bytes' }
         @{ fn = 'Get-TKHtmlCss' }

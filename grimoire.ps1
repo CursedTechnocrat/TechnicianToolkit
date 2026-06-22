@@ -475,11 +475,11 @@ function Show-Banner {
     [Console]::Clear()
     Write-Host ""
     Write-Host "  ██████╗ ██████╗ ██╗███╗   ███╗ ██████╗ ██╗██████╗ ███████╗" -ForegroundColor $ColorSchema.Header
-    Write-Host " ██╔====╝ ██╔==██╗██║████╗ ████║██╔===██╗██║██╔==██╗██╔====╝" -ForegroundColor $ColorSchema.Header
+    Write-Host " ██╔════╝ ██╔══██╗██║████╗ ████║██╔═══██╗██║██╔══██╗██╔════╝" -ForegroundColor $ColorSchema.Header
     Write-Host " ██║  ███╗██████╔╝██║██╔████╔██║██║   ██║██║██████╔╝█████╗  " -ForegroundColor $ColorSchema.Header
-    Write-Host " ██║   ██║██╔==██╗██║██║╚██╔╝██║██║   ██║██║██╔==██╗██╔==╝  " -ForegroundColor $ColorSchema.Header
-    Write-Host " ╚██████╔╝██║  ██║██║██║ ╚=╝ ██║╚██████╔╝██║██║  ██║███████╗" -ForegroundColor $ColorSchema.Header
-    Write-Host "  ╚=====╝ ╚=╝  ╚=╝╚=╝╚=╝     ╚=╝ ╚=====╝ ╚=╝╚=╝  ╚=╝╚======╝" -ForegroundColor $ColorSchema.Header
+    Write-Host " ██║   ██║██╔══██╗██║██║╚██╔╝██║██║   ██║██║██╔══██╗██╔══╝  " -ForegroundColor $ColorSchema.Header
+    Write-Host " ╚██████╔╝██║  ██║██║██║ ╚═╝ ██║╚██████╔╝██║██║  ██║███████╗" -ForegroundColor $ColorSchema.Header
+    Write-Host "  ╚═════╝ ╚═╝  ╚═╝╚═╝╚═╝     ╚═╝ ╚═════╝ ╚═╝╚═╝  ╚═╝╚══════╝" -ForegroundColor $ColorSchema.Header
     Write-Host ""
     Write-Host "  General Repository for Integrated Management and" -ForegroundColor $ColorSchema.Info
     Write-Host "  Orchestration of IT Resources & Executables" -ForegroundColor $ColorSchema.Info
@@ -523,8 +523,10 @@ function Show-Menu {
     } else {
         Write-Host "  [X]  Roll up reports (C.O.D.E.X.)" -ForegroundColor $ColorSchema.Menu
     }
+    Write-Host "  [F]  Find a tool by name or keyword" -ForegroundColor $ColorSchema.Menu
     Write-Host "  [Q]  Exit GRIMOIRE" -ForegroundColor $ColorSchema.Warning
     Write-Host ""
+    Write-Host "  Tip: type a tool name or number (e.g. 'pyre' or '18') to jump straight to it." -ForegroundColor $ColorSchema.Info
     Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
     Write-Host ""
 }
@@ -641,6 +643,86 @@ function Pause-ForKey {
 }
 
 # ===========================
+# TOOL SEARCH
+# ===========================
+
+function Find-Tool {
+    # Resolve a free-text query to one or more tools. Matching order:
+    #   1. Exact tool key       (e.g. '18')
+    #   2. Exact acronym/file   (e.g. 'pyre', 'P.Y.R.E.', 'pyre.ps1')
+    #   3. Substring on acronym/filename, plus a keyword scan of descriptions
+    # Acronyms are normalised by dropping dots/spaces/hyphens so 'P.Y.R.E.',
+    # 'pyre' and 'PYRE' all collapse to the same token.
+    param([string]$Query)
+
+    $q = $Query.Trim()
+    if ([string]::IsNullOrWhiteSpace($q)) { return @() }
+
+    $byKey = @($Tools | Where-Object { $_.Key -eq $q })
+    if ($byKey.Count -gt 0) { return $byKey }
+
+    $norm = ($q -replace '[\s\.\-]', '').ToLower()
+    $ql   = $q.ToLower()
+    if (-not $norm) { return @() }
+
+    $exact = @($Tools | Where-Object {
+        ((($_.Name -replace '[\s\.\-]', '').ToLower()) -eq $norm) -or
+        ((($_.File -replace '\.ps1$', '').ToLower())    -eq $norm)
+    })
+    if ($exact.Count -gt 0) { return $exact }
+
+    $byName = @($Tools | Where-Object {
+        ((($_.Name -replace '[\s\.\-]', '').ToLower()) -like "*$norm*") -or
+        ((($_.File -replace '\.ps1$', '').ToLower())    -like "*$norm*")
+    })
+    # Description keyword search only for queries of 3+ chars, so a stray single
+    # letter doesn't dump the whole catalogue.
+    $byDesc = @()
+    if ($ql.Length -ge 3) {
+        $byDesc = @($Tools | Where-Object { $_.Description.ToLower() -like "*$ql*" })
+    }
+
+    $seen   = @{}
+    $result = foreach ($t in @($byName + $byDesc)) {
+        if (-not $seen.ContainsKey($t.Key)) { $seen[$t.Key] = $true; $t }
+    }
+    # Filter guards the no-match case: an empty foreach yields $null, and
+    # @($null) would otherwise report a phantom count of 1.
+    return @($result | Where-Object { $_ })
+}
+
+function Select-FromMatches {
+    # Given the result of Find-Tool, return the single tool to run. One match
+    # launches straight away; several render a pick-list; [B]/blank cancels.
+    param([object[]]$Matches)
+
+    if ($Matches.Count -eq 1) { return $Matches[0] }
+
+    [Console]::Clear()
+    Write-Host ""
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
+    Write-Host "  GRIMOIRE  /  Search results ($($Matches.Count))" -ForegroundColor $ColorSchema.Header
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
+    Write-Host ""
+
+    foreach ($tool in $Matches) {
+        Write-Host "  [$($tool.Key)]  $($tool.Name)  " -NoNewline -ForegroundColor $tool.Color
+        Write-Host "v$($tool.Version)" -ForegroundColor $ColorSchema.Info
+        Write-Host "       $($tool.Description)" -ForegroundColor $ColorSchema.Info
+        Write-Host "       $($tool.Category)" -ForegroundColor $ColorSchema.Accent
+        Write-Host ""
+    }
+
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
+    Write-Host "  Enter a tool number to launch, or [B] to go back." -ForegroundColor $ColorSchema.Info
+    Write-Host ""
+    Write-Host -NoNewline "  Enter selection: " -ForegroundColor $ColorSchema.Menu
+    $pick = (Read-Host).Trim().ToUpper()
+    if ($pick -eq 'B' -or $pick -eq '') { return $null }
+    return ($Matches | Where-Object { $_.Key -eq $pick } | Select-Object -First 1)
+}
+
+# ===========================
 # MAIN LOOP
 # ===========================
 
@@ -672,11 +754,37 @@ do {
         continue
     }
 
+    # Explicit search prompt.
+    if ($CatSelection -eq 'F') {
+        Write-Host -NoNewline "  Search tools: " -ForegroundColor $ColorSchema.Menu
+        $query = (Read-Host).Trim()
+        if ($query) {
+            $found = Find-Tool -Query $query
+            if ($found.Count -gt 0) {
+                $chosen = Select-FromMatches -Matches $found
+                if ($chosen) { Invoke-Tool -Tool $chosen }
+            } else {
+                Write-Host ""
+                Write-Host "  [!!] No tool matched '$query'." -ForegroundColor $ColorSchema.Warning
+                Start-Sleep -Seconds 1
+            }
+        }
+        continue
+    }
+
     $SelectedCategory = $CategoryKeys[$CatSelection]
 
     if (-not $SelectedCategory) {
+        # Not a category letter — treat the input as a tool name/number search
+        # so 'pyre' or '18' jumps straight to the tool from the main menu.
+        $found = Find-Tool -Query $CatSelection
+        if ($found.Count -gt 0) {
+            $chosen = Select-FromMatches -Matches $found
+            if ($chosen) { Invoke-Tool -Tool $chosen }
+            continue
+        }
         Write-Host ""
-        Write-Host "  [!!] Invalid selection. Enter a category letter, [X] to roll up reports, or [Q] to quit." -ForegroundColor $ColorSchema.Warning
+        Write-Host "  [!!] No category or tool matched '$CatSelection'. Enter a category letter, a tool name/number, [F] to search, [X] to roll up reports, or [Q] to quit." -ForegroundColor $ColorSchema.Warning
         Start-Sleep -Seconds 1
         continue
     }

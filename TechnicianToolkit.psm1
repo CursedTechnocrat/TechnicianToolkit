@@ -28,6 +28,49 @@ function Write-Warn { param([string]$Msg) Write-Host ("  [!] {0}" -f $Msg) -Fore
 function Write-Fail { param([string]$Msg) Write-Host ("  [-] {0}" -f $Msg) -ForegroundColor Red     }
 function Write-Info { param([string]$Msg) Write-Host ("      {0}" -f $Msg) -ForegroundColor Gray    }
 
+function Show-TKReportResult {
+    <#
+    .SYNOPSIS
+        Prints a consistent "report saved" line and offers to open the file.
+    .DESCRIPTION
+        Standardises the end-of-run experience for tools that emit a report.
+        Prints the resolved path once, and — unless -Unattended is set — prompts
+        to open it in the default handler. Safe to call when the file is missing:
+        it prints a warning instead of prompting.
+    .PARAMETER Path        Path to the generated report file.
+    .PARAMETER Unattended  Suppress the interactive "open now?" prompt.
+    .PARAMETER Label       Noun shown in the saved line (default 'Report').
+    .EXAMPLE
+        Show-TKReportResult -Path $reportPath -Unattended:$Unattended
+    #>
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [switch]$Unattended,
+        [string]$Label = 'Report'
+    )
+
+    if (-not (Test-Path $Path)) {
+        Write-Warn "$Label was not created: $Path"
+        return
+    }
+
+    $full = (Resolve-Path $Path -ErrorAction SilentlyContinue).Path
+    if (-not $full) { $full = $Path }
+
+    Write-Ok "$Label saved:"
+    Write-Info $full
+
+    if ($Unattended) { return }
+
+    Write-Host ""
+    Write-Host -NoNewline ("  Open the {0} now? (Y/N) " -f $Label.ToLower()) -ForegroundColor Cyan
+    $answer = Read-Host
+    if ($answer -match '^(y|yes)$') {
+        try   { Invoke-Item -Path $full -ErrorAction Stop }
+        catch { Write-Warn "Could not open the file: $($_.Exception.Message)" }
+    }
+}
+
 #endregion
 
 #region -- Error Telemetry ---------------------------------------------------
@@ -693,4 +736,4 @@ function Export-TKNoteReport {
 
 #endregion
 
-Export-ModuleMember -Function Write-Section, Write-Step, Write-Ok, Write-Warn, Write-Fail, Write-Info, EscHtml, Format-Bytes, Get-TKHtmlCss, Get-TKHtmlHead, Get-TKHtmlFoot, Test-IsAdmin, Assert-AdminPrivilege, Invoke-AdminElevation, Get-TKConfig, Set-TKConfig, Resolve-LogDirectory, Start-TKTranscript, Stop-TKTranscript, Write-TKError, Add-TKNote, Get-TKNote, Clear-TKNote, Export-TKNoteReport
+Export-ModuleMember -Function Write-Section, Write-Step, Write-Ok, Write-Warn, Write-Fail, Write-Info, Show-TKReportResult, EscHtml, Format-Bytes, Get-TKHtmlCss, Get-TKHtmlHead, Get-TKHtmlFoot, Test-IsAdmin, Assert-AdminPrivilege, Invoke-AdminElevation, Get-TKConfig, Set-TKConfig, Resolve-LogDirectory, Start-TKTranscript, Stop-TKTranscript, Write-TKError, Add-TKNote, Get-TKNote, Clear-TKNote, Export-TKNoteReport
