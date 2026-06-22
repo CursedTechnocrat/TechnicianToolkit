@@ -32,7 +32,7 @@
     PS C:\> .\ritual.ps1 -Recipe Retire -ContinueOnError    # Ignore per-step failures
 
 .NOTES
-    Version : 3.5
+    Version : 3.6
 
 #>
 
@@ -99,7 +99,7 @@ function Show-RitualBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
     Write-Host "  R.I.T.U.A.L. — Runs Integrated Tool Usage in Automation Loops" -ForegroundColor Cyan
-    Write-Host "  Workflow Orchestrator for the Technician Toolkit  v3.5" -ForegroundColor Cyan
+    Write-Host "  Workflow Orchestrator for the Technician Toolkit  v3.6" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -224,6 +224,47 @@ function Resolve-Recipe {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# TOOL RESOLUTION
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Base URL for fetching toolkit scripts on demand. RITUAL orchestrates other
+# tool scripts, so the single-file distribution promise (drop one .ps1 and let
+# it self-provision from GitHub) only holds if RITUAL can pull the scripts its
+# recipe references — not just the shared module. This mirrors the module
+# bootstrap at the top of the file.
+$script:TKRawBase = 'https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main'
+
+# Return a usable path to the requested tool script. If it isn't co-located
+# with RITUAL, download it from GitHub (validating syntax exactly as the module
+# bootstrap does) so a lone ritual.ps1 can still run a full recipe. Returns
+# $null if the tool is neither present nor downloadable.
+function Resolve-ToolFile {
+    param([string]$ToolName)
+
+    $local = Join-Path $ScriptPath $ToolName
+    if (Test-Path $local) { return $local }
+
+    $url = "$script:TKRawBase/$ToolName"
+    Write-Info "Tool '$ToolName' not found locally - downloading from GitHub..."
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+        Invoke-RestMethod -Uri $url -OutFile $local -ErrorAction Stop
+        $parseErrors = $null
+        $null = [System.Management.Automation.Language.Parser]::ParseFile($local, [ref]$null, [ref]$parseErrors)
+        if ($parseErrors.Count -gt 0) {
+            Remove-Item -Path $local -Force -ErrorAction SilentlyContinue
+            Write-Fail "Downloaded '$ToolName' failed syntax validation - file removed."
+            return $null
+        }
+        Write-Ok "Downloaded $ToolName."
+        return $local
+    } catch {
+        Write-Fail "Could not download '$ToolName': $($_.Exception.Message)"
+        return $null
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # STEP EXECUTION
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -256,16 +297,16 @@ function Invoke-RecipeStep {
         [string]$LogRoot
     )
 
-    $toolPath = Join-Path $ScriptPath $Step.Tool
-    $label    = if ($Step.Label) { $Step.Label } else { $Step.Tool }
+    $label = if ($Step.Label) { $Step.Label } else { $Step.Tool }
 
     Write-Section ("STEP {0} - {1}" -f $StepNumber, $label)
     Write-Info "Tool    : $($Step.Tool)"
     Write-Info "Args    : $($Step.Args -join ' ')"
     Write-Host ""
 
-    if (-not (Test-Path $toolPath)) {
-        Write-Fail "Tool file not found: $toolPath"
+    $toolPath = Resolve-ToolFile -ToolName $Step.Tool
+    if (-not $toolPath) {
+        Write-Fail "Tool file not found and could not be downloaded: $($Step.Tool)"
         return [PSCustomObject]@{
             StepNumber = $StepNumber
             Label      = $label
@@ -274,7 +315,7 @@ function Invoke-RecipeStep {
             DurationSec = 0
             ExitCode   = $null
             NewFiles   = @()
-            Error      = "Tool file not found at $toolPath"
+            Error      = "Tool '$($Step.Tool)' not found in $ScriptPath and download from GitHub failed"
         }
     }
 
@@ -396,7 +437,7 @@ function Build-RollupHtml {
         }) `
         -NavItems   @('Overall', 'Steps')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'R.I.T.U.A.L. v3.5'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'R.I.T.U.A.L. v3.6'
 
     $html = $htmlHead + @"
 
