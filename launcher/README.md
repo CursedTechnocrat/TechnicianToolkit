@@ -50,6 +50,17 @@ PowerShell, which ships with every Windows install.
 
 The resulting `dist\TechnicianToolkit.exe` is the whole suite in one file.
 
+### Don't have the .NET SDK? Let CI build it.
+
+The **Release Launcher** workflow (`.github/workflows/release-launcher.yml`)
+builds the `.exe` for you on GitHub's runners — no local SDK needed:
+
+- **Push a version tag** (e.g. `git tag v1.0.0 && git push origin v1.0.0`) and the
+  workflow builds `win-x64` and `win-arm64` and attaches both `.exe` files to the
+  GitHub Release for that tag.
+- **Or run it manually** from the Actions tab (*Run workflow*) to produce the
+  `.exe` files as downloadable workflow artifacts without tagging.
+
 Equivalent raw command if you prefer not to use the script:
 
 ```powershell
