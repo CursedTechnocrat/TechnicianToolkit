@@ -125,7 +125,7 @@ function Get-AccountData {
 
     $staleDays  = 90
     $staleDate  = (Get-Date).AddDays(-$staleDays)
-    $accounts   = @()
+    $accounts   = [System.Collections.Generic.List[object]]::new()
 
     $localUsers = Get-LocalUser -ErrorAction SilentlyContinue
 
@@ -148,7 +148,7 @@ function Get-AccountData {
             $flags += "Disabled"
         }
 
-        $accounts += [PSCustomObject]@{
+        $accounts.Add([PSCustomObject]@{
             Name              = $user.Name
             FullName          = $user.FullName
             Enabled           = $user.Enabled
@@ -159,7 +159,7 @@ function Get-AccountData {
             PasswordRequired  = $user.PasswordRequired
             Description       = $user.Description
             Flags             = if ($flags.Count -gt 0) { $flags -join '; ' } else { "" }
-        }
+        })
     }
 
     return $accounts

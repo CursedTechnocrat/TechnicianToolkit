@@ -118,7 +118,7 @@ function Show-ArtifactBanner {
 
 function Get-LocalCertHealth {
     param([string[]]$StoreNames = @('My', 'CA', 'Root', 'TrustedPublisher'))
-    $results = @()
+    $results = [System.Collections.Generic.List[object]]::new()
     foreach ($storeName in $StoreNames) {
         try {
             $store = [Security.Cryptography.X509Certificates.X509Store]::new($storeName, 'LocalMachine')
@@ -129,7 +129,7 @@ function Get-LocalCertHealth {
                             elseif ($daysLeft -le 30)  { 'Critical' }
                             elseif ($daysLeft -le 90)  { 'Warning'  }
                             else                       { 'Healthy'  }
-                $results += [PSCustomObject]@{
+                $results.Add([PSCustomObject]@{
                     Store      = $storeName
                     Subject    = $cert.Subject
                     Issuer     = $cert.Issuer
@@ -137,7 +137,7 @@ function Get-LocalCertHealth {
                     Expiry     = $cert.NotAfter
                     DaysLeft   = $daysLeft
                     Status     = $status
-                }
+                })
             }
             $store.Close()
         } catch {}
@@ -190,7 +190,7 @@ function Get-SslCertExpiry {
 function ConvertTo-TargetList {
     param([string]$TargetString)
 
-    $entries = @()
+    $entries = [System.Collections.Generic.List[object]]::new()
 
     if ([string]::IsNullOrWhiteSpace($TargetString)) {
         return $entries
@@ -210,15 +210,15 @@ function ConvertTo-TargetList {
 
         # Check for hostname:port format
         if ($line -match '^(.+):(\d+)$') {
-            $entries += [PSCustomObject]@{
+            $entries.Add([PSCustomObject]@{
                 Hostname = $Matches[1].Trim()
                 Port     = [int]$Matches[2]
-            }
+            })
         } else {
-            $entries += [PSCustomObject]@{
+            $entries.Add([PSCustomObject]@{
                 Hostname = $line
                 Port     = 443
-            }
+            })
         }
     }
 
@@ -542,7 +542,7 @@ if ($Unattended) {
         $localCerts.Count, $expiredCount, $critCount, $warnCount, $healthyCount) -ForegroundColor $C.Success
 
     # SSL checks
-    $sslResults = @()
+    $sslResults = [System.Collections.Generic.List[object]]::new()
     if (-not [string]::IsNullOrWhiteSpace($Targets)) {
         $targetList = ConvertTo-TargetList -TargetString $Targets
         if ($targetList.Count -gt 0) {
@@ -550,7 +550,7 @@ if ($Unattended) {
             Write-Host "  [*] Checking SSL/TLS certificates on $($targetList.Count) remote host(s)..." -ForegroundColor $C.Progress
             foreach ($t in $targetList) {
                 Write-Host "  [*] Checking $($t.Hostname):$($t.Port)..." -ForegroundColor $C.Progress
-                $sslResults += Get-SslCertExpiry -Hostname $t.Hostname -Port $t.Port
+                $sslResults.AddRange([object[]]@(Get-SslCertExpiry -Hostname $t.Hostname -Port $t.Port))
             }
         }
     }
@@ -659,11 +659,11 @@ do {
                 if ($targetList.Count -eq 0) {
                     Write-Host "  [!!] No valid targets parsed." -ForegroundColor $C.Warning
                 } else {
-                    $sslResults = @()
+                    $sslResults = [System.Collections.Generic.List[object]]::new()
                     Write-Host ""
                     foreach ($t in $targetList) {
                         Write-Host "  [*] Checking $($t.Hostname):$($t.Port)..." -ForegroundColor $C.Progress
-                        $sslResults += Get-SslCertExpiry -Hostname $t.Hostname -Port $t.Port
+                        $sslResults.AddRange([object[]]@(Get-SslCertExpiry -Hostname $t.Hostname -Port $t.Port))
                     }
 
                     Show-SslSummary -SslResults $sslResults
@@ -701,14 +701,14 @@ do {
             Write-Host -NoNewline "  Targets: " -ForegroundColor $C.Header
             $rawTargets = (Read-Host).Trim()
 
-            $sslResults = @()
+            $sslResults = [System.Collections.Generic.List[object]]::new()
             if (-not [string]::IsNullOrWhiteSpace($rawTargets)) {
                 $targetList = ConvertTo-TargetList -TargetString $rawTargets
                 if ($targetList.Count -gt 0) {
                     Write-Host ""
                     foreach ($t in $targetList) {
                         Write-Host "  [*] Checking $($t.Hostname):$($t.Port)..." -ForegroundColor $C.Progress
-                        $sslResults += Get-SslCertExpiry -Hostname $t.Hostname -Port $t.Port
+                        $sslResults.AddRange([object[]]@(Get-SslCertExpiry -Hostname $t.Hostname -Port $t.Port))
                     }
                 }
             }

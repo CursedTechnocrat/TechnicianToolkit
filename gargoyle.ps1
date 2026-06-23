@@ -169,22 +169,22 @@ function Get-ServiceHealth {
 
     $scriptBlock = {
         param($names)
-        $results = @()
+        $results = [System.Collections.Generic.List[object]]::new()
         foreach ($name in $names) {
             try {
                 $svc = Get-Service -Name $name -ErrorAction Stop
-                $results += [PSCustomObject]@{
+                $results.Add([PSCustomObject]@{
                     Name      = $svc.Name
                     Status    = $svc.Status.ToString()
                     StartType = $svc.StartType.ToString()
-                }
+                })
             }
             catch {
-                $results += [PSCustomObject]@{
+                $results.Add([PSCustomObject]@{
                     Name      = $name
                     Status    = 'NotFound'
                     StartType = 'Unknown'
-                }
+                })
             }
         }
         return $results
@@ -202,16 +202,16 @@ function Get-ServiceHealth {
         $raw = & $scriptBlock -names $serviceNames
     }
 
-    $output = @()
+    $output = [System.Collections.Generic.List[object]]::new()
     foreach ($r in $raw) {
         $concern = ($r.Status -eq 'Stopped' -and $r.StartType -eq 'Automatic')
-        $output += [PSCustomObject]@{
+        $output.Add([PSCustomObject]@{
             Name        = $r.Name
             DisplayName = if ($displayMap.ContainsKey($r.Name)) { $displayMap[$r.Name] } else { $r.Name }
             Status      = $r.Status
             StartType   = $r.StartType
             Concern     = $concern
-        }
+        })
     }
     return $output
 }
@@ -223,28 +223,28 @@ function Get-ServiceHealth {
 function Get-TaskAudit {
     $scriptBlock = {
         $tasks = Get-ScheduledTask -ErrorAction SilentlyContinue
-        $results = @()
+        $results = [System.Collections.Generic.List[object]]::new()
         foreach ($task in $tasks) {
             try {
                 $info = $task | Get-ScheduledTaskInfo -ErrorAction Stop
-                $results += [PSCustomObject]@{
+                $results.Add([PSCustomObject]@{
                     TaskName       = $task.TaskName
                     TaskPath       = $task.TaskPath
                     State          = $task.State.ToString()
                     LastRunTime    = $info.LastRunTime
                     LastTaskResult = $info.LastTaskResult
                     NextRunTime    = $info.NextRunTime
-                }
+                })
             }
             catch {
-                $results += [PSCustomObject]@{
+                $results.Add([PSCustomObject]@{
                     TaskName       = $task.TaskName
                     TaskPath       = $task.TaskPath
                     State          = $task.State.ToString()
                     LastRunTime    = $null
                     LastTaskResult = -1
                     NextRunTime    = $null
-                }
+                })
             }
         }
         return $results
@@ -266,7 +266,7 @@ function Get-TaskAudit {
     # LastTaskResult codes: 0=success, 267009=running, 267011=never run
     $successCodes = @(0, 267009, 267011)
 
-    $output = @()
+    $output = [System.Collections.Generic.List[object]]::new()
     foreach ($t in $raw) {
         $isMicrosoft  = $t.TaskPath -like '\Microsoft\*'
         $lastRunStale = ($t.LastRunTime -ne $null -and $t.LastRunTime -lt $cutoff -and $t.LastRunTime -gt [datetime]'1900-01-01')
@@ -285,7 +285,7 @@ function Get-TaskAudit {
             $flagReason = 'MSFailed'
         }
 
-        $output += [PSCustomObject]@{
+        $output.Add([PSCustomObject]@{
             TaskName       = $t.TaskName
             TaskPath       = $t.TaskPath
             State          = $t.State
@@ -294,7 +294,7 @@ function Get-TaskAudit {
             NextRunTime    = $t.NextRunTime
             IsMicrosoft    = $isMicrosoft
             FlagReason     = $flagReason
-        }
+        })
     }
     return $output
 }
@@ -325,26 +325,26 @@ function Get-EventErrors {
         } catch { @() }
     }
 
-    $allErrors = @()
+    $allErrors = [System.Collections.Generic.List[object]]::new()
     foreach ($e in $sysErrors) {
-        $allErrors += [PSCustomObject]@{
+        $allErrors.Add([PSCustomObject]@{
             Log           = 'System'
             TimeGenerated = $e.TimeGenerated
             EntryType     = $e.EntryType.ToString()
             Source        = $e.Source
             EventID       = $e.EventID
             Message       = if ($e.Message.Length -gt 120) { $e.Message.Substring(0,120) + '...' } else { $e.Message }
-        }
+        })
     }
     foreach ($e in $appErrors) {
-        $allErrors += [PSCustomObject]@{
+        $allErrors.Add([PSCustomObject]@{
             Log           = 'Application'
             TimeGenerated = $e.TimeGenerated
             EntryType     = $e.EntryType.ToString()
             Source        = $e.Source
             EventID       = $e.EventID
             Message       = if ($e.Message.Length -gt 120) { $e.Message.Substring(0,120) + '...' } else { $e.Message }
-        }
+        })
     }
 
     # Build source summary (top 10)

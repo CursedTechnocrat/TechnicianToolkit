@@ -269,7 +269,7 @@ Write-Ok "Found $($appServicePlans.Count) plans"
 Write-Step "SQL servers & databases..."
 $sqlServers   = @(Get-AzSqlServer -ErrorAction SilentlyContinue)
 $sqlDatabases = @{}
-$sqlFirewallIssues = @()
+$sqlFirewallIssues = [System.Collections.Generic.List[object]]::new()
 $totalDbCount = 0
 foreach ($srv in $sqlServers) {
     $dbs = @(Get-AzSqlDatabase -ServerName $srv.ServerName `
@@ -286,10 +286,10 @@ foreach ($srv in $sqlServers) {
         if ($rule.StartIpAddress -eq '0.0.0.0' -and $rule.EndIpAddress -in @('0.0.0.0','255.255.255.255')) {
             # 0.0.0.0/0.0.0.0 = Azure services rule (acceptable); 0.0.0.0/255.255.255.255 = allow all (not acceptable)
             if ($rule.EndIpAddress -eq '255.255.255.255') {
-                $sqlFirewallIssues += [pscustomobject]@{ Server = $srv.ServerName; Rule = $rule.FirewallRuleName; Range = "$($rule.StartIpAddress) - $($rule.EndIpAddress)" }
+                $sqlFirewallIssues.Add([pscustomobject]@{ Server = $srv.ServerName; Rule = $rule.FirewallRuleName; Range = "$($rule.StartIpAddress) - $($rule.EndIpAddress)" })
             }
         } elseif ($rule.StartIpAddress -ne '0.0.0.0' -and $rule.EndIpAddress -eq '255.255.255.255') {
-            $sqlFirewallIssues += [pscustomobject]@{ Server = $srv.ServerName; Rule = $rule.FirewallRuleName; Range = "$($rule.StartIpAddress) - $($rule.EndIpAddress)" }
+            $sqlFirewallIssues.Add([pscustomobject]@{ Server = $srv.ServerName; Rule = $rule.FirewallRuleName; Range = "$($rule.StartIpAddress) - $($rule.EndIpAddress)" })
         }
     }
 }
@@ -302,7 +302,7 @@ Write-Ok "Found $($storageAccounts.Count) accounts ($($publicStorageAccounts.Cou
 
 Write-Step "Recovery services vaults & backup items..."
 $recoveryVaults  = @(Get-AzRecoveryServicesVault -ErrorAction SilentlyContinue)
-$backedUpVmNames = @()
+$backedUpVmNames = [System.Collections.Generic.List[object]]::new()
 $backupRows      = [System.Collections.Generic.List[pscustomobject]]::new()
 foreach ($vault in $recoveryVaults) {
     try {
@@ -311,7 +311,7 @@ foreach ($vault in $recoveryVaults) {
         foreach ($item in $items) {
             $vmFriendly = $item.FriendlyName
             if ($vmFriendly) {
-                $backedUpVmNames += $vmFriendly
+                $backedUpVmNames.Add($vmFriendly)
                 $backupRows.Add([pscustomobject]@{
                     VMName        = $vmFriendly
                     Vault         = $vault.Name
@@ -340,7 +340,7 @@ Write-Ok "Found $($publicIPs.Count) IPs ($($unassociatedIPs.Count) unassociated)
 
 Write-Step "Network security groups..."
 $nsgs            = @(Get-AzNetworkSecurityGroup -ErrorAction SilentlyContinue)
-$exposedNsgRules = @()
+$exposedNsgRules = [System.Collections.Generic.List[object]]::new()
 $dangerPorts     = @('*', '3389', '22', '5985', '5986', '23', '3306', '1433', '5432')
 foreach ($nsg in $nsgs) {
     $dangerous = $nsg.SecurityRules | Where-Object {
@@ -353,13 +353,13 @@ foreach ($nsg in $nsgs) {
     }
     foreach ($rule in $dangerous) {
         $port = if ($rule.DestinationPortRange) { $rule.DestinationPortRange } else { ($rule.DestinationPortRanges -join ', ') }
-        $exposedNsgRules += [pscustomobject]@{
+        $exposedNsgRules.Add([pscustomobject]@{
             NSG      = EscHtml $nsg.Name
             RG       = EscHtml $nsg.ResourceGroupName
             Rule     = EscHtml $rule.Name
             Port     = EscHtml $port
             Priority = $rule.Priority
-        }
+        })
     }
 }
 Write-Ok "Found $($nsgs.Count) NSGs ($($exposedNsgRules.Count) rules exposing sensitive ports to the internet)"
@@ -444,9 +444,9 @@ Write-Step "Advisor: $highAdvisor High, $medAdvisor Medium"
 
 # Ad-hoc databases
 $adHocPattern = '\d{8}|\d{4}[-_]\d{2}[-_]\d{2}|backup|copy|_old|_temp|restore'
-$adHocDbs = @()
+$adHocDbs = [System.Collections.Generic.List[object]]::new()
 foreach ($srv in $sqlServers) {
-    $adHocDbs += @($sqlDatabases[$srv.ServerName] | Where-Object { $_.DatabaseName -imatch $adHocPattern })
+    $adHocDbs.AddRange([object[]]@($sqlDatabases[$srv.ServerName] | Where-Object { $_.DatabaseName -imatch $adHocPattern }))
 }
 Write-Step "Ad-hoc databases: $($adHocDbs.Count)"
 

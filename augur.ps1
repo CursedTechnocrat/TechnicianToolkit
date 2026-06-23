@@ -123,7 +123,7 @@ Write-Host ""
 
 Write-Host "  [1/3] Reading physical disk health..." -ForegroundColor $ColorSchema.Progress
 
-$diskReport = @()
+$diskReport = [System.Collections.Generic.List[object]]::new()
 
 try {
     $physDisks = Get-PhysicalDisk -ErrorAction Stop
@@ -182,7 +182,7 @@ try {
 
         Write-Host $displayLine -ForegroundColor $lineColor
 
-        $diskReport += [PSCustomObject]@{
+        $diskReport.Add([PSCustomObject]@{
             ID                = $pd.DeviceId
             Name              = $pd.FriendlyName
             Serial            = $serial
@@ -194,7 +194,7 @@ try {
             OperationalStatus = $pd.OperationalStatus
             SMARTPrediction   = $smartLabel
             SMARTReason       = $smartReason
-        }
+        })
     }
 
     Write-Host ""
@@ -212,7 +212,7 @@ Write-Host ""
 
 Write-Host "  [2/3] Reading volume health..." -ForegroundColor $ColorSchema.Progress
 
-$volumeReport = @()
+$volumeReport = [System.Collections.Generic.List[object]]::new()
 
 try {
     $volumes = Get-Volume -ErrorAction Stop | Where-Object { $_.DriveLetter -or $_.FileSystemLabel }
@@ -234,7 +234,7 @@ try {
         Write-Host ("  {0,-6} {1,-20} {2,7} GB total  {3,7} GB free  {4,5}%  [{5}]" -f `
             $label, $fsLabel, $totalGB, $freeGB, $pct, $vol.HealthStatus) -ForegroundColor $healthColor
 
-        $volumeReport += [PSCustomObject]@{
+        $volumeReport.Add([PSCustomObject]@{
             Drive       = $label
             Label       = $fsLabel
             FileSystem  = $vol.FileSystem
@@ -243,7 +243,7 @@ try {
             PctUsed     = $pct
             Health      = $vol.HealthStatus
             DriveType   = $vol.DriveType
-        }
+        })
     }
 
     Write-Host ""
