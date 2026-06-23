@@ -22,6 +22,9 @@
 .NOTES
     Version : 4.0
 
+    Credits : Thanks to Steve the Killer for help and letting me use his
+              script BERET: https://tools.thekiller.net/killer-scripts
+
 #>
 
 param(
