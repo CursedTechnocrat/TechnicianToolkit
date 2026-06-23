@@ -1454,7 +1454,6 @@ if (-not $OutputPath) {
 
 try {
     $html | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
-    Write-Ok "Report saved: $OutputPath"
 } catch {
     Write-Fail "Could not save report: $($_.Exception.Message)"
     Write-TKError -ScriptName 'tendril' -Message "Save report failed: $($_.Exception.Message)" -Category 'Report Output'
@@ -1462,12 +1461,7 @@ try {
     exit 1
 }
 
-if (-not $NoOpen -and -not $Unattended) {
-    Write-Step "Opening in default browser..."
-    try { Start-Process $OutputPath } catch {
-        Write-Warn "Could not auto-open report: $($_.Exception.Message)"
-    }
-}
+Show-TKReportResult -Path $OutputPath -Unattended:($NoOpen -or $Unattended)
 
 Write-Host ""
 Write-Ok "Audit complete. $totalHits dependency hit(s) recorded."

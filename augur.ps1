@@ -408,21 +408,7 @@ if ($warningCount -gt 0) {
 }
 
 Write-Host ""
-Write-Host "  Report         : $reportPath" -ForegroundColor $ColorSchema.Accent
-Write-Host ""
-
-if (-not $Unattended) {
-    $open = Read-Host "  Open the HTML report now? (Y/N)"
-    if ($open -eq 'Y' -or $open -eq 'y') {
-        try {
-            Start-Process $reportPath
-            Write-Host "  [+] Opening report..." -ForegroundColor $ColorSchema.Success
-        }
-        catch {
-            Write-Host "  [-] Could not open report. Navigate to: $reportPath" -ForegroundColor $ColorSchema.Warning
-        }
-    }
-}
+Show-TKReportResult -Path $reportPath -Unattended:$Unattended
 
 Write-Host ""
 Write-Host ("  " + ("=" * 62)) -ForegroundColor $ColorSchema.Header

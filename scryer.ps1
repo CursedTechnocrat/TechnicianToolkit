@@ -559,10 +559,6 @@ $html += Get-TKHtmlFoot -ScriptName "S.C.R.Y.E.R. v3.5"
 $html | Out-File -FilePath $reportFile -Encoding UTF8
 Write-Host "  [+] Report saved: $reportFile" -ForegroundColor $ColorSchema.Success
 
-if (-not $Unattended) {
-    try { Start-Process $reportFile } catch {}
-}
-
 # ---------------------------------------------------------------------------
 # CONSOLE SUMMARY
 # ---------------------------------------------------------------------------
@@ -582,6 +578,8 @@ Write-Host ""
 Write-Host ("  " + ("=" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host ""
 
-if (-not $Unattended) { Read-Host "  Press Enter to exit" }
+Show-TKReportResult -Path $reportFile -Unattended:$Unattended
+
+if (-not $Unattended) { Read-Host "  Press Enter to exit" | Out-Null }
 if ($Transcript) { Stop-TKTranscript }
 if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

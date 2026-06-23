@@ -1132,22 +1132,7 @@ if ($avUnprotected -gt 0) {
 }
 
 Write-Host ""
-Write-Host "  Report     : $reportPath" -ForegroundColor $ColorSchema.Accent
-Write-Host ""
-
-if (-not $Unattended) {
-    $openReport = Read-Host "Open the HTML report now? (Y/N)"
-    if ($openReport -eq 'Y' -or $openReport -eq 'y') {
-        try {
-            Start-Process $reportPath
-            Write-Host "[+] Opening report in default browser..." -ForegroundColor $ColorSchema.Success
-        }
-        catch {
-            Write-Host "[-] Could not open report automatically. Navigate to: $reportPath" -ForegroundColor $ColorSchema.Warning
-        }
-    }
-}
-
+Show-TKReportResult -Path $reportPath -Unattended:$Unattended
 Write-Host ""
 Write-Host "================================================" -ForegroundColor $ColorSchema.Header
 Write-Host "  SCRIPT EXECUTION COMPLETED" -ForegroundColor $ColorSchema.Header

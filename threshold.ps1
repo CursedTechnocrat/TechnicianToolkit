@@ -768,12 +768,7 @@ do {
             $reportPath = Build-HtmlReport -DiskData $diskData -VolumeData $volData
 
             Write-Host ""
-            Write-Host ("  Report saved to: {0}" -f $reportPath) -ForegroundColor $C.Green
-
-            $open = Read-Host "  Open report in browser? [Y/N]"
-            if ($open -match '^[Yy]') {
-                Start-Process $reportPath
-            }
+            Show-TKReportResult -Path $reportPath -Unattended:$Unattended
             Write-Host ""
             Read-Host "  Press Enter to return to menu"
         }

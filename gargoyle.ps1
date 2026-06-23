@@ -866,7 +866,7 @@ function Export-HtmlReport {
 
     try {
         [System.IO.File]::WriteAllText($reportPath, $html, [System.Text.Encoding]::UTF8)
-        Write-Host "  [+] Report saved: $reportPath" -ForegroundColor $C.Success
+        Show-TKReportResult -Path $reportPath -Unattended:$Unattended
     }
     catch {
         Write-Host "  [-] Failed to save report: $_" -ForegroundColor $C.Error

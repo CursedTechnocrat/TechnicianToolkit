@@ -960,11 +960,7 @@ $outPath   = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "PALADIN
 
 try {
     [System.IO.File]::WriteAllText($outPath, $html, [System.Text.Encoding]::UTF8)
-    Write-Ok "Report saved: $outPath"
-    if (-not $Unattended) {
-        Write-Step "Opening in default browser..."
-        Start-Process $outPath
-    }
+    Show-TKReportResult -Path $outPath -Unattended:$Unattended
 } catch {
     Write-Fail "Could not save report: $($_.Exception.Message)"
 }

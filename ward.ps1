@@ -361,7 +361,6 @@ $reportPath     = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) $re
 try {
     $htmlContent = Build-HtmlReport -Accounts $accounts -MachineName $machineName -ReportTimestamp $reportTimestamp
     [System.IO.File]::WriteAllText($reportPath, $htmlContent, [System.Text.Encoding]::UTF8)
-    Write-Host "  [+] Report saved: $reportPath" -ForegroundColor $ColorSchema.Success
 }
 catch {
     Write-Host "  [-] Could not save report: $_" -ForegroundColor $ColorSchema.Error
@@ -389,6 +388,8 @@ Write-Host ("  " + ("=" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host "  W.A.R.D. AUDIT COMPLETE" -ForegroundColor $ColorSchema.Header
 Write-Host ("  " + ("=" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host ""
+
+Show-TKReportResult -Path $reportPath -Unattended:$Unattended
 
 if (-not $Unattended) { Read-Host "  Press Enter to exit" }
 if ($Transcript) { Stop-TKTranscript }
