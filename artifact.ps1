@@ -510,7 +510,6 @@ function Save-HtmlReport {
 
     try {
         [System.IO.File]::WriteAllText($reportPath, $html, [System.Text.Encoding]::UTF8)
-        Write-Host "  [+] Report saved: $reportPath" -ForegroundColor $C.Success
     } catch {
         Write-Host "  [-] Could not save report: $_" -ForegroundColor $C.Error
         $reportPath = $null
@@ -559,6 +558,7 @@ if ($Unattended) {
     # Generate HTML report
     Write-Host ""
     $reportPath = Save-HtmlReport -LocalCerts $localCerts -SslResults $sslResults
+    if ($reportPath) { Show-TKReportResult -Path $reportPath -Unattended:$Unattended }
 
     # Console summary
     Write-Host ""
@@ -631,10 +631,7 @@ do {
             if ($exportChoice -eq 'Y') {
                 $reportPath = Save-HtmlReport -LocalCerts $localCerts -SslResults @()
                 if ($reportPath) {
-                    Write-Host ""
-                    Write-Host -NoNewline "  Open report in browser? (Y/N): " -ForegroundColor $C.Header
-                    $openChoice = (Read-Host).Trim().ToUpper()
-                    if ($openChoice -eq 'Y') { Start-Process $reportPath }
+                    Show-TKReportResult -Path $reportPath -Unattended:$Unattended
                 }
             }
 
@@ -676,10 +673,7 @@ do {
                     if ($exportChoice -eq 'Y') {
                         $reportPath = Save-HtmlReport -LocalCerts @() -SslResults $sslResults
                         if ($reportPath) {
-                            Write-Host ""
-                            Write-Host -NoNewline "  Open report in browser? (Y/N): " -ForegroundColor $C.Header
-                            $openChoice = (Read-Host).Trim().ToUpper()
-                            if ($openChoice -eq 'Y') { Start-Process $reportPath }
+                            Show-TKReportResult -Path $reportPath -Unattended:$Unattended
                         }
                     }
                 }
@@ -729,10 +723,7 @@ do {
             $reportPath = Save-HtmlReport -LocalCerts $localCerts -SslResults $sslResults
 
             if ($reportPath) {
-                Write-Host ""
-                Write-Host -NoNewline "  Open report in browser? (Y/N): " -ForegroundColor $C.Header
-                $openChoice = (Read-Host).Trim().ToUpper()
-                if ($openChoice -eq 'Y') { Start-Process $reportPath }
+                Show-TKReportResult -Path $reportPath -Unattended:$Unattended
             }
 
             Write-Host ""
