@@ -20,7 +20,7 @@
     PS C:\> .\cipher.ps1 -Unattended -Action Export -OutputPath D:\Reports
 
 .NOTES
-    Version : 3.8
+    Version : 4.0
 
 #>
 
@@ -216,6 +216,44 @@ function Test-ProtectionOn {
     return $false
 }
 
+# Starts encryption on a not-yet-encrypted volume, working around two snags seen
+# in the field:
+#   - Virtual machines, where the pre-encryption hardware test and used-space-only
+#     conversion are unreliable — encryption is started full-volume with the
+#     hardware test skipped.
+#   - Physical disks that reject used-space-only conversion with 0x803100a5 — we
+#     retry full-volume.
+# manage-bde is used so the volume's existing protectors are honoured and
+# -SkipHardwareTest is available (it begins encrypting immediately instead of
+# waiting for a reboot-time hardware test). Returns $true on success; the command
+# output / exit code are left in $script:LastEncryptOutput / $script:LastEncryptExit.
+function Start-DriveEncryption {
+    param(
+        [Parameter(Mandatory)][string]$MountPoint,
+        [string]$EncryptionMethod = 'XtsAes256'
+    )
+
+    $model = (Get-CimInstance Win32_ComputerSystem -ErrorAction SilentlyContinue).Model
+    $isVM  = $model -match 'Virtual|VMware|QEMU|KVM|Hyper-V|Xen'
+
+    if ($isVM) {
+        $out  = & manage-bde.exe -on $MountPoint -EncryptionMethod $EncryptionMethod -SkipHardwareTest 2>&1 | Out-String
+        $exit = $LASTEXITCODE
+    } else {
+        $out  = & manage-bde.exe -on $MountPoint -EncryptionMethod $EncryptionMethod -UsedSpaceOnly -SkipHardwareTest 2>&1 | Out-String
+        $exit = $LASTEXITCODE
+        if ($exit -ne 0 -and $out -match '0x803100a5') {
+            # Used-space-only not accepted on this volume — retry full-volume.
+            $out  = & manage-bde.exe -on $MountPoint -EncryptionMethod $EncryptionMethod -SkipHardwareTest 2>&1 | Out-String
+            $exit = $LASTEXITCODE
+        }
+    }
+
+    $script:LastEncryptOutput = $out.Trim()
+    $script:LastEncryptExit   = $exit
+    return ($exit -eq 0)
+}
+
 # Renders an HTML file to PDF using headless Microsoft Edge (or Chrome as a
 # fallback) — both ship Chromium's --print-to-pdf, so no third-party tooling is
 # required. Returns $true if the PDF was produced, $false if no browser is
@@ -272,16 +310,51 @@ function Enable-DriveEncryption {
         Write-Host ""
         Write-Host "  [!!] Drive $($vol.MountPoint) is already fully encrypted." -ForegroundColor $ColorSchema.Warning
 
-        $existingKey = $vol.KeyProtector | Where-Object { $_.KeyProtectorType -eq 'RecoveryPassword' } | Select-Object -Last 1
-        if ($existingKey) {
+        if ($vol.ProtectionStatus -eq "On") {
+            $existingKey = $vol.KeyProtector | Where-Object { $_.KeyProtectorType -eq 'RecoveryPassword' } | Select-Object -Last 1
             Write-Host ""
-            Write-Host "  [+] Recovery key is already present." -ForegroundColor $ColorSchema.Success
-            Write-Host "  ID  : $($existingKey.KeyProtectorId)" -ForegroundColor $ColorSchema.Warning
-            Write-Host "  Key : $($existingKey.RecoveryPassword)" -ForegroundColor $ColorSchema.Warning
+            Write-Host "  [+] BitLocker protection is already ON — nothing to do." -ForegroundColor $ColorSchema.Success
+            if ($existingKey) {
+                Write-Host "  ID  : $($existingKey.KeyProtectorId)" -ForegroundColor $ColorSchema.Warning
+                Write-Host "  Key : $($existingKey.RecoveryPassword)" -ForegroundColor $ColorSchema.Warning
+            }
+            Write-Host ""
+            return
+        }
+
+        # Protection is OFF on an already-encrypted volume. Two very different cases:
+        #   (a) the volume is suspended / already carries a usable protector (TPM,
+        #       recovery password, etc.) — it just needs RESUMING, and adding another
+        #       recovery password would only pile up duplicates;
+        #   (b) the only thing holding the volume key is an unsecured clear key — a
+        #       usable protector must be added before protection can be enabled.
+        $usableTypes  = @('Tpm','TpmPin','TpmStartupKey','TpmPinStartupKey','RecoveryPassword','Password')
+        $hasProtector = [bool]($vol.KeyProtector | Where-Object { $_.KeyProtectorType -in $usableTypes })
+
+        if ($WhatIf) {
+            Write-Host ""
+            if ($hasProtector) {
+                Write-Host "  [~] Would resume BitLocker protection on $($vol.MountPoint) (suspended; protectors already present)." -ForegroundColor Cyan
+            } else {
+                Write-Host "  [~] Would add a recovery password to $($vol.MountPoint), then enable protection." -ForegroundColor Cyan
+            }
+            Write-Host ""
+            return
+        }
+
+        if ($hasProtector) {
+            Write-Host ""
+            Write-Host "  [!!] BitLocker is suspended (protection off) but usable key protectors exist." -ForegroundColor $ColorSchema.Warning
+            Write-Host "  [*] Resuming BitLocker protection..." -ForegroundColor $ColorSchema.Progress
         } else {
-            Write-Host "  [!!] No recovery key found — adding one now." -ForegroundColor $ColorSchema.Warning
+            Write-Host ""
+            Write-Host "  [!!] No usable key protector found — only an unsecured (clear) key is present." -ForegroundColor $ColorSchema.Warning
+            Write-Host "  [*] Adding a recovery password before enabling protection..." -ForegroundColor $ColorSchema.Progress
             try {
-                $vol = Add-BitLockerKeyProtector -MountPoint $vol.MountPoint -RecoveryPasswordProtector -ErrorAction Stop
+                $null = Add-BitLockerKeyProtector -MountPoint $vol.MountPoint -RecoveryPasswordProtector -ErrorAction Stop
+                # Re-query to confirm the protector actually persisted to the volume —
+                # the returned object can report success even when a policy blocks the commit.
+                $vol    = Get-BitLockerVolume -MountPoint $vol.MountPoint -ErrorAction Stop
                 $newKey = $vol.KeyProtector | Where-Object { $_.KeyProtectorType -eq 'RecoveryPassword' } | Select-Object -Last 1
                 if ($newKey) {
                     Write-Host ""
@@ -294,27 +367,30 @@ function Enable-DriveEncryption {
                     Write-Host ""
                     Read-Host "  Press Enter once you have saved the recovery key"
                     Write-Host "  [+] Recovery key added successfully." -ForegroundColor $ColorSchema.Success
+                } else {
+                    Write-Host "  [-] The recovery password did not persist to the volume — cannot enable protection." -ForegroundColor $ColorSchema.Error
+                    Write-Host "      This usually means a policy requires the key be escrowed first, or the drive is" -ForegroundColor $ColorSchema.Warning
+                    Write-Host "      in Windows Device Encryption 'waiting' state. Resolve that, then retry." -ForegroundColor $ColorSchema.Warning
+                    Write-TKError -ScriptName 'cipher' -Message "Recovery password did not persist on '$($vol.MountPoint)' after Add-BitLockerKeyProtector." -Category 'BitLocker Enable'
+                    Write-Host ""
+                    return
                 }
             } catch {
                 Write-Host "  [-] Failed to add recovery key: $_" -ForegroundColor $ColorSchema.Error
+                Write-Host ""
+                return
             }
         }
-        if ($vol.ProtectionStatus -ne "On") {
-            Write-Host ""
-            Write-Host "  [!!] BitLocker protection is OFF — encryption exists but keys are exposed." -ForegroundColor $ColorSchema.Warning
-            Write-Host "  [*] Activating BitLocker protection..." -ForegroundColor $ColorSchema.Progress
-            if (Enable-DriveProtection -MountPoint $vol.MountPoint) {
-                Write-Host "  [+] BitLocker protection is now ON." -ForegroundColor $ColorSchema.Success
-            } else {
-                Write-Host "  [-] Failed to activate protection on $($vol.MountPoint)." -ForegroundColor $ColorSchema.Error
-                if ($script:LastEnableOutput) {
-                    Write-Host "      manage-bde (exit $($script:LastEnableExit)): $($script:LastEnableOutput)" -ForegroundColor $ColorSchema.Warning
-                }
-                Write-Host "      Run manually to inspect: manage-bde -protectors -enable $($vol.MountPoint)" -ForegroundColor $ColorSchema.Warning
-                Write-TKError -ScriptName 'cipher' -Message "Activate protection failed on '$($vol.MountPoint)' (manage-bde exit $($script:LastEnableExit)): $($script:LastEnableOutput)" -Category 'BitLocker Enable'
-            }
+
+        if (Enable-DriveProtection -MountPoint $vol.MountPoint) {
+            Write-Host "  [+] BitLocker protection is now ON." -ForegroundColor $ColorSchema.Success
         } else {
-            Write-Host "  [+] BitLocker protection is ON." -ForegroundColor $ColorSchema.Success
+            Write-Host "  [-] Failed to activate protection on $($vol.MountPoint)." -ForegroundColor $ColorSchema.Error
+            if ($script:LastEnableOutput) {
+                Write-Host "      manage-bde (exit $($script:LastEnableExit)): $($script:LastEnableOutput)" -ForegroundColor $ColorSchema.Warning
+            }
+            Write-Host "      Run manually to inspect: manage-bde -protectors -enable $($vol.MountPoint)" -ForegroundColor $ColorSchema.Warning
+            Write-TKError -ScriptName 'cipher' -Message "Activate protection failed on '$($vol.MountPoint)' (manage-bde exit $($script:LastEnableExit)): $($script:LastEnableOutput)" -Category 'BitLocker Enable'
         }
 
         Write-Host ""
@@ -338,7 +414,7 @@ function Enable-DriveEncryption {
         Write-Host ""
         Write-Host "  [~] Would add recovery password protector to $($vol.MountPoint)" -ForegroundColor Cyan
         Write-Host "  [~] Would add $protName protector to $($vol.MountPoint)" -ForegroundColor Cyan
-        Write-Host "  [~] Would start XtsAes256 encryption (used space only) on $($vol.MountPoint)" -ForegroundColor Cyan
+        Write-Host "  [~] Would start XtsAes256 encryption on $($vol.MountPoint) (used space only; full-volume on VMs or if the disk rejects it)" -ForegroundColor Cyan
         Write-Host ""
         return
     }
@@ -385,7 +461,15 @@ function Enable-DriveEncryption {
         }
 
         Write-Host "  [*] Starting encryption on $($vol.MountPoint)..." -ForegroundColor $ColorSchema.Progress
-        Enable-BitLocker -MountPoint $vol.MountPoint -EncryptionMethod XtsAes256 -UsedSpaceOnly -ErrorAction Stop | Out-Null
+        if (-not (Start-DriveEncryption -MountPoint $vol.MountPoint -EncryptionMethod 'XtsAes256')) {
+            Write-Host "  [-] Failed to start encryption on $($vol.MountPoint)." -ForegroundColor $ColorSchema.Error
+            if ($script:LastEncryptOutput) {
+                Write-Host "      manage-bde (exit $($script:LastEncryptExit)): $($script:LastEncryptOutput)" -ForegroundColor $ColorSchema.Warning
+            }
+            Write-TKError -ScriptName 'cipher' -Message "Start encryption failed on '$($vol.MountPoint)' (manage-bde exit $($script:LastEncryptExit)): $($script:LastEncryptOutput)" -Category 'BitLocker Enable'
+            Write-Host ""
+            return
+        }
 
         $volCheck = Get-BitLockerVolume -MountPoint $vol.MountPoint -ErrorAction SilentlyContinue
         if ($volCheck -and $volCheck.ProtectionStatus -ne "On") {
@@ -630,7 +714,7 @@ function Export-EncryptionReport {
   </div>
 </div>
 "@
-    $html += Get-TKHtmlFoot -ScriptName 'C.I.P.H.E.R. v3.8'
+    $html += Get-TKHtmlFoot -ScriptName 'C.I.P.H.E.R. v4.0'
 
     try {
         $html | Out-File -FilePath $htmlPath -Encoding UTF8 -ErrorAction Stop

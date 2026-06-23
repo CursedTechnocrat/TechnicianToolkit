@@ -391,7 +391,8 @@ Produces a single consolidated HTML report covering the most commonly requested 
 Manages BitLocker drive encryption across all volumes with an interactive menu-driven interface.
 
 - Displays current encryption status for all drives on launch
-- Enable BitLocker with TPM, TPM + PIN, or recovery password only
+- Enable BitLocker with TPM, TPM + PIN, or recovery password only (detects VMs and falls back to full-volume encryption when a disk rejects used-space-only)
+- On an already-encrypted drive, recognizes a *suspended* volume and resumes it rather than re-adding protectors; only adds a recovery key when none is present
 - Recovery key displayed and confirmed before encryption begins
 - Disable BitLocker (full decryption) with confirmation prompt
 - Back up recovery key to Active Directory or Entra ID (Azure AD)
