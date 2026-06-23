@@ -159,7 +159,7 @@ try {
     Write-Host "    Cores/Threads: $($cpu.NumberOfCores) cores / $($cpu.NumberOfLogicalProcessors) threads" -ForegroundColor $ColorSchema.Info
     Write-Host "    RAM          : $ramGB GB" -ForegroundColor $ColorSchema.Info
 
-    $diskSummary = @()
+    $diskSummary = [System.Collections.Generic.List[object]]::new()
     foreach ($disk in $disks) {
         $totalGB = [math]::Round($disk.Size / 1GB, 1)
         $freeGB  = [math]::Round($disk.FreeSpace / 1GB, 1)
@@ -169,14 +169,14 @@ try {
         $color = if ($pct -ge 90) { $ColorSchema.Error } elseif ($pct -ge 75) { $ColorSchema.Warning } else { $ColorSchema.Info }
         Write-Host "    Disk $($disk.DeviceID)      : $usedGB GB used / $totalGB GB total ($pct% full)" -ForegroundColor $color
 
-        $diskSummary += [PSCustomObject]@{
+        $diskSummary.Add([PSCustomObject]@{
             Drive   = $disk.DeviceID
             Label   = $disk.VolumeName
             TotalGB = $totalGB
             UsedGB  = $usedGB
             FreeGB  = $freeGB
             PctUsed = $pct
-        }
+        })
     }
 
     $reportData['Hardware'] = [PSCustomObject]@{
@@ -255,7 +255,7 @@ Write-Host "[3/10] Collecting Network Configuration..." -ForegroundColor $ColorS
 
 try {
     $adapters = Get-CimInstance -ClassName Win32_NetworkAdapterConfiguration -Filter "IPEnabled=True"
-    $netSummary = @()
+    $netSummary = [System.Collections.Generic.List[object]]::new()
 
     foreach ($adapter in $adapters) {
         $ip      = ($adapter.IPAddress      | Where-Object { $_ -match '^\d+\.\d+\.\d+\.\d+$' }) -join ', '
@@ -269,13 +269,13 @@ try {
         Write-Host "    DNS      : $dns" -ForegroundColor $ColorSchema.Info
         Write-Host ""
 
-        $netSummary += [PSCustomObject]@{
+        $netSummary.Add([PSCustomObject]@{
             Adapter = $adapter.Description
             IP      = $ip
             MAC     = $adapter.MACAddress
             Gateway = $gateway
             DNS     = $dns
-        }
+        })
     }
 
     $reportData['Network'] = $netSummary
@@ -340,8 +340,8 @@ Write-Host ""
 
 Write-Host "[5/10] Collecting Storage & RAID Health..." -ForegroundColor $ColorSchema.Progress
 
-$physicalDiskSummary = @()
-$virtualDiskSummary  = @()
+$physicalDiskSummary = [System.Collections.Generic.List[object]]::new()
+$virtualDiskSummary  = [System.Collections.Generic.List[object]]::new()
 
 try {
     $physicalDisks = Get-PhysicalDisk -ErrorAction Stop
@@ -355,7 +355,7 @@ try {
         }
         Write-Host "    [$($pd.DeviceId)] $($pd.FriendlyName) | $($pd.MediaType) | $sizeGB GB | Health: $($pd.HealthStatus) | Status: $($pd.OperationalStatus)" -ForegroundColor $healthColor
 
-        $physicalDiskSummary += [PSCustomObject]@{
+        $physicalDiskSummary.Add([PSCustomObject]@{
             ID                = $pd.DeviceId
             Name              = $pd.FriendlyName
             MediaType         = $pd.MediaType
@@ -363,7 +363,7 @@ try {
             SizeGB            = $sizeGB
             HealthStatus      = $pd.HealthStatus
             OperationalStatus = $pd.OperationalStatus
-        }
+        })
     }
 
     # Storage Spaces virtual disks (software RAID)
@@ -379,13 +379,13 @@ try {
             $vSizeGB = if ($vd.Size -gt 0) { [math]::Round($vd.Size / 1GB, 1) } else { 0 }
             Write-Host "      VDisk: $($vd.FriendlyName) | $($vd.ResiliencySettingName) | $vSizeGB GB | Health: $($vd.HealthStatus) / Op: $($vd.OperationalStatus)" -ForegroundColor $vHealthColor
 
-            $virtualDiskSummary += [PSCustomObject]@{
+            $virtualDiskSummary.Add([PSCustomObject]@{
                 Name              = $vd.FriendlyName
                 ResiliencyType    = $vd.ResiliencySettingName
                 SizeGB            = $vSizeGB
                 HealthStatus      = $vd.HealthStatus
                 OperationalStatus = $vd.OperationalStatus
-            }
+            })
         }
     }
     else {
@@ -393,7 +393,7 @@ try {
     }
 
     # Hardware RAID controller detection via WMI
-    $raidControllers = @()
+    $raidControllers = [System.Collections.Generic.List[object]]::new()
     try {
         $scsiControllers = Get-CimInstance -ClassName Win32_SCSIController -ErrorAction SilentlyContinue |
             Where-Object { $_.Name -match 'RAID|MegaRAID|PERC|Smart Array|LSI|Adaptec|Avago|Broadcom|RST|Intel.*RAID|Areca|3ware' }
@@ -401,12 +401,12 @@ try {
         foreach ($ctrl in $scsiControllers) {
             $ctrlColor = if ($ctrl.Status -eq 'OK') { $ColorSchema.Success } else { $ColorSchema.Warning }
             Write-Host "    RAID Controller : $($ctrl.Name) [$($ctrl.Status)]" -ForegroundColor $ctrlColor
-            $raidControllers += [PSCustomObject]@{
+            $raidControllers.Add([PSCustomObject]@{
                 Name         = $ctrl.Name
                 Manufacturer = if ($ctrl.Manufacturer) { $ctrl.Manufacturer } else { 'N/A' }
                 Status       = $ctrl.Status
                 DriverName   = if ($ctrl.DriverName) { $ctrl.DriverName } else { 'N/A' }
-            }
+            })
         }
 
         if ($raidControllers.Count -eq 0) {
@@ -418,7 +418,7 @@ try {
     }
 
     # Vendor CLI tools — capture detailed RAID config if available
-    $raidVendorOutput = @()
+    $raidVendorOutput = [System.Collections.Generic.List[object]]::new()
     $cliCandidates = @(
         @{ Name = 'StorCLI';   Exe = 'StorCLI64.exe'; Dirs = @('C:\Windows\System32','C:\Program Files\MegaRAID\StorCLI','C:\Program Files (x86)\MegaRAID\StorCLI');         Args = @('/call','show') },
         @{ Name = 'PERCCLI';   Exe = 'perccli64.exe'; Dirs = @('C:\Windows\System32','C:\Program Files\PERCCLI','C:\Program Files (x86)\PERCCLI');                            Args = @('/call','show') },
@@ -431,7 +431,7 @@ try {
             try {
                 Write-Host "    Found $($cli.Name): $exePath" -ForegroundColor $ColorSchema.Info
                 $rawOutput = & "$exePath" @($cli.Args) 2>&1 | Out-String
-                $raidVendorOutput += [PSCustomObject]@{ Tool = $cli.Name; Output = $rawOutput.Trim() }
+                $raidVendorOutput.Add([PSCustomObject]@{ Tool = $cli.Name; Output = $rawOutput.Trim() })
                 Write-Host "    [+] $($cli.Name) output captured" -ForegroundColor $ColorSchema.Success
             }
             catch {
@@ -468,7 +468,7 @@ Write-Host ""
 Write-Host "[6/10] Scanning for Pending Updates..." -ForegroundColor $ColorSchema.Progress
 Write-Host "    This may take a moment..." -ForegroundColor $ColorSchema.Info
 
-$pendingUpdates = @()
+$pendingUpdates = [System.Collections.Generic.List[object]]::new()
 try {
     $updateSession  = New-Object -ComObject Microsoft.Update.Session
     $updateSearcher = $updateSession.CreateUpdateSearcher()
@@ -481,11 +481,11 @@ try {
         Write-Host "    [!!] $($searchResult.Updates.Count) pending update(s) found:" -ForegroundColor $ColorSchema.Warning
         foreach ($update in $searchResult.Updates) {
             Write-Host "      * $($update.Title)" -ForegroundColor $ColorSchema.Warning
-            $pendingUpdates += [PSCustomObject]@{
+            $pendingUpdates.Add([PSCustomObject]@{
                 Title    = $update.Title
                 Severity = if ($update.MsrcSeverity) { $update.MsrcSeverity } else { "N/A" }
                 KB       = ($update.KBArticleIDs -join ', ')
-            }
+            })
         }
     }
 
@@ -505,7 +505,7 @@ Write-Host ""
 
 Write-Host "[7/10] Collecting Installed Software..." -ForegroundColor $ColorSchema.Progress
 
-$installedApps = @()
+$installedApps = [System.Collections.Generic.List[object]]::new()
 try {
     $regPaths = @(
         "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
@@ -516,12 +516,12 @@ try {
         Get-ItemProperty $path -ErrorAction SilentlyContinue |
             Where-Object { $_.DisplayName -and $_.DisplayName -ne '' } |
             ForEach-Object {
-                $installedApps += [PSCustomObject]@{
+                $installedApps.Add([PSCustomObject]@{
                     Name      = $_.DisplayName
                     Version   = if ($_.DisplayVersion) { $_.DisplayVersion } else { "N/A" }
                     Publisher = if ($_.Publisher)       { $_.Publisher }       else { "N/A" }
                     InstallDate = if ($_.InstallDate)   { $_.InstallDate }     else { "N/A" }
-                }
+                })
             }
     }
 
@@ -593,7 +593,7 @@ catch {
 
 Write-Host "[9/10] Collecting Scheduled Tasks..." -ForegroundColor $ColorSchema.Progress
 
-$scheduledTaskSummary = @()
+$scheduledTaskSummary = [System.Collections.Generic.List[object]]::new()
 try {
     $tasks = Get-ScheduledTask -ErrorAction Stop |
         Where-Object { $_.TaskPath -notmatch '^\\Microsoft\\' }
@@ -612,7 +612,7 @@ try {
             $info.NextRunTime.ToString('yyyy-MM-dd HH:mm')
         } else { 'N/A' }
 
-        $scheduledTaskSummary += [PSCustomObject]@{
+        $scheduledTaskSummary.Add([PSCustomObject]@{
             Name       = $task.TaskName
             Path       = $task.TaskPath
             State      = $task.State
@@ -620,7 +620,7 @@ try {
             NextRun    = $nextRun
             LastResult = if ($info) { "0x{0:X8}" -f $info.LastTaskResult } else { 'N/A' }
             Actions    = $actions
-        }
+        })
     }
 
     Write-Host "    Found $($scheduledTaskSummary.Count) non-Microsoft scheduled task(s)" -ForegroundColor $ColorSchema.Info
@@ -640,7 +640,7 @@ Write-Host ""
 
 Write-Host "[10/10] Collecting Security & AV Status..." -ForegroundColor $ColorSchema.Progress
 
-$avProducts = @()
+$avProducts = [System.Collections.Generic.List[object]]::new()
 try {
     $defender = Get-MpComputerStatus -ErrorAction SilentlyContinue
     if ($defender) {
@@ -652,13 +652,13 @@ try {
             Get-Date $defender.QuickScanEndTime -Format 'yyyy-MM-dd HH:mm'
         } else { 'Never' }
 
-        $avProducts += [PSCustomObject]@{
+        $avProducts.Add([PSCustomObject]@{
             Product            = 'Windows Defender'
             RealTimeProtection = if ($defender.RealTimeProtectionEnabled) { 'On' } else { 'Off' }
             DefinitionAge      = if ($null -ne $defAgeDays) { "$defAgeDays day(s)" } else { 'Unknown' }
             LastQuickScan      = $lastScan
             ServiceEnabled     = if ($defender.AMServiceEnabled) { 'Yes' } else { 'No' }
-        }
+        })
         Write-Host "[+] Windows Defender status collected" -ForegroundColor $ColorSchema.Success
     }
 }
@@ -670,13 +670,13 @@ try {
     $thirdParty = Get-WmiObject -Namespace 'root\SecurityCenter2' -Class AntiVirusProduct -ErrorAction SilentlyContinue |
                   Where-Object { $_.displayName -notmatch 'Windows Defender|Microsoft Defender' }
     foreach ($av in $thirdParty) {
-        $avProducts += [PSCustomObject]@{
+        $avProducts.Add([PSCustomObject]@{
             Product            = $av.displayName
             RealTimeProtection = 'N/A'
             DefinitionAge      = 'N/A'
             LastQuickScan      = 'N/A'
             ServiceEnabled     = 'Registered'
-        }
+        })
     }
 }
 catch {

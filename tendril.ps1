@@ -423,19 +423,19 @@ Write-Ok "Group-based licenses: $($LicenseRows.Count)"
 
 # ---- 3. Conditional Access --------------------------------------------------
 Write-Step "Conditional Access policies..."
-$CAHits = @()
+$CAHits = [System.Collections.Generic.List[object]]::new()
 try {
     $CAPolicies = @(Get-MgIdentityConditionalAccessPolicy -All -ErrorAction Stop)
     foreach ($p in $CAPolicies) {
         $inc = $p.Conditions.Users.IncludeGroups -contains $GroupId
         $exc = $p.Conditions.Users.ExcludeGroups -contains $GroupId
         if ($inc -or $exc) {
-            $CAHits += [PSCustomObject]@{
+            $CAHits.Add([PSCustomObject]@{
                 PolicyName = $p.DisplayName
                 PolicyId   = $p.Id
                 State      = $p.State
                 Role       = if ($inc -and $exc) { 'Include + Exclude' } elseif ($inc) { 'Include' } else { 'Exclude' }
-            }
+            })
         }
     }
 } catch {
@@ -463,7 +463,7 @@ Write-Ok "Enterprise app assignments: $($AppHits.Count)"
 
 # ---- 5. Directory role assignments ------------------------------------------
 Write-Step "Entra directory role assignments..."
-$RoleHits = @()
+$RoleHits = [System.Collections.Generic.List[object]]::new()
 try {
     $activeRoles = @(Get-MgRoleManagementDirectoryRoleAssignment -Filter "principalId eq '$GroupId'" -All -ErrorAction Stop)
     foreach ($r in $activeRoles) {
@@ -471,11 +471,11 @@ try {
         try { $def = Get-MgRoleManagementDirectoryRoleDefinition -UnifiedRoleDefinitionId $r.RoleDefinitionId -ErrorAction Stop } catch {
             # Definition lookup may 403 on highly-restricted roles  -  fall back to the ID.
         }
-        $RoleHits += [PSCustomObject]@{
+        $RoleHits.Add([PSCustomObject]@{
             RoleName       = if ($def) { $def.DisplayName } else { $r.RoleDefinitionId }
             Scope          = $r.DirectoryScopeId
             AssignmentKind = 'Active'
-        }
+        })
     }
 } catch {
     Write-Warn "Active role assignment enumeration failed: $($_.Exception.Message)"
@@ -487,11 +487,11 @@ try {
         try { $def = Get-MgRoleManagementDirectoryRoleDefinition -UnifiedRoleDefinitionId $r.RoleDefinitionId -ErrorAction Stop } catch {
             # PIM eligibility schedules can reference roles we can't fully resolve.
         }
-        $RoleHits += [PSCustomObject]@{
+        $RoleHits.Add([PSCustomObject]@{
             RoleName       = if ($def) { $def.DisplayName } else { $r.RoleDefinitionId }
             Scope          = $r.DirectoryScopeId
             AssignmentKind = 'PIM-Eligible'
-        }
+        })
     }
 } catch {
     # PIM endpoints require the tenant to have AAD P2; ignore on P1-only tenants.
@@ -518,14 +518,14 @@ Write-Ok "Nested under: $($NestedRows.Count) parent group(s)"
 
 # ---- 7. Administrative units ------------------------------------------------
 Write-Step "Administrative Unit membership..."
-$AURows = @()
+$AURows = [System.Collections.Generic.List[object]]::new()
 try {
     $aus = @(Get-MgDirectoryAdministrativeUnit -All -ErrorAction Stop)
     foreach ($au in $aus) {
         try {
             $auMembers = @(Get-MgDirectoryAdministrativeUnitMember -AdministrativeUnitId $au.Id -All -ErrorAction Stop)
             if ($auMembers.Id -contains $GroupId) {
-                $AURows += [PSCustomObject]@{ AdminUnit = $au.DisplayName; AdminUnitId = $au.Id }
+                $AURows.Add([PSCustomObject]@{ AdminUnit = $au.DisplayName; AdminUnitId = $au.Id })
             }
         } catch {
             # AUs can be scoped so the signed-in principal can't list members  -  skip silently.
@@ -591,7 +591,7 @@ try {
 Write-Ok "Intune assignments referencing this group: $($IntuneHits.Count)"
 
 # ---- 9. SharePoint Online (optional) ----------------------------------------
-$SharePointRows = @()
+$SharePointRows = [System.Collections.Generic.List[object]]::new()
 $SharePointSiteScanned = 0
 $SharePointSiteSkipped = 0
 $SharePointConnectedSite = ''
@@ -629,11 +629,11 @@ if ($IncludeSharePoint -and $PnpAvailable) {
                         foreach ($member in $gm) {
                             $login = $member.LoginName
                             if ($login -and ($login -match [regex]::Escape($GroupId) -or $login -match "\|$GroupId$")) {
-                                $SharePointRows += [PSCustomObject]@{
+                                $SharePointRows.Add([PSCustomObject]@{
                                     SiteUrl       = $site.Url
                                     SharePointGroup = $spg.Title
                                     Role          = ($spg.Title -replace '.*?(Owners|Members|Visitors).*','$1')
-                                }
+                                })
                             }
                         }
                     } catch {
@@ -654,11 +654,11 @@ if ($IncludeSharePoint -and $PnpAvailable) {
 }
 
 # ---- 10. Exchange Online (optional) -----------------------------------------
-$EXOTransportHits   = @()
-$EXOSendAsHits      = @()
-$EXOSendOnBehalf    = @()
-$EXORoleGroupHits   = @()
-$EXOParentDLs       = @()
+$EXOTransportHits   = [System.Collections.Generic.List[object]]::new()
+$EXOSendAsHits      = [System.Collections.Generic.List[object]]::new()
+$EXOSendOnBehalf    = [System.Collections.Generic.List[object]]::new()
+$EXORoleGroupHits   = [System.Collections.Generic.List[object]]::new()
+$EXOParentDLs       = [System.Collections.Generic.List[object]]::new()
 if ($IncludeExchange -and $ExoAvailable) {
     Write-Step "Exchange Online recipient policies..."
     try {
@@ -683,11 +683,11 @@ if ($IncludeExchange -and $ExoAvailable) {
                     ($r.RedirectMessageTo -join ';')
                 ) -join '|'
                 if ($blob -match [regex]::Escape($GroupSmtp)) {
-                    $EXOTransportHits += [PSCustomObject]@{
+                    $EXOTransportHits.Add([PSCustomObject]@{
                         RuleName = $r.Name
                         State    = $r.State
                         Priority = $r.Priority
-                    }
+                    })
                 }
             }
         } catch {
@@ -700,10 +700,10 @@ if ($IncludeExchange -and $ExoAvailable) {
         try {
             $recipients = @(Get-RecipientPermission -Trustee $GroupSmtp -ErrorAction SilentlyContinue)
             foreach ($p in $recipients) {
-                $EXOSendAsHits += [PSCustomObject]@{
+                $EXOSendAsHits.Add([PSCustomObject]@{
                     Identity = $p.Identity
                     Access   = ($p.AccessRights -join ', ')
-                }
+                })
             }
         } catch {
             # Tenant may not permit trustee-based queries.
@@ -716,10 +716,10 @@ if ($IncludeExchange -and $ExoAvailable) {
                     if ($id -and ($id -ieq $GroupName -or $id -match [regex]::Escape($GroupSmtp))) { $matched = $true; break }
                 }
                 if ($matched) {
-                    $EXOSendOnBehalf += [PSCustomObject]@{
+                    $EXOSendOnBehalf.Add([PSCustomObject]@{
                         Mailbox      = $mbx.DisplayName
                         SmtpAddress  = $mbx.PrimarySmtpAddress
-                    }
+                    })
                 }
             }
         } catch {
@@ -739,10 +739,10 @@ if ($IncludeExchange -and $ExoAvailable) {
                     $_.DistinguishedName -match [regex]::Escape($GroupName)
                 }
                 if ($matched) {
-                    $EXORoleGroupHits += [PSCustomObject]@{
+                    $EXORoleGroupHits.Add([PSCustomObject]@{
                         RoleGroup = $rg.DisplayName
                         Roles     = ($rg.Roles -join ', ')
-                    }
+                    })
                 }
             } catch {
                 # Some role groups are linked to AAD universal groups and 403 on read.
@@ -760,10 +760,10 @@ if ($IncludeExchange -and $ExoAvailable) {
                 try {
                     $dlm = @(Get-DistributionGroupMember -Identity $dl.Identity -ResultSize Unlimited -ErrorAction Stop)
                     if ($dlm | Where-Object { $_.ExternalDirectoryObjectId -eq $GroupId }) {
-                        $EXOParentDLs += [PSCustomObject]@{
+                        $EXOParentDLs.Add([PSCustomObject]@{
                             DistributionList = $dl.DisplayName
                             SmtpAddress      = $dl.PrimarySmtpAddress
-                        }
+                        })
                     }
                 } catch {
                     # Large DLs may exceed the WinRM message size; skip rather than fail the audit.
@@ -778,7 +778,7 @@ if ($IncludeExchange -and $ExoAvailable) {
 }
 
 # ---- 11. Azure subscription RBAC (optional) ---------------------------------
-$AzureRbacHits = @()
+$AzureRbacHits = [System.Collections.Generic.List[object]]::new()
 $AzSubsScanned = 0
 if ($IncludeAzureRbac -and $AzAvailable) {
     Write-Step "Azure subscription RBAC..."
@@ -794,12 +794,12 @@ if ($IncludeAzureRbac -and $AzAvailable) {
                 Set-AzContext -SubscriptionId $sub.Id -ErrorAction Stop | Out-Null
                 $assignments = @(Get-AzRoleAssignment -ObjectId $GroupId -ErrorAction SilentlyContinue)
                 foreach ($a in $assignments) {
-                    $AzureRbacHits += [PSCustomObject]@{
+                    $AzureRbacHits.Add([PSCustomObject]@{
                         Subscription = $sub.Name
                         SubscriptionId = $sub.Id
                         Role         = $a.RoleDefinitionName
                         Scope        = $a.Scope
-                    }
+                    })
                 }
             } catch {
                 Write-Warn "Could not scan subscription '$($sub.Name)': $($_.Exception.Message)"
@@ -1011,9 +1011,9 @@ if ($IncludeExchange) {
     }
 
     $exoDelegHtml = [System.Text.StringBuilder]::new()
-    $delegRows = @()
-    foreach ($s in $EXOSendAsHits)   { $delegRows += [PSCustomObject]@{ Type='Send-As';        Target=$s.Identity; Detail=$s.Access } }
-    foreach ($s in $EXOSendOnBehalf) { $delegRows += [PSCustomObject]@{ Type='Send-On-Behalf'; Target=$s.Mailbox;  Detail=$s.SmtpAddress } }
+    $delegRows = [System.Collections.Generic.List[object]]::new()
+    foreach ($s in $EXOSendAsHits)   { $delegRows.Add([PSCustomObject]@{ Type='Send-As';        Target=$s.Identity; Detail=$s.Access }) }
+    foreach ($s in $EXOSendOnBehalf) { $delegRows.Add([PSCustomObject]@{ Type='Send-On-Behalf'; Target=$s.Mailbox;  Detail=$s.SmtpAddress }) }
     if ($delegRows.Count -eq 0) {
         [void]$exoDelegHtml.Append("<tr><td colspan='3' class='tk-badge-ok' style='text-align:center;padding:14px'>No mailbox delegations grant this group send rights.</td></tr>")
     } else {
