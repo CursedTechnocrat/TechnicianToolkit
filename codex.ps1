@@ -339,11 +339,7 @@ $outPath   = Join-Path $resolvedLogDir "CODEX_${timestamp}.html"
 
 try {
     [System.IO.File]::WriteAllText($outPath, $html, [System.Text.Encoding]::UTF8)
-    Write-Ok "Index saved: $outPath"
-    if (-not $Unattended) {
-        Write-Step "Opening in default browser..."
-        Start-Process $outPath
-    }
+    Show-TKReportResult -Path $outPath -Unattended:$Unattended -Label 'Index'
 } catch {
     Write-Fail "Could not save index: $($_.Exception.Message)"
 }

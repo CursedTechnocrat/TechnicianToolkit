@@ -479,11 +479,7 @@ function Export-RollupHtml {
 
     try {
         [System.IO.File]::WriteAllText($outPath, $html, [System.Text.Encoding]::UTF8)
-        Write-Ok "Rollup report saved: $outPath"
-        if (-not $Unattended) {
-            Write-Step "Opening in default browser..."
-            Start-Process $outPath
-        }
+        Show-TKReportResult -Path $outPath -Unattended:$Unattended -Label 'Rollup report'
     } catch {
         Write-Fail "Could not save rollup report: $($_.Exception.Message)"
     }

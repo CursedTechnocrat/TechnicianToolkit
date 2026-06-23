@@ -874,17 +874,7 @@ function Export-StaleReport {
 
     try {
         [System.IO.File]::WriteAllText($reportPath, $html, [System.Text.Encoding]::UTF8)
-        Write-Host "  [+] Stale accounts report saved:" -ForegroundColor $C.Success
-        Write-Host "      $reportPath" -ForegroundColor $C.Success
-
-        if (-not $Unattended) {
-            Write-Host ""
-            Write-Host -NoNewline "  Open report in browser? (Y/N): " -ForegroundColor $C.Header
-            $open = (Read-Host).Trim().ToUpper()
-            if ($open -eq "Y") {
-                Start-Process $reportPath
-            }
-        }
+        Show-TKReportResult -Path $reportPath -Unattended:$Unattended -Label 'Stale accounts report'
     } catch {
         Write-Host "  [-] Failed to save report: $_" -ForegroundColor $C.Error
     }
@@ -1186,15 +1176,7 @@ function Export-PasswordExpiryReport {
 
     try {
         [System.IO.File]::WriteAllText($reportPath, $html, [System.Text.Encoding]::UTF8)
-        Write-Host "  [+] Password expiry report saved:" -ForegroundColor $C.Success
-        Write-Host "      $reportPath" -ForegroundColor $C.Success
-
-        if (-not $Unattended) {
-            Write-Host ""
-            Write-Host -NoNewline "  Open report in browser? (Y/N): " -ForegroundColor $C.Header
-            $open = (Read-Host).Trim().ToUpper()
-            if ($open -eq "Y") { Start-Process $reportPath }
-        }
+        Show-TKReportResult -Path $reportPath -Unattended:$Unattended -Label 'Password expiry report'
     } catch {
         Write-Host "  [-] Failed to save report: $_" -ForegroundColor $C.Error
     }

@@ -813,9 +813,7 @@ function Export-HtmlReport {
 
     try {
         $html | Out-File -FilePath $outPath -Encoding UTF8 -Force
-        Write-Ok "Report saved: $outPath"
-        Write-Step "Opening in default browser..."
-        Start-Process $outPath
+        Show-TKReportResult -Path $outPath -Unattended:$Unattended
     } catch {
         Write-Fail "Failed to save report: $_"
     }

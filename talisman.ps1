@@ -1124,12 +1124,7 @@ $html | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
 
 Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
 Write-Host ""
-Write-Ok "Report saved: $OutputPath"
-
-if (-not $NoOpen) {
-    Write-Step "Opening in default browser..."
-    Start-Process $OutputPath
-}
+Show-TKReportResult -Path $OutputPath -Unattended:($NoOpen -or $Unattended)
 
 Write-Host ""
 if ($Transcript) { Stop-TKTranscript }
