@@ -326,14 +326,14 @@ function Get-WmiPersistenceEntries {
                 elseif ($match.ExecutablePath)  { $cmd = $match.ExecutablePath }
             }
         }
-        $rows.Add(New-PersistenceRow -Category 'WMI Subscription' -Source 'root\subscription' -Name $b.Filter -Command $cmd)
+        $rows.Add((New-PersistenceRow -Category 'WMI Subscription' -Source 'root\subscription' -Name $b.Filter -Command $cmd))
     }
 
     # If there are no bindings, still surface bare filters/consumers so a reviewer knows the
     # subscription surface was inspected (no silent skips).
     if ($bindings.Count -eq 0 -and ($filters.Count -gt 0 -or $consumers.Count -gt 0)) {
         foreach ($f in $filters) {
-            $rows.Add(New-PersistenceRow -Category 'WMI Subscription' -Source 'root\subscription' -Name "Filter: $($f.Name)" -Command $f.Query)
+            $rows.Add((New-PersistenceRow -Category 'WMI Subscription' -Source 'root\subscription' -Name "Filter: $($f.Name)" -Command $f.Query))
         }
     }
 
@@ -369,8 +369,8 @@ function Get-WinlogonEntries {
 
     try {
         $wl = Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' -ErrorAction Stop
-        if ($wl.Shell)    { $rows.Add(New-PersistenceRow -Category 'Winlogon' -Source 'HKLM\Winlogon' -Name 'Shell'    -Command $wl.Shell) }
-        if ($wl.Userinit) { $rows.Add(New-PersistenceRow -Category 'Winlogon' -Source 'HKLM\Winlogon' -Name 'Userinit' -Command $wl.Userinit) }
+        if ($wl.Shell)    { $rows.Add((New-PersistenceRow -Category 'Winlogon' -Source 'HKLM\Winlogon' -Name 'Shell'    -Command $wl.Shell)) }
+        if ($wl.Userinit) { $rows.Add((New-PersistenceRow -Category 'Winlogon' -Source 'HKLM\Winlogon' -Name 'Userinit' -Command $wl.Userinit)) }
     } catch {
         # Winlogon key always exists on Windows; failure here means access-denied in a test
         # environment. Continue silently rather than emit a fake-missing row.
@@ -380,8 +380,8 @@ function Get-WinlogonEntries {
     # auditable.
     try {
         $init = Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows' -ErrorAction Stop
-        if ($init.AppInit_DLLs)  { $rows.Add(New-PersistenceRow -Category 'Winlogon' -Source 'HKLM\Windows' -Name 'AppInit_DLLs'  -Command $init.AppInit_DLLs) }
-        if ($init.LoadAppInit_DLLs) { $rows.Add(New-PersistenceRow -Category 'Winlogon' -Source 'HKLM\Windows' -Name 'LoadAppInit_DLLs' -Command "$($init.LoadAppInit_DLLs)") }
+        if ($init.AppInit_DLLs)  { $rows.Add((New-PersistenceRow -Category 'Winlogon' -Source 'HKLM\Windows' -Name 'AppInit_DLLs'  -Command $init.AppInit_DLLs)) }
+        if ($init.LoadAppInit_DLLs) { $rows.Add((New-PersistenceRow -Category 'Winlogon' -Source 'HKLM\Windows' -Name 'LoadAppInit_DLLs' -Command "$($init.LoadAppInit_DLLs)")) }
     } catch {
         # Same as above -- this key always exists under normal OS builds.
     }
