@@ -20,7 +20,7 @@
     PS C:\> .\cipher.ps1 -Unattended -Action Export -OutputPath D:\Reports
 
 .NOTES
-    Version : 3.9
+    Version : 4.0
 
 #>
 
@@ -216,6 +216,44 @@ function Test-ProtectionOn {
     return $false
 }
 
+# Starts encryption on a not-yet-encrypted volume, working around two snags seen
+# in the field:
+#   - Virtual machines, where the pre-encryption hardware test and used-space-only
+#     conversion are unreliable — encryption is started full-volume with the
+#     hardware test skipped.
+#   - Physical disks that reject used-space-only conversion with 0x803100a5 — we
+#     retry full-volume.
+# manage-bde is used so the volume's existing protectors are honoured and
+# -SkipHardwareTest is available (it begins encrypting immediately instead of
+# waiting for a reboot-time hardware test). Returns $true on success; the command
+# output / exit code are left in $script:LastEncryptOutput / $script:LastEncryptExit.
+function Start-DriveEncryption {
+    param(
+        [Parameter(Mandatory)][string]$MountPoint,
+        [string]$EncryptionMethod = 'XtsAes256'
+    )
+
+    $model = (Get-CimInstance Win32_ComputerSystem -ErrorAction SilentlyContinue).Model
+    $isVM  = $model -match 'Virtual|VMware|QEMU|KVM|Hyper-V|Xen'
+
+    if ($isVM) {
+        $out  = & manage-bde.exe -on $MountPoint -EncryptionMethod $EncryptionMethod -SkipHardwareTest 2>&1 | Out-String
+        $exit = $LASTEXITCODE
+    } else {
+        $out  = & manage-bde.exe -on $MountPoint -EncryptionMethod $EncryptionMethod -UsedSpaceOnly -SkipHardwareTest 2>&1 | Out-String
+        $exit = $LASTEXITCODE
+        if ($exit -ne 0 -and $out -match '0x803100a5') {
+            # Used-space-only not accepted on this volume — retry full-volume.
+            $out  = & manage-bde.exe -on $MountPoint -EncryptionMethod $EncryptionMethod -SkipHardwareTest 2>&1 | Out-String
+            $exit = $LASTEXITCODE
+        }
+    }
+
+    $script:LastEncryptOutput = $out.Trim()
+    $script:LastEncryptExit   = $exit
+    return ($exit -eq 0)
+}
+
 # Renders an HTML file to PDF using headless Microsoft Edge (or Chrome as a
 # fallback) — both ship Chromium's --print-to-pdf, so no third-party tooling is
 # required. Returns $true if the PDF was produced, $false if no browser is
@@ -376,7 +414,7 @@ function Enable-DriveEncryption {
         Write-Host ""
         Write-Host "  [~] Would add recovery password protector to $($vol.MountPoint)" -ForegroundColor Cyan
         Write-Host "  [~] Would add $protName protector to $($vol.MountPoint)" -ForegroundColor Cyan
-        Write-Host "  [~] Would start XtsAes256 encryption (used space only) on $($vol.MountPoint)" -ForegroundColor Cyan
+        Write-Host "  [~] Would start XtsAes256 encryption on $($vol.MountPoint) (used space only; full-volume on VMs or if the disk rejects it)" -ForegroundColor Cyan
         Write-Host ""
         return
     }
@@ -423,7 +461,15 @@ function Enable-DriveEncryption {
         }
 
         Write-Host "  [*] Starting encryption on $($vol.MountPoint)..." -ForegroundColor $ColorSchema.Progress
-        Enable-BitLocker -MountPoint $vol.MountPoint -EncryptionMethod XtsAes256 -UsedSpaceOnly -ErrorAction Stop | Out-Null
+        if (-not (Start-DriveEncryption -MountPoint $vol.MountPoint -EncryptionMethod 'XtsAes256')) {
+            Write-Host "  [-] Failed to start encryption on $($vol.MountPoint)." -ForegroundColor $ColorSchema.Error
+            if ($script:LastEncryptOutput) {
+                Write-Host "      manage-bde (exit $($script:LastEncryptExit)): $($script:LastEncryptOutput)" -ForegroundColor $ColorSchema.Warning
+            }
+            Write-TKError -ScriptName 'cipher' -Message "Start encryption failed on '$($vol.MountPoint)' (manage-bde exit $($script:LastEncryptExit)): $($script:LastEncryptOutput)" -Category 'BitLocker Enable'
+            Write-Host ""
+            return
+        }
 
         $volCheck = Get-BitLockerVolume -MountPoint $vol.MountPoint -ErrorAction SilentlyContinue
         if ($volCheck -and $volCheck.ProtectionStatus -ne "On") {
@@ -668,7 +714,7 @@ function Export-EncryptionReport {
   </div>
 </div>
 "@
-    $html += Get-TKHtmlFoot -ScriptName 'C.I.P.H.E.R. v3.9'
+    $html += Get-TKHtmlFoot -ScriptName 'C.I.P.H.E.R. v4.0'
 
     try {
         $html | Out-File -FilePath $htmlPath -Encoding UTF8 -ErrorAction Stop
