@@ -308,10 +308,10 @@ function Invoke-PowerCfgBatteryReport {
     # Per-battery static info -- Win32_Battery doesn't expose serial number
     # or manufacture date, so operators currently have to crack the case to
     # read the label. The XML report has both.
-    $batteries = @()
+    $batteries = [System.Collections.Generic.List[object]]::new()
     if ($report.Batteries -and $report.Batteries.Battery) {
         foreach ($b in @($report.Batteries.Battery)) {
-            $batteries += [PSCustomObject]@{
+            $batteries.Add([PSCustomObject]@{
                 Id                 = [string]$b.Id
                 Manufacturer       = [string]$b.Manufacturer
                 SerialNumber       = [string]$b.SerialNumber
@@ -319,7 +319,7 @@ function Invoke-PowerCfgBatteryReport {
                 Chemistry          = [string]$b.Chemistry
                 DesignCapacity     = if ($b.DesignCapacity)     { [int64]$b.DesignCapacity }     else { $null }
                 FullChargeCapacity = if ($b.FullChargeCapacity) { [int64]$b.FullChargeCapacity } else { $null }
-            }
+            })
         }
     }
     $result.Batteries = @($batteries)
@@ -343,16 +343,16 @@ function Invoke-PowerCfgBatteryReport {
     # Battery capacity history -- one entry per measurement period showing
     # how full-charge capacity has drifted relative to design. Useful to see
     # whether degradation is accelerating before deciding to replace.
-    $history = @()
+    $history = [System.Collections.Generic.List[object]]::new()
     if ($report.HistoryEntries -and $report.HistoryEntries.HistoryEntry) {
         foreach ($h in @($report.HistoryEntries.HistoryEntry)) {
-            $history += [PSCustomObject]@{
+            $history.Add([PSCustomObject]@{
                 StartDate          = [string]$h.StartDate
                 EndDate            = [string]$h.EndDate
                 DesignCapacity     = if ($h.DesignCapacity)     { [int64]$h.DesignCapacity }     else { $null }
                 FullChargeCapacity = if ($h.FullChargeCapacity) { [int64]$h.FullChargeCapacity } else { $null }
                 CycleCount         = if ($h.CycleCount)         { [int]$h.CycleCount }            else { $null }
-            }
+            })
         }
     }
     # Most recent entries first; cap at 12 so the table stays readable on a

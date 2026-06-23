@@ -303,7 +303,7 @@ function Get-ScheduledTaskEntries {
 # ─────────────────────────────────────────────────────────────────────────────
 
 function Get-WmiPersistenceEntries {
-    $rows = @()
+    $rows = [System.Collections.Generic.List[object]]::new()
 
     # Permanent WMI event subscriptions are a high-signal persistence surface -- they're
     # rarely used by legitimate software and are a known APT trick. Surface every one.
@@ -326,14 +326,14 @@ function Get-WmiPersistenceEntries {
                 elseif ($match.ExecutablePath)  { $cmd = $match.ExecutablePath }
             }
         }
-        $rows += New-PersistenceRow -Category 'WMI Subscription' -Source 'root\subscription' -Name $b.Filter -Command $cmd
+        $rows.Add(New-PersistenceRow -Category 'WMI Subscription' -Source 'root\subscription' -Name $b.Filter -Command $cmd)
     }
 
     # If there are no bindings, still surface bare filters/consumers so a reviewer knows the
     # subscription surface was inspected (no silent skips).
     if ($bindings.Count -eq 0 -and ($filters.Count -gt 0 -or $consumers.Count -gt 0)) {
         foreach ($f in $filters) {
-            $rows += New-PersistenceRow -Category 'WMI Subscription' -Source 'root\subscription' -Name "Filter: $($f.Name)" -Command $f.Query
+            $rows.Add(New-PersistenceRow -Category 'WMI Subscription' -Source 'root\subscription' -Name "Filter: $($f.Name)" -Command $f.Query)
         }
     }
 
@@ -365,12 +365,12 @@ function Get-IfeoEntries {
 # ─────────────────────────────────────────────────────────────────────────────
 
 function Get-WinlogonEntries {
-    $rows = @()
+    $rows = [System.Collections.Generic.List[object]]::new()
 
     try {
         $wl = Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' -ErrorAction Stop
-        if ($wl.Shell)    { $rows += New-PersistenceRow -Category 'Winlogon' -Source 'HKLM\Winlogon' -Name 'Shell'    -Command $wl.Shell }
-        if ($wl.Userinit) { $rows += New-PersistenceRow -Category 'Winlogon' -Source 'HKLM\Winlogon' -Name 'Userinit' -Command $wl.Userinit }
+        if ($wl.Shell)    { $rows.Add(New-PersistenceRow -Category 'Winlogon' -Source 'HKLM\Winlogon' -Name 'Shell'    -Command $wl.Shell) }
+        if ($wl.Userinit) { $rows.Add(New-PersistenceRow -Category 'Winlogon' -Source 'HKLM\Winlogon' -Name 'Userinit' -Command $wl.Userinit) }
     } catch {
         # Winlogon key always exists on Windows; failure here means access-denied in a test
         # environment. Continue silently rather than emit a fake-missing row.
@@ -380,8 +380,8 @@ function Get-WinlogonEntries {
     # auditable.
     try {
         $init = Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows' -ErrorAction Stop
-        if ($init.AppInit_DLLs)  { $rows += New-PersistenceRow -Category 'Winlogon' -Source 'HKLM\Windows' -Name 'AppInit_DLLs'  -Command $init.AppInit_DLLs }
-        if ($init.LoadAppInit_DLLs) { $rows += New-PersistenceRow -Category 'Winlogon' -Source 'HKLM\Windows' -Name 'LoadAppInit_DLLs' -Command "$($init.LoadAppInit_DLLs)" }
+        if ($init.AppInit_DLLs)  { $rows.Add(New-PersistenceRow -Category 'Winlogon' -Source 'HKLM\Windows' -Name 'AppInit_DLLs'  -Command $init.AppInit_DLLs) }
+        if ($init.LoadAppInit_DLLs) { $rows.Add(New-PersistenceRow -Category 'Winlogon' -Source 'HKLM\Windows' -Name 'LoadAppInit_DLLs' -Command "$($init.LoadAppInit_DLLs)") }
     } catch {
         # Same as above -- this key always exists under normal OS builds.
     }

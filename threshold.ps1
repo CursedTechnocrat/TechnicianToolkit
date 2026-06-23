@@ -118,7 +118,7 @@ function Get-PhysicalDiskInfo {
     $diskObjects = Get-Disk        -ErrorAction SilentlyContinue
     $cimDisks    = Get-CimInstance -ClassName Win32_DiskDrive -ErrorAction SilentlyContinue
 
-    $results = @()
+    $results = [System.Collections.Generic.List[object]]::new()
     foreach ($pd in $physDisks) {
         $diskNum = $null
         # Try to match by serial or DeviceId
@@ -130,7 +130,7 @@ function Get-PhysicalDiskInfo {
 
         $cimMatch = $cimDisks | Where-Object { $_.Size -eq $pd.Size } | Select-Object -First 1
 
-        $results += [PSCustomObject]@{
+        $results.Add([PSCustomObject]@{
             FriendlyName      = $pd.FriendlyName
             MediaType         = $pd.MediaType
             Size              = $pd.Size
@@ -144,7 +144,7 @@ function Get-PhysicalDiskInfo {
             PartitionStyle    = if ($matchedDisk) { $matchedDisk.PartitionStyle } else { 'N/A' }
             IsSystem          = if ($matchedDisk) { $matchedDisk.IsSystem } else { $false }
             IsBoot            = if ($matchedDisk) { $matchedDisk.IsBoot } else { $false }
-        }
+        })
     }
     return $results
 }
@@ -154,12 +154,12 @@ function Get-VolumeInfo {
         $_.DriveType -ne 'CD-ROM' -and $_.DriveLetter -ne $null -and $_.Size -gt 0
     }
 
-    $results = @()
+    $results = [System.Collections.Generic.List[object]]::new()
     foreach ($vol in $volumes) {
         $pctFree = if ($vol.Size -gt 0) { [Math]::Round(($vol.SizeRemaining / $vol.Size) * 100, 1) } else { 0 }
         $spaceStatus = if ($pctFree -lt 5) { 'Critical' } elseif ($pctFree -lt 15) { 'Warning' } else { 'OK' }
 
-        $results += [PSCustomObject]@{
+        $results.Add([PSCustomObject]@{
             DriveLetter     = $vol.DriveLetter
             Label           = if ($vol.FileSystemLabel) { $vol.FileSystemLabel } else { '(No Label)' }
             FileSystem      = $vol.FileSystem
@@ -171,7 +171,7 @@ function Get-VolumeInfo {
             SpaceStatus     = $spaceStatus
             DriveType       = $vol.DriveType
             HealthStatus    = if ($vol.HealthStatus) { $vol.HealthStatus } else { 'Unknown' }
-        }
+        })
     }
     return $results
 }

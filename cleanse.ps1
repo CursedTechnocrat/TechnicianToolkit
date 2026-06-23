@@ -148,7 +148,7 @@ function Get-UserTempPaths {
 }
 
 function Get-BrowserCachePaths {
-    $paths = @()
+    $paths = [System.Collections.Generic.List[object]]::new()
     $profiles = Get-ChildItem 'C:\Users' -Directory -ErrorAction SilentlyContinue
 
     foreach ($profile in $profiles) {
@@ -158,20 +158,20 @@ function Get-BrowserCachePaths {
         if (Test-Path $chromeCacheBase) {
             Get-ChildItem $chromeCacheBase -Directory -ErrorAction SilentlyContinue |
                 Where-Object { $_.Name -match '^(Default|Profile)' } |
-                ForEach-Object { $paths += Join-Path $_.FullName 'Cache'; $paths += Join-Path $_.FullName 'Code Cache' }
+                ForEach-Object { $paths.Add((Join-Path $_.FullName 'Cache')); $paths.Add((Join-Path $_.FullName 'Code Cache')) }
         }
         # Edge
         $edgeCacheBase = Join-Path $base 'AppData\Local\Microsoft\Edge\User Data'
         if (Test-Path $edgeCacheBase) {
             Get-ChildItem $edgeCacheBase -Directory -ErrorAction SilentlyContinue |
                 Where-Object { $_.Name -match '^(Default|Profile)' } |
-                ForEach-Object { $paths += Join-Path $_.FullName 'Cache'; $paths += Join-Path $_.FullName 'Code Cache' }
+                ForEach-Object { $paths.Add((Join-Path $_.FullName 'Cache')); $paths.Add((Join-Path $_.FullName 'Code Cache')) }
         }
         # Firefox
         $ffProfiles = Join-Path $base 'AppData\Local\Mozilla\Firefox\Profiles'
         if (Test-Path $ffProfiles) {
             Get-ChildItem $ffProfiles -Directory -ErrorAction SilentlyContinue |
-                ForEach-Object { $paths += Join-Path $_.FullName 'cache2' }
+                ForEach-Object { $paths.Add((Join-Path $_.FullName 'cache2')) }
         }
     }
     return $paths | Where-Object { Test-Path $_ }
