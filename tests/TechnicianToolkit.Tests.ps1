@@ -682,3 +682,107 @@ Describe 'Tier-mapper data tables' {
         }
     }
 }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Color-map safety — guards two classes of "Cannot convert null to ConsoleColor"
+# crashes that have bitten the toolkit:
+#
+#   1. CLEANSE: a tool referenced `$ColorSchema.Menu` six times but never
+#      defined a `Menu` key, so `-ForegroundColor` received $null.
+#   2. ANVIL / PORTAL / TENDRIL: a `foreach ($c in ...)` loop variable collided
+#      (PowerShell variables are case-insensitive) with the `$C` color map,
+#      clobbering it so later `$C.Success` reads returned $null.
+#
+# A "color map" is detected structurally — any variable assigned a hashtable
+# literal whose values are all valid ConsoleColor names — so the test stays
+# name-agnostic (`$C`, `$ColorSchema`, anything).
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'Color-map safety — all scripts' {
+    $scriptCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Filter '*.ps1' -File |
+        ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
+
+    BeforeAll {
+        # Returns a hashtable: color-map variable name (lower-case) -> [string[]]
+        # of defined keys (lower-case), for every hashtable literal in the AST
+        # whose values are all ConsoleColor names.
+        function Get-ColorMapKeys {
+            param($Ast)
+            $consoleColors = [enum]::GetNames([System.ConsoleColor])
+            $maps = @{}
+            $assignments = $Ast.FindAll({
+                param($n)
+                $n -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+                $n.Left -is [System.Management.Automation.Language.VariableExpressionAst]
+            }, $true)
+            foreach ($a in $assignments) {
+                # The RHS must *be* a hashtable literal (not merely contain one).
+                $ht = $a.Right.Find({
+                    param($n) $n -is [System.Management.Automation.Language.HashtableAst]
+                }, $false)
+                if (-not $ht) { continue }
+                if ($ht.Extent.Text.Trim() -ne $a.Right.Extent.Text.Trim()) { continue }
+                if ($ht.KeyValuePairs.Count -eq 0) { continue }
+
+                $keys      = @()
+                $allColors = $true
+                foreach ($pair in $ht.KeyValuePairs) {
+                    $keys += $pair.Item1.Extent.Text.Trim().Trim("'`"")
+                    $valText = $pair.Item2.Extent.Text.Trim().Trim("'`"")
+                    if ($valText -notin $consoleColors) { $allColors = $false }
+                }
+                if ($allColors) {
+                    $name = $a.Left.VariablePath.UserPath.ToLower()
+                    if (-not $maps.ContainsKey($name)) { $maps[$name] = @() }
+                    $maps[$name] += ($keys | ForEach-Object { $_.ToLower() })
+                }
+            }
+            return $maps
+        }
+    }
+
+    It '<Name>: every -Foreground/-BackgroundColor $map.Key uses a defined key' -ForEach $scriptCases {
+        $ast = [System.Management.Automation.Language.Parser]::ParseFile($FullName, [ref]$null, [ref]$null)
+        $maps = Get-ColorMapKeys -Ast $ast
+
+        $bad = @()
+        $commands = $ast.FindAll({
+            param($n) $n -is [System.Management.Automation.Language.CommandAst]
+        }, $true)
+        foreach ($cmd in $commands) {
+            $els = $cmd.CommandElements
+            for ($i = 0; $i -lt $els.Count; $i++) {
+                $el = $els[$i]
+                if ($el -isnot [System.Management.Automation.Language.CommandParameterAst]) { continue }
+                if ($el.ParameterName -notin @('ForegroundColor', 'BackgroundColor')) { continue }
+                $arg = if ($el.Argument) { $el.Argument } elseif ($i + 1 -lt $els.Count) { $els[$i + 1] } else { $null }
+                if ($arg -is [System.Management.Automation.Language.MemberExpressionAst] -and
+                    $arg.Expression -is [System.Management.Automation.Language.VariableExpressionAst] -and
+                    $arg.Member -is [System.Management.Automation.Language.StringConstantExpressionAst]) {
+                    $mapName = $arg.Expression.VariablePath.UserPath.ToLower()
+                    $member  = $arg.Member.Value.ToLower()
+                    if ($maps.ContainsKey($mapName) -and $member -notin $maps[$mapName]) {
+                        $bad += $arg.Extent.Text
+                    }
+                }
+            }
+        }
+        $bad -join ', ' | Should -BeNullOrEmpty
+    }
+
+    It '<Name>: no foreach loop variable shadows a color map' -ForEach $scriptCases {
+        $ast = [System.Management.Automation.Language.Parser]::ParseFile($FullName, [ref]$null, [ref]$null)
+        $maps = Get-ColorMapKeys -Ast $ast
+
+        $bad = @()
+        $loops = $ast.FindAll({
+            param($n) $n -is [System.Management.Automation.Language.ForEachStatementAst]
+        }, $true)
+        foreach ($loop in $loops) {
+            $loopVar = $loop.Variable.VariablePath.UserPath.ToLower()
+            if ($maps.ContainsKey($loopVar)) {
+                $bad += "`$$($loop.Variable.VariablePath.UserPath)"
+            }
+        }
+        $bad -join ', ' | Should -BeNullOrEmpty
+    }
+}

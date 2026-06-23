@@ -190,10 +190,10 @@ function Get-AlwaysOnTriggers {
     param([array]$Connections)
 
     $rows = New-Object 'System.Collections.Generic.List[object]'
-    foreach ($c in $Connections) {
+    foreach ($conn in $Connections) {
         try {
-            $params = @{ ConnectionName = $c.Name; ErrorAction = 'Stop' }
-            if ($c.Scope -eq 'AllUser') { $params.AllUserConnection = $true }
+            $params = @{ ConnectionName = $conn.Name; ErrorAction = 'Stop' }
+            if ($conn.Scope -eq 'AllUser') { $params.AllUserConnection = $true }
             $trigger = Get-VpnConnectionTrigger @params
             if (-not $trigger) { continue }
 
@@ -209,8 +209,8 @@ function Get-AlwaysOnTriggers {
             }
             if ($apps.Count -gt 0 -or $dns.Count -gt 0) {
                 $rows.Add([PSCustomObject]@{
-                    ConnectionName = $c.Name
-                    Scope          = $c.Scope
+                    ConnectionName = $conn.Name
+                    Scope          = $conn.Scope
                     Apps           = $apps
                     DnsRules       = $dns
                 })
@@ -486,12 +486,12 @@ function Build-PortalReport {
     if ($ThirdParty.Count -eq 0) {
         [void]$cRows.Append("<tr><td colspan='5' class='tk-badge-info' style='text-align:center;'>No third-party VPN clients detected.</td></tr>")
     } else {
-        foreach ($c in $ThirdParty) {
-            $statusBadge = if ($c.Status -eq 'Running') { "<span class='tk-badge-ok'>Running</span>" } else { "<span class='tk-badge-info'>$(EscHtml $c.Status)</span>" }
+        foreach ($tp in $ThirdParty) {
+            $statusBadge = if ($tp.Status -eq 'Running') { "<span class='tk-badge-ok'>Running</span>" } else { "<span class='tk-badge-info'>$(EscHtml $tp.Status)</span>" }
             [void]$cRows.Append(
-                "<tr><td>$(EscHtml $c.Friendly)</td><td>$(EscHtml $c.Vendor)</td>" +
-                "<td class='tk-mono'>$(EscHtml $c.Name)</td><td>$statusBadge</td>" +
-                "<td>$(EscHtml $c.StartType)</td></tr>"
+                "<tr><td>$(EscHtml $tp.Friendly)</td><td>$(EscHtml $tp.Vendor)</td>" +
+                "<td class='tk-mono'>$(EscHtml $tp.Name)</td><td>$statusBadge</td>" +
+                "<td>$(EscHtml $tp.StartType)</td></tr>"
             )
         }
     }
@@ -633,9 +633,9 @@ Write-Host ""
 Write-Section "THIRD-PARTY VPN CLIENTS"
 $thirdParty = Get-ThirdPartyVpnClients
 Write-Host ("  Detected client services  : {0}" -f $thirdParty.Count) -ForegroundColor $C.Info
-foreach ($c in $thirdParty) {
-    $color = if ($c.Status -eq 'Running') { $C.Success } else { $C.Info }
-    Write-Host ("    - {0,-30} ({1})  service: {2,-30} {3}" -f $c.Friendly, $c.Vendor, $c.Name, $c.Status) -ForegroundColor $color
+foreach ($tp in $thirdParty) {
+    $color = if ($tp.Status -eq 'Running') { $C.Success } else { $C.Info }
+    Write-Host ("    - {0,-30} ({1})  service: {2,-30} {3}" -f $tp.Friendly, $tp.Vendor, $tp.Name, $tp.Status) -ForegroundColor $color
 }
 Write-Host ""
 

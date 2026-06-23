@@ -341,9 +341,9 @@ function Build-HtmlReport {
     $fwClass = if ($Uefi.FirmwareType -eq 'UEFI') { 'tk-badge-ok' } elseif ($Uefi.FirmwareType -like 'BIOS*') { 'tk-badge-err' } else { 'tk-badge-warn' }
 
     $chRows = [System.Text.StringBuilder]::new()
-    foreach ($c in $Channels) {
-        $badge = if ($c.Found) { "<span class='tk-badge-ok'>Installed</span>" } else { "<span class='tk-badge-warn'>Not installed</span>" }
-        [void]$chRows.Append("<tr><td>$(EscHtml $c.Vendor)</td><td>$(EscHtml $c.Name)</td><td>$badge</td><td><code>$(EscHtml $c.Path)</code></td></tr>`n")
+    foreach ($ch in $Channels) {
+        $badge = if ($ch.Found) { "<span class='tk-badge-ok'>Installed</span>" } else { "<span class='tk-badge-warn'>Not installed</span>" }
+        [void]$chRows.Append("<tr><td>$(EscHtml $ch.Vendor)</td><td>$(EscHtml $ch.Name)</td><td>$badge</td><td><code>$(EscHtml $ch.Path)</code></td></tr>`n")
     }
 
     $pendingRows = [System.Text.StringBuilder]::new()

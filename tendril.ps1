@@ -560,9 +560,9 @@ function Test-IntuneAssignmentMatch {
 
 try {
     $compliance = @(Get-MgDeviceManagementDeviceCompliancePolicy -All -ExpandProperty Assignments -ErrorAction Stop)
-    foreach ($c in $compliance) {
-        if (Test-IntuneAssignmentMatch -Item $c -GroupIdToMatch $GroupId) {
-            $IntuneHits.Add([PSCustomObject]@{ Type='Compliance Policy';   Name=$c.DisplayName; Id=$c.Id })
+    foreach ($pol in $compliance) {
+        if (Test-IntuneAssignmentMatch -Item $pol -GroupIdToMatch $GroupId) {
+            $IntuneHits.Add([PSCustomObject]@{ Type='Compliance Policy';   Name=$pol.DisplayName; Id=$pol.Id })
         }
     }
 } catch {
@@ -570,9 +570,9 @@ try {
 }
 try {
     $configs = @(Get-MgDeviceManagementDeviceConfiguration -All -ExpandProperty Assignments -ErrorAction Stop)
-    foreach ($c in $configs) {
-        if (Test-IntuneAssignmentMatch -Item $c -GroupIdToMatch $GroupId) {
-            $IntuneHits.Add([PSCustomObject]@{ Type='Configuration Profile'; Name=$c.DisplayName; Id=$c.Id })
+    foreach ($pol in $configs) {
+        if (Test-IntuneAssignmentMatch -Item $pol -GroupIdToMatch $GroupId) {
+            $IntuneHits.Add([PSCustomObject]@{ Type='Configuration Profile'; Name=$pol.DisplayName; Id=$pol.Id })
         }
     }
 } catch {
