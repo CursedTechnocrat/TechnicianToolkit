@@ -16,7 +16,7 @@
     PS C:\> .\anvil.ps1 -Unattended        # Silent: export HTML and exit
 
 .NOTES
-    Version : 3.5
+    Version : 3.5.1
 
 #>
 
@@ -78,7 +78,7 @@ function Show-AnvilBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
     Write-Host "  A.N.V.I.L. — Audits & Notates Vendor Inventory & Lifecycle" -ForegroundColor Cyan
-    Write-Host "  BIOS / UEFI / Firmware Audit Tool  v3.5" -ForegroundColor Cyan
+    Write-Host "  BIOS / UEFI / Firmware Audit Tool  v3.5.1" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -481,9 +481,9 @@ Write-Host ""
 
 Write-Section "VENDOR FIRMWARE CHANNELS"
 $channels = Get-VendorChannelStatus -Vendor $system.Vendor
-foreach ($c in $channels) {
-    $color = if ($c.Found) { $C.Success } else { $C.Info }
-    Write-Host ("  [{0,-10}] {1,-40} {2}" -f $c.Vendor, $c.Name, $(if ($c.Found) { 'Installed' } else { 'Not installed' })) -ForegroundColor $color
+foreach ($ch in $channels) {
+    $color = if ($ch.Found) { $C.Success } else { $C.Info }
+    Write-Host ("  [{0,-10}] {1,-40} {2}" -f $ch.Vendor, $ch.Name, $(if ($ch.Found) { 'Installed' } else { 'Not installed' })) -ForegroundColor $color
 }
 Write-Host ""
 
