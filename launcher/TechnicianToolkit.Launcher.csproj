@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Self-contained, portable launcher for the TechnicianToolkit PowerShell suite.
+
+    Every top-level .ps1, the shared module, and config.json are embedded as
+    resources INSIDE the produced .exe. At run time they are extracted next to
+    the executable (or to %TEMP% if the medium is read-only) and grimoire.ps1 is
+    launched against them. Because every script is present locally, neither
+    grimoire's Invoke-Tool nor any tool's module bootstrap ever reaches out to
+    GitHub — the program is fully offline and performs no update checks. Drop the
+    single .exe on a USB stick and run.
+
+    The existing PowerShell scripts are NOT modified by this project; they are
+    embedded verbatim from the repository root.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>TechnicianToolkit</AssemblyName>
+    <RootNamespace>TechnicianToolkit.Launcher</RootNamespace>
+    <Version>1.0.0</Version>
+    <Product>TechnicianToolkit</Product>
+    <Description>Self-contained portable launcher for the TechnicianToolkit PowerShell suite</Description>
+    <!-- Trim is intentionally OFF: trimming can strip reflection metadata the
+         single-file resource extraction relies on. -->
+    <PublishTrimmed>false</PublishTrimmed>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <!--
+    Embed every script from the repository root. The glob is single-level, so it
+    matches the toolkit's root .ps1 files but NOT this folder's build.ps1 and not
+    the tests/ subfolder. LogicalName flattens each resource to "TKScripts.<file>"
+    so Program.cs can enumerate and extract them by stripping the prefix.
+  -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\*.ps1">
+      <LogicalName>TKScripts.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\TechnicianToolkit.psm1">
+      <LogicalName>TKScripts.TechnicianToolkit.psm1</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\config.json">
+      <LogicalName>TKScripts.config.json</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>
