@@ -17,7 +17,7 @@
     PS C:\> .\grove.ps1 -Unattended        # Silent: auto-connect + export HTML
 
 .NOTES
-    Version : 3.5
+    Version : 3.6
 
 #>
 
@@ -88,7 +88,7 @@ function Show-GroveBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
     Write-Host "  G.R.O.V.E. — Gathers, Reports On, & Verifies Estates" -ForegroundColor Cyan
-    Write-Host "  SharePoint Online Site Inventory Tool  v3.5" -ForegroundColor Cyan
+    Write-Host "  SharePoint Online Site Inventory Tool  v3.6" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -396,7 +396,7 @@ function Build-HtmlReport {
         }) `
         -NavItems   @('Sharing Policy', 'Site Inventory', 'Large Sites', 'External Sharing', 'Ownerless Sites', 'Stale Sites')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'G.R.O.V.E. v3.5'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'G.R.O.V.E. v3.6'
 
     $largeClass     = if ($Large.Count -gt 0)     { 'warn' } else { 'ok' }
     $sharedClass    = if ($Shared.Count -gt 0)    { 'warn' } else { 'ok' }

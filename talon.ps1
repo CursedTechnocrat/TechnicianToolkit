@@ -22,7 +22,7 @@
     PS C:\> .\talon.ps1 -Unattended        # Silent: export HTML and exit
 
 .NOTES
-    Version : 3.5
+    Version : 3.6
 
 #>
 
@@ -84,7 +84,7 @@ function Show-TalonBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
     Write-Host "  T.A.L.O.N. — Tracks Anomalies & Locates Otherwise-silent Nastiness" -ForegroundColor Cyan
-    Write-Host "  Persistence / Autoruns Audit Tool  v3.5" -ForegroundColor Cyan
+    Write-Host "  Persistence / Autoruns Audit Tool  v3.6" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -461,7 +461,7 @@ function Build-HtmlReport {
         }) `
         -NavItems   $navItems
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'T.A.L.O.N. v3.5'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'T.A.L.O.N. v3.6'
 
     $html = $htmlHead + @"
 

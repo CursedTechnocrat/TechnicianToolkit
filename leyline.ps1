@@ -17,7 +17,7 @@
     PS C:\> .\leyline.ps1 -Unattended -Action PortTest -Target "8.8.8.8:53"
 
 .NOTES
-    Version : 3.5
+    Version : 3.6
 
 #>
 

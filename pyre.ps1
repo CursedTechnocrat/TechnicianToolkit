@@ -27,7 +27,7 @@
     PS C:\> .\pyre.ps1 -Unattended        # Silent: export HTML and exit
 
 .NOTES
-    Version : 3.5
+    Version : 3.6
 
 #>
 
@@ -89,7 +89,7 @@ function Show-PyreBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
     Write-Host "  P.Y.R.E. — Power-Yield Reliability Evaluator" -ForegroundColor Cyan
-    Write-Host "  Laptop Battery Health Audit Tool  v3.5" -ForegroundColor Cyan
+    Write-Host "  Laptop Battery Health Audit Tool  v3.6" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -528,7 +528,7 @@ function Build-HtmlReport {
         }) `
         -NavItems   @('Verdict', 'Batteries', 'powercfg Report')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'P.Y.R.E. v3.5'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'P.Y.R.E. v3.6'
 
     $bestCard  = if ($null -ne $bestHealth)  { "$bestHealth%"  } else { 'n/a' }
     $worstCard = if ($null -ne $worstHealth) { "$worstHealth%" } else { 'n/a' }

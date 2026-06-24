@@ -16,7 +16,7 @@
     PS C:\> .\tether.ps1 -Unattended        # Silent mode, export HTML and exit
 
 .NOTES
-    Version : 3.5
+    Version : 3.6
 
 #>
 
@@ -77,7 +77,7 @@ function Show-TetherBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
     Write-Host "  T.E.T.H.E.R. — Tests Endpoint Tethering: Hosted Environment Readiness" -ForegroundColor Cyan
-    Write-Host "  OneDrive Known-Folder-Move Pre-Migration Validator  v3.5" -ForegroundColor Cyan
+    Write-Host "  OneDrive Known-Folder-Move Pre-Migration Validator  v3.6" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -405,7 +405,7 @@ function Build-HtmlReport {
         }) `
         -NavItems   @('Verdict', 'Client', 'Accounts', 'Known Folders', 'Content Volume', 'Sync Errors')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'T.E.T.H.E.R. v3.5'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'T.E.T.H.E.R. v3.6'
 
     $html = $htmlHead + @"
 

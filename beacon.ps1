@@ -21,7 +21,7 @@
     PS C:\> .\beacon.ps1 -IncludeKey        # Render cleartext PSKs in the report (technician-managed audit only)
 
 .NOTES
-    Version : 3.5
+    Version : 3.6
 
 #>
 
@@ -84,7 +84,7 @@ function Show-BeaconBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
     Write-Host "  B.E.A.C.O.N. -- Broadcasts, Encryption, Authentication & Connections Of Networks" -ForegroundColor Yellow
-    Write-Host "  Wi-Fi Profile Audit  v3.5" -ForegroundColor Yellow
+    Write-Host "  Wi-Fi Profile Audit  v3.6" -ForegroundColor Yellow
     if ($IncludeKey) {
         Write-Host "  *** Key material WILL be rendered in cleartext (-IncludeKey) ***" -ForegroundColor Magenta
     }
@@ -522,7 +522,7 @@ function Build-BeaconReport {
         }) `
         -NavItems   @('Verdict', 'Adapters', 'Saved Profiles', 'Open / Weak', 'Auto-connect')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'B.E.A.C.O.N. v3.5'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'B.E.A.C.O.N. v3.6'
 
     $keyNoteBadge = if ($IncludeKey) {
         "<span class='tk-badge-warn'>Key material rendered in cleartext (-IncludeKey)</span>"
