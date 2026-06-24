@@ -23,7 +23,7 @@
     PS C:\> .\paladin.ps1 -SignatureMaxAgeDays 3   # Tighter signature-age threshold (default 7)
 
 .NOTES
-    Version : 3.5
+    Version : 3.6
 
 #>
 
@@ -89,7 +89,7 @@ function Show-PaladinBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
     Write-Host "  P.A.L.A.D.I.N. -- Protection Auditor: Logs Antivirus, Defender, Intrusions & Notifications" -ForegroundColor Magenta
-    Write-Host "  AV / Microsoft Defender Health Audit  v3.5" -ForegroundColor Magenta
+    Write-Host "  AV / Microsoft Defender Health Audit  v3.6" -ForegroundColor Magenta
     Write-Host ""
 }
 
@@ -718,7 +718,7 @@ function Build-PaladinReport {
         }) `
         -NavItems   @('Verdict', 'Defender Core', 'Cloud & Sample', 'Signatures', 'Scans', 'Threats', 'Detections', 'Exclusions', 'ASR Rules', 'Third-Party AV', 'Services', 'Events')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'P.A.L.A.D.I.N. v3.5'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'P.A.L.A.D.I.N. v3.6'
 
     $html = $htmlHead + @"
 

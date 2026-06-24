@@ -14,7 +14,7 @@
     PS C:\> .\augur.ps1 -Unattended        # Silent mode — no prompts, no banner
 
 .NOTES
-    Version : 3.5
+    Version : 3.6
 
 #>
 
@@ -331,7 +331,7 @@ $htmlHead = Get-TKHtmlHead `
     }) `
     -NavItems   @('Physical Disks', 'Volumes')
 
-$htmlFoot = Get-TKHtmlFoot -ScriptName 'A.U.G.U.R. v3.5'
+$htmlFoot = Get-TKHtmlFoot -ScriptName 'A.U.G.U.R. v3.6'
 
 $htmlReport = $htmlHead + @"
 

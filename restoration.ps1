@@ -15,7 +15,7 @@
     PS C:\> .\restoration.ps1 -Unattended -AutoReboot  # Silent mode — reboot automatically if needed
 
 .NOTES
-    Version : 3.5
+    Version : 3.6
 
 #>
 

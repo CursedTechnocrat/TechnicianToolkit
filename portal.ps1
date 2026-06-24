@@ -21,7 +21,7 @@
     PS C:\> .\portal.ps1 -Unattended        # Silent: export HTML and exit
 
 .NOTES
-    Version : 3.5
+    Version : 3.6
 
 #>
 
@@ -83,7 +83,7 @@ function Show-PortalBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
     Write-Host "  P.O.R.T.A.L. -- Profiles, Observes & Reports Tunnels, Authentication & Links" -ForegroundColor Green
-    Write-Host "  VPN / Always-On VPN Audit  v3.5" -ForegroundColor Green
+    Write-Host "  VPN / Always-On VPN Audit  v3.6" -ForegroundColor Green
     Write-Host ""
 }
 
@@ -523,7 +523,7 @@ function Build-PortalReport {
         }) `
         -NavItems   @('Verdict', 'Built-in VPNs', 'Always-On Triggers', 'NRPT', 'Tunnel Interfaces', 'Third-Party Clients')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'P.O.R.T.A.L. v3.5'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'P.O.R.T.A.L. v3.6'
 
     $html = $htmlHead + @"
 

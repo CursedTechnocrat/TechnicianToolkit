@@ -19,7 +19,7 @@
     PS C:\> .\sigil.ps1 -Unattended -WhatIf               # Preview unattended run without applying
 
 .NOTES
-    Version : 3.5
+    Version : 3.6
 
 #>
 

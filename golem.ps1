@@ -15,7 +15,7 @@
     PS C:\> .\golem.ps1 -Unattended      # Auto-connect and export full audit report
 
 .NOTES
-    Version : 3.5
+    Version : 3.6
 
 #>
 
@@ -107,7 +107,7 @@ function Show-GolemBanner {
 
 "@ -ForegroundColor Cyan
     Write-Host "  G.O.L.E.M. — Governs & Observes Licensed Endpoint Management" -ForegroundColor Cyan
-    Write-Host "  Microsoft Intune / MDM Compliance Audit Tool  v3.5" -ForegroundColor Cyan
+    Write-Host "  Microsoft Intune / MDM Compliance Audit Tool  v3.6" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -480,7 +480,7 @@ function Build-HtmlReport {
         }) `
         -NavItems   @('Devices', 'Stale Devices', 'Configuration Profiles')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'G.O.L.E.M. v3.5'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'G.O.L.E.M. v3.6'
 
     $html = $htmlHead + @"
 
