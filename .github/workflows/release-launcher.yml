@@ -1,0 +1,76 @@
+name: Release Launcher
+
+# Builds the self-contained, single-file TechnicianToolkit launcher (.exe).
+#
+#  - On a version tag (v*)  : build every runtime and attach the .exe files to
+#                             the GitHub Release for that tag.
+#  - Manual (workflow_dispatch): build and upload the .exe files as workflow
+#                             artifacts so you can grab them without tagging.
+#
+# Target machines need only Windows PowerShell (ships with Windows); the .NET
+# runtime is bundled into each .exe.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      runtime:
+        description: 'Runtime identifier to build (build matrix is used for tags)'
+        required: false
+        default: 'win-x64'
+        type: choice
+        options:
+          - win-x64
+          - win-arm64
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.runtime }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        runtime: [win-x64, win-arm64]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build self-contained launcher
+        shell: pwsh
+        run: |
+          ./launcher/build.ps1 -Runtime '${{ matrix.runtime }}' -Output './dist'
+
+      - name: Stage runtime-tagged artifact
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path './dist' -Filter 'TechnicianToolkit*.exe' -File |
+              Select-Object -First 1
+          if (-not $exe) { throw "No .exe produced in ./dist" }
+          New-Item -ItemType Directory -Force -Path './out' | Out-Null
+          $dest = Join-Path './out' ("TechnicianToolkit-{0}.exe" -f '${{ matrix.runtime }}')
+          Copy-Item $exe.FullName $dest -Force
+          $sizeMb = [math]::Round((Get-Item $dest).Length / 1MB, 1)
+          Write-Host "Staged $dest ($sizeMb MB)"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TechnicianToolkit-${{ matrix.runtime }}
+          path: out/TechnicianToolkit-${{ matrix.runtime }}.exe
+          if-no-files-found: error
+
+      - name: Attach to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/TechnicianToolkit-${{ matrix.runtime }}.exe
