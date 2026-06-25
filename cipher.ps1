@@ -20,7 +20,7 @@
     PS C:\> .\cipher.ps1 -Unattended -Action Export -OutputPath D:\Reports
 
 .NOTES
-    Version : 4.0
+    Version : 4.1
 
     Credits : Thanks to Steve the Killer for help and letting me use his
               script BERET: https://tools.thekiller.net/killer-scripts
@@ -199,11 +199,31 @@ function Enable-DriveProtection {
     } catch { }
 
     # Otherwise enforce protectors / remove the unsecured clear key via manage-bde.
-    $script:LastEnableOutput = (& manage-bde.exe -protectors -enable $MountPoint 2>&1 | Out-String).Trim()
-    $script:LastEnableExit   = $LASTEXITCODE
+    #
+    # Caveat: a key protector added moments earlier through the WMI-based BitLocker
+    # cmdlets (Add-BitLockerKeyProtector) lands in the WMI view — and therefore in
+    # Get-BitLockerVolume — before it finishes committing to the on-disk volume
+    # metadata that manage-bde reads. If -enable runs inside that window manage-bde
+    # still sees only the unsecured clear key and aborts with 0x8031001D ("you
+    # cannot delete the last key on this drive"), because from its stale view the
+    # clear key IS the last key. Poll-and-retry so the commit has time to land —
+    # the same WMI/manage-bde lag Test-ProtectionOn already guards against, applied
+    # to the protector list rather than the protection status.
+    for ($attempt = 0; $attempt -lt 6; $attempt++) {
+        $script:LastEnableOutput = (& manage-bde.exe -protectors -enable $MountPoint 2>&1 | Out-String).Trim()
+        $script:LastEnableExit   = $LASTEXITCODE
+        if ($script:LastEnableExit -eq 0) { return $true }
 
-    if (Test-ProtectionOn -MountPoint $MountPoint) { return $true }
-    return ($script:LastEnableExit -eq 0)
+        # Only the not-yet-committed-protector race is worth retrying. Any other
+        # failure (a genuine policy block, a missing protector that will never
+        # appear) will not clear on its own, so stop and let the caller report it.
+        if ($script:LastEnableOutput -notmatch '0x8031001[dD]') { break }
+        Start-Sleep -Milliseconds 1000
+    }
+
+    # A late metadata commit can flip protection On even when the final -enable
+    # returned non-zero — confirm before declaring failure.
+    return (Test-ProtectionOn -MountPoint $MountPoint)
 }
 
 # Returns $true if the volume's ProtectionStatus is On. ProtectionStatus can lag
