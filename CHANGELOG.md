@@ -5,7 +5,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [Unreleased]
+## [3.6.0] - 2026-06-24
 
 ### Added
 - **Toolkit-wide version bump to 3.6.** Every tool's `.NOTES Version`, banner v-tag, `Get-TKHtmlFoot -ScriptName` footer, and GRIMOIRE registry `Version` field now reads `3.6`. The GRIMOIRE hub banner now reads `Hub v3.6` and the HEARTH banner reads `HEARTH v3.6`. ANVIL and CLEANSE moved from `3.5.1` to `3.6`. Every tool is again on a single major.minor line (`3.6`), ahead of the first git tag `v3.6.0`.
