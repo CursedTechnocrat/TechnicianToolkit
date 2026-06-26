@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     S.C.R.Y.E.R. -- System Consolidated Report Yielding Exhaustive Results
     Unified Diagnostic Report for PowerShell 5.1+

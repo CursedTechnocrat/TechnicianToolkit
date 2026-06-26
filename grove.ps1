@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     G.R.O.V.E. — Gathers, Reports On, & Verifies Estates (SharePoint)
     SharePoint Online Site Inventory Tool for PowerShell 5.1+

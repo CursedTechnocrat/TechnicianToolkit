@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     C.O.D.E.X. — Compiles Output Documents into an EXhibit
     Toolkit Report Index Builder for PowerShell 5.1+

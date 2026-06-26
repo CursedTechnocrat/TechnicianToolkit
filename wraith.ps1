@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     W.R.A.I.T.H. — Watches Registrations, Access, Identities, Tokens & Hygiene
     Entra ID Identity Hygiene Audit Tool for PowerShell 5.1+

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     R.I.T.U.A.L. — Runs Integrated Tool Usage in Automation Loops
     Workflow Orchestrator for the Technician Toolkit (PowerShell 5.1+)

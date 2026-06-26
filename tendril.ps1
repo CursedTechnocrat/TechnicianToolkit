@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     T.E.N.D.R.I.L. — Traces Entitlements, Nested Dependencies, Roles, Integrations & Licenses
     Entra ID Group Dependency Audit Tool for PowerShell 5.1+

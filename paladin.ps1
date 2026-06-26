@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     P.A.L.A.D.I.N. — Protection Auditor: Logs Antivirus, Defender, Intrusions & Notifications
     Antivirus / Microsoft Defender Health Audit Tool for PowerShell 5.1+
