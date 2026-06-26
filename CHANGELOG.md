@@ -5,6 +5,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Fixed
+- **Mangled banners and menus under Windows PowerShell 5.1 — missing UTF-8 BOMs.** 21 of the 42 root scripts (including `grimoire.ps1` and `TechnicianToolkit.psm1`) were saved without a UTF-8 byte-order mark. Windows PowerShell 5.1 reads a BOM-less `.ps1` as ANSI (Windows-1252), so every Unicode box-drawing glyph in the GRIMOIRE banner, the ANSI-Shadow logos, and the menu frames was corrupted into mojibake at parse time. This surfaced most visibly through the portable launcher, which invokes `powershell.exe` (5.1) directly. A UTF-8 BOM has now been added to every `.ps1`/`.psm1` in the repository (matching the BOM that `grimoire.ps1`'s `Invoke-Tool` already writes onto downloaded tools), forcing UTF-8 decoding. CI runs under `pwsh` (PowerShell 7, which assumes UTF-8) so it never reproduced the corruption; a new Pester block (`UTF-8 BOM — all scripts`) now asserts every script begins with `EF BB BF` to prevent regressions.
+
+---
+
 ## [3.6.0] - 2026-06-24
 
 ### Added

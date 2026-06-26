@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     P.O.R.T.A.L. — Profiles, Observes & Reports Tunnels, Authentication & Links
     VPN / Always-On VPN Audit Tool for PowerShell 5.1+

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     A.U.G.U.R. — Analyzes, Uncovers & Gauges Unit Reliability
     Disk Health & SMART Assessment Tool for PowerShell 5.1+

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     B.E.A.C.O.N. — Broadcasts, Encryption, Authentication & Connections Of Networks
     Wi-Fi Profile Audit Tool for PowerShell 5.1+

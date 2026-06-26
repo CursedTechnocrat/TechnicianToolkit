@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
 .SYNOPSIS
     Build the self-contained, portable TechnicianToolkit launcher (.exe).

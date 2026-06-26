@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     G.O.L.E.M. — Governs & Observes Licensed Endpoint Management
     Microsoft Intune / MDM Compliance Audit Tool for PowerShell 5.1+

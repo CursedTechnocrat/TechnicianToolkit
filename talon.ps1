@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     T.A.L.O.N. — Tracks Anomalies & Locates Otherwise-silent Nastiness
     Persistence / Autoruns Audit Tool for PowerShell 5.1+

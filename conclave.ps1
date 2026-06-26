@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     C.O.N.C.L.A.V.E. — Consolidates Organisational Networks, Chats, Licenses, Access, Visibility & Entitlements
     Microsoft Teams Audit Tool for PowerShell 5.1+

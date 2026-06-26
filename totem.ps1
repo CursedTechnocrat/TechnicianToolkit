@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     T.O.T.E.M. — Trusted Observer of Transparent Execution Modules
     TPM Health Audit Tool for PowerShell 5.1+

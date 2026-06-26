@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     T.E.T.H.E.R. — Tests Endpoint Tethering: Hosted Environment Readiness
     OneDrive Known-Folder-Move Pre-Migration Validator for PowerShell 5.1+

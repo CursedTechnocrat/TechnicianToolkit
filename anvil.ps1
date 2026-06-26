@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     A.N.V.I.L. — Audits & Notates Vendor Inventory & Lifecycle
     BIOS / UEFI / Firmware Audit Tool for PowerShell 5.1+

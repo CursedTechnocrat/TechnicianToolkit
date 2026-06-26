@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     G.R.I.M.O.I.R.E. — General Repository for Integrated Management and Orchestration of IT Resources & Executables
     Technician Toolkit Hub for PowerShell 5.1+

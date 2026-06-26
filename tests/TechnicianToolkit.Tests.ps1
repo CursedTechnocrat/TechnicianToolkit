@@ -1,4 +1,4 @@
-#Requires -Modules Pester
+﻿#Requires -Modules Pester
 <#
 .SYNOPSIS
     Pester tests for the TechnicianToolkit shared module (TechnicianToolkit.psm1).
@@ -329,6 +329,26 @@ Describe 'PowerShell syntax — all scripts' {
             $FullName, [ref]$null, [ref]$errors
         )
         $errors.Count | Should -Be 0
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# UTF-8 BOM — every .ps1/.psm1 must start with a UTF-8 byte-order mark.
+# Windows PowerShell 5.1 reads a BOM-less file as ANSI (Windows-1252), which
+# mangles the Unicode box-drawing banners and menu glyphs at parse time (the
+# launcher invokes powershell.exe 5.1, so it hits this every run). A BOM forces
+# UTF-8 decoding. CI runs under pwsh (PS7, which assumes UTF-8) so it would not
+# otherwise catch a missing BOM — this test does.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'UTF-8 BOM — all scripts' {
+    $bomCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Include '*.ps1', '*.psm1' -File -Recurse |
+        Where-Object { $_.FullName -notmatch ([regex]::Escape([IO.Path]::DirectorySeparatorChar + '.git' + [IO.Path]::DirectorySeparatorChar)) } |
+        ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
+
+    It '<Name> begins with a UTF-8 BOM' -ForEach $bomCases {
+        $bytes = [System.IO.File]::ReadAllBytes($FullName)
+        $bytes.Length | Should -BeGreaterThan 2
+        $bytes[0..2] -join ',' | Should -Be '239,187,191' -Because "$Name must start with a UTF-8 BOM (EF BB BF) so Windows PowerShell 5.1 parses it as UTF-8"
     }
 }
 

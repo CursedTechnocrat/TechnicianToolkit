@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     C.L.E.A.N.S.E. — Cleans Leftover, Ephemeral And Neglected System Entries
     Disk Cleanup Tool for PowerShell 5.1+

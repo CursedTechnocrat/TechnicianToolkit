@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     P.Y.R.E. — Power-Yield Reliability Evaluator
     Laptop Battery Health Audit Tool for PowerShell 5.1+

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     E.X.H.U.M.E. — Enumerates, eXposes & Hunts Unmigrated Mail Entries
     Outlook PST / OST Discovery Tool for PowerShell 5.1+
