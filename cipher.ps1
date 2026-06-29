@@ -20,7 +20,7 @@
     PS C:\> .\cipher.ps1 -Unattended -Action Export -OutputPath D:\Reports
 
 .NOTES
-    Version : 4.1
+    Version : 4.2
 
     Credits : Thanks to Steve the Killer for help and letting me use his
               script BERET: https://tools.thekiller.net/killer-scripts
@@ -172,13 +172,18 @@ function Select-Drive {
 }
 
 # Turns BitLocker protection ON for a volume that is already encrypted but has
-# Turns BitLocker protection ON for a volume that is already encrypted but has
 # ProtectionStatus = Off — typically an OEM "device encryption waiting" state
-# where the volume carries a TPM protector plus an unsecured clear key, so the
-# volume key is exposed. Resume-BitLocker only handles volumes suspended via
-# Suspend-BitLocker; on these it throws FVE_E_KEY_REQUIRED (0x8031001D, "you
-# cannot delete the last key"), so we fall back to manage-bde -protectors -enable,
-# which removes the unsecured key and enforces the remaining protectors.
+# where the volume carries a TPM / recovery-password protector plus an unsecured
+# clear key, so the volume key is exposed. Resume-BitLocker only handles volumes
+# suspended via Suspend-BitLocker; on these it throws FVE_E_KEY_REQUIRED
+# (0x8031001D, "you cannot delete the last key"), so we fall back to
+# manage-bde -protectors -enable, which removes the unsecured key and enforces the
+# remaining protectors. Two distinct conditions make -enable trip on 0x8031001D,
+# and this function works through both (see the inline comments):
+#   1. a protector added moments earlier via WMI hasn't committed to disk yet —
+#      handled by a short poll-and-retry;
+#   2. the volume is half-suspended (real protectors present but DISABLED, only
+#      the clear key enabled) — handled by a clean -disable/-enable cycle.
 #
 # Verification is deliberate: Get-BitLockerVolume can briefly report a stale
 # ProtectionStatus right after an external manage-bde process flips it, so we
@@ -222,7 +227,29 @@ function Enable-DriveProtection {
     }
 
     # A late metadata commit can flip protection On even when the final -enable
-    # returned non-zero — confirm before declaring failure.
+    # returned non-zero — confirm before going further.
+    if (Test-ProtectionOn -MountPoint $MountPoint) { return $true }
+
+    # Still failing on FVE_E_KEY_REQUIRED (0x8031001D) after the retries: this is
+    # the half-suspended state, not a commit race. The real protectors exist but
+    # sit DISABLED while the unsecured clear key is the only ENABLED one, so
+    # -enable's removal of the clear key is rejected as "deleting the last key"
+    # (and Resume-BitLocker fails the same way). Re-suspend cleanly with -disable
+    # to put the existing protectors back into a consistent suspended state, then
+    # -enable can drop the clear key and turn protection On. -disable only
+    # (re)issues a clear key and marks protectors disabled — it never decrypts data
+    # and leaves the volume no less protected than the OFF state it is already in,
+    # so it is safe as a last resort. If the follow-up -enable still fails the
+    # volume is left exactly as we found it.
+    if ($script:LastEnableOutput -match '0x8031001[dD]') {
+        $null = & manage-bde.exe -protectors -disable $MountPoint 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            $script:LastEnableOutput = (& manage-bde.exe -protectors -enable $MountPoint 2>&1 | Out-String).Trim()
+            $script:LastEnableExit   = $LASTEXITCODE
+            if ($script:LastEnableExit -eq 0) { return $true }
+        }
+    }
+
     return (Test-ProtectionOn -MountPoint $MountPoint)
 }
 
