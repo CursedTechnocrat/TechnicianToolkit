@@ -15,7 +15,7 @@
     PS C:\> .\restoration.ps1 -Unattended -AutoReboot  # Silent mode — reboot automatically if needed
 
 .NOTES
-    Version : 3.6
+    Version : 3.6.2
 
 #>
 
@@ -264,8 +264,8 @@ Write-Host ""
 Write-Host "Checking reboot status..." -ForegroundColor $ColorSchema.Progress
 $rebootRequired = $false
 try {
-    $rebootStatus = Get-WindowsUpdateRebootStatus
-    $rebootRequired = $rebootStatus.RebootRequired
+    # Get-WURebootStatus -Silent returns a plain [bool] ($true when a reboot is pending).
+    $rebootRequired = [bool](Get-WURebootStatus -Silent -ErrorAction Stop)
 }
 catch {
     Write-Host "[-] Could not determine reboot status: $_" -ForegroundColor $ColorSchema.Warning
@@ -275,11 +275,12 @@ catch {
 Write-Host ""
 
 if ($rebootRequired) {
+    $lastBoot = try { (Get-CimInstance Win32_OperatingSystem -ErrorAction Stop).LastBootUpTime } catch { 'unknown' }
     Write-Host "  *** REBOOT REQUIRED ***" -ForegroundColor $ColorSchema.Warning
     Write-Host ""
     Write-Host "  Reboot Status Details:" -ForegroundColor $ColorSchema.Warning
-    Write-Host "  | Reboot Required: $($rebootStatus.RebootRequired)" -ForegroundColor $ColorSchema.Warning
-    Write-Host "  | Last Boot Time: $($rebootStatus.LastBootUpTime)" -ForegroundColor $ColorSchema.Info
+    Write-Host "  | Reboot Required: $rebootRequired" -ForegroundColor $ColorSchema.Warning
+    Write-Host "  | Last Boot Time: $lastBoot" -ForegroundColor $ColorSchema.Info
     Write-Host ""
 }
 else {
@@ -388,10 +389,8 @@ elseif ($rebootRequired) {
         }
     }
 }
-else {
-    Write-Host "[+] No reboot required at this time" -ForegroundColor $ColorSchema.Success
-    Write-Host ""
-}
+# Note: the "no reboot required" case is already reported by the status block above,
+# so the reboot-decision block intentionally has no else branch here.
 
 # ─────────────────────────────────────────────────────────────────────────────
 # RESTORE MONITOR TIMEOUT
