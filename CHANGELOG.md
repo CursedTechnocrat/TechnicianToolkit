@@ -5,7 +5,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [3.6.1] - 2026-06-26
+## [3.6.2] - 2026-07-15
+
+### Fixed
+- **`R.E.S.T.O.R.A.T.I.O.N.` reboot check crashed on an unknown cmdlet, and reported "No reboot required" twice.** The post-install reboot check called `Get-WindowsUpdateRebootStatus` — a cmdlet that does not exist in PSWindowsUpdate — so every run fell into the catch block (`The term 'Get-WindowsUpdateRebootStatus' is not recognized…`) and silently skipped the reboot detection, always treating the machine as not needing a reboot even when it did. The call now uses the real cmdlet, `Get-WURebootStatus -Silent`, which returns a plain `[bool]`; when a reboot is pending the "Reboot Status Details" block reports the pending state and derives the last boot time from `Win32_OperatingSystem` (the old `$rebootStatus.RebootRequired` / `.LastBootUpTime` properties never existed on the result). Separately, when no reboot was required the script printed `[+] No reboot required at this time` twice — the status-report block and the reboot-decision block each carried their own `else` branch for the same condition. The redundant `else` on the reboot-decision block was removed, so the message now prints once.
 
 ### Fixed
 - **Mangled banners and menus under Windows PowerShell 5.1 — missing UTF-8 BOMs.** 21 of the 42 root scripts (including `grimoire.ps1` and `TechnicianToolkit.psm1`) were saved without a UTF-8 byte-order mark. Windows PowerShell 5.1 reads a BOM-less `.ps1` as ANSI (Windows-1252), so every Unicode box-drawing glyph in the GRIMOIRE banner, the ANSI-Shadow logos, and the menu frames was corrupted into mojibake at parse time. This surfaced most visibly through the portable launcher, which invokes `powershell.exe` (5.1) directly. A UTF-8 BOM has now been added to every `.ps1`/`.psm1` in the repository (matching the BOM that `grimoire.ps1`'s `Invoke-Tool` already writes onto downloaded tools), forcing UTF-8 decoding. CI runs under `pwsh` (PowerShell 7, which assumes UTF-8) so it never reproduced the corruption; a new Pester block (`UTF-8 BOM — all scripts`) now asserts every script begins with `EF BB BF` to prevent regressions.
