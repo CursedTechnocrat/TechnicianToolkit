@@ -1,0 +1,183 @@
+<Window x:Class="TechnicianToolkit.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="TechnicianToolkit" Height="720" Width="1120"
+        MinHeight="520" MinWidth="880"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource BgBrush}"
+        FontFamily="Segoe UI" FontSize="14"
+        TextOptions.TextFormattingMode="Ideal">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Admin banner (shown only when not elevated) -->
+        <Border x:Name="AdminBanner" Grid.Row="0" Background="#33E3B341"
+                BorderBrush="{StaticResource YellowBrush}" BorderThickness="0,0,0,1"
+                Padding="16,10" Visibility="Collapsed">
+            <DockPanel>
+                <Button x:Name="ElevateButton" DockPanel.Dock="Right" Style="{StaticResource TkButton}"
+                        Content="Restart as Administrator" Click="ElevateButton_Click"/>
+                <TextBlock VerticalAlignment="Center" Foreground="{StaticResource YellowBrush}"
+                           Text="Not running as Administrator — most tools need elevation for complete data."/>
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="320"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ===================== LEFT: tool list ===================== -->
+            <Border Grid.Column="0" Background="{StaticResource SurfaceBrush}"
+                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Margin="20,20,20,12">
+                        <TextBlock Text="TECHNICIAN TOOLKIT" Foreground="{StaticResource CyanBrush}"
+                                   FontFamily="Consolas" FontSize="13" FontWeight="Bold"/>
+                        <TextBlock Text="Native edition" Foreground="{StaticResource TextDimBrush}"
+                                   FontSize="12" Margin="0,2,0,0"/>
+                    </StackPanel>
+
+                    <ListBox x:Name="ToolList" Grid.Row="1" Background="Transparent"
+                             BorderThickness="0" Foreground="{StaticResource TextBrush}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             SelectionChanged="ToolList_SelectionChanged">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Margin" Value="10,2"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border x:Name="b" CornerRadius="6" Padding="12,10"
+                                                    Background="Transparent">
+                                                <ContentPresenter/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="b" Property="Background" Value="{StaticResource Surface2Brush}"/>
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="b" Property="Background" Value="{StaticResource Surface2Brush}"/>
+                                                    <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource CyanBrush}"/>
+                                                    <Setter TargetName="b" Property="BorderThickness" Value="1"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}" Foreground="{StaticResource CyanBrush}"
+                                               FontFamily="Consolas" FontSize="13" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding Title}" Foreground="{StaticResource TextBrush}"
+                                               FontSize="13" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <Border Grid.Row="2" Padding="20,12" BorderBrush="{StaticResource BorderBrush}"
+                            BorderThickness="0,1,0,0">
+                        <TextBlock x:Name="SuiteNote" TextWrapping="Wrap" FontSize="11"
+                                   Foreground="{StaticResource TextDimBrush}"/>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- ===================== RIGHT: detail + run ===================== -->
+            <Grid Grid.Column="1" Margin="28,24,28,24">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Detail header -->
+                <StackPanel Grid.Row="0">
+                    <TextBlock x:Name="DetailName" Foreground="{StaticResource CyanBrush}"
+                               FontFamily="Consolas" FontSize="22" FontWeight="Bold"/>
+                    <TextBlock x:Name="DetailTitle" Foreground="#FFE8F0F8" FontSize="18"
+                               Margin="0,2,0,0"/>
+                    <StackPanel x:Name="BadgeRow" Orientation="Horizontal" Margin="0,10,0,0"/>
+                    <TextBlock x:Name="DetailDescription" Foreground="{StaticResource TextDimBrush}"
+                               FontSize="13" TextWrapping="Wrap" Margin="0,10,0,0"/>
+                </StackPanel>
+
+                <!-- Options -->
+                <Border Grid.Row="1" Margin="0,18,0,0" Padding="16" CornerRadius="8"
+                        Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}"
+                        BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="OUTPUT FOLDER" Foreground="{StaticResource CyanBrush}"
+                                   FontFamily="Consolas" FontSize="10" Margin="0,0,0,6"/>
+                        <DockPanel>
+                            <Button x:Name="BrowseButton" DockPanel.Dock="Right" Style="{StaticResource TkButton}"
+                                    Content="Browse…" Margin="8,0,0,0" Click="BrowseButton_Click"/>
+                            <TextBox x:Name="OutputBox" Background="{StaticResource Surface2Brush}"
+                                     Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource BorderBrush}"
+                                     BorderThickness="1" Padding="8,6" VerticalContentAlignment="Center"/>
+                        </DockPanel>
+                        <CheckBox x:Name="WhatIfCheck" Content="Preview only (-WhatIf)" Margin="0,12,0,0"
+                                  Foreground="{StaticResource TextBrush}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Run row -->
+                <DockPanel Grid.Row="2" Margin="0,16,0,0">
+                    <Button x:Name="RunButton" DockPanel.Dock="Left" Style="{StaticResource TkPrimaryButton}"
+                            Content="Run tool" Padding="24,9" Click="RunButton_Click"/>
+                    <TextBlock x:Name="StatusText" VerticalAlignment="Center" Margin="16,0,0,0"
+                               Foreground="{StaticResource TextDimBrush}"/>
+                </DockPanel>
+
+                <!-- Run log -->
+                <Border Grid.Row="3" Margin="0,16,0,0" CornerRadius="8"
+                        Background="#FF080B10" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                    <RichTextBox x:Name="LogBox" IsReadOnly="True" Background="Transparent"
+                                 Foreground="{StaticResource TextBrush}" BorderThickness="0"
+                                 FontFamily="Consolas" FontSize="12.5" Padding="12"
+                                 VerticalScrollBarVisibility="Auto"
+                                 HorizontalScrollBarVisibility="Disabled">
+                        <FlowDocument x:Name="LogDoc"/>
+                    </RichTextBox>
+                </Border>
+
+                <!-- Result panel -->
+                <Border x:Name="ResultPanel" Grid.Row="4" Margin="0,14,0,0" Padding="16" CornerRadius="8"
+                        Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource GreenBrush}"
+                        BorderThickness="1" Visibility="Collapsed">
+                    <StackPanel>
+                        <TextBlock x:Name="ResultSummary" Foreground="{StaticResource TextBrush}"
+                                   TextWrapping="Wrap"/>
+                        <TextBlock x:Name="ResultPath" Foreground="{StaticResource TextDimBrush}"
+                                   FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                            <Button x:Name="OpenReportButton" Style="{StaticResource TkButton}"
+                                    Content="Open report" Click="OpenReportButton_Click"/>
+                            <Button x:Name="OpenFolderButton" Style="{StaticResource TkButton}"
+                                    Content="Open folder" Margin="8,0,0,0" Click="OpenFolderButton_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

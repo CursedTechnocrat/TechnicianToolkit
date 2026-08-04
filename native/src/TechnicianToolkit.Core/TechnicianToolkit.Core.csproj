@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The Core library is the native port of TechnicianToolkit.psm1. It is kept
+    deliberately platform-neutral (targets net8.0, not net8.0-windows) so the
+    pure logic - HTML templating, config I/O, note reports, byte formatting -
+    can be unit-tested on any OS. The only Windows-specific surface is the admin
+    check in AdminPrivilege, which is guarded with OperatingSystem.IsWindows().
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>TechnicianToolkit.Core</RootNamespace>
+    <AssemblyName>TechnicianToolkit.Core</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- WindowsIdentity / WindowsPrincipal for the elevation check. Resolves as
+         a facade on non-Windows so the assembly still compiles cross-platform. -->
+    <PackageReference Include="System.Security.Principal.Windows" Version="5.0.0" />
+  </ItemGroup>
+
+</Project>

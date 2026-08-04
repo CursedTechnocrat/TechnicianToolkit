@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The Tools library holds the native reimplementations of individual toolkit
+    tools plus the Windows data collectors they share. It targets
+    net8.0-windows because it talks to WMI/CIM, the Service Control Manager, the
+    Task Scheduler COM API and the WinNT ADSI provider - all Windows-only. The
+    code compiles on other platforms only as a reference; it must RUN on Windows.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RootNamespace>TechnicianToolkit.Tools</RootNamespace>
+    <AssemblyName>TechnicianToolkit.Tools</AssemblyName>
+    <!-- We deliberately call Windows-only APIs; the -windows TFM makes that the
+         supported platform, so silence the remaining CA1416 advisories that come
+         from transitively-referenced facades. -->
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TechnicianToolkit.Core\TechnicianToolkit.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Management" Version="8.0.0" />
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="8.0.1" />
+    <PackageReference Include="System.DirectoryServices" Version="8.0.0" />
+  </ItemGroup>
+
+</Project>

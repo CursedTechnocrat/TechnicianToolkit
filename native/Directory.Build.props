@@ -1,0 +1,20 @@
+<Project>
+  <!--
+    Shared MSBuild properties for every project in the native TechnicianToolkit
+    solution. Individual projects still choose their own TargetFramework and
+    UI-specific switches (UseWPF, OutputType); this file only carries settings
+    that are genuinely common to all of them.
+  -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <Product>TechnicianToolkit</Product>
+    <Company>CursedTechnocrat</Company>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Copyright>TechnicianToolkit contributors</Copyright>
+  </PropertyGroup>
+</Project>

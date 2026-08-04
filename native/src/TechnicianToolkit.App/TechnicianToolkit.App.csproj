@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The WPF front end. WinExe + UseWPF makes this a windowed desktop app; it can
+    only build and run on Windows. It references the Tools library (which does
+    the Windows data collection) and, transitively, Core (templating/config).
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>TechnicianToolkit.App</RootNamespace>
+    <AssemblyName>TechnicianToolkit.App</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TechnicianToolkit.Core\TechnicianToolkit.Core.csproj" />
+    <ProjectReference Include="..\TechnicianToolkit.Tools\TechnicianToolkit.Tools.csproj" />
+  </ItemGroup>
+
+</Project>

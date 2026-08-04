@@ -23,6 +23,19 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 
 ---
 
+## Standalone builds
+
+The scripts above are the primary distribution. Two folders turn the toolkit into a self-contained program you can build with the .NET SDK (and Visual Studio / VS Code, if you like):
+
+| Folder | What it is | When to use |
+|--------|-----------|-------------|
+| [`launcher/`](launcher/) | A single portable `.exe` that **embeds and runs the PowerShell scripts** offline (bundled .NET runtime; target only needs Windows PowerShell). | You want one file on a USB stick, no code changes, still the PowerShell tools underneath. |
+| [`native/`](native/) | A **truly native C# / WPF desktop app** that reimplements the tools directly against Windows APIs — no PowerShell at runtime. | You want a real windowed program. Currently ships the shared module + 3 reference tools (SCRYER, WARD, AUGUR); more are ported incrementally. |
+
+See each folder's `README.md` for build instructions.
+
+---
+
 ## Table of Contents
 
 - [Tools Overview](#tools-overview)

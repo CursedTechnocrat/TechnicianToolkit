@@ -33,5 +33,14 @@ $RECYCLE.BIN/
 .idea/
 *.code-workspace
 
+# ─── .NET / native launcher & app build artifacts ────────────────────────────
+[Bb]in/
+[Oo]bj/
+.vs/
+*.user
+# launcher/native publish output
+launcher/dist/
+native/**/dist/
+
 # ─── Claude Code ──────────────────────────────────────────────────────────────
 .claude/settings.local.json
