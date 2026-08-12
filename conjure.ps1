@@ -275,6 +275,70 @@ function Test-WingetAvailable {
 # INSTALLATION FUNCTIONS
 # ===========================
 
+# ---------------------------------------------------------------------------
+# EXIT-CODE DECODING
+# ---------------------------------------------------------------------------
+# winget (and the installers it launches) report their result through the
+# process exit code, which PowerShell surfaces as a signed 32-bit integer in
+# $LASTEXITCODE. A winget result such as 0x8A150011 (installer hash mismatch)
+# therefore arrives as the raw number -1978335215 — meaningless to a
+# technician reading the run log, and previously logged verbatim. This table
+# maps the codes we recognise to a plain-English reason and a class:
+#
+#   Success  installed, or a no-op because the package was already current
+#   Failed   nothing was installed
+#   (Warning is the fallback for a non-zero code we can't positively read)
+#
+# Keys are the unsigned hex form so they line up 1:1 with Microsoft's published
+# winget return-code list; Resolve-InstallExit normalises the signed
+# $LASTEXITCODE back to that form before looking it up. Codes and text are taken
+# from the winget return-code documentation:
+#   https://learn.microsoft.com/windows/package-manager/winget/returnCodes
+$InstallExitInfo = @{
+    # --- Clean success / reboot pending (Windows installer conventions) ---
+    '0x00000000' = @{ Class = 'Success'; Reason = 'Installed successfully' }
+    '0x00000BC2' = @{ Class = 'Success'; Reason = 'Installed successfully — a reboot is required to finish' }  # 3010 ERROR_SUCCESS_REBOOT_REQUIRED
+    '0x00000669' = @{ Class = 'Success'; Reason = 'Installed successfully — a reboot has been initiated' }      # 1641 ERROR_SUCCESS_REBOOT_INITIATED
+    '0x000003A3' = @{ Class = 'Success'; Reason = 'Installer reported success (vendor code 931)' }              # observed installer success code
+
+    # --- Already current: winget no-op, not a failure ---
+    '0x8A150061' = @{ Class = 'Success'; Reason = 'Already installed — an existing version of the package is present' }
+    '0x8A15002B' = @{ Class = 'Success'; Reason = 'Already up to date — no applicable update found' }
+
+    # --- Hard failures: nothing was installed ---
+    '0x8A150011' = @{ Class = 'Failed';  Reason = "Installer hash mismatch — the downloaded installer's hash does not match the manifest, so winget rejected it" }
+    '0x8A150010' = @{ Class = 'Failed';  Reason = 'No applicable installer — none of the installers fit this system' }
+    '0x8A150008' = @{ Class = 'Failed';  Reason = 'Download failed — the installer could not be downloaded' }
+    '0x8A150006' = @{ Class = 'Failed';  Reason = 'Installer failed — running the installer (ShellExecute) returned an error' }
+    '0x8A150003' = @{ Class = 'Failed';  Reason = 'Command failed — winget could not complete the install' }
+    '0x8A150056' = @{ Class = 'Failed';  Reason = 'Installer cannot be run from an administrator context' }
+}
+
+# Resolve a raw $LASTEXITCODE to a verdict object: { Class; Reason; Code; Hex }.
+# Unrecognised non-zero codes are surfaced as 'Warning' — the run finished with
+# a code we can't read, which is worth flagging but not treated as a clean
+# install. Known-failure codes (e.g. a hash mismatch) return 'Failed' so the
+# summary counts them honestly instead of as "installed with warnings".
+function Resolve-InstallExit {
+    param([int]$ExitCode)
+
+    # 4294967295 (0xFFFFFFFF) masks the sign-extended int back to unsigned 32-bit;
+    # written in decimal so it is unambiguously [long] on Windows PowerShell 5.1.
+    $hex  = '0x{0:X8}' -f ($ExitCode -band 4294967295)
+    $info = $script:InstallExitInfo[$hex]
+
+    if ($info) {
+        return [PSCustomObject]@{ Class = $info.Class; Reason = $info.Reason; Code = $ExitCode; Hex = $hex }
+    }
+
+    return [PSCustomObject]@{
+        Class  = 'Warning'
+        Reason = "Finished with an unrecognised exit code ($ExitCode / $hex) — verify the package manually"
+        Code   = $ExitCode
+        Hex    = $hex
+    }
+}
+
 function Install-Software {
     param(
         [string[]]$SoftwareList,
@@ -311,13 +375,22 @@ function Install-Software {
             $installTime = (Get-Date).ToString('HH:mm:ss')
             $elapsed     = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
 
-            if ($exitCode -eq 0 -or $exitCode -eq 931 -or $exitCode -eq 3010) {
-                Write-Host "[OK] $item installed successfully at $installTime (${elapsed}s)" -ForegroundColor $Colors.Success
-                Add-InstallationRecord -Software $item -Status "INSTALLED"
-            }
-            else {
-                Write-Host "[!!] $item completed with exit code $exitCode at $installTime" -ForegroundColor $Colors.Warning
-                Add-InstallationRecord -Software $item -Status "INSTALLED (with warnings - Exit Code: $exitCode)"
+            $verdict = Resolve-InstallExit -ExitCode $exitCode
+
+            switch ($verdict.Class) {
+                'Success' {
+                    Write-Host "[OK] $item — $($verdict.Reason) at $installTime (${elapsed}s)" -ForegroundColor $Colors.Success
+                    Add-InstallationRecord -Software $item -Status "INSTALLED"
+                }
+                'Failed' {
+                    Write-Host "[ERROR] $item failed — $($verdict.Reason) [exit code $exitCode] at $installTime" -ForegroundColor $Colors.Error
+                    Add-InstallationRecord -Software $item -Status "FAILED - $($verdict.Reason)"
+                    Write-TKError -ScriptName 'conjure' -Message "Package install failed ('$item' via $PackageManager): $($verdict.Reason) [exit code $exitCode]" -Category 'Package Install'
+                }
+                default {
+                    Write-Host "[!!] $item — $($verdict.Reason) at $installTime" -ForegroundColor $Colors.Warning
+                    Add-InstallationRecord -Software $item -Status "INSTALLED (with warnings - Exit Code: $exitCode)"
+                }
             }
         }
         catch {
@@ -356,8 +429,9 @@ function Update-AllSoftware {
             Add-InstallationRecord -Software "All Packages" -Status "UPDATED"
         }
         else {
-            Write-Host "[!!] Package update completed with status code $exitCode at $updateTime" -ForegroundColor $Colors.Warning
-            Add-InstallationRecord -Software "All Packages" -Status "UPDATED (with warnings)"
+            $verdict = Resolve-InstallExit -ExitCode $exitCode
+            Write-Host "[!!] Package update finished at $updateTime — $($verdict.Reason)" -ForegroundColor $Colors.Warning
+            Add-InstallationRecord -Software "All Packages" -Status "UPDATED (with warnings - $($verdict.Reason))"
         }
     }
     catch {

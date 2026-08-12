@@ -5,6 +5,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.6.3] - 2026-08-12
+
+### Fixed
+- **`C.O.N.J.U.R.E.` reported failed installs as "installed with warnings" and printed raw negative exit codes.** `Install-Software` treated every winget/installer result except `0`, `931`, and `3010` as a benign `INSTALLED (with warnings - Exit Code: <n>)` — a status the run summary counts as a *successful* install (`Status -like "*INSTALLED*"`). So a genuine failure such as Microsoft 365 (`Microsoft.Office`) returning `-1978335215` (winget `0x8A150011`, *the downloaded installer's hash does not match the manifest*) was logged as `[!!] Microsoft.Office completed with exit code -1978335215` and tallied as installed, even though nothing was installed. The exit-code handling is now table-driven: a new `$InstallExitInfo` map decodes the codes CONJURE recognises to a plain-English reason and a class — `Success` (installed, or a no-op because the package was already current: winget `0x8A150061` *already installed* / `0x8A15002B` *no applicable update*), or `Failed` (nothing installed: `0x8A150011` installer hash mismatch, `0x8A150010` no applicable installer, `0x8A150008` download failed, `0x8A150006` ShellExecute failed, `0x8A150003` command failed, `0x8A150056` cannot run as admin). A new `Resolve-InstallExit` helper normalises the signed `$LASTEXITCODE` back to the unsigned hex form Microsoft publishes and looks it up; an unrecognised non-zero code now surfaces as a `Warning` ("finished with an unrecognised exit code … — verify the package manually") rather than being silently counted as installed. Known-failure codes are recorded as `FAILED - <reason>` (so the summary's fail count picks them up) and fire a `Write-TKError` telemetry ping; the per-package and upgrade-all lines now print the human-readable reason instead of a bare number (e.g. `[ERROR] Microsoft.Office failed — Installer hash mismatch — the downloaded installer's hash does not match the manifest, so winget rejected it [exit code -1978335215]`). A new Pester `Describe 'Tier-mapper data tables'` context asserts the classifications (hash mismatch → `Failed`, already-installed/up-to-date → `Success`, clean/reboot codes → `Success`, other known winget failures → `Failed`, every entry carries a class + non-empty reason) and the signed→unsigned hex normalisation.
+
+---
+
 ## [3.6.2] - 2026-07-15
 
 ### Fixed
