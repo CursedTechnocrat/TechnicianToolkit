@@ -561,6 +561,7 @@ Describe 'Tier-mapper data tables' {
         $script:PaladinPath = Join-Path $script:ToolkitRoot 'paladin.ps1'
         $script:BeaconPath  = Join-Path $script:ToolkitRoot 'beacon.ps1'
         $script:PortalPath  = Join-Path $script:ToolkitRoot 'portal.ps1'
+        $script:ConjurePath = Join-Path $script:ToolkitRoot 'conjure.ps1'
 
         function Import-ScriptHashtable {
             param([string]$ScriptPath, [string]$VarName)
@@ -700,6 +701,42 @@ Describe 'Tier-mapper data tables' {
             $e['Optional']     | Should -Be 'Weak'
             $e['Required']     | Should -Be 'Strong'
             $e['Maximum']      | Should -Be 'Strong'
+        }
+    }
+
+    Context 'CONJURE: $InstallExitInfo exit-code table' {
+        It 'decodes the installer-hash-mismatch code (0x8A150011) as a failure' {
+            $t = Import-ScriptHashtable -ScriptPath $script:ConjurePath -VarName 'InstallExitInfo'
+            $t | Should -Not -BeNullOrEmpty
+            $t['0x8A150011'].Class  | Should -Be 'Failed'
+            $t['0x8A150011'].Reason | Should -Match 'hash'
+        }
+        It 'classifies already-installed / up-to-date winget codes as success no-ops' {
+            $t = Import-ScriptHashtable -ScriptPath $script:ConjurePath -VarName 'InstallExitInfo'
+            $t['0x8A150061'].Class | Should -Be 'Success'
+            $t['0x8A15002B'].Class | Should -Be 'Success'
+        }
+        It 'classifies clean-success and reboot-pending codes as success' {
+            $t = Import-ScriptHashtable -ScriptPath $script:ConjurePath -VarName 'InstallExitInfo'
+            $t['0x00000000'].Class | Should -Be 'Success'  # 0
+            $t['0x00000BC2'].Class | Should -Be 'Success'  # 3010 reboot required
+        }
+        It 'classifies other known winget failures as failures' {
+            $t = Import-ScriptHashtable -ScriptPath $script:ConjurePath -VarName 'InstallExitInfo'
+            $t['0x8A150010'].Class | Should -Be 'Failed'  # no applicable installer
+            $t['0x8A150008'].Class | Should -Be 'Failed'  # download failed
+        }
+        It 'every entry carries a Class and a non-empty Reason' {
+            $t = Import-ScriptHashtable -ScriptPath $script:ConjurePath -VarName 'InstallExitInfo'
+            foreach ($k in $t.Keys) {
+                $t[$k].Class  | Should -BeIn @('Success', 'Warning', 'Failed') -Because "code $k must be classified"
+                $t[$k].Reason | Should -Not -BeNullOrEmpty -Because "code $k must have a human-readable reason"
+            }
+        }
+        It 'normalises a signed $LASTEXITCODE back to the unsigned hex key the table uses' {
+            # winget's 0x8A150011 is surfaced by $LASTEXITCODE as -1978335215;
+            # Resolve-InstallExit relies on this conversion to find the entry.
+            ('0x{0:X8}' -f (-1978335215 -band 4294967295)) | Should -Be '0x8A150011'
         }
     }
 }
