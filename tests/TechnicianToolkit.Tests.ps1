@@ -842,16 +842,28 @@ Describe 'Tier-mapper data tables' {
 # ─────────────────────────────────────────────────────────────────────────────
 Describe 'HERALD LDAP and DN helpers' {
     BeforeAll {
+        # Pester 5 restricts Should to It bodies, so the "did the helper load?"
+        # check is recorded here and asserted in its own It below rather than
+        # being asserted inline.
         $heraldPath = Join-Path $PSScriptRoot '..\herald.ps1'
         $errs = $null
         $ast  = [System.Management.Automation.Language.Parser]::ParseFile($heraldPath, [ref]$null, [ref]$errs)
+        $script:HeraldHelpersLoaded = @()
         foreach ($name in 'ConvertTo-LdapFilterValue', 'Get-DnLeaf', 'Get-DnParent') {
             $fn = $ast.FindAll({
                 param($n)
                 $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq $name
             }, $true) | Select-Object -First 1
-            $fn | Should -Not -BeNullOrEmpty -Because "herald.ps1 must define $name"
-            . ([scriptblock]::Create($fn.Extent.Text))
+            if ($fn) {
+                . ([scriptblock]::Create($fn.Extent.Text))
+                $script:HeraldHelpersLoaded += $name
+            }
+        }
+    }
+
+    It 'herald.ps1 defines the LDAP and DN helpers' {
+        foreach ($name in 'ConvertTo-LdapFilterValue', 'Get-DnLeaf', 'Get-DnParent') {
+            $script:HeraldHelpersLoaded | Should -Contain $name -Because "herald.ps1 must define $name"
         }
     }
 
