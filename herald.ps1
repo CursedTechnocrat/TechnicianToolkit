@@ -55,7 +55,7 @@
     PS C:\> .\herald.ps1 -Server dc01.contoso.com -StaleDays 60
 
 .NOTES
-    Version : 3.7
+    Version : 3.7.1
 
 #>
 
@@ -171,6 +171,15 @@ $RoleTiers = [ordered]@{
     'Standard User'           = @{ Rank = 4; Badge = 'info'; Blurb = 'No privileged group membership found. Ordinary day-to-day account.' }
 }
 
+# $RoleTiers stays [ordered] because the report renders the tiers most-privileged
+# first (and the Pester suite asserts on the literal). Lookups go through these
+# plain copies instead: OrderedDictionary exposes both Item[Int32] and
+# Item[Object], and an [object]-typed key reaching that indexer is a known way to
+# get "Argument types do not match" out of Windows PowerShell 5.1.
+$RoleTierOrder = [string[]]@($RoleTiers.Keys)
+$RoleTierMap   = @{}
+foreach ($roleKey in $RoleTierOrder) { $RoleTierMap[$roleKey] = $RoleTiers[[string]$roleKey] }
+
 # ─────────────────────────────────────────────────────────────────────────────
 # BANNER
 # ─────────────────────────────────────────────────────────────────────────────
@@ -218,6 +227,20 @@ function ConvertTo-LdapFilterValue {
         }
     }
     return $sb.ToString()
+}
+
+function Get-FaultLocation {
+    <#
+        Renders "<file> line <n>" for an error record. The file matters because a
+        fault can surface from the shared module rather than from this script, and
+        naming the wrong one sends the next reader to the wrong place.
+    #>
+    param($ErrorRecord)
+
+    $line = $ErrorRecord.InvocationInfo.ScriptLineNumber
+    $file = $ErrorRecord.InvocationInfo.ScriptName
+    if ([string]::IsNullOrWhiteSpace($file)) { return "line $line" }
+    return ("{0} line {1}" -f (Split-Path -Leaf $file), $line)
 }
 
 function Get-DnLeaf {
@@ -494,10 +517,10 @@ function Build-AccountRoster {
 
         # Highest privilege wins: the lowest rank among every group granting access.
         $role = 'Standard User'
-        $rank = $RoleTiers['Standard User'].Rank
+        $rank = $RoleTierMap['Standard User'].Rank
         foreach ($g in $grants) {
             $gRole = $GrantDetail[$g].Role
-            $gRank = $RoleTiers[$gRole].Rank
+            $gRank = $RoleTierMap[[string]$gRole].Rank
             if ($gRank -lt $rank) {
                 $rank = $gRank
                 $role = $gRole
@@ -551,7 +574,7 @@ function Build-AccountRoster {
 function Get-RoleBadge {
     param([string]$Role)
     $badge = 'info'
-    if ($RoleTiers.Contains($Role)) { $badge = $RoleTiers[$Role].Badge }
+    if ($RoleTierMap.ContainsKey($Role)) { $badge = $RoleTierMap[$Role].Badge }
     return "<span class=`"tk-badge-$badge`">$(EscHtml $Role)</span>"
 }
 
@@ -562,6 +585,33 @@ function Get-FlagCell {
         "<span class=`"tk-badge-warn`">$(EscHtml $f)</span>"
     }
     return ($cells -join ' ')
+}
+
+function Invoke-ReportSection {
+    <#
+        Renders one section's rows inside its own guard. A section that throws is
+        reported with its name, exception type and originating line, and is
+        replaced in the document by a visible note — one bad row must not cost
+        the technician the entire report, and the failure has to say where to look
+        rather than just that something went wrong.
+    #>
+    param(
+        [Parameter(Mandatory)][string]      $Name,
+        [Parameter(Mandatory)][int]         $ColSpan,
+        [Parameter(Mandatory)][scriptblock] $Build
+    )
+
+    try {
+        return (& $Build)
+    } catch {
+        $where = Get-FaultLocation $_
+        Write-Fail "Report section '$Name' failed to render: $($_.Exception.Message)"
+        Write-Info "$($_.Exception.GetType().FullName) at $where"
+        Write-Info $_.InvocationInfo.Line.Trim()
+        Write-TKError -ScriptName 'herald' -Category 'Report' `
+            -Message "Section '$Name': $($_.Exception.GetType().FullName): $($_.Exception.Message) [$where]"
+        return "<tr><td colspan=""$ColSpan""><strong>This section could not be rendered.</strong> See the console output for the failure detail.</td></tr>"
+    }
 }
 
 function Build-HeraldReport {
@@ -596,36 +646,46 @@ function Build-HeraldReport {
         'Flagged for Review'
     )
 
+    # The two account subsets are needed by the summary cards as well as by their
+    # own sections, so they are computed once, ahead of rendering.
+    $privileged = @($Roster | Where-Object { $_.Rank -lt $RoleTierMap['Standard User'].Rank } |
+                    Sort-Object Rank, FullName)
+    $flagged    = @($Roster | Where-Object { $_.ReviewFlags } | Sort-Object Rank, FullName)
+
     # ── 01 Access levels at a glance ─────────────────────────────────────────
-    $tierRows = ''
-    foreach ($tier in $RoleTiers.Keys) {
-        $count = @($Roster | Where-Object { $_.Role -eq $tier }).Count
-        $tierRows += @"
+    $tierRows = Invoke-ReportSection -Name 'Access levels at a glance' -ColSpan 3 -Build {
+        $sb = New-Object System.Text.StringBuilder
+        foreach ($tier in $RoleTierOrder) {
+            $count = @($Roster | Where-Object { $_.Role -eq $tier }).Count
+            [void]$sb.Append(@"
         <tr>
           <td>$(Get-RoleBadge $tier)</td>
           <td><strong>$count</strong></td>
-          <td>$(EscHtml $RoleTiers[$tier].Blurb)</td>
+          <td>$(EscHtml $RoleTierMap[$tier].Blurb)</td>
         </tr>
-"@
+"@)
+        }
+        $sb.ToString()
     }
 
-    $typeRows = ''
-    foreach ($grp in ($Roster | Group-Object AccountType | Sort-Object Name)) {
-        $typeRows += @"
+    $typeRows = Invoke-ReportSection -Name 'Account types' -ColSpan 2 -Build {
+        $sb = New-Object System.Text.StringBuilder
+        foreach ($grp in ($Roster | Group-Object AccountType | Sort-Object Name)) {
+            [void]$sb.Append(@"
         <tr><td>$(EscHtml $grp.Name)</td><td><strong>$($grp.Count)</strong></td></tr>
-"@
+"@)
+        }
+        $sb.ToString()
     }
 
     # ── 02 Privileged accounts ───────────────────────────────────────────────
-    $privileged = @($Roster | Where-Object { $_.Rank -lt $RoleTiers['Standard User'].Rank } |
-                    Sort-Object Rank, FullName)
-
     # A whole-domain roster can run to thousands of rows, and `+=` on a string
-    # reallocates the entire buffer once per row, so the three account-scale
-    # loops accumulate into a StringBuilder instead.
-    $privSb = New-Object System.Text.StringBuilder
-    foreach ($a in $privileged) {
-        [void]$privSb.Append(@"
+    # reallocates the entire buffer once per row, so the account-scale loops
+    # accumulate into a StringBuilder instead.
+    $privRows = Invoke-ReportSection -Name 'Privileged accounts' -ColSpan 7 -Build {
+        $privSb = New-Object System.Text.StringBuilder
+        foreach ($a in $privileged) {
+            [void]$privSb.Append(@"
         <tr>
           <td><strong>$(EscHtml $a.FullName)</strong></td>
           <td class="tk-mono">$(EscHtml $a.Alias)</td>
@@ -636,21 +696,23 @@ function Build-HeraldReport {
           <td>$(Get-FlagCell $a.ReviewFlags)</td>
         </tr>
 "@)
+        }
+        $privSb.ToString()
     }
-    $privRows = $privSb.ToString()
     if (-not $privRows) {
         $privRows = '<tr><td colspan="7">No accounts hold privileged group membership.</td></tr>'
     }
 
     # ── 03 Full roster ───────────────────────────────────────────────────────
-    $rosterSb = New-Object System.Text.StringBuilder
-    foreach ($a in ($Roster | Sort-Object Rank, FullName)) {
-        $statusBadge = if ($a.Enabled) {
-            '<span class="tk-badge-ok">Active</span>'
-        } else {
-            '<span class="tk-badge-warn">Disabled</span>'
-        }
-        [void]$rosterSb.Append(@"
+    $rosterRows = Invoke-ReportSection -Name 'Full account roster' -ColSpan 9 -Build {
+        $rosterSb = New-Object System.Text.StringBuilder
+        foreach ($a in ($Roster | Sort-Object Rank, FullName)) {
+            $statusBadge = if ($a.Enabled) {
+                '<span class="tk-badge-ok">Active</span>'
+            } else {
+                '<span class="tk-badge-warn">Disabled</span>'
+            }
+            [void]$rosterSb.Append(@"
         <tr>
           <td><strong>$(EscHtml $a.FullName)</strong></td>
           <td class="tk-mono">$(EscHtml $a.Alias)</td>
@@ -663,36 +725,41 @@ function Build-HeraldReport {
           <td>$(Get-FlagCell $a.ReviewFlags)</td>
         </tr>
 "@)
+        }
+        $rosterSb.ToString()
     }
-    $rosterRows = $rosterSb.ToString()
     if (-not $rosterRows) {
         $rosterRows = '<tr><td colspan="9">No accounts matched the report scope.</td></tr>'
     }
 
     # ── 04 Privileged group membership ───────────────────────────────────────
-    $groupRows = ''
-    foreach ($g in $GroupSummary) {
-        $memberCell = if ($g.Members.Count -gt 0) { EscHtml (($g.Members | Sort-Object) -join ', ') } else { '<em>Empty</em>' }
-        $countClass = if ($g.Members.Count -eq 0) { 'ok' } else { $RoleTiers[$g.Role].Badge }
-        $groupRows += @"
+    $groupRows = Invoke-ReportSection -Name 'Privileged group membership' -ColSpan 5 -Build {
+        $groupSb = New-Object System.Text.StringBuilder
+        foreach ($g in $GroupSummary) {
+            $memberNames = @($g.Members)
+            $memberCell  = if ($memberNames.Count -gt 0) { EscHtml (($memberNames | Sort-Object) -join ', ') } else { '<em>Empty</em>' }
+            $countClass  = if ($memberNames.Count -eq 0) { 'ok' } else { $RoleTierMap[[string]$g.Role].Badge }
+            [void]$groupSb.Append(@"
         <tr>
           <td><strong>$(EscHtml $g.Name)</strong></td>
           <td>$(Get-RoleBadge $g.Role)</td>
-          <td><span class="tk-badge-$countClass">$($g.Members.Count)</span></td>
+          <td><span class="tk-badge-$countClass">$($memberNames.Count)</span></td>
           <td>$(EscHtml $g.Reason)</td>
           <td>$memberCell</td>
         </tr>
-"@
+"@)
+        }
+        $groupSb.ToString()
     }
     if (-not $groupRows) {
         $groupRows = '<tr><td colspan="5">No privileged groups were resolved in this domain.</td></tr>'
     }
 
     # ── 05 Flagged for review ────────────────────────────────────────────────
-    $flagged = @($Roster | Where-Object { $_.ReviewFlags } | Sort-Object Rank, FullName)
-    $flagSb = New-Object System.Text.StringBuilder
-    foreach ($a in $flagged) {
-        [void]$flagSb.Append(@"
+    $flagRows = Invoke-ReportSection -Name 'Flagged for review' -ColSpan 6 -Build {
+        $flagSb = New-Object System.Text.StringBuilder
+        foreach ($a in $flagged) {
+            [void]$flagSb.Append(@"
         <tr>
           <td><strong>$(EscHtml $a.FullName)</strong></td>
           <td class="tk-mono">$(EscHtml $a.Alias)</td>
@@ -702,8 +769,9 @@ function Build-HeraldReport {
           <td>$(Get-FlagCell $a.ReviewFlags)</td>
         </tr>
 "@)
+        }
+        $flagSb.ToString()
     }
-    $flagRows = $flagSb.ToString()
     if (-not $flagRows) {
         $flagRows = '<tr><td colspan="6">No accounts raised a review flag.</td></tr>'
     }
@@ -849,7 +917,7 @@ function Build-HeraldReport {
   </div>
 </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'H.E.R.A.L.D. v3.7')
+"@ + (Get-TKHtmlFoot -ScriptName 'H.E.R.A.L.D. v3.7.1')
 
     return $html
 }
@@ -1040,7 +1108,7 @@ Write-Host ("  {0,-26} {1}" -f 'Standard Users',           $counts.Standard)   -
 Write-Host ("  {0,-26} {1}" -f 'Flagged for review',       $counts.Flagged)    -ForegroundColor $C.Info
 Write-Host ""
 
-$privilegedAccounts = @($roster | Where-Object { $_.Rank -lt $RoleTiers['Standard User'].Rank } |
+$privilegedAccounts = @($roster | Where-Object { $_.Rank -lt $RoleTierMap['Standard User'].Rank } |
                         Sort-Object Rank, FullName)
 
 if ($privilegedAccounts.Count -gt 0) {
@@ -1082,8 +1150,15 @@ try {
                                -Counts $counts
     [System.IO.File]::WriteAllText($reportPath, $html, [System.Text.Encoding]::UTF8)
 } catch {
+    # Name the exception type and the originating line: "could not save the
+    # report" on its own gives a technician in the field nothing to act on and
+    # nothing to report back.
+    $where = Get-FaultLocation $_
     Write-Fail "Could not save the HTML report: $($_.Exception.Message)"
-    Write-TKError -ScriptName 'herald' -Message $_.Exception.Message -Category 'Report'
+    Write-Info "$($_.Exception.GetType().FullName) at $where"
+    Write-Info $_.InvocationInfo.Line.Trim()
+    Write-TKError -ScriptName 'herald' -Category 'Report' `
+        -Message "$($_.Exception.GetType().FullName): $($_.Exception.Message) [$where]"
 }
 
 if (-not $NoCsv) {
