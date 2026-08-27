@@ -694,18 +694,18 @@ function Find-Tool {
 function Select-FromMatches {
     # Given the result of Find-Tool, return the single tool to run. One match
     # launches straight away; several render a pick-list; [B]/blank cancels.
-    param([object[]]$Matches)
+    param([object[]]$Found)
 
-    if ($Matches.Count -eq 1) { return $Matches[0] }
+    if ($Found.Count -eq 1) { return $Found[0] }
 
     [Console]::Clear()
     Write-Host ""
     Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
-    Write-Host "  GRIMOIRE  /  Search results ($($Matches.Count))" -ForegroundColor $ColorSchema.Header
+    Write-Host "  GRIMOIRE  /  Search results ($($Found.Count))" -ForegroundColor $ColorSchema.Header
     Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
     Write-Host ""
 
-    foreach ($tool in $Matches) {
+    foreach ($tool in $Found) {
         Write-Host "  [$($tool.Key)]  $($tool.Name)  " -NoNewline -ForegroundColor $tool.Color
         Write-Host "v$($tool.Version)" -ForegroundColor $ColorSchema.Info
         Write-Host "       $($tool.Description)" -ForegroundColor $ColorSchema.Info
@@ -719,7 +719,7 @@ function Select-FromMatches {
     Write-Host -NoNewline "  Enter selection: " -ForegroundColor $ColorSchema.Menu
     $pick = (Read-Host).Trim().ToUpper()
     if ($pick -eq 'B' -or $pick -eq '') { return $null }
-    return ($Matches | Where-Object { $_.Key -eq $pick } | Select-Object -First 1)
+    return ($Found | Where-Object { $_.Key -eq $pick } | Select-Object -First 1)
 }
 
 # ===========================
@@ -761,7 +761,7 @@ do {
         if ($query) {
             $found = Find-Tool -Query $query
             if ($found.Count -gt 0) {
-                $chosen = Select-FromMatches -Matches $found
+                $chosen = Select-FromMatches -Found $found
                 if ($chosen) { Invoke-Tool -Tool $chosen }
             } else {
                 Write-Host ""
@@ -779,7 +779,7 @@ do {
         # so 'pyre' or '18' jumps straight to the tool from the main menu.
         $found = Find-Tool -Query $CatSelection
         if ($found.Count -gt 0) {
-            $chosen = Select-FromMatches -Matches $found
+            $chosen = Select-FromMatches -Found $found
             if ($chosen) { Invoke-Tool -Tool $chosen }
             continue
         }

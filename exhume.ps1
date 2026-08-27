@@ -176,7 +176,7 @@ function Get-DriveRoots {
 
     # Fixed local drives only — skip CD-ROM, network, and removable by default.
     $drives = Get-PSDrive -PSProvider FileSystem -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -match '^[A-Z]$' -and $_.Used -ne $null }
+        Where-Object { $_.Name -match '^[A-Z]$' -and $null -ne $_.Used }
     return @($drives | ForEach-Object { "$($_.Name):\" })
 }
 

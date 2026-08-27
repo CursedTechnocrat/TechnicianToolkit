@@ -269,7 +269,7 @@ function Get-TaskAudit {
     $output = [System.Collections.Generic.List[object]]::new()
     foreach ($t in $raw) {
         $isMicrosoft  = $t.TaskPath -like '\Microsoft\*'
-        $lastRunStale = ($t.LastRunTime -ne $null -and $t.LastRunTime -lt $cutoff -and $t.LastRunTime -gt [datetime]'1900-01-01')
+        $lastRunStale = ($null -ne $t.LastRunTime -and $t.LastRunTime -lt $cutoff -and $t.LastRunTime -gt [datetime]'1900-01-01')
         $hasFailed    = ($t.LastTaskResult -notin $successCodes)
         $isDisabled   = ($t.State -eq 'Disabled')
 

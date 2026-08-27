@@ -597,7 +597,6 @@ if ($Unattended) {
 
         # Status line if hosts are already known
         if ($script:DiscoveredHosts.Count -gt 0) {
-            $portScanned = ($script:DiscoveredHosts | Where-Object { $_.OpenPorts.Count -gt 0 -or $_.OpenPorts -ne $null }).Count
             Write-Host ("  Inventory: {0} host(s) in memory" -f $script:DiscoveredHosts.Count) -ForegroundColor $C.Info
 
             $lastSeen = $script:DiscoveredHosts | Select-Object -Last 1 -ExpandProperty LastSeen

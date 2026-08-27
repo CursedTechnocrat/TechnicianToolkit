@@ -183,10 +183,11 @@ function Invoke-RemoteTool {
         [string]$ScriptFile,
         [string]$ComputerName,
         [string]$ToolName,
-        [scriptblock]$RemoteArgs = {}
+        [hashtable]$ScriptArgs = @{ Unattended = $true }
     )
 
-    $localScript  = Join-Path $ScriptPath $ScriptFile
+    $localScript   = Join-Path $ScriptPath $ScriptFile
+    $localModule   = Join-Path $ScriptPath 'TechnicianToolkit.psm1'
     $remoteTempDir = "C:\Temp\ShadeToolkit"
     $remoteScript  = "$remoteTempDir\$ScriptFile"
 
@@ -204,18 +205,27 @@ function Invoke-RemoteTool {
             $null = New-Item -Path $dir -ItemType Directory -Force
         } -ArgumentList $remoteTempDir -ErrorAction Stop
 
-        # Copy script to remote machine
+        # Copy the tool to the remote machine. The shared module goes with it --
+        # every tool's bootstrap needs TechnicianToolkit.psm1 beside the script, and
+        # a remote endpoint may have no route to GitHub to download it itself.
         Write-Host "  [*] Copying $ScriptFile to $ComputerName..." -ForegroundColor $ColorSchema.Progress
         Copy-Item -Path $localScript -Destination $remoteTempDir -ToSession $Session -ErrorAction Stop
+        if (Test-Path $localModule) {
+            Copy-Item -Path $localModule -Destination $remoteTempDir -ToSession $Session -ErrorAction Stop
+        } else {
+            Write-Host "  [!] TechnicianToolkit.psm1 not found locally - the remote tool will try to download it." -ForegroundColor $ColorSchema.Warning
+        }
 
         # Execute the script remotely
         Write-Host "  [*] Executing $ToolName on $ComputerName..." -ForegroundColor $ColorSchema.Progress
         Write-Host ""
 
+        # A WinRM runspace has no console, so any Read-Host prompt would stall the
+        # run. Every tool is invoked with -Unattended (plus any tool-specific args).
         Invoke-Command -Session $Session -ScriptBlock {
-            param($scriptPath)
-            & $scriptPath
-        } -ArgumentList $remoteScript -ErrorAction Stop
+            param($scriptPath, $scriptArgs)
+            & $scriptPath @scriptArgs
+        } -ArgumentList $remoteScript, $ScriptArgs -ErrorAction Stop
 
         Write-Host ""
 
@@ -259,6 +269,7 @@ function Invoke-RemoteSigil {
     )
 
     $localScript   = Join-Path $ScriptPath "sigil.ps1"
+    $localModule   = Join-Path $ScriptPath 'TechnicianToolkit.psm1'
     $remoteTempDir = "C:\Temp\ShadeToolkit"
     $remoteScript  = "$remoteTempDir\sigil.ps1"
 
@@ -273,15 +284,20 @@ function Invoke-RemoteSigil {
         } -ArgumentList $remoteTempDir -ErrorAction Stop
 
         Copy-Item -Path $localScript -Destination $remoteTempDir -ToSession $Session -ErrorAction Stop
+        if (Test-Path $localModule) {
+            Copy-Item -Path $localModule -Destination $remoteTempDir -ToSession $Session -ErrorAction Stop
+        } else {
+            Write-Host "  [!] TechnicianToolkit.psm1 not found locally - the remote tool will try to download it." -ForegroundColor $ColorSchema.Warning
+        }
 
         Write-Host "  [*] Executing S.I.G.I.L. baseline on $ComputerName (applying all categories)..." -ForegroundColor $ColorSchema.Progress
         Write-Host ""
 
-        # Run sigil non-interactively by piping "A" to select all categories
+        # -Categories A selects every baseline category; -Unattended keeps SIGIL off
+        # Read-Host, which a WinRM runspace cannot answer.
         Invoke-Command -Session $Session -ScriptBlock {
-            param($script)
-            # Invoke sigil passing "A" for all categories then Enter to exit
-            & $script
+            param($sigilScript)
+            & $sigilScript -Unattended -Categories A
         } -ArgumentList $remoteScript
 
         Write-Host ""
@@ -422,7 +438,8 @@ do {
         }
         "3" {
             Write-Host ""
-            Write-Host "  [!!] RESTORATION may reboot the target machine if updates require it." -ForegroundColor $ColorSchema.Warning
+            Write-Host "  [!!] RESTORATION will install updates on the target machine." -ForegroundColor $ColorSchema.Warning
+            Write-Host "       It runs without -AutoReboot, so a required reboot is reported, not performed." -ForegroundColor $ColorSchema.Warning
             Write-Host -NoNewline "  Continue? (Y/N): " -ForegroundColor $ColorSchema.Warning
             $confirm = (Read-Host).Trim().ToUpper()
             if ($confirm -eq "Y") {

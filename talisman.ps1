@@ -1005,7 +1005,7 @@ $orgName    = EscHtml $subName
 $subIdEsc   = EscHtml $subId
 $regionDisp = ($regions | ForEach-Object { EscHtml $_ }) -join ', '
 
-$defenderStatBox = if ($defenderPct -ne $null) {
+$defenderStatBox = if ($null -ne $defenderPct) {
     $dClass = if ($defenderPct -ge 70) { 'ok' } elseif ($defenderPct -ge 40) { 'warn' } else { 'err' }
     "<div class='tk-summary-card $dClass'><div class='tk-summary-num'>$defenderPct%</div><div class='tk-summary-lbl'>Defender Secure Score</div></div>"
 } else {

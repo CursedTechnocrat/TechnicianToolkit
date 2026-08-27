@@ -530,6 +530,7 @@ function Build-PortalReport {
   <div class="tk-summary-row">
     <div class="tk-summary-card $($Verdict.Class)"><div class="tk-summary-num">$(EscHtml $Verdict.Verdict)</div><div class="tk-summary-lbl">VPN Posture</div></div>
     <div class="tk-summary-card info"><div class="tk-summary-num">$($Vpns.Count)</div><div class="tk-summary-lbl">Built-in VPNs</div></div>
+    <div class="tk-summary-card $(if ($insecureCount -gt 0) { 'err' } else { 'ok' })"><div class="tk-summary-num">$insecureCount</div><div class="tk-summary-lbl">Insecure Auth / Encryption</div></div>
     <div class="tk-summary-card info"><div class="tk-summary-num">$allUserCount</div><div class="tk-summary-lbl">All-user (Always-On candidate)</div></div>
     <div class="tk-summary-card info"><div class="tk-summary-num">$($Triggers.Count)</div><div class="tk-summary-lbl">App Triggers</div></div>
     <div class="tk-summary-card info"><div class="tk-summary-num">$($Nrpt.Count)</div><div class="tk-summary-lbl">NRPT Entries</div></div>
