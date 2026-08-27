@@ -5,6 +5,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.8.3] - 2026-08-27
+
+### Fixed
+- **`H.E.R.A.L.D.` still lost the HTML report after 3.8.1, and the stack trace narrowed it to argument preparation.** The field run reported `System.ArgumentException: Argument types do not match` at the call statement with **no `Build-HeraldReport` frame** in `$_.ScriptStackTrace` — so the fault is in evaluating or binding the arguments, not inside the function, and 3.8.1 had already removed every type constraint that could explain binding. That left the two composite argument expressions at the call site.
+
+  Both are now gone. `$groupSummary` — the one collection built as a `System.Collections.Generic.List[object]` — was wrapped in `@()` at the call site; it is now passed as-is. The inline `Get-Date` is its own statement. Every argument is assigned on its own line into a hashtable and the call is splatted, so a future failure names the argument by line number instead of implicating the whole call.
+
+  Normalisation inside `Build-HeraldReport` no longer uses `@()` either. A new `ConvertTo-HeraldArray` enumerates item by item into an `ArrayList`, which cannot raise a conversion error whatever it is handed, and returns `[object[]]` with the unary comma so an empty collection comes back as an empty array rather than `$null`.
+
+  **Honest scope:** `@()` over a `List[object]` was observed throwing this exact exception in the sandbox (PowerShell 7.4.6), and 3.8.1 could not render at all when handed a bare list, while 3.8.3 renders the full 89 KB report from the same input. But repeated sandbox tests around this construct produced **contradictory results** — several were traced to artifacts in the test scaffolding rather than PowerShell — and eight other shipped tools use `return @($rows)` over a `List[object]` without known trouble. The Windows PowerShell 5.1 behaviour is therefore **not proven**. This change removes the dependency on `@()` in the failing path rather than asserting a root cause.
+
+- **The failure path now reports the runtime type of every report argument.** This is the one thing the previous rounds of diagnostics could not supply; it is emitted defensively so a fault while reporting cannot mask the fault being reported.
+
+### Changed
+- New Pester `Describe 'ConvertTo-HeraldArray'` pins every shape the report is handed: a `List[object]` built with `New-Object` (the group summary's exact construction), an empty list, a plain array, `$null`, a scalar, a string that must not split into characters, and a hashtable that must not enumerate into entries. `Describe 'HERALD report parameters'` was updated to require the helper and to assert `@()` is no longer applied to either collection.
+
+---
+
 ## [3.8.1] - 2026-08-27
 
 ### Fixed

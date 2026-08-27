@@ -55,7 +55,7 @@
     PS C:\> .\herald.ps1 -Server dc01.contoso.com -StaleDays 60
 
 .NOTES
-    Version : 3.8.1
+    Version : 3.8.3
 
 #>
 
@@ -282,6 +282,38 @@ function ConvertTo-LdapFilterValue {
         }
     }
     return $sb.ToString()
+}
+
+function ConvertTo-HeraldArray {
+    <#
+        Normalises any value to [object[]] by explicit enumeration.
+
+        The report was repeatedly lost to System.ArgumentException "Argument
+        types do not match" raised while preparing the arguments for
+        Build-HeraldReport. The group summary is the one collection built as a
+        System.Collections.Generic.List[object], and @() over that list is the
+        construct under suspicion - but sandbox testing gave contradictory
+        results, so this does not rely on @() behaving. Enumerating item by item
+        into an ArrayList cannot raise a conversion error whatever the input is.
+    #>
+    param($Value)
+
+    $acc = New-Object System.Collections.ArrayList
+
+    if ($null -ne $Value) {
+        $isEnumerable = ($Value -is [System.Collections.IEnumerable]) -and
+                        ($Value -isnot [string]) -and
+                        ($Value -isnot [System.Collections.IDictionary])
+        if ($isEnumerable) {
+            foreach ($item in $Value) { [void]$acc.Add($item) }
+        } else {
+            [void]$acc.Add($Value)
+        }
+    }
+
+    # The unary comma stops PowerShell unrolling the result on output, so an
+    # empty collection comes back as an empty array rather than $null.
+    return , [object[]]$acc.ToArray()
 }
 
 function Get-FaultLocation {
@@ -827,8 +859,8 @@ function Build-HeraldReport {
 
     # Normalise here instead of at the binder, so .Count is still safe on a
     # single-element or empty result.
-    $Roster       = @($Roster)
-    $GroupSummary = @($GroupSummary)
+    $Roster       = ConvertTo-HeraldArray $Roster
+    $GroupSummary = ConvertTo-HeraldArray $GroupSummary
 
     $tkConfig  = Get-TKConfig
     $orgPrefix = ''
@@ -1249,7 +1281,7 @@ function Build-HeraldReport {
   </div>
 </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'H.E.R.A.L.D. v3.8.1')
+"@ + (Get-TKHtmlFoot -ScriptName 'H.E.R.A.L.D. v3.8.3')
 
     return $html
 }
@@ -1519,12 +1551,31 @@ $stamp      = Get-Date -Format 'yyyyMMdd_HHmmss'
 $reportPath = Join-Path $outDir "HERALD_$stamp.html"
 $csvPath    = Join-Path $outDir "HERALD_Roster_$stamp.csv"
 
+# Every argument is prepared on its own line and the call is splatted.
+#
+# The report was lost twice to a System.ArgumentException raised at the call
+# statement with no Build-HeraldReport frame in the stack trace, which places the
+# fault in evaluating or binding the arguments rather than inside the function.
+# The type constraints that could have explained binding are already gone
+# (3.8.1), leaving the two composite argument expressions -- and both are now
+# removed. The @() that wrapped $groupSummary is redundant because
+# Build-HeraldReport normalises both collections itself, and the inline Get-Date
+# becomes its own statement.
+#
+# One value per line means a failure names the argument by line number rather
+# than implicating the whole call, and splatting binds by name from a plain
+# hashtable.
+$reportArgs = @{}
+
 try {
-    $html = Build-HeraldReport -Roster $roster -GroupSummary @($groupSummary) `
-                               -DomainName $domainName `
-                               -ReportTimestamp (Get-Date -Format 'yyyy-MM-dd HH:mm:ss') `
-                               -Counts $counts `
-                               -AuthPolicy $authPolicy
+    $reportArgs['Roster']          = $roster
+    $reportArgs['GroupSummary']    = $groupSummary
+    $reportArgs['DomainName']      = $domainName
+    $reportArgs['ReportTimestamp'] = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    $reportArgs['Counts']          = $counts
+    $reportArgs['AuthPolicy']      = $authPolicy
+
+    $html = Build-HeraldReport @reportArgs
     [System.IO.File]::WriteAllText($reportPath, $html, [System.Text.Encoding]::UTF8)
 } catch {
     # Name the exception type and the originating line: "could not save the
@@ -1540,6 +1591,21 @@ try {
     foreach ($frame in ($_.ScriptStackTrace -split "`r?`n")) {
         if ($frame.Trim()) { Write-Info $frame.Trim() }
     }
+
+    # The runtime type of each argument is the one thing the previous rounds of
+    # diagnostics could not supply. Reported defensively so that a fault here
+    # cannot mask the fault being reported.
+    try {
+        $shapes = foreach ($argName in ($reportArgs.Keys | Sort-Object)) {
+            $argValue = $reportArgs[$argName]
+            if ($null -eq $argValue) { "$argName=<null>" }
+            else { "{0}={1}" -f $argName, $argValue.GetType().FullName }
+        }
+        if ($shapes) { Write-Info ("argument types: " + ($shapes -join ', ')) }
+    } catch {
+        Write-Info 'argument types could not be read.'
+    }
+
     Write-TKError -ScriptName 'herald' -Category 'Report' `
         -Message "$($_.Exception.GetType().FullName): $($_.Exception.Message) [$where]"
 }

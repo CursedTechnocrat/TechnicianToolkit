@@ -1143,10 +1143,82 @@ Describe 'HERALD report parameters' {
 
     It 'normalises the two collections inside the body instead' {
         # This is what the removed [array] constraints were buying; without it
-        # .Count on a single object or a null would misbehave.
+        # .Count on a single object or a null would misbehave. It deliberately
+        # does not use @(), which is the construct suspected of raising
+        # "Argument types do not match" over a List[object].
         $text = $script:BuildReportFn.Extent.Text
-        $text | Should -Match '\$Roster\s*=\s*@\(\$Roster\)'
-        $text | Should -Match '\$GroupSummary\s*=\s*@\(\$GroupSummary\)'
+        $text | Should -Match '\$Roster\s*=\s*ConvertTo-HeraldArray\s+\$Roster'
+        $text | Should -Match '\$GroupSummary\s*=\s*ConvertTo-HeraldArray\s+\$GroupSummary'
+        $text | Should -Not -Match '@\(\$Roster\)'
+        $text | Should -Not -Match '@\(\$GroupSummary\)'
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ConvertTo-HeraldArray — the report was lost repeatedly to an ArgumentException
+# ("Argument types do not match") raised while preparing its arguments. The one
+# collection built as a System.Collections.Generic.List[object] is the group
+# summary, and @() over such a list is the construct under suspicion. Rather
+# than depend on @() behaving, the helper enumerates explicitly; these cases pin
+# that it handles every shape the report is given.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'ConvertTo-HeraldArray' {
+    BeforeAll {
+        $heraldPath = Join-Path $PSScriptRoot '..\herald.ps1'
+        $errs = $null
+        $ast  = [System.Management.Automation.Language.Parser]::ParseFile($heraldPath, [ref]$null, [ref]$errs)
+        $fn = $ast.FindAll({
+            param($n)
+            $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'ConvertTo-HeraldArray'
+        }, $true) | Select-Object -First 1
+        $script:ConvertLoaded = $null -ne $fn
+        if ($fn) { . ([scriptblock]::Create($fn.Extent.Text)) }
+    }
+
+    It 'is defined in herald.ps1' {
+        $script:ConvertLoaded | Should -BeTrue
+    }
+
+    It 'converts a List[object] built with New-Object' {
+        # The exact construction the group summary uses.
+        $list = New-Object System.Collections.Generic.List[object]
+        $list.Add([PSCustomObject]@{ Name = 'G1' })
+        $list.Add([PSCustomObject]@{ Name = 'G2' })
+        $result = ConvertTo-HeraldArray $list
+        $result -is [array] | Should -BeTrue
+        $result.Count | Should -Be 2
+    }
+
+    It 'converts an empty List[object] to an empty array, not null' {
+        $list = New-Object System.Collections.Generic.List[object]
+        $result = ConvertTo-HeraldArray $list
+        $result -is [array] | Should -BeTrue
+        $result.Count | Should -Be 0
+    }
+
+    It 'passes an array through with its contents intact' {
+        $result = ConvertTo-HeraldArray @(1, 2, 3)
+        $result.Count | Should -Be 3
+    }
+
+    It 'returns an empty array for null rather than null' {
+        $result = ConvertTo-HeraldArray $null
+        $result -is [array] | Should -BeTrue
+        $result.Count | Should -Be 0
+    }
+
+    It 'wraps a scalar as a single element' {
+        (ConvertTo-HeraldArray ([PSCustomObject]@{ A = 1 })).Count | Should -Be 1
+    }
+
+    It 'does not split a string into characters' {
+        $result = ConvertTo-HeraldArray 'hello'
+        $result.Count | Should -Be 1
+        $result[0] | Should -Be 'hello'
+    }
+
+    It 'keeps a hashtable as one element rather than enumerating its entries' {
+        (ConvertTo-HeraldArray @{ a = 1; b = 2 }).Count | Should -Be 1
     }
 }
 
