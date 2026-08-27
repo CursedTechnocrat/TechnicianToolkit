@@ -1105,6 +1105,52 @@ Describe 'HERALD password-policy verdicts' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# HERALD report parameters must stay untyped — a live 91-account domain on
+# Windows PowerShell 5.1 threw System.ArgumentException "Argument types do not
+# match" binding arguments into Build-HeraldReport, at the call statement and
+# therefore before any section guard could catch it, losing the whole report. A
+# type constraint is the only thing that can fail at a call site, so the
+# parameters are deliberately unconstrained and the collections are normalised
+# inside the function instead.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'HERALD report parameters' {
+    BeforeAll {
+        $heraldPath = Join-Path $PSScriptRoot '..\herald.ps1'
+        $errs = $null
+        $ast  = [System.Management.Automation.Language.Parser]::ParseFile($heraldPath, [ref]$null, [ref]$errs)
+        $script:BuildReportFn = $ast.FindAll({
+            param($n)
+            $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'Build-HeraldReport'
+        }, $true) | Select-Object -First 1
+    }
+
+    It 'defines Build-HeraldReport' {
+        $script:BuildReportFn | Should -Not -BeNullOrEmpty
+    }
+
+    It 'declares every parameter without a type constraint' {
+        $params = $script:BuildReportFn.Body.ParamBlock.Parameters
+        $params.Count | Should -BeGreaterThan 0
+        foreach ($p in $params) {
+            $name = $p.Name.VariablePath.UserPath
+            # Attributes on a ParameterAst include its type constraint, if any.
+            $constraint = @($p.Attributes | Where-Object {
+                $_ -is [System.Management.Automation.Language.TypeConstraintAst]
+            })
+            $constraint.Count | Should -Be 0 -Because "binding a constraint on -$name is what lost the report on PowerShell 5.1"
+        }
+    }
+
+    It 'normalises the two collections inside the body instead' {
+        # This is what the removed [array] constraints were buying; without it
+        # .Count on a single object or a null would misbehave.
+        $text = $script:BuildReportFn.Extent.Text
+        $text | Should -Match '\$Roster\s*=\s*@\(\$Roster\)'
+        $text | Should -Match '\$GroupSummary\s*=\s*@\(\$GroupSummary\)'
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # License header compliance — the toolkit is GPL-3.0-or-later and its whole
 # distribution model is "copy one .ps1 onto the machine and run it". A lone
 # script that travels without its notice cannot tell the next technician what

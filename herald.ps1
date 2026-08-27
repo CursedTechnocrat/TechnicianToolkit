@@ -55,7 +55,7 @@
     PS C:\> .\herald.ps1 -Server dc01.contoso.com -StaleDays 60
 
 .NOTES
-    Version : 3.8
+    Version : 3.8.1
 
 #>
 
@@ -791,6 +791,9 @@ function Invoke-ReportSection {
         Write-Fail "Report section '$Name' failed to render: $($_.Exception.Message)"
         Write-Info "$($_.Exception.GetType().FullName) at $where"
         Write-Info $_.InvocationInfo.Line.Trim()
+        foreach ($frame in ($_.ScriptStackTrace -split "`r?`n")) {
+            if ($frame.Trim()) { Write-Info $frame.Trim() }
+        }
         Write-TKError -ScriptName 'herald' -Category 'Report' `
             -Message "Section '$Name': $($_.Exception.GetType().FullName): $($_.Exception.Message) [$where]"
         return "<tr><td colspan=""$ColSpan""><strong>This section could not be rendered.</strong> See the console output for the failure detail.</td></tr>"
@@ -798,14 +801,34 @@ function Invoke-ReportSection {
 }
 
 function Build-HeraldReport {
+    <#
+        Parameters are deliberately untyped.
+
+        A live 91-account domain on Windows PowerShell 5.1 threw
+        System.ArgumentException "Argument types do not match" at the *call site*
+        of this function - before any section rendered, so none of the section
+        guards could catch it and no report was written. A type constraint makes
+        the binder convert every argument on the way in, and that conversion is
+        the only thing that can fail at a call statement.
+
+        Nothing here needs the coercion: the body enumerates and indexes, and the
+        two collections are normalised with @() below, which is what the [array]
+        constraint was buying. Removing the constraints removes the failure mode
+        outright rather than guessing which of them was at fault.
+    #>
     param(
-        [array]    $Roster,
-        [array]    $GroupSummary,
-        [string]   $DomainName,
-        [string]   $ReportTimestamp,
-        [hashtable]$Counts,
+        $Roster,
+        $GroupSummary,
+        $DomainName,
+        $ReportTimestamp,
+        $Counts,
         $AuthPolicy
     )
+
+    # Normalise here instead of at the binder, so .Count is still safe on a
+    # single-element or empty result.
+    $Roster       = @($Roster)
+    $GroupSummary = @($GroupSummary)
 
     $tkConfig  = Get-TKConfig
     $orgPrefix = ''
@@ -1226,7 +1249,7 @@ function Build-HeraldReport {
   </div>
 </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'H.E.R.A.L.D. v3.8')
+"@ + (Get-TKHtmlFoot -ScriptName 'H.E.R.A.L.D. v3.8.1')
 
     return $html
 }
@@ -1511,6 +1534,12 @@ try {
     Write-Fail "Could not save the HTML report: $($_.Exception.Message)"
     Write-Info "$($_.Exception.GetType().FullName) at $where"
     Write-Info $_.InvocationInfo.Line.Trim()
+    # The stack trace distinguishes a failure at the call statement (parameter
+    # binding) from one inside the callee. Without it, a call-site line number
+    # is ambiguous between the two.
+    foreach ($frame in ($_.ScriptStackTrace -split "`r?`n")) {
+        if ($frame.Trim()) { Write-Info $frame.Trim() }
+    }
     Write-TKError -ScriptName 'herald' -Category 'Report' `
         -Message "$($_.Exception.GetType().FullName): $($_.Exception.Message) [$where]"
 }

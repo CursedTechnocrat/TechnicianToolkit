@@ -5,6 +5,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.8.1] - 2026-08-27
+
+### Fixed
+- **`H.E.R.A.L.D.` lost the HTML report to a parameter-binding failure, which the 3.7.1 diagnostics finally located.** A live 91-account domain kept throwing `System.ArgumentException: Argument types do not match` with no report written. 3.7.1's per-section guards did not fire and the fault location came back as **the call statement itself** — `$html = Build-HeraldReport -Roster $roster …` — which places the failure in argument binding, before any section renders. That also explains why the section guards could not help: there was nothing to guard yet.
+
+  `Build-HeraldReport` declared `[array]$Roster`, `[array]$GroupSummary`, `[string]$DomainName`, `[string]$ReportTimestamp` and `[hashtable]$Counts`. A type constraint makes the binder convert each argument on the way in, and a conversion is the only thing that can throw at a call statement. Which constraint was at fault was never isolated — the same `[array]` and `[hashtable]` constraints on `Build-AccountRoster` bound the same run's data without complaint — so rather than guess a third time, all six parameters are now unconstrained and the two collections are normalised with `@()` in the body, which is what the `[array]` constraints were actually buying. The failure mode is removed rather than narrowed.
+
+  Verified byte-identical rendering against the reconstructed failing run (only the version string differs), and that the untyped parameters still handle a single non-array object, an empty collection, and `$null` — the shapes `[array]` had been normalising.
+
+- **Both catch blocks now print `$_.ScriptStackTrace`.** A call-site line number alone is ambiguous between a binding failure and an exception inside the callee; the stack trace separates them in one run. Its absence is why 3.7.1 needed a second round-trip to the field to localise this.
+
+### Changed
+- New Pester `Describe 'HERALD report parameters'` walks the AST and fails if any `Build-HeraldReport` parameter regains a type constraint, and asserts the two in-body `@()` normalisations are still present. The lesson is encoded where it will be enforced rather than only in a comment.
+
+---
+
 ## [3.8.0] - 2026-08-27
 
 ### Added
