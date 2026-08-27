@@ -88,6 +88,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | 24 | **talon.ps1** | **T.A.L.O.N.** — Tracks Anomalies & Locates Otherwise-silent Nastiness | Persistence / autoruns audit — Run keys, startup folders, services, tasks, WMI subscriptions, IFEO hijacks, Winlogon, HTML report |
 | 25 | **totem.ps1** | **T.O.T.E.M.** — Trusted Observer of Transparent Execution Modules | TPM health audit — presence, spec version, ownership, readiness, BitLocker dependency, endorsement key, HTML report |
 | 26 | **paladin.ps1** | **P.A.L.A.D.I.N.** — Protection Auditor: Logs Antivirus, Defender, Intrusions & Notifications | AV / Microsoft Defender health audit — core state, real-time / cloud / sample, signature freshness, scan history, threats, exclusions, ASR rules, third-party AV, service health, recent events, HTML report |
+| 27 | **herald.ps1** | **H.E.R.A.L.D.** — Hierarchy, Entitlements, Roles & Access-Level Directory | Active Directory account roster — full name / alias / access level per account, nested group expansion, privileged group membership, review CSV, HTML report |
 
 ### Network & Remote
 
@@ -447,6 +448,27 @@ Interactive Active Directory user and group management tool. Requires RSAT (auto
 
 ---
 
+### H.E.R.A.L.D.
+
+Answers the question a customer asks at review time: *who has an account here, and what can each of them do?* Produces the roster an MSP hands to a client for sign-off and cleanup — every account as **Full Name / alias / Role** — plus the evidence behind each role. Read-only; HERALD never modifies the directory.
+
+- **Effective, not direct, membership** — group membership is expanded server-side with the LDAP in-chain matching rule (`1.2.840.113556.1.4.1941`), so an account that reaches Domain Admins three nested groups deep is still reported as a Domain Administrator
+- **Primary-group membership resolved separately** — an account whose *primary* group has been switched to Domain Admins does not appear in that group's member list at all, and is folded in explicitly
+- **Groups resolved by well-known RID, not by name** — a renamed or localised `Domain Admins` is still found
+- **Four role tiers**:
+  - **Domain Administrator** — Enterprise / Schema / Domain Admins, `BUILTIN\Administrators`, Group Policy Creator Owners
+  - **Delegated Administrator** — Account / Server / Backup / Print Operators, DnsAdmins, Key Admins, Enterprise Key Admins, Cert Publishers, Remote Management Users
+  - **Elevated (Custom Group)** — member of a customer-created group whose name matches `-AdminGroupPattern` (the "IT Admins" / "Helpdesk Operators" groups a built-ins-only audit misses)
+  - **Standard User** — no privileged membership found
+- **Account type** is reported separately from role — `User`, `Service Account` (SPN present or `svc_`-style naming), `Built-in (KDC)`, `Built-in (Guest)`
+- **Review flags for the cleanup conversation** — never signed in, inactive beyond `-StaleDays`, locked out, password expired / never expires / never set, trusted for unconstrained delegation, unused administrator, and *former privileged account* (an `adminCount` stamp with no current privileged membership — an ex-administrator whose ACL is still detached from its OU)
+- **Review CSV** alongside the HTML — the same roster with two deliberately empty columns (`Action (Keep/Disable/Delete)`, `Customer Notes`) so the customer can mark it up and hand it straight back
+- Report sections: access levels at a glance, privileged accounts, full roster, privileged group membership (with effective members per group), and accounts flagged for review
+- `-IncludeDisabled` widens the roster past enabled accounts; `-SearchBase` scopes to one OU; `-Server` targets a specific domain controller; `-StaleDays` sets the inactivity threshold (default 90); `-SkipCustomGroupScan` limits the audit to built-in groups; `-NoCsv` suppresses the CSV
+- Requires the RSAT ActiveDirectory module (offered for install if missing)
+
+---
+
 ### A.R.T.I.F.A.C.T.
 
 Monitors certificate health across the local machine and remote hosts — surfaces expiring and expired certificates before they cause outages.
@@ -773,7 +795,7 @@ Outlook data-file discovery that inventories every PST (and optionally OST) on t
 | Robocopy (built into Windows) | `revenant.ps1`, `archive.ps1` |
 | BitLocker-capable Windows edition (Pro/Enterprise) | `cipher.ps1` |
 | WinRM enabled on target machine | `shade.ps1`, `gargoyle.ps1` (remote mode) |
-| RSAT ActiveDirectory module | `citadel.ps1` (auto-installed if missing) |
+| RSAT ActiveDirectory module | `citadel.ps1`, `herald.ps1` (auto-installed if missing) |
 | Az PowerShell modules | `talisman.ps1`, `tendril.ps1` (optional, auto-installed if -IncludeAzureRbac) |
 | Microsoft.Graph modules | `reliquary.ps1`, `golem.ps1`, `wraith.ps1`, `conclave.ps1`, `grove.ps1`, `tendril.ps1` (auto-installed if missing) |
 | ExchangeOnlineManagement module | `tendril.ps1` (optional, auto-installed if -IncludeExchange) |
@@ -782,7 +804,7 @@ Outlook data-file discovery that inventories every PST (and optionally OST) on t
 | Microsoft 365 tenant + Global Reader or equivalent | `reliquary.ps1`, `golem.ps1`, `wraith.ps1`, `conclave.ps1`, `grove.ps1`, `tendril.ps1` |
 | Microsoft Intune licence + DeviceManagement Graph permissions | `golem.ps1`, `tendril.ps1` |
 | RoleManagement.Read.Directory + AuditLog.Read.All Graph scopes | `wraith.ps1`, `tendril.ps1` |
-| On-premises Active Directory domain membership | `citadel.ps1` |
+| On-premises Active Directory domain membership | `citadel.ps1`, `herald.ps1` |
 
 ---
 
@@ -884,6 +906,9 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\sigil.ps1"
 
 # C.I.T.A.D.E.L. — Active Directory management
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\citadel.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/citadel.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
+# H.E.R.A.L.D. — AD account roster & access levels
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\herald.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/herald.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # A.R.T.I.F.A.C.T. — Certificate health monitor
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\artifact.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/artifact.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
@@ -994,6 +1019,7 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\cipher.ps1        # BitLocker drive encryption management
 .\sigil.ps1         # Security baseline enforcement
 .\citadel.ps1       # Active Directory user and group management
+.\herald.ps1        # Active Directory account roster and access-level report
 .\artifact.ps1         # Certificate health and SSL expiry monitor
 .\talon.ps1          # Persistence / autoruns audit
 .\totem.ps1          # TPM health audit
@@ -1063,6 +1089,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **cipher.ps1** | `LogDirectory` (read) — Export action writes the PDF report there unless `-OutputPath` overrides it. `OrgName` is shown in the report header. Drive and action are selected interactively at runtime |
 | **sigil.ps1** | None — categories selected interactively; screensaver timeout editable in script (default 600 s) |
 | **citadel.ps1** | None — user search and action selected interactively; stale threshold is 90 days (editable in script) |
+| **herald.ps1** | `LogDirectory` (read) — HTML and CSV are written there unless `-OutputPath` overrides it; `OrgName` is shown in the report header. `-StaleDays <int>` inactivity threshold (default 90), `-SearchBase <dn>` to scope to one OU, `-Server <dc>` to target a domain controller, `-IncludeDisabled`, `-AdminGroupPattern <regex>` for customer-created admin groups (default `(?i)(admin\|operator\|helpdesk\|privileg)`), `-SkipCustomGroupScan`, `-NoCsv` |
 | **artifact.ps1** | None — stores and targets selected interactively or via `-Targets` parameter |
 | **talon.ps1** | None — every persistence surface is enumerated unconditionally |
 | **totem.ps1** | None — reads TPM state, BitLocker protectors, and endorsement key info unconditionally |
@@ -1113,6 +1140,7 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **cipher.ps1** | Console only by default; the Export action writes `CIPHER_Report_<timestamp>.pdf` (status + recovery keys) to `-OutputPath` or the log directory, keeping `.html` if no Edge/Chrome is available to render it |
 | **sigil.ps1** | Log directory — `SIGIL_BaselineLog_<timestamp>.csv` |
 | **citadel.ps1** | Log directory — `CITADEL_Stale_<timestamp>.html`; `CITADEL_PwdExpiry_<timestamp>.html` |
+| **herald.ps1** | Log directory (or `-OutputPath`) — `HERALD_<timestamp>.html` (account roster & access levels), `HERALD_Roster_<timestamp>.csv` (same roster with blank Action / Notes columns for customer review) |
 | **artifact.ps1** | Log directory — `ARTIFACT_<timestamp>.html` (cert inventory & SSL results) |
 | **talon.ps1** | Log directory — `TALON_<timestamp>.html` (persistence / autoruns audit) |
 | **totem.ps1** | Log directory — `TOTEM_<timestamp>.html` (TPM health audit) |

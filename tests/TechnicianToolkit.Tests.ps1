@@ -582,6 +582,7 @@ Describe 'Tier-mapper data tables' {
         $script:BeaconPath  = Join-Path $script:ToolkitRoot 'beacon.ps1'
         $script:PortalPath  = Join-Path $script:ToolkitRoot 'portal.ps1'
         $script:ConjurePath = Join-Path $script:ToolkitRoot 'conjure.ps1'
+        $script:HeraldPath  = Join-Path $script:ToolkitRoot 'herald.ps1'
 
         function Import-ScriptHashtable {
             param([string]$ScriptPath, [string]$VarName)
@@ -757,6 +758,152 @@ Describe 'Tier-mapper data tables' {
             # winget's 0x8A150011 is surfaced by $LASTEXITCODE as -1978335215;
             # Resolve-InstallExit relies on this conversion to find the entry.
             ('0x{0:X8}' -f (-1978335215 -band 4294967295)) | Should -Be '0x8A150011'
+        }
+    }
+
+    Context 'HERALD: $PrivilegedGroupTiers group table' {
+        It 'covers the four forest/domain-wide administrative groups' {
+            $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'PrivilegedGroupTiers'
+            $t | Should -Not -BeNullOrEmpty
+            foreach ($g in 'Enterprise Admins', 'Schema Admins', 'Domain Admins', 'Administrators') {
+                $t[$g].Role | Should -Be 'Domain Administrator' -Because "$g confers full domain control"
+            }
+        }
+        It 'classifies the built-in operator groups as delegated administrators' {
+            $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'PrivilegedGroupTiers'
+            foreach ($g in 'Account Operators', 'Server Operators', 'Backup Operators', 'Print Operators') {
+                $t[$g].Role | Should -Be 'Delegated Administrator'
+            }
+        }
+        It 'resolves domain-scoped groups by their well-known RID' {
+            # Resolving by RID rather than name is what makes the audit survive a
+            # renamed or localised "Domain Admins".
+            $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'PrivilegedGroupTiers'
+            $t['Domain Admins'].Rid       | Should -Be 512
+            $t['Domain Admins'].Scope     | Should -Be 'Domain'
+            $t['Enterprise Admins'].Rid   | Should -Be 519
+            $t['Schema Admins'].Rid       | Should -Be 518
+        }
+        It 'resolves BUILTIN groups against the S-1-5-32 authority' {
+            $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'PrivilegedGroupTiers'
+            $t['Administrators'].Scope     | Should -Be 'Builtin'
+            $t['Administrators'].Rid       | Should -Be 544
+            $t['Backup Operators'].Scope   | Should -Be 'Builtin'
+            $t['Backup Operators'].Rid     | Should -Be 551
+        }
+        It 'resolves DnsAdmins by name, since it has no fixed RID' {
+            $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'PrivilegedGroupTiers'
+            $t['DnsAdmins'].Scope | Should -Be 'Name'
+            $t['DnsAdmins'].Rid   | Should -BeNullOrEmpty
+        }
+        It 'every entry carries a known role and a non-empty reason' {
+            $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'PrivilegedGroupTiers'
+            foreach ($k in $t.Keys) {
+                $t[$k].Role   | Should -BeIn @('Domain Administrator', 'Delegated Administrator') -Because "group $k must map to a role HERALD ranks"
+                $t[$k].Reason | Should -Not -BeNullOrEmpty -Because "group $k must explain to the customer why it matters"
+                $t[$k].Scope  | Should -BeIn @('Domain', 'Builtin', 'Name')
+            }
+        }
+    }
+
+    Context 'HERALD: $RoleTiers rank table' {
+        It 'ranks the roles from most to least privileged' {
+            $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'RoleTiers'
+            $t['Domain Administrator'].Rank    | Should -Be 1
+            $t['Delegated Administrator'].Rank | Should -Be 2
+            $t['Elevated (Custom Group)'].Rank | Should -Be 3
+            $t['Standard User'].Rank           | Should -Be 4
+        }
+        It 'covers every role $PrivilegedGroupTiers can produce' {
+            # Build-AccountRoster indexes $RoleTiers by the Role string a group
+            # carries; a role with no tier entry would throw at classification time.
+            $groups = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'PrivilegedGroupTiers'
+            $roles  = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'RoleTiers'
+            foreach ($k in $groups.Keys) {
+                $roles.Contains($groups[$k].Role) | Should -BeTrue -Because "role '$($groups[$k].Role)' (from $k) must have a rank"
+            }
+        }
+        It 'assigns every role a badge class the shared CSS defines' {
+            $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'RoleTiers'
+            foreach ($k in $t.Keys) {
+                $t[$k].Badge | Should -BeIn @('ok', 'warn', 'err', 'info')
+                $t[$k].Blurb | Should -Not -BeNullOrEmpty -Because "role $k is explained to the customer in the report"
+            }
+        }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HERALD LDAP / DN helpers — HERALD interpolates distinguished names straight
+# into LDAP filter strings, so the escaping helper is the boundary between a
+# correct query and one whose meaning a stray parenthesis has changed. The
+# helpers are pure, so they are extracted by AST and exercised directly rather
+# than dot-sourcing the tool (which launches its main flow on import).
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'HERALD LDAP and DN helpers' {
+    BeforeAll {
+        # Pester 5 restricts Should to It bodies, so the "did the helper load?"
+        # check is recorded here and asserted in its own It below rather than
+        # being asserted inline.
+        $heraldPath = Join-Path $PSScriptRoot '..\herald.ps1'
+        $errs = $null
+        $ast  = [System.Management.Automation.Language.Parser]::ParseFile($heraldPath, [ref]$null, [ref]$errs)
+        $script:HeraldHelpersLoaded = @()
+        foreach ($name in 'ConvertTo-LdapFilterValue', 'Get-DnLeaf', 'Get-DnParent') {
+            $fn = $ast.FindAll({
+                param($n)
+                $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq $name
+            }, $true) | Select-Object -First 1
+            if ($fn) {
+                . ([scriptblock]::Create($fn.Extent.Text))
+                $script:HeraldHelpersLoaded += $name
+            }
+        }
+    }
+
+    It 'herald.ps1 defines the LDAP and DN helpers' {
+        foreach ($name in 'ConvertTo-LdapFilterValue', 'Get-DnLeaf', 'Get-DnParent') {
+            $script:HeraldHelpersLoaded | Should -Contain $name -Because "herald.ps1 must define $name"
+        }
+    }
+
+    Context 'ConvertTo-LdapFilterValue' {
+        It 'escapes the RFC 4515 reserved characters' {
+            ConvertTo-LdapFilterValue 'a(b)c' | Should -Be 'a\28b\29c'
+            ConvertTo-LdapFilterValue 'a*b'   | Should -Be 'a\2ab'
+            ConvertTo-LdapFilterValue 'a\b'   | Should -Be 'a\5cb'
+        }
+        It 'escapes a distinguished name containing parentheses' {
+            ConvertTo-LdapFilterValue 'CN=Admins (Legacy),DC=contoso,DC=com' |
+                Should -Be 'CN=Admins \28Legacy\29,DC=contoso,DC=com'
+        }
+        It 'passes an ordinary distinguished name through unchanged' {
+            $dn = 'CN=Domain Admins,CN=Users,DC=contoso,DC=com'
+            ConvertTo-LdapFilterValue $dn | Should -Be $dn
+        }
+        It 'returns an empty string for null or empty input' {
+            ConvertTo-LdapFilterValue $null | Should -Be ''
+            ConvertTo-LdapFilterValue ''    | Should -Be ''
+        }
+    }
+
+    Context 'Get-DnLeaf / Get-DnParent' {
+        It 'reads the leaf value of a distinguished name' {
+            Get-DnLeaf 'CN=Jane Doe,OU=Staff,DC=contoso,DC=com' | Should -Be 'Jane Doe'
+        }
+        It 'reads the container a distinguished name sits in' {
+            Get-DnParent 'CN=Jane Doe,OU=Staff,DC=contoso,DC=com' | Should -Be 'OU=Staff,DC=contoso,DC=com'
+        }
+        It 'does not split on an escaped comma inside a CN' {
+            # "Doe, Jane" is stored as CN=Doe\, Jane — splitting naively on every
+            # comma would report the manager as "Doe" and the OU as " Jane,OU=...".
+            Get-DnLeaf   'CN=Doe\, Jane,OU=Staff,DC=contoso,DC=com' | Should -Be 'Doe, Jane'
+            Get-DnParent 'CN=Doe\, Jane,OU=Staff,DC=contoso,DC=com' | Should -Be 'OU=Staff,DC=contoso,DC=com'
+        }
+        It 'returns an empty string for null, empty, or single-component input' {
+            Get-DnLeaf   $null              | Should -Be ''
+            Get-DnParent ''                 | Should -Be ''
+            Get-DnParent 'DC=com'           | Should -Be ''
         }
     }
 }
