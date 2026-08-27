@@ -1,0 +1,107 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    PHASE 00 SPIKE — throwaway.
+
+    This project exists to answer one question: can a WPF app that hosts
+    PowerShell 7 in-process be published as a self-contained single-file .exe
+    and actually run a real toolkit script on a machine with no PowerShell 7
+    installed?
+
+    Microsoft does not officially support Microsoft.PowerShell.SDK together
+    with PublishSingleFile, so this is deliberately built and measured before
+    any of the real application is written.
+
+    Note what is NOT set here: IncludeAllContentForSelfExtract. The spike first
+    tries the plain single-file configuration; that property is the documented
+    fallback and is passed on the command line only if the plain build fails.
+  -->
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>TechnicianToolkit.Spike</AssemblyName>
+    <RootNamespace>TechnicianToolkit.Spike</RootNamespace>
+
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+
+    <!-- Trimming must stay off: it strips the reflection metadata the
+         PowerShell engine resolves cmdlets and types through. -->
+    <PublishTrimmed>false</PublishTrimmed>
+
+    <!-- The app requests Administrator so that Assert-AdminPrivilege and
+         Invoke-AdminElevation never take their failure branches. -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+
+    <!-- PowerShell needs real globalization data; invariant mode breaks it. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+
+    <!-- The SDK warns that single-file publishing is unverified for some of
+         its transitive dependencies. That warning is the thing under test, so
+         it must not fail the build. -->
+    <NoWarn>$(NoWarn);IL3000;NETSDK1179</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- GeneratePathProperty exposes $(PkgMicrosoft_PowerShell_SDK), which the
+         module-remap target below needs. -->
+    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.4.6" GeneratePathProperty="true" />
+  </ItemGroup>
+
+  <!--
+    THE FIX THAT MAKES SINGLE-FILE WORK.
+
+    The SDK ships PowerShell's built-in modules (CimCmdlets, Utility,
+    Management, Security, Diagnostics, WSMan) as *content* files under a
+    RID-relative path: contentFiles/any/any/runtimes/win/lib/net8.0/Modules.
+    Assemblies get flattened into the bundle root, but content keeps its
+    relative path — so the modules extract to runtimes\win\lib\net8.0\Modules
+    while PowerShell only ever looks in $PSHOME\Modules. Every built-in cmdlet
+    then fails to resolve, including Get-CimInstance, which 35 sites depend on.
+
+    Re-linking them to Modules\** puts them where $PSHOME expects. The unix
+    copies are dropped: this is a Windows-only application and they are dead
+    weight in the bundle.
+  -->
+  <Target Name="RemapPowerShellModules" BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <_PSBuiltInModule Include="$(PkgMicrosoft_PowerShell_SDK)\contentFiles\any\any\runtimes\win\lib\net8.0\Modules\**\*" />
+      <Content Include="@(_PSBuiltInModule)">
+        <Link>Modules\%(RecursiveDir)%(Filename)%(Extension)</Link>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </Content>
+    </ItemGroup>
+  </Target>
+
+  <!-- Drop the stranded RID-path copies so the bundle carries one set. -->
+  <Target Name="DropRidPathModules" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish
+        Remove="@(ResolvedFileToPublish)"
+        Condition="$([System.String]::Copy('%(ResolvedFileToPublish.RelativePath)').Replace('/', '\').Contains('runtimes\unix\lib\net8.0\Modules\')) OR
+                   $([System.String]::Copy('%(ResolvedFileToPublish.RelativePath)').Replace('/', '\').Contains('runtimes\win\lib\net8.0\Modules\'))" />
+    </ItemGroup>
+  </Target>
+
+  <!--
+    Embed exactly what the spike needs to run: one real read-only tool and the
+    shared module it imports. Same LogicalName scheme the launcher prototype
+    used, so the extraction logic carries over unchanged.
+  -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\ward.ps1">
+      <LogicalName>TKScripts.ward.ps1</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\TechnicianToolkit.psm1">
+      <LogicalName>TKScripts.TechnicianToolkit.psm1</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>

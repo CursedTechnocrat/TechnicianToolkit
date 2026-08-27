@@ -35,3 +35,14 @@ $RECYCLE.BIN/
 
 # ─── Claude Code ──────────────────────────────────────────────────────────────
 .claude/settings.local.json
+
+# ─── .NET build output ────────────────────────────────────────────────────────
+# The launcher prototype was only ever built in CI, so the repo had no .NET
+# ignores. The desktop app is built locally, so it needs them.
+bin/
+obj/
+dist/
+dist-*/
+
+# Phase 00 spike probe reports
+probe-*.txt

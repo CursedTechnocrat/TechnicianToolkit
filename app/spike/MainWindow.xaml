@@ -1,0 +1,46 @@
+<Window x:Class="TechnicianToolkit.Spike.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Technician Toolkit — Phase 00 Spike"
+        Height="700" Width="1000"
+        Background="#101413">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   Text="Phase 00 spike — PowerShell 7 hosted in-process"
+                   Foreground="#5BC0AE" FontFamily="Segoe UI" FontSize="16"
+                   FontWeight="SemiBold" Margin="0,0,0,10" />
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+            <Button x:Name="CheckRuntimeButton" Content="1 — Check runtime"
+                    Padding="14,7" Margin="0,0,8,0" Click="OnCheckRuntime" />
+            <Button x:Name="RunWardButton" Content="2 — Run WARD"
+                    Padding="14,7" Margin="0,0,8,0" Click="OnRunWard" />
+            <Button x:Name="ClearButton" Content="Clear"
+                    Padding="14,7" Margin="0,0,8,0" Click="OnClear" />
+            <TextBlock x:Name="StatusText" Text="Ready" VerticalAlignment="Center"
+                       Foreground="#7F8C87" FontFamily="Segoe UI" Margin="8,0,0,0" />
+        </StackPanel>
+
+        <Border Grid.Row="2" Background="#0B0F0E" BorderBrush="#2B3432" BorderThickness="1">
+            <ScrollViewer x:Name="OutputScroller" VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Auto" Padding="10">
+                <RichTextBox x:Name="OutputBox" IsReadOnly="True" Background="Transparent"
+                             BorderThickness="0" Foreground="#B7C2BD"
+                             FontFamily="Consolas, Courier New" FontSize="12.5"
+                             VerticalScrollBarVisibility="Disabled"
+                             HorizontalScrollBarVisibility="Disabled" />
+            </ScrollViewer>
+        </Border>
+
+        <TextBlock Grid.Row="3" x:Name="ProgressText" Text=""
+                   Foreground="#C79A5A" FontFamily="Segoe UI" FontSize="11"
+                   Margin="0,8,0,0" />
+    </Grid>
+</Window>

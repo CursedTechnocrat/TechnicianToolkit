@@ -29,7 +29,11 @@
         Import-Module "$PSScriptRoot\TechnicianToolkit.psm1" -Force
 #>
 
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+# Forcing UTF-8 keeps the box-drawing banners intact when a console is attached.
+# When one is not — a GUI host, a WinRM runspace, a scheduled task — the setter
+# throws "The handle is invalid", so this must never be fatal. The module runs
+# this at import time, which means every tool would hit it on its first line.
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
 
 #region -- Logging Helpers ---------------------------------------------------
 

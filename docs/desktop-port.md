@@ -1,6 +1,14 @@
 # Desktop Port — turning the toolkit into one portable application
 
-**Status:** planning · **Target release:** 5.0 — *bringing it together to be portable*
+**Status:** phase 00 complete · **Target release:** 5.0 — *bringing it together to be portable*
+
+> **Phase 00 outcome — the approach is viable.** A single-file self-contained WPF
+> app hosting PowerShell 7 loads the engine, resolves `$PSHOME`, runs CIM, and
+> carries the toolkit's console output, prompts, and streams through a custom
+> host. It needs two non-obvious build settings that nothing in the error
+> messages points at. See [`app/spike/README.md`](../app/spike/README.md) for the
+> build recipe and the full findings; the corrections it forced are folded into
+> the sections below.
 
 The suite ships today as 41 standalone PowerShell scripts plus a prototype `.exe`
 launcher. Version 5.0 replaces that arrangement with a single signed Windows
@@ -72,8 +80,24 @@ scraped text, cancellation through `PowerShell.Stop()`, and — via a custom
 process gives none of that. It also removes the last external dependency: the
 target machine needs no PowerShell at all.
 
-*Cost:* roughly a 150 MB executable, and 11 cmdlet call sites to modernize. Both
-are bounded and both are known.
+*Cost:* 11 cmdlet call sites to modernize, and an 83 MB executable — about half
+the 150 MB originally budgeted.
+
+**Two build settings are mandatory** (phase 00 established both; neither is
+hinted at by the error you get without it):
+
+1. `IncludeAllContentForSelfExtract=true`. Without it, constructing
+   `PSHostUserInterface` throws `TypeInitializationException` on
+   `PowerShellConfig` before a single script runs — PowerShell derives `$PSHOME`
+   from `Assembly.Location`, which is empty under single-file. It fails inside
+   the host constructor, so no script-level `try/catch` can reach it.
+2. **Re-link PowerShell's built-in modules to `Modules\**`.** The SDK ships
+   CimCmdlets, Utility, Management, Security, Diagnostics and WSMan as *content*
+   under `contentFiles/any/any/runtimes/win/lib/net8.0/Modules/`. Assemblies
+   flatten into the bundle root but content keeps its RID-relative path, so the
+   modules extract somewhere PowerShell never looks and every built-in cmdlet
+   fails to resolve — `Get-CimInstance` included, which 35 sites depend on. See
+   the `RemapPowerShellModules` target in the spike's project file.
 
 ### Scripts extract to disk and run by path — never from a string
 
@@ -98,7 +122,14 @@ read-only ones. Document it plainly rather than trying to be clever about it.
 
 The custom `PSHost` is the load-bearing component of the whole port. All 3,512
 `Write-Host` calls and all 220 prompts route through it — which is precisely why no
-tool script needs rewriting to gain a GUI.
+tool script needs rewriting to gain a GUI. **Verified in phase 00:** the module's
+own `Write-Ok` / `Write-Warn` / `Write-Fail` / `Write-Info` / `Write-Step` /
+`Write-Section` helpers all arrived with their colors intact, alongside
+`Clear-Host`, `Read-Host`, `Write-Progress`, and the warning and verbose streams.
+
+Two rows below were wrong before the spike and are corrected here: PowerShell 7
+has no `RawUI.Clear()` — `Clear-Host` calls `SetBufferContents` with a rectangle
+of all `-1` — and a script's `exit` never reaches `SetShouldExit` at all.
 
 | What the script does | Where it lands in the app | Implemented by |
 |---|---|---|
@@ -107,7 +138,7 @@ tool script needs rewriting to gain a GUI.
 | `Read-Host -AsSecureString` | Masked password dialog | `UI.ReadLineAsSecureString` |
 | Yes / No / Cancel prompts | Button row beneath the question | `UI.PromptForChoice` |
 | `Write-Progress` | Determinate progress bar on the run | `UI.WriteProgress` |
-| `Clear-Host` (37 sites) | Clears the output pane | `RawUI.Clear` |
+| `Clear-Host` (37 sites) | Clears the output pane | `RawUI.SetBufferContents` |
 | Warning / Error / Verbose streams | Severity-tinted lines; errors collected for the run summary | `PSDataCollection` handlers |
 | `Start-Transcript` | Degrades to a no-op; the app logs the run itself | already wrapped in `try/catch` |
 
@@ -143,10 +174,21 @@ else in the suite blocks the move.
 |---|---|---|---|
 | `augur.ps1:154`, `auspex.ps1:690`, `citadel.ps1:156`, `forge.ps1:136,380,383`, `sigil.ps1:608` | `Get-WmiObject` was removed in PowerShell 7 — 7 sites across 5 files | Replace with `Get-CimInstance`; `-Namespace` carries over unchanged | must fix |
 | `gargoyle.ps1:332–344` | `Get-EventLog` was removed in PowerShell 7 — 4 sites | Replace with `Get-WinEvent -FilterHashtable`, which keeps `-ComputerName` | must fix |
-| `TechnicianToolkit.psm1:32` | `[Console]::OutputEncoding` throws when no console is attached | Wrap in `try/catch` | **crashes app** |
-| `covenant.ps1:984–985`, `restoration.ps1:360–361` | `[Console]::KeyAvailable` / `ReadKey` in press-a-key-to-skip loops | Guard on a host-capability check; skip the poll entirely when hosted | **crashes app** |
+| `TechnicianToolkit.psm1:32` | `[Console]::OutputEncoding` throws `"The handle is invalid"` when no console is attached | Wrap in `try/catch` | ~~crashes app~~ **DONE** |
+| `covenant.ps1:984–985`, `restoration.ps1:360–361` | `[Console]::KeyAvailable` / `ReadKey` in press-a-key-to-skip loops | Guard on a host-capability check; skip the poll entirely when hosted | must fix |
 | `scryer.ps1:108` | `[Console]::Clear()` bypasses the host | Use `Clear-Host`, which the custom host implements | must fix |
 | `grimoire.ps1` ×4 | Same `[Console]::Clear()`, but in the hub the app replaces | Leave alone — console mode still uses it | no action |
+
+**Severity corrected by the spike.** `[Console]::OutputEncoding` was rated
+"crashes app". It does not: it surfaces as a *non-terminating error record* and
+the module still imports. It was fixed anyway — the module runs it at import
+time, so without the fix all 41 tools open with a spurious error. Windows
+PowerShell 5.1 was re-checked afterwards and still sets UTF-8 when a console is
+attached, so the standalone script path does not regress.
+
+The `[Console]::KeyAvailable` sites are **not** yet verified either way; they sit
+behind interactive branches the spike never reached. Treat their severity as
+unknown until a prompt-heavy tool is actually run.
 
 ### Found while scanning
 
@@ -250,21 +292,29 @@ arrangement for open-source tooling.
 
 ## Phases
 
-### 00 — Spike: prove the runtime · 2–3 days
+### 00 — Spike: prove the runtime · ~~2–3 days~~ **DONE**
 
-Everything downstream assumes something Microsoft does not officially support.
-Find out now, on a throwaway branch, not in month two.
+Everything downstream assumed something Microsoft does not officially support.
+Settled in [`app/spike/`](../app/spike/).
 
-- Publish a bare WPF app referencing `Microsoft.PowerShell.SDK` as self-contained
-  single-file for `win-x64`, and confirm it starts
-- Run one real read-only tool — `ward.ps1` — through a minimal custom host and see
-  its colored output
-- Measure the resulting binary; confirm `win-arm64` publishes too
-- **In parallel:** submit the SignPath Foundation application
+- ✅ Single-file self-contained WPF + `Microsoft.PowerShell.SDK` publishes and
+  starts — once the two build settings above are applied
+- ✅ Engine loads: PowerShell 7.4.6 (Core), `$PSHOME` resolves, `Get-CimInstance`
+  works
+- ✅ The host carries the toolkit's colored output, prompts, progress, and
+  streams — driven through the real module's own helpers
+- ✅ 83 MB `win-x64` / 80 MB `win-arm64`, one `.exe` and nothing beside it
+- ⬜ **WARD end to end.** It reaches its admin gate cleanly with zero error
+  records, but the probe build is `asInvoker`, so the audit never runs. Needs one
+  elevated run.
+- ⬜ **Clean VM.** This machine has PowerShell 7 installed independently, so
+  "the `.exe` carries its own engine" is not yet honestly proven.
+- ⬜ **ARM64 on real hardware.** It bundles; it has never been executed.
+- ⬜ **SignPath Foundation application** — still to submit, still the longest
+  lead time in the plan.
 
-**Exit:** a single `.exe` on a clean VM with no PowerShell 7 installed runs WARD end
-to end. **If it fails:** fall back to `IncludeAllContentForSelfExtract`; if that
-also fails, ship an exe-plus-folder and reconsider shelling out.
+The three open boxes are cheap and should be closed before phase 02 commits to
+the architecture, but none of them blocks starting phase 01.
 
 ### 01 — Engine · 1–2 weeks
 
@@ -326,7 +376,8 @@ without leaving the window.
 
 | Risk | Why it bites | Response |
 |---|---|---|
-| **high** — PowerShell SDK with single-file publish | Microsoft does not officially support the combination; assembly resolution can fail only at runtime, on the target machine | Phase 00 exists solely to settle this. Test on a clean VM, never on the dev box |
+| ~~**high**~~ **retired** — PowerShell SDK with single-file publish | Both failure modes found and fixed in phase 00; neither was discoverable from its error message | Locked in via two build settings. Keep the spike's `--probe` check in CI so a dependency bump cannot silently reintroduce either |
+| **low** — the clean-VM claim is unverified | The dev box has PowerShell 7 installed independently, so a stray dependency on it would not show up here | One run on a VM with no PowerShell 7 before phase 02 |
 | **med** — SignPath application lead time | It is an application with a review, not a purchase | Submitted during phase 00. Unsigned builds trip SmartScreen, which is fatal for a tool run on client machines |
 | **med** — Antivirus false positives | A single-file executable that unpacks scripts to disk and runs them elevated is, structurally, what a dropper looks like | Signing helps most. Submit to Microsoft and the major vendors for whitelisting ahead of the release |
 | **med** — Prompt-heavy tools | `covenant.ps1` has 26 `Read-Host` calls and `citadel.ps1` has 17; a separate dialog for each is a miserable experience | Prefer `-Unattended` driven by the generated form. Treat modal prompts as the fallback path, not the primary one |
