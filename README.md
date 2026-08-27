@@ -88,7 +88,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | 24 | **talon.ps1** | **T.A.L.O.N.** — Tracks Anomalies & Locates Otherwise-silent Nastiness | Persistence / autoruns audit — Run keys, startup folders, services, tasks, WMI subscriptions, IFEO hijacks, Winlogon, HTML report |
 | 25 | **totem.ps1** | **T.O.T.E.M.** — Trusted Observer of Transparent Execution Modules | TPM health audit — presence, spec version, ownership, readiness, BitLocker dependency, endorsement key, HTML report |
 | 26 | **paladin.ps1** | **P.A.L.A.D.I.N.** — Protection Auditor: Logs Antivirus, Defender, Intrusions & Notifications | AV / Microsoft Defender health audit — core state, real-time / cloud / sample, signature freshness, scan history, threats, exclusions, ASR rules, third-party AV, service health, recent events, HTML report |
-| 27 | **herald.ps1** | **H.E.R.A.L.D.** — Hierarchy, Entitlements, Roles & Access-Level Directory | Active Directory account roster — full name / alias / access level per account, nested group expansion, privileged group membership, review CSV, HTML report |
+| 27 | **herald.ps1** | **H.E.R.A.L.D.** — Hierarchy, Entitlements, Roles & Access-Level Directory | Active Directory authentication & access review — domain password/lockout policy with verdicts, full name / alias / access level per account, nested group expansion, privileged group membership, review CSV, HTML report |
 
 ### Network & Remote
 
@@ -450,8 +450,11 @@ Interactive Active Directory user and group management tool. Requires RSAT (auto
 
 ### H.E.R.A.L.D.
 
-Answers the question a customer asks at review time: *who has an account here, and what can each of them do?* Produces the roster an MSP hands to a client for sign-off and cleanup — every account as **Full Name / alias / Role** — plus the evidence behind each role. Read-only; HERALD never modifies the directory.
+Answers the two questions a customer security review asks: *what authentication controls are in place*, and *who has an account here and what can each of them do?* Produces the roster an MSP hands to a client for sign-off and cleanup — every account as **Full Name / alias / Role** — plus the evidence behind each role. Read-only; HERALD never modifies the directory.
 
+- **Authentication policy, answered in prose** — reads the default domain password and lockout policy and scores each setting **Strong / Acceptable / Weak** against a stated baseline, then writes the four items an access questionnaire asks for (password length and complexity, password history, password expiration, lockout for failed attempts) as finished sentences the technician can paste into the response
+- **Fine-grained password policies (PSOs) enumerated** — a PSO overrides the domain default for the principals it targets, so answering from the default alone can be flatly wrong; any that exist are listed with their precedence and targets
+- The meaningful zeros are interpreted rather than printed: lockout threshold `0` means lockout is **off** (Weak), max password age `0` means passwords **never expire** (reported, not failed — NIST SP 800-63B advises against routine expiry), and lockout duration `0` means **locked until an administrator unlocks**, the strictest setting rather than the weakest
 - **Effective, not direct, membership** — group membership is expanded server-side with the LDAP in-chain matching rule (`1.2.840.113556.1.4.1941`), so an account that reaches Domain Admins three nested groups deep is still reported as a Domain Administrator
 - **Primary-group membership resolved separately** — an account whose *primary* group has been switched to Domain Admins does not appear in that group's member list at all, and is folded in explicitly
 - **Groups resolved by well-known RID, not by name** — a renamed or localised `Domain Admins` is still found
@@ -1140,7 +1143,7 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **cipher.ps1** | Console only by default; the Export action writes `CIPHER_Report_<timestamp>.pdf` (status + recovery keys) to `-OutputPath` or the log directory, keeping `.html` if no Edge/Chrome is available to render it |
 | **sigil.ps1** | Log directory — `SIGIL_BaselineLog_<timestamp>.csv` |
 | **citadel.ps1** | Log directory — `CITADEL_Stale_<timestamp>.html`; `CITADEL_PwdExpiry_<timestamp>.html` |
-| **herald.ps1** | Log directory (or `-OutputPath`) — `HERALD_<timestamp>.html` (account roster & access levels), `HERALD_Roster_<timestamp>.csv` (same roster with blank Action / Notes columns for customer review) |
+| **herald.ps1** | Log directory (or `-OutputPath`) — `HERALD_<timestamp>.html` (authentication policy + account roster & access levels), `HERALD_Roster_<timestamp>.csv` (same roster with blank Action / Notes columns for customer review) |
 | **artifact.ps1** | Log directory — `ARTIFACT_<timestamp>.html` (cert inventory & SSL results) |
 | **talon.ps1** | Log directory — `TALON_<timestamp>.html` (persistence / autoruns audit) |
 | **totem.ps1** | Log directory — `TOTEM_<timestamp>.html` (TPM health audit) |

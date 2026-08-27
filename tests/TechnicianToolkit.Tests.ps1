@@ -806,6 +806,36 @@ Describe 'Tier-mapper data tables' {
         }
     }
 
+    Context 'HERALD: $PasswordPolicyBaseline table' {
+        It 'covers the four settings the access questionnaire asks about' {
+            $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'PasswordPolicyBaseline'
+            $t | Should -Not -BeNullOrEmpty
+            foreach ($k in 'MinPasswordLength', 'ComplexityEnabled', 'PasswordHistoryCount',
+                           'MaxPasswordAgeDays', 'LockoutThreshold') {
+                $t.Contains($k) | Should -BeTrue -Because "the questionnaire asks about $k"
+            }
+        }
+        It 'gives every setting a Kind the verdict logic can evaluate' {
+            $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'PasswordPolicyBaseline'
+            foreach ($k in $t.Keys) {
+                $t[$k].Kind  | Should -BeIn @('Number', 'Threshold', 'Age', 'Boolean', 'Duration')
+                $t[$k].Label | Should -Not -BeNullOrEmpty
+                $t[$k].Why   | Should -Not -BeNullOrEmpty -Because "$k is explained to the customer in the report"
+            }
+        }
+        It 'treats lockout duration as a Duration, not a plain number' {
+            # 0 minutes means "until an administrator unlocks", the strictest
+            # setting available; scoring it as higher-is-better calls it Weak.
+            $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'PasswordPolicyBaseline'
+            $t['LockoutDurationMinutes'].Kind | Should -Be 'Duration'
+        }
+        It 'flags reversible encryption as bad when enabled' {
+            $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'PasswordPolicyBaseline'
+            $t['ReversibleEncryptionEnabled'].Kind | Should -Be 'Boolean'
+            $t['ReversibleEncryptionEnabled'].Good | Should -BeFalse
+        }
+    }
+
     Context 'HERALD: $RoleTiers rank table' {
         It 'ranks the roles from most to least privileged' {
             $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'RoleTiers'
@@ -969,6 +999,107 @@ Describe 'HERALD report-section guard' {
         It 'degrades to a bare line number when the error carries no script origin' {
             $rec = [PSCustomObject]@{ InvocationInfo = [PSCustomObject]@{ ScriptLineNumber = 42; ScriptName = '' } }
             Get-FaultLocation $rec | Should -Be 'line 42'
+        }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HERALD password-policy verdicts — the report answers an access questionnaire,
+# so each setting is scored rather than merely printed. The zero cases carry the
+# most meaning and the least intuition: zero lockout threshold disables lockout
+# entirely, zero max age means passwords never expire, and zero lockout duration
+# means locked until an administrator intervenes — the strictest option, not the
+# weakest.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'HERALD password-policy verdicts' {
+    BeforeAll {
+        $heraldPath = Join-Path $PSScriptRoot '..\herald.ps1'
+        $errs = $null
+        $ast  = [System.Management.Automation.Language.Parser]::ParseFile($heraldPath, [ref]$null, [ref]$errs)
+
+        foreach ($name in 'Get-PolicyVerdict', 'Format-PolicyValue') {
+            $fn = $ast.FindAll({
+                param($n)
+                $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq $name
+            }, $true) | Select-Object -First 1
+            if ($fn) { . ([scriptblock]::Create($fn.Extent.Text)) }
+        }
+
+        # Mirror the plain-hashtable map herald builds at load, which the two
+        # helpers read from.
+        $assign = $ast.FindAll({
+            param($n)
+            $n -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+            $n.Left -is [System.Management.Automation.Language.VariableExpressionAst] -and
+            $n.Left.VariablePath.UserPath -eq 'PasswordPolicyBaseline'
+        }, $true) | Select-Object -First 1
+        $ordered = & ([scriptblock]::Create($assign.Right.Extent.Text))
+        $script:PolicyBaseline = @{}
+        foreach ($k in @($ordered.Keys)) { $script:PolicyBaseline[[string]$k] = $ordered[[string]$k] }
+        $PolicyBaseline = $script:PolicyBaseline
+    }
+
+    It 'loaded the baseline the helpers depend on' {
+        # Without this the helpers silently score everything Strong off a null map.
+        $script:PolicyBaseline | Should -Not -BeNullOrEmpty
+        $script:PolicyBaseline.Count | Should -BeGreaterThan 5
+    }
+
+    Context 'password strength' {
+        It 'scores minimum length against the baseline' {
+            Get-PolicyVerdict -Key 'MinPasswordLength' -Value 14 | Should -Be 'Strong'
+            Get-PolicyVerdict -Key 'MinPasswordLength' -Value 8  | Should -Be 'Acceptable'
+            Get-PolicyVerdict -Key 'MinPasswordLength' -Value 6  | Should -Be 'Weak'
+        }
+        It 'requires complexity to be enabled' {
+            Get-PolicyVerdict -Key 'ComplexityEnabled' -Value $true  | Should -Be 'Strong'
+            Get-PolicyVerdict -Key 'ComplexityEnabled' -Value $false | Should -Be 'Weak'
+        }
+        It 'scores password history' {
+            Get-PolicyVerdict -Key 'PasswordHistoryCount' -Value 24 | Should -Be 'Strong'
+            Get-PolicyVerdict -Key 'PasswordHistoryCount' -Value 0  | Should -Be 'Weak'
+        }
+        It 'treats reversible encryption as a finding when enabled' {
+            Get-PolicyVerdict -Key 'ReversibleEncryptionEnabled' -Value $true  | Should -Be 'Weak'
+            Get-PolicyVerdict -Key 'ReversibleEncryptionEnabled' -Value $false | Should -Be 'Strong'
+        }
+    }
+
+    Context 'the zero cases' {
+        It 'calls a zero lockout threshold Weak, because lockout is then off' {
+            Get-PolicyVerdict -Key 'LockoutThreshold' -Value 0  | Should -Be 'Weak'
+            Get-PolicyVerdict -Key 'LockoutThreshold' -Value 5  | Should -Be 'Strong'
+            Get-PolicyVerdict -Key 'LockoutThreshold' -Value 50 | Should -Be 'Weak'
+        }
+        It 'calls a zero lockout duration Strong, because it holds until an admin unlocks' {
+            Get-PolicyVerdict -Key 'LockoutDurationMinutes' -Value 0 | Should -Be 'Strong'
+            Get-PolicyVerdict -Key 'LockoutDurationMinutes' -Value 5 | Should -Be 'Weak'
+        }
+        It 'does not fail a no-expiry policy outright, but does not call it Strong either' {
+            # NIST SP 800-63B advises against routine expiry, so this is reported
+            # for the questionnaire rather than scored as a defect.
+            Get-PolicyVerdict -Key 'MaxPasswordAgeDays' -Value 0   | Should -Be 'Acceptable'
+            Get-PolicyVerdict -Key 'MaxPasswordAgeDays' -Value 90  | Should -Be 'Strong'
+            Get-PolicyVerdict -Key 'MaxPasswordAgeDays' -Value 999 | Should -Be 'Weak'
+        }
+        It 'returns Unknown rather than guessing when the directory gave no value' {
+            Get-PolicyVerdict -Key 'MinPasswordLength' -Value $null | Should -Be 'Unknown'
+            Get-PolicyVerdict -Key 'NoSuchSetting' -Value 1         | Should -Be 'Unknown'
+        }
+    }
+
+    Context 'Format-PolicyValue' {
+        It 'spells out what each meaningful zero means' {
+            Format-PolicyValue -Key 'MaxPasswordAgeDays'     -Value 0 | Should -Be 'Never expires'
+            Format-PolicyValue -Key 'LockoutThreshold'       -Value 0 | Should -Be 'Never locks out'
+            Format-PolicyValue -Key 'LockoutDurationMinutes' -Value 0 | Should -Be 'Until an administrator unlocks'
+        }
+        It 'renders booleans as Enabled / Disabled' {
+            Format-PolicyValue -Key 'ComplexityEnabled' -Value $true  | Should -Be 'Enabled'
+            Format-PolicyValue -Key 'ComplexityEnabled' -Value $false | Should -Be 'Disabled'
+        }
+        It 'appends the unit to a plain number' {
+            Format-PolicyValue -Key 'MinPasswordLength' -Value 14 | Should -Be '14 characters'
         }
     }
 }

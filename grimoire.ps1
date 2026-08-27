@@ -342,8 +342,8 @@ $Tools = @(
         Key         = '27'
         Name        = 'H.E.R.A.L.D.'
         File        = 'herald.ps1'
-        Version     = '3.7.1'
-        Description = 'Active Directory account roster  -  full name / alias / access level per account, nested group expansion, privileged group membership, HTML + review CSV'
+        Version     = '3.8'
+        Description = 'Active Directory account roster  -  domain password & lockout policy verdicts, full name / alias / access level per account, nested group expansion, privileged group membership, HTML + review CSV'
         Color       = 'Cyan'
         Category    = 'Security'
     },

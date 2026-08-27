@@ -55,7 +55,7 @@
     PS C:\> .\herald.ps1 -Server dc01.contoso.com -StaleDays 60
 
 .NOTES
-    Version : 3.7.1
+    Version : 3.8
 
 #>
 
@@ -179,6 +179,61 @@ $RoleTiers = [ordered]@{
 $RoleTierOrder = [string[]]@($RoleTiers.Keys)
 $RoleTierMap   = @{}
 foreach ($roleKey in $RoleTierOrder) { $RoleTierMap[$roleKey] = $RoleTiers[[string]$roleKey] }
+
+# Domain password / lockout policy baseline. The customer questionnaire asks what
+# authentication mechanisms are in place, so each setting is reported with a
+# verdict rather than a bare number — a technician answering an audit needs to
+# know which values will draw a follow-up question.
+#
+# Kind drives how a value is judged:
+#   Number    higher is better; Strong / Acceptable are the floors
+#   Threshold lower is better, but 0 disables the control entirely (always Weak)
+#   Age       lower is better, but 0 means "never expires" (called out, not failed)
+#   Duration  higher is better, but 0 means "until an administrator unlocks",
+#             which is the most restrictive setting rather than the weakest
+#   Boolean   Good names the value that is not a finding
+$PasswordPolicyBaseline = [ordered]@{
+    'MinPasswordLength' = @{
+        Label = 'Minimum password length'; Kind = 'Number'; Strong = 14; Acceptable = 8; Unit = 'characters'
+        Why   = 'Length is the largest single factor in how long a stolen hash resists offline cracking.'
+    }
+    'ComplexityEnabled' = @{
+        Label = 'Password complexity required'; Kind = 'Boolean'; Good = $true
+        Why   = 'Requires three of five character classes and blocks the account name appearing in the password.'
+    }
+    'PasswordHistoryCount' = @{
+        Label = 'Password history'; Kind = 'Number'; Strong = 24; Acceptable = 5; Unit = 'remembered'
+        Why   = 'Stops a user returning straight to a known password at the next change.'
+    }
+    'MaxPasswordAgeDays' = @{
+        Label = 'Maximum password age'; Kind = 'Age'; Strong = 90; Acceptable = 365; Unit = 'days'
+        Why   = 'Auditors generally expect a bounded lifetime. Note that NIST SP 800-63B now advises against routine expiry where length and breach screening are strong, so a deliberate no-expiry policy may be defensible — say so rather than leaving it unexplained.'
+    }
+    'MinPasswordAgeDays' = @{
+        Label = 'Minimum password age'; Kind = 'Number'; Strong = 1; Acceptable = 1; Unit = 'days'
+        Why   = 'At zero a user can cycle through the entire history in one sitting and land back on the same password.'
+    }
+    'LockoutThreshold' = @{
+        Label = 'Account lockout threshold'; Kind = 'Threshold'; Strong = 5; Acceptable = 10; Unit = 'failed attempts'
+        Why   = 'At zero, online password guessing against every account in the domain is never interrupted.'
+    }
+    'LockoutDurationMinutes' = @{
+        Label = 'Account lockout duration'; Kind = 'Duration'; Strong = 15; Acceptable = 15; Unit = 'minutes'
+        Why   = 'A short lockout lets an attacker resume guessing almost immediately.'
+    }
+    'LockoutObservationMinutes' = @{
+        Label = 'Lockout counter resets after'; Kind = 'Number'; Strong = 15; Acceptable = 15; Unit = 'minutes'
+        Why   = 'Resetting the failed-attempt counter quickly widens the window for slow guessing.'
+    }
+    'ReversibleEncryptionEnabled' = @{
+        Label = 'Reversible encryption'; Kind = 'Boolean'; Good = $false
+        Why   = 'Stores passwords in a recoverable form - equivalent to plaintext for anyone who can read the directory.'
+    }
+}
+
+$PolicyKeyOrder = [string[]]@($PasswordPolicyBaseline.Keys)
+$PolicyBaseline = @{}
+foreach ($policyKey in $PolicyKeyOrder) { $PolicyBaseline[$policyKey] = $PasswordPolicyBaseline[[string]$policyKey] }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # BANNER
@@ -429,6 +484,134 @@ function Get-CustomAdminGroup {
 # ACCOUNT COLLECTION & CLASSIFICATION
 # ─────────────────────────────────────────────────────────────────────────────
 
+function Get-PolicyVerdict {
+    <#
+        Judges one policy value against its baseline entry. Returns Strong /
+        Acceptable / Weak, or Unknown when the directory did not supply a value.
+    #>
+    param([string]$Key, $Value)
+
+    if (-not $PolicyBaseline.ContainsKey($Key)) { return 'Unknown' }
+    if ($null -eq $Value)                        { return 'Unknown' }
+
+    $spec = $PolicyBaseline[$Key]
+
+    switch ($spec.Kind) {
+        'Boolean' {
+            if ([bool]$Value -eq [bool]$spec.Good) { return 'Strong' }
+            return 'Weak'
+        }
+        'Threshold' {
+            # 0 disables lockout altogether, which is worse than any large value.
+            if ([int]$Value -eq 0)                  { return 'Weak' }
+            if ([int]$Value -le [int]$spec.Strong)     { return 'Strong' }
+            if ([int]$Value -le [int]$spec.Acceptable) { return 'Acceptable' }
+            return 'Weak'
+        }
+        'Duration' {
+            # 0 keeps the account locked until an administrator intervenes, which
+            # is the most restrictive option available, not the weakest.
+            if ([int]$Value -eq 0)                     { return 'Strong' }
+            if ([int]$Value -ge [int]$spec.Strong)     { return 'Strong' }
+            if ([int]$Value -ge [int]$spec.Acceptable) { return 'Acceptable' }
+            return 'Weak'
+        }
+        'Age' {
+            # 0 means passwords never expire. Flagged for the questionnaire, but
+            # deliberately not called Weak - see the Why text on this entry.
+            if ([int]$Value -eq 0)                     { return 'Acceptable' }
+            if ([int]$Value -le [int]$spec.Strong)     { return 'Strong' }
+            if ([int]$Value -le [int]$spec.Acceptable) { return 'Acceptable' }
+            return 'Weak'
+        }
+        default {
+            if ([int]$Value -ge [int]$spec.Strong)     { return 'Strong' }
+            if ([int]$Value -ge [int]$spec.Acceptable) { return 'Acceptable' }
+            return 'Weak'
+        }
+    }
+}
+
+function Format-PolicyValue {
+    <# Renders a policy value the way a person reading an audit response expects. #>
+    param([string]$Key, $Value)
+
+    if ($null -eq $Value) { return 'Unknown' }
+
+    $spec = $null
+    if ($PolicyBaseline.ContainsKey($Key)) { $spec = $PolicyBaseline[$Key] }
+
+    if ($spec -and $spec.Kind -eq 'Boolean') {
+        if ([bool]$Value) { return 'Enabled' }
+        return 'Disabled'
+    }
+    if ($Key -eq 'MaxPasswordAgeDays'   -and [int]$Value -eq 0) { return 'Never expires' }
+    if ($Key -eq 'LockoutThreshold'     -and [int]$Value -eq 0) { return 'Never locks out' }
+    if ($Key -eq 'LockoutDurationMinutes' -and [int]$Value -eq 0) { return 'Until an administrator unlocks' }
+
+    if ($spec -and $spec.Unit) { return "$Value $($spec.Unit)" }
+    return "$Value"
+}
+
+function Get-AuthenticationPolicy {
+    <#
+        Reads the default domain password and lockout policy, plus any
+        fine-grained password policies (PSOs). PSOs matter because they override
+        the default for the principals they target - answering an access-review
+        questionnaire from the default policy alone can be flatly wrong when one
+        exists over, say, the admin group.
+    #>
+    param([hashtable]$AdCommon)
+
+    $result = [PSCustomObject]@{
+        Available = $false
+        Error     = ''
+        Values    = @{}
+        Pso       = @()
+        PsoError  = ''
+    }
+
+    try {
+        $p = Get-ADDefaultDomainPasswordPolicy @AdCommon -ErrorAction Stop
+    } catch {
+        $result.Error = $_.Exception.Message
+        return $result
+    }
+
+    $result.Available = $true
+    $result.Values = @{
+        MinPasswordLength           = [int]$p.MinPasswordLength
+        ComplexityEnabled           = [bool]$p.ComplexityEnabled
+        PasswordHistoryCount        = [int]$p.PasswordHistoryCount
+        MaxPasswordAgeDays          = [int]$p.MaxPasswordAge.TotalDays
+        MinPasswordAgeDays          = [int]$p.MinPasswordAge.TotalDays
+        LockoutThreshold            = [int]$p.LockoutThreshold
+        LockoutDurationMinutes      = [int]$p.LockoutDuration.TotalMinutes
+        LockoutObservationMinutes   = [int]$p.LockoutObservationWindow.TotalMinutes
+        ReversibleEncryptionEnabled = [bool]$p.ReversibleEncryptionEnabled
+    }
+
+    try {
+        $result.Pso = @(Get-ADFineGrainedPasswordPolicy -Filter * @AdCommon -ErrorAction Stop |
+            ForEach-Object {
+                [PSCustomObject]@{
+                    Name                 = $_.Name
+                    Precedence           = $_.Precedence
+                    MinPasswordLength    = $_.MinPasswordLength
+                    ComplexityEnabled    = $_.ComplexityEnabled
+                    PasswordHistoryCount = $_.PasswordHistoryCount
+                    MaxPasswordAgeDays   = [int]$_.MaxPasswordAge.TotalDays
+                    LockoutThreshold     = $_.LockoutThreshold
+                    AppliesTo            = (@($_.AppliesTo | ForEach-Object { Get-DnLeaf $_ }) -join '; ')
+                }
+            })
+    } catch {
+        $result.PsoError = $_.Exception.Message
+    }
+
+    return $result
+}
+
 function Get-HeraldUser {
     param([hashtable]$AdCommon)
 
@@ -620,7 +803,8 @@ function Build-HeraldReport {
         [array]    $GroupSummary,
         [string]   $DomainName,
         [string]   $ReportTimestamp,
-        [hashtable]$Counts
+        [hashtable]$Counts,
+        $AuthPolicy
     )
 
     $tkConfig  = Get-TKConfig
@@ -639,6 +823,7 @@ function Build-HeraldReport {
     }
 
     $navItems = @(
+        'Authentication Policy',
         'Access Levels at a Glance',
         'Privileged Accounts',
         'Full Account Roster',
@@ -776,6 +961,108 @@ function Build-HeraldReport {
         $flagRows = '<tr><td colspan="6">No accounts raised a review flag.</td></tr>'
     }
 
+    # ── 01 Authentication policy ─────────────────────────────────────────────
+    $policyBadge = @{ Strong = 'ok'; Acceptable = 'warn'; Weak = 'err'; Unknown = 'info' }
+
+    $policyRows = Invoke-ReportSection -Name 'Authentication policy' -ColSpan 4 -Build {
+        if (-not $AuthPolicy.Available) {
+            return "<tr><td colspan=""4"">Domain password policy could not be read: $(EscHtml $AuthPolicy.Error)</td></tr>"
+        }
+        $sb = New-Object System.Text.StringBuilder
+        foreach ($key in $PolicyKeyOrder) {
+            $spec    = $PolicyBaseline[$key]
+            $value   = $AuthPolicy.Values[$key]
+            $verdict = Get-PolicyVerdict -Key $key -Value $value
+            $badge   = $policyBadge[$verdict]
+            [void]$sb.Append(@"
+        <tr>
+          <td><strong>$(EscHtml $spec.Label)</strong></td>
+          <td class="tk-mono">$(EscHtml (Format-PolicyValue -Key $key -Value $value))</td>
+          <td style="white-space:nowrap"><span class="tk-badge-$badge">$(EscHtml $verdict)</span></td>
+          <td>$(EscHtml $spec.Why)</td>
+        </tr>
+"@)
+        }
+        $sb.ToString()
+    }
+
+    # The questionnaire asks four specific things. Answering them in prose here
+    # means the technician can paste the response rather than re-derive it from
+    # the table above.
+    $answerHtml = '<p>The domain password policy could not be read, so these answers must be gathered by hand.</p>'
+    if ($AuthPolicy.Available) {
+        $v = $AuthPolicy.Values
+        $complexity = if ($v.ComplexityEnabled) { 'complexity enforced (three of five character classes, and the account name may not appear in the password)' }
+                      else { '<strong>complexity not enforced</strong>' }
+        # Each branch is written as a finished sentence. An earlier version
+        # capitalised the first character afterwards, which silently did nothing
+        # whenever the sentence opened with a <strong> tag.
+        $expiry = if ($v.MaxPasswordAgeDays -eq 0) {
+            '<strong>Passwords never expire.</strong>'
+        } else {
+            "Passwords expire every $($v.MaxPasswordAgeDays) days, and cannot be changed again for $($v.MinPasswordAgeDays) day(s)."
+        }
+        $lock = if ($v.LockoutThreshold -eq 0) {
+            '<strong>Accounts never lock out</strong>, so online password guessing against the domain is never interrupted.'
+        } else {
+            $dur = if ($v.LockoutDurationMinutes -eq 0) { 'and stay locked until an administrator unlocks them' }
+                   else { "and stay locked for $($v.LockoutDurationMinutes) minutes" }
+            "Accounts lock after $($v.LockoutThreshold) failed attempts $dur, with the failed-attempt counter resetting after $($v.LockoutObservationMinutes) minutes."
+        }
+        $answerHtml = @"
+<p><strong>Password length and complexity.</strong> Minimum $($v.MinPasswordLength) characters, with $complexity.</p>
+<p><strong>Password history.</strong> The last $($v.PasswordHistoryCount) password(s) are remembered and cannot be reused.</p>
+<p><strong>Password expiration.</strong> $expiry</p>
+<p><strong>Lockout for failed attempts.</strong> $lock</p>
+"@
+    }
+
+    $psoHtml = ''
+    if ($AuthPolicy.Available) {
+        if ($AuthPolicy.PsoError) {
+            $psoHtml = "<div class=""tk-info-box""><span class=""tk-info-label"">Fine-grained policies</span> Could not be read: $(EscHtml $AuthPolicy.PsoError). Check by hand before answering — a policy here overrides everything above for the accounts it targets.</div>"
+        } elseif (@($AuthPolicy.Pso).Count -eq 0) {
+            $psoHtml = '<div class="tk-info-box"><span class="tk-info-label">Fine-grained policies</span> None defined, so the settings above apply to every account in the domain.</div>'
+        } else {
+            $psoSb = New-Object System.Text.StringBuilder
+            foreach ($q in $AuthPolicy.Pso) {
+                $qExpiry = if ([int]$q.MaxPasswordAgeDays -eq 0) { 'Never' } else { "$($q.MaxPasswordAgeDays) days" }
+                [void]$psoSb.Append(@"
+        <tr>
+          <td><strong>$(EscHtml $q.Name)</strong></td>
+          <td>$(EscHtml $q.Precedence)</td>
+          <td>$(EscHtml $q.MinPasswordLength)</td>
+          <td>$(EscHtml $q.ComplexityEnabled)</td>
+          <td>$(EscHtml $q.PasswordHistoryCount)</td>
+          <td>$(EscHtml $qExpiry)</td>
+          <td>$(EscHtml $q.LockoutThreshold)</td>
+          <td>$(EscHtml $q.AppliesTo)</td>
+        </tr>
+"@)
+            }
+            $psoHtml = @"
+<div class="tk-info-box">
+  <span class="tk-info-label">Fine-grained policies</span>
+  <strong>$(@($AuthPolicy.Pso).Count) policy(ies) override the defaults above</strong> for the principals they target.
+  Answer the questionnaire from these as well, not from the domain default alone.
+</div>
+<table class="tk-table" style="margin-top:14px">
+  <thead><tr><th>Policy</th><th>Precedence</th><th>Min length</th><th>Complexity</th><th>History</th><th>Max age</th><th>Lockout</th><th>Applies to</th></tr></thead>
+  <tbody>$($psoSb.ToString())</tbody>
+</table>
+"@
+        }
+    }
+
+    $weakCount = 0
+    if ($AuthPolicy.Available) {
+        foreach ($key in $PolicyKeyOrder) {
+            if ((Get-PolicyVerdict -Key $key -Value $AuthPolicy.Values[$key]) -eq 'Weak') { $weakCount++ }
+        }
+    }
+    $policyClass = if (-not $AuthPolicy.Available) { 'info' } elseif ($weakCount -gt 0) { 'err' } else { 'ok' }
+    $policyNum   = if (-not $AuthPolicy.Available) { 'n/a' } else { "$weakCount" }
+
     $adminClass   = if ($Counts.DomainAdmin -gt 4) { 'err' } else { 'warn' }
     $flaggedClass = if ($flagged.Count -gt 0) { 'warn' } else { 'ok' }
 
@@ -820,12 +1107,34 @@ function Build-HeraldReport {
     <div class="tk-summary-num">$($flagged.Count)</div>
     <div class="tk-summary-lbl">Flagged for Review</div>
   </div>
+  <div class="tk-summary-card $policyClass">
+    <div class="tk-summary-num">$policyNum</div>
+    <div class="tk-summary-lbl">Weak Policy Settings</div>
+  </div>
 </div>
 
 <div class="tk-section" id="s01">
   <div class="tk-card-header">
-    <span class="tk-section-title">Access Levels at a Glance</span>
+    <span class="tk-section-title">Authentication Policy</span>
     <span class="tk-section-num">Section 01</span>
+  </div>
+  <div class="tk-card">
+    <div class="tk-info-box">
+      <span class="tk-info-label">Questionnaire answer</span>
+      $answerHtml
+    </div>
+    <table class="tk-table" style="margin-top:18px">
+      <thead><tr><th>Setting</th><th>Configured</th><th>Verdict</th><th>Why it matters</th></tr></thead>
+      <tbody>$policyRows</tbody>
+    </table>
+    $psoHtml
+  </div>
+</div>
+
+<div class="tk-section" id="s02">
+  <div class="tk-card-header">
+    <span class="tk-section-title">Access Levels at a Glance</span>
+    <span class="tk-section-num">Section 02</span>
   </div>
   <div class="tk-card">
     <table class="tk-table">
@@ -840,7 +1149,7 @@ function Build-HeraldReport {
   </div>
 </div>
 
-<div class="tk-section" id="s02">
+<div class="tk-section" id="s03">
   <div class="tk-card-header">
     <span class="tk-section-title">Privileged Accounts</span>
     <span class="tk-section-num">$($privileged.Count) account(s)</span>
@@ -864,7 +1173,7 @@ function Build-HeraldReport {
   </div>
 </div>
 
-<div class="tk-section" id="s03">
+<div class="tk-section" id="s04">
   <div class="tk-card-header">
     <span class="tk-section-title">Full Account Roster</span>
     <span class="tk-section-num">$($Roster.Count) account(s)</span>
@@ -882,7 +1191,7 @@ function Build-HeraldReport {
   </div>
 </div>
 
-<div class="tk-section" id="s04">
+<div class="tk-section" id="s05">
   <div class="tk-card-header">
     <span class="tk-section-title">Privileged Group Membership</span>
     <span class="tk-section-num">$($GroupSummary.Count) group(s)</span>
@@ -895,7 +1204,7 @@ function Build-HeraldReport {
   </div>
 </div>
 
-<div class="tk-section" id="s05">
+<div class="tk-section" id="s06">
   <div class="tk-card-header">
     <span class="tk-section-title">Flagged for Review</span>
     <span class="tk-section-num">$($flagged.Count) account(s)</span>
@@ -917,7 +1226,7 @@ function Build-HeraldReport {
   </div>
 </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'H.E.R.A.L.D. v3.7.1')
+"@ + (Get-TKHtmlFoot -ScriptName 'H.E.R.A.L.D. v3.8')
 
     return $html
 }
@@ -970,6 +1279,50 @@ $domainName = $domain.DNSRoot
 $domainSid  = $domain.DomainSID.Value
 Write-Ok "Connected to $domainName"
 if ($SearchBase) { Write-Info "Search base: $SearchBase" }
+
+# ── Authentication policy ────────────────────────────────────────────────────
+
+Write-Section 'AUTHENTICATION POLICY'
+
+$authPolicy = Get-AuthenticationPolicy -AdCommon $AdCommon
+
+if (-not $authPolicy.Available) {
+    Write-Warn "Could not read the domain password policy: $($authPolicy.Error)"
+    Write-Info 'The account roster below is unaffected; the policy section of the report will say so.'
+} else {
+    $policyWeak = 0
+    foreach ($key in $PolicyKeyOrder) {
+        $value   = $authPolicy.Values[$key]
+        $verdict = Get-PolicyVerdict -Key $key -Value $value
+        if ($verdict -eq 'Weak') { $policyWeak++ }
+
+        $tone = switch ($verdict) {
+            'Strong'     { $C.Success }
+            'Acceptable' { $C.Info    }
+            'Weak'       { $C.Error   }
+            default      { $C.Info    }
+        }
+        Write-Host ("  {0,-30} {1,-32} {2}" -f `
+            $PolicyBaseline[$key].Label, (Format-PolicyValue -Key $key -Value $value), $verdict) -ForegroundColor $tone
+    }
+
+    if ($policyWeak -gt 0) {
+        Write-Warn "$policyWeak setting(s) fall short of the baseline - see section 01 of the report."
+    } else {
+        Write-Ok 'All password and lockout settings meet the baseline.'
+    }
+
+    if ($authPolicy.PsoError) {
+        Write-Warn "Fine-grained password policies could not be read: $($authPolicy.PsoError)"
+    } elseif (@($authPolicy.Pso).Count -gt 0) {
+        Write-Warn "$(@($authPolicy.Pso).Count) fine-grained password policy(ies) override the defaults above."
+        foreach ($q in $authPolicy.Pso) {
+            Write-Info ("{0} (precedence {1}) applies to: {2}" -f $q.Name, $q.Precedence, $q.AppliesTo)
+        }
+    } else {
+        Write-Info 'No fine-grained password policies - the defaults apply domain-wide.'
+    }
+}
 
 # ── Resolve privileged groups and expand their effective membership ──────────
 
@@ -1147,7 +1500,8 @@ try {
     $html = Build-HeraldReport -Roster $roster -GroupSummary @($groupSummary) `
                                -DomainName $domainName `
                                -ReportTimestamp (Get-Date -Format 'yyyy-MM-dd HH:mm:ss') `
-                               -Counts $counts
+                               -Counts $counts `
+                               -AuthPolicy $authPolicy
     [System.IO.File]::WriteAllText($reportPath, $html, [System.Text.Encoding]::UTF8)
 } catch {
     # Name the exception type and the originating line: "could not save the
