@@ -307,6 +307,36 @@ Both touch Microsoft Defender, but they sit on opposite sides of the audit/enfor
 
 PALADIN is the diagnostic tool you run to decide whether enforcement is needed; SIGIL is the tool that does the enforcing. They compose: SIGIL hardens the machine, PALADIN later confirms the AV side held.
 
+### CITADEL vs HERALD
+
+Both are Active Directory tools; they sit on opposite sides of the act/report divide.
+
+| Question | Reach for |
+|----------|-----------|
+| "Unlock this account / reset this password / add them to a group." | **CITADEL** (interactive AD management — it changes the directory) |
+| "Give the customer a list of every account and what each one can do." | **HERALD** (read-only roster: full name / alias / access level, plus a review CSV) |
+
+CITADEL's reports (stale accounts, password expiry) answer *account hygiene* questions about the
+directory. HERALD answers an *access review* question — who holds privilege, and through which
+groups. HERALD never writes to AD.
+
+Where they overlap on inactivity: CITADEL's stale report is the standalone "who hasn't logged in"
+export; HERALD folds the same signal in as one review flag among several, in the context of the
+account's access level (an inactive Domain Admin ranks differently from an inactive standard user).
+
+### HERALD vs WARD
+
+Both produce an account roster with a Role column, at different scopes.
+
+| Question | Reach for |
+|----------|-----------|
+| "Who can administer *this machine*?" | **WARD** (local SAM accounts + local Administrators group, one machine) |
+| "Who can administer *the domain*?" | **HERALD** (AD user objects + privileged domain groups, whole directory) |
+
+WARD runs on any Windows machine, domain-joined or not. HERALD requires a domain and RSAT.
+Neither subsumes the other: a local administrator on a workstation does not appear in HERALD,
+and a Domain Admin does not appear in WARD unless they also hold a local account.
+
 ### BEACON vs LANTERN
 
 Both tools live in Network & Remote, but cover different layers of the network stack.

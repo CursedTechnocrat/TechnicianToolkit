@@ -5,6 +5,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.7.0] - 2026-08-27
+
+### Added
+- **`H.E.R.A.L.D.` — Active Directory account roster & access-level report (new tool, `herald.ps1`, GRIMOIRE key 27, Security).** Answers the access-review question CITADEL does not: *who has an account in this domain, and what can each of them do?* Every account is reported as **Full Name / alias (`SamAccountName`) / Role**, which is the shape a customer reviews and signs off on. Read-only — HERALD queries the directory and writes a report; it never modifies AD.
+  - **Role is derived from effective, not direct, group membership.** Membership is expanded server-side with the LDAP in-chain matching rule (`1.2.840.113556.1.4.1941`), so an account that reaches `Domain Admins` three nested groups deep is still reported as a Domain Administrator. A client-side walk of the `member` attribute — the obvious implementation — reports that same account as a standard user, which is precisely the mistake an access review exists to catch.
+  - **Primary-group membership is resolved separately.** An account whose `primaryGroupID` has been switched to `Domain Admins` does not appear in that group's `member` attribute at all, so no amount of nesting expansion finds it. HERALD compares each account's `primaryGroupID` against the RIDs of the resolved privileged groups and folds those grants in, reporting the count on the console.
+  - **Privileged groups resolve by well-known RID, not by name** (domain-relative RIDs against the domain SID, `BUILTIN` RIDs against `S-1-5-32`), so a renamed or localised `Domain Admins` is still found. Groups absent from the domain — `Enterprise Admins` and `Schema Admins` outside the forest root, `Key Admins` on pre-2016 schemas — are skipped as normal rather than reported as errors. `DnsAdmins` has no fixed RID and resolves by name.
+  - **Four role tiers, highest wins:** `Domain Administrator` (Enterprise / Schema / Domain Admins, `BUILTIN\Administrators`, Group Policy Creator Owners), `Delegated Administrator` (Account / Server / Backup / Print Operators, DnsAdmins, Key Admins, Enterprise Key Admins, Cert Publishers, Remote Management Users), `Elevated (Custom Group)`, and `Standard User`. Account *type* (`User` / `Service Account` / `Built-in`) is reported in its own column rather than mixed into the role, so a service account that is also a Domain Admin reads as both.
+  - **Customer-created admin groups are scanned too.** `-AdminGroupPattern` (default `(?i)(admin|operator|helpdesk|privileg)`) matches the "IT Admins" / "Helpdesk Operators" groups that carry real delegated rights and are invisible to a built-ins-only audit; matches are capped at 60 groups with a console warning rather than silently truncated. `-SkipCustomGroupScan` turns the scan off. The pattern is validated as a regex before any directory work starts.
+  - **Review flags for the cleanup conversation:** never signed in, inactive beyond `-StaleDays` (default 90), locked out, password expired / never expires / never set, trusted for unconstrained delegation, unused administrator, and *former privileged account* — an `adminCount` stamp with no current privileged membership, i.e. an ex-administrator whose ACL is still detached from its OU and which nothing else in the toolkit surfaces.
+  - **Outputs `HERALD_<timestamp>.html` and `HERALD_Roster_<timestamp>.csv`.** The HTML carries five sections (access levels at a glance, privileged accounts, full roster, privileged group membership with effective members per group, accounts flagged for review). The CSV repeats the roster with two deliberately empty columns — `Action (Keep/Disable/Delete)` and `Customer Notes` — so the customer can mark it up in Excel and hand it back.
+  - Distinguished names are escaped per RFC 4515 before interpolation into LDAP filters; DN parsing splits on unescaped commas only, so a manager stored as `CN=Doe\, Jane` reads back as `Doe, Jane` rather than `Doe`.
+  - Parameters: `-Unattended`, `-IncludeDisabled`, `-StaleDays`, `-SearchBase`, `-Server`, `-AdminGroupPattern`, `-SkipCustomGroupScan`, `-OutputPath`, `-NoCsv`, `-Transcript`.
+  - Pester coverage: two new `Tier-mapper data tables` contexts assert the `$PrivilegedGroupTiers` role/RID/scope mapping and that every role it produces has a rank and a valid badge class in `$RoleTiers`; a new `HERALD LDAP and DN helpers` describe exercises the RFC 4515 escaping and the escaped-comma DN cases directly.
+  - Scope, stated in the report itself: HERALD covers privilege conferred by security-group membership in one domain. It does not evaluate OU or object ACL delegation, per-workstation local administrators, Group Policy user-rights assignments, or gMSAs. Entra ID directory roles are W.R.A.I.T.H.'s surface; local accounts on a single machine are W.A.R.D.'s.
+
+---
+
 ## [3.6.4] - 2026-08-27
 
 ### Fixed
