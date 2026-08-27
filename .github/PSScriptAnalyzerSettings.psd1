@@ -1,4 +1,4 @@
-@{
+﻿@{
     # Only treat these rules as errors (build-breaking); everything else is a warning.
     Severity = @('Error', 'Warning')
 

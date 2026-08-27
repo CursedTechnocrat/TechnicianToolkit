@@ -174,9 +174,11 @@ catch {
 Write-Host "    Checking current domain/Entra join status..." -ForegroundColor $ColorSchema.Info
 try {
     $dsregOutput = & dsregcmd /status 2>&1
-    $azureAdJoined  = ($dsregOutput | Where-Object { $_ -match "AzureAdJoined\s*:\s*YES" })    -ne $null
-    $domainJoined   = ($dsregOutput | Where-Object { $_ -match "DomainJoined\s*:\s*YES" })     -ne $null
-    $workplaceJoined = ($dsregOutput | Where-Object { $_ -match "WorkplaceJoined\s*:\s*YES" }) -ne $null
+    # @(...).Count -gt 0 yields a real boolean. `-ne $null` on a pipeline result
+    # filters the collection instead of testing it, so it returned matched text.
+    $azureAdJoined   = @($dsregOutput | Where-Object { $_ -match "AzureAdJoined\s*:\s*YES" }).Count   -gt 0
+    $domainJoined    = @($dsregOutput | Where-Object { $_ -match "DomainJoined\s*:\s*YES" }).Count    -gt 0
+    $workplaceJoined = @($dsregOutput | Where-Object { $_ -match "WorkplaceJoined\s*:\s*YES" }).Count -gt 0
 
     if ($azureAdJoined) {
         Write-Host "    [!!] This machine is already Entra ID (Azure AD) joined." -ForegroundColor $ColorSchema.Warning
@@ -421,7 +423,7 @@ if ($Unattended) {
 
             # Verify result
             $verifyOutput = & dsregcmd /status 2>&1
-            $nowJoined = ($verifyOutput | Where-Object { $_ -match "AzureAdJoined\s*:\s*YES" }) -ne $null
+            $nowJoined = @($verifyOutput | Where-Object { $_ -match "AzureAdJoined\s*:\s*YES" }).Count -gt 0
 
             if ($nowJoined) {
                 Write-Host "    [+] Successfully joined to Entra ID!" -ForegroundColor $ColorSchema.Success

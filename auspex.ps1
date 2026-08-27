@@ -793,12 +793,6 @@ foreach ($n in $reportData['Network']) {
 $hw = $reportData['Hardware']
 $os = $reportData['OS']
 $health = $reportData['Health']
-$batteryHtml = if ($health.Battery) {
-    "<p><strong>Battery:</strong> $($health.Battery.Charge)%  -  $($health.Battery.Status)</p>"
-} else {
-    "<p><strong>Battery:</strong> N/A (desktop or not detected)</p>"
-}
-
 # Updates badge
 $updateCount = $reportData['Updates'].Count
 $updateBadge = if ($updateCount -eq 0) {

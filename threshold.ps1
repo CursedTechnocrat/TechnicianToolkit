@@ -120,7 +120,6 @@ function Get-PhysicalDiskInfo {
 
     $results = [System.Collections.Generic.List[object]]::new()
     foreach ($pd in $physDisks) {
-        $diskNum = $null
         # Try to match by serial or DeviceId
         $matchedDisk = $diskObjects | Where-Object { $_.Number -eq ($pd.DeviceId -replace '\D','') } | Select-Object -First 1
         if (-not $matchedDisk) {
@@ -151,7 +150,7 @@ function Get-PhysicalDiskInfo {
 
 function Get-VolumeInfo {
     $volumes = Get-Volume -ErrorAction SilentlyContinue | Where-Object {
-        $_.DriveType -ne 'CD-ROM' -and $_.DriveLetter -ne $null -and $_.Size -gt 0
+        $_.DriveType -ne 'CD-ROM' -and $_.DriveLetter -and $_.Size -gt 0
     }
 
     $results = [System.Collections.Generic.List[object]]::new()

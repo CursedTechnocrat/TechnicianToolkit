@@ -201,24 +201,24 @@ function ConvertFrom-WlanProfileXml {
 
     # The XML uses a default namespace; XPath queries must declare it. We pluck
     # values by walking the DOM directly to avoid an XmlNamespaceManager dance.
-    $profile = $doc.WLANProfile
-    if (-not $profile) { return $null }
+    $wlanProfile = $doc.WLANProfile
+    if (-not $wlanProfile) { return $null }
 
-    $name           = $profile.name
+    $name           = $wlanProfile.name
     $ssidName       = $null
     $ssidHex        = $null
     $nonBroadcast   = $false
-    if ($profile.SSIDConfig -and $profile.SSIDConfig.SSID) {
-        $ssidName = $profile.SSIDConfig.SSID.name
-        $ssidHex  = $profile.SSIDConfig.SSID.hex
+    if ($wlanProfile.SSIDConfig -and $wlanProfile.SSIDConfig.SSID) {
+        $ssidName = $wlanProfile.SSIDConfig.SSID.name
+        $ssidHex  = $wlanProfile.SSIDConfig.SSID.hex
     }
-    if ($profile.SSIDConfig -and $profile.SSIDConfig.nonBroadcast) {
-        $nonBroadcast = ($profile.SSIDConfig.nonBroadcast -eq 'true')
+    if ($wlanProfile.SSIDConfig -and $wlanProfile.SSIDConfig.nonBroadcast) {
+        $nonBroadcast = ($wlanProfile.SSIDConfig.nonBroadcast -eq 'true')
     }
 
-    $connectionType = $profile.connectionType
-    $connectionMode = $profile.connectionMode
-    $autoSwitch     = ($profile.autoSwitch -eq 'true')
+    $connectionType = $wlanProfile.connectionType
+    $connectionMode = $wlanProfile.connectionMode
+    $autoSwitch     = ($wlanProfile.autoSwitch -eq 'true')
 
     $auth         = $null
     $encryption   = $null
@@ -226,8 +226,8 @@ function ConvertFrom-WlanProfileXml {
     $keyType      = $null
     $keyProtected = $null
     $keyMaterial  = $null
-    if ($profile.MSM -and $profile.MSM.security) {
-        $sec = $profile.MSM.security
+    if ($wlanProfile.MSM -and $wlanProfile.MSM.security) {
+        $sec = $wlanProfile.MSM.security
         if ($sec.authEncryption) {
             $auth       = $sec.authEncryption.authentication
             $encryption = $sec.authEncryption.encryption
@@ -244,8 +244,8 @@ function ConvertFrom-WlanProfileXml {
     # MacRandomization sits in a v3 child namespace. .NET's XmlElement returns
     # the property if present regardless of namespace, but if it's missing the
     # accessor returns $null in PS5.1 (no exception).
-    if ($profile.MacRandomization) {
-        $macRand = ($profile.MacRandomization.enableRandomization -eq 'true')
+    if ($wlanProfile.MacRandomization) {
+        $macRand = ($wlanProfile.MacRandomization.enableRandomization -eq 'true')
     }
 
     return [PSCustomObject]@{

@@ -992,7 +992,7 @@ function Get-ExpiringPasswords {
             Enabled -eq $true -and PasswordNeverExpires -eq $false
         } -Properties DisplayName, EmailAddress, Department, PasswordLastSet, PasswordNeverExpires -ErrorAction Stop |
             Where-Object {
-                $_.PasswordLastSet -ne $null -and
+                $null -ne $_.PasswordLastSet -and
                 $_.PasswordLastSet.AddDays($maxAge) -le $cutoff
             } |
             ForEach-Object {

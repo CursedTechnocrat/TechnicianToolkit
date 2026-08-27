@@ -468,6 +468,7 @@ function Build-HtmlReport {
     $compClass       = if ($noncompCount -gt 0) { 'err' } else { 'ok' }
     $staleClass      = if ($Stale.Count -gt 0) { 'warn' } else { 'ok' }
     $unassignedClass = if ($unassigned -gt 0) { 'warn' } else { 'ok' }
+    $unknownClass    = if ($unknownCount -gt 0) { 'warn' } else { 'ok' }
 
     $htmlHead = Get-TKHtmlHead `
         -Title      'G.O.L.E.M. Intune Compliance Report' `
@@ -489,6 +490,7 @@ function Build-HtmlReport {
     <div class="tk-summary-card ok"><div class="tk-summary-num">$compCount</div><div class="tk-summary-lbl">Compliant</div></div>
     <div class="tk-summary-card $compClass"><div class="tk-summary-num">$noncompCount</div><div class="tk-summary-lbl">Non-compliant / Error</div></div>
     <div class="tk-summary-card warn"><div class="tk-summary-num">$graceCount</div><div class="tk-summary-lbl">In Grace Period</div></div>
+    <div class="tk-summary-card $unknownClass"><div class="tk-summary-num">$unknownCount</div><div class="tk-summary-lbl">Compliance Unknown</div></div>
     <div class="tk-summary-card $staleClass"><div class="tk-summary-num">$($Stale.Count)</div><div class="tk-summary-lbl">Stale (30d+)</div></div>
     <div class="tk-summary-card $unassignedClass"><div class="tk-summary-num">$unassigned</div><div class="tk-summary-lbl">Unassigned Profiles</div></div>
   </div>

@@ -438,7 +438,7 @@ function Get-InactiveUsers {
                 UPN           = $u.UserPrincipalName
                 Department    = if ($u.Department) { $u.Department } else { '—' }
                 LastSignIn    = if ($lastSignIn) { $lastSignIn.ToString('yyyy-MM-dd') } else { 'Never' }
-                DaysInactive  = if ($daysInactive -ne $null) { $daysInactive } else { 'N/A' }
+                DaysInactive  = if ($null -ne $daysInactive) { $daysInactive } else { 'N/A' }
                 IsLicensed    = ($u.AssignedLicenses.Count -gt 0)
             }
         }
@@ -595,7 +595,6 @@ function Build-HtmlReport {
     $tenantDisplay = if ($script:TenantDomain) { EscHtml $script:TenantDomain } else { EscHtml $script:ConnectedAs }
     $connectedAs   = EscHtml $script:ConnectedAs
 
-    $totalLicensed   = ($UnlicensedData.Count)  # unlicensed count
     $totalUsers      = 0
     try {
         $totalUsers = (Get-MgUser -Filter "accountEnabled eq true and userType eq 'Member'" -CountVariable x -ConsistencyLevel eventual -All -Property "id" -ErrorAction SilentlyContinue | Measure-Object).Count
@@ -603,8 +602,6 @@ function Build-HtmlReport {
         Write-Warn "Could not retrieve total user count — licensed count will show as '—'."
     }
     $licensedCount   = if ($totalUsers -gt 0) { $totalUsers - $UnlicensedData.Count } else { '—' }
-    $inactiveCount   = $InactiveData.Count
-    $noMfaCount      = $NoMfaData.Count
 
     # ── License rows ─────────────────────────────────────────────────────────
     $licRows = [System.Text.StringBuilder]::new()
