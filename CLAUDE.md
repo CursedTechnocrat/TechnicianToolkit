@@ -126,9 +126,46 @@ Invoke-Pester -Path .\tests\TechnicianToolkit.Tests.ps1 -Output Detailed
 ```
 
 Tests run without Administrator privileges and without Windows-only APIs, so they work in CI.
-The suite covers: `EscHtml`, `Get-TKConfig`/`Set-TKConfig`, `Test-IsAdmin`, `Write-TKError`,
-module exports, PowerShell syntax validation on all `.ps1` files, module-import compliance,
-param block compliance (`-Unattended`), and GRIMOIRE registry integrity.
+The suite covers: `EscHtml`, `Format-Bytes`, `Get-TKConfig`/`Set-TKConfig`, `Test-IsAdmin`,
+`Write-TKError`, the technician-note helpers, HTML report helpers, and module exports; plus
+repo-wide gates — PowerShell syntax validation and UTF-8 BOM on every script, module-bootstrap
+compliance, param block compliance (`-Unattended`, and `-WhatIf` on the destructive set),
+GRIMOIRE registry integrity, retired tool names and filename prefixes, removed deprecation
+stubs, no locally redefined shared helpers, and the PALADIN / BEACON / PORTAL / CONJURE
+tier-mapper data tables (extracted by AST lookup rather than dot-sourcing, since the tools
+launch their main flow on import).
+
+### Verifying on Linux / in an agent sandbox
+
+CI runs on `windows-latest`, but most of the suite is platform-agnostic and the linter runs
+anywhere. In a sandbox where PowerShell is not installed, note that **PSGallery is often
+blocked by network policy** — `Install-Module` then fails with *"No repository with the name
+'PSGallery' was found"*, and registering it by hand does not help. Fetch from GitHub releases
+instead:
+
+```bash
+# PowerShell 7 (tarball) and PSScriptAnalyzer (nupkg is a zip; extract onto PSModulePath)
+curl -sSL -o pwsh.tar.gz https://github.com/PowerShell/PowerShell/releases/download/v7.4.6/powershell-7.4.6-linux-x64.tar.gz
+curl -sSL -o psa.zip    https://github.com/PowerShell/PSScriptAnalyzer/releases/download/1.22.0/PSScriptAnalyzer.1.22.0.nupkg
+```
+
+Pester cannot be obtained this way — it needs a compiled assembly built with the .NET SDK — so
+the Pester suite stays CI-only. What *is* reachable offline, and worth running before pushing:
+
+- `Invoke-ScriptAnalyzer -Path . -Recurse -Settings .github/PSScriptAnalyzerSettings.psd1 -ExcludeRule PSAvoidUsingWriteHost`
+  (CI fails on `Error` severity only; warnings are advisory).
+- `[System.Management.Automation.Language.Parser]::ParseFile()` over every `.ps1`/`.psm1` — the
+  same check the syntax tests make.
+- The repo-wide gates above are all plain string/AST assertions and are cheap to replicate
+  directly against the working tree.
+- `Import-Module ./TechnicianToolkit.psm1` works on Linux pwsh, so the pure helpers
+  (`EscHtml`, `Format-Bytes`, the HTML builders) can be exercised without Pester.
+
+Two analyzer rules produce **false positives** throughout this repo — check before "fixing" a
+hit: `PSReviewUnusedParameter` misses parameters used only inside nested function scopes (this
+is why `-WhatIf` and `-Unattended` appear unused), and `PSUseUsingScopeModifierInNewRunspaces`
+flags `Invoke-Command` script blocks that correctly declare their own `param()` and receive
+values through `-ArgumentList`.
 
 ## Key Conventions
 
