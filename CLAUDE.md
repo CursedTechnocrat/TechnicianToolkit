@@ -128,7 +128,8 @@ Invoke-Pester -Path .\tests\TechnicianToolkit.Tests.ps1 -Output Detailed
 Tests run without Administrator privileges and without Windows-only APIs, so they work in CI.
 The suite covers: `EscHtml`, `Get-TKConfig`/`Set-TKConfig`, `Test-IsAdmin`, `Write-TKError`,
 module exports, PowerShell syntax validation on all `.ps1` files, module-import compliance,
-param block compliance (`-Unattended`), and GRIMOIRE registry integrity.
+param block compliance (`-Unattended`), GRIMOIRE registry integrity, and license-header
+compliance (GPL notice + SPDX tag present and correctly positioned in every source file).
 
 ## Key Conventions
 
@@ -157,6 +158,29 @@ $ColorSchema = @{
   it, and the Pester suite (`'-WhatIf declared on destructive tools'`) enforces the list.
 - Tools that write logs expose `[switch]$Transcript`.
 
+### License Notice Block
+
+The toolkit is **GPL-3.0-or-later**. Every `.ps1` and `.psm1` opens with the GPL notice
+header, above the comment-based help block:
+
+```powershell
+# <filename> - <A.C.R.O.N.Y.M.> — <one-line description>
+# Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
+#
+# Copyright (C) 2026 CursedTechnocrat and the Technician Toolkit contributors
+#
+# This program is free software: you can redistribute it and/or modify
+# ... (standard GPLv3 notice, copied verbatim from any existing script)
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+```
+
+Position matters: comment-based help is only picked up when preceded solely by comments and
+blank lines, so the notice goes *above* the `<# .SYNOPSIS #>` block, never inside it. The
+notice is per-file because a single tool script is a valid unit of distribution here — a
+technician copying one `.ps1` onto a machine should still receive the license with it. The
+Pester suite (`'License header compliance — all source files'`) enforces presence and position.
+
 ### Script Header Block
 
 Every script carries a `.SYNOPSIS / .DESCRIPTION / .USAGE / .NOTES` comment block. The
@@ -183,13 +207,15 @@ updates the file.
 
 ### Adding a New Tool
 
-1. Copy the header block from an existing tool and update acronym, synopsis, version.
+1. Copy the GPL notice block and the header block from an existing tool; update the filename,
+   acronym, synopsis, and version. The notice must stay above the `<# .SYNOPSIS #>` block.
 2. Add the shared-module bootstrap block (see the initialization pattern above) and the
    appropriate admin check (`Invoke-AdminElevation` or `Assert-AdminPrivilege`). Copy the
    block verbatim from an existing tool — the Pester suite enforces the exact shape.
 3. Register the tool in `grimoire.ps1`'s `$Tools` array with a unique numeric `Key`.
 4. Add the script's filename to the Quick Launch and Usage sections in `README.md`.
-5. The syntax-validation and module-bootstrap compliance Pester tests will cover it automatically.
+5. The syntax-validation, module-bootstrap, and license-header compliance Pester tests will
+   cover it automatically.
 
 ## Tool Distinctions
 

@@ -1,4 +1,24 @@
-﻿#Requires -Modules Pester
+﻿# TechnicianToolkit.Tests.ps1 - Pester tests for the TechnicianToolkit shared module (TechnicianToolkit.psm1).
+# Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
+#
+# Copyright (C) 2026 CursedTechnocrat and the Technician Toolkit contributors
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+#Requires -Modules Pester
 <#
 .SYNOPSIS
     Pester tests for the TechnicianToolkit shared module (TechnicianToolkit.psm1).
@@ -738,5 +758,69 @@ Describe 'Tier-mapper data tables' {
             # Resolve-InstallExit relies on this conversion to find the entry.
             ('0x{0:X8}' -f (-1978335215 -band 4294967295)) | Should -Be '0x8A150011'
         }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# License header compliance — the toolkit is GPL-3.0-or-later and its whole
+# distribution model is "copy one .ps1 onto the machine and run it". A lone
+# script that travels without its notice cannot tell the next technician what
+# it is or what rights they have, so every source file carries the notice in
+# its own header. This test stops a new tool from being added without one.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'License header compliance — all source files' {
+    $licenseCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Include '*.ps1', '*.psm1' -File -Recurse |
+        Where-Object { $_.FullName -notmatch ([regex]::Escape([IO.Path]::DirectorySeparatorChar + '.git' + [IO.Path]::DirectorySeparatorChar)) } |
+        ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
+
+    It '<Name> carries the SPDX license identifier' -ForEach $licenseCases {
+        $content = Get-Content $FullName -Raw
+        $content | Should -Match 'SPDX-License-Identifier:\s*GPL-3\.0-or-later' -Because "$Name must declare its license in its own header"
+    }
+
+    It '<Name> carries the GPL notice and a copyright line' -ForEach $licenseCases {
+        $content = Get-Content $FullName -Raw
+        $content | Should -Match 'GNU General Public License'
+        $content | Should -Match '(?m)^\s*#\s*Copyright \(C\) \d{4}'
+    }
+
+    It '<Name> keeps the notice at the top, above the comment-based help' -ForEach $licenseCases {
+        # Comment-based help is only picked up when preceded solely by comments
+        # and blank lines, so the notice must sit above it, not inside it.
+        $content = Get-Content $FullName -Raw
+        $spdxAt  = $content.IndexOf('SPDX-License-Identifier')
+        $helpAt  = $content.IndexOf('<#')
+        $spdxAt | Should -BeGreaterThan -1
+        if ($helpAt -ge 0) {
+            $spdxAt | Should -BeLessThan $helpAt -Because "$Name must declare its license before its help block"
+        }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LICENSE file integrity — the GPL text is a legal document that must be
+# distributed verbatim; a truncated or edited copy undermines the grant.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'LICENSE file' {
+    BeforeAll {
+        $script:LicensePath = Join-Path $PSScriptRoot '..\LICENSE'
+    }
+
+    It 'exists' {
+        $script:LicensePath | Should -Exist
+    }
+
+    It 'is the GNU GPL version 3' {
+        $text = Get-Content $script:LicensePath -Raw
+        $text | Should -Match 'GNU GENERAL PUBLIC LICENSE'
+        $text | Should -Match 'Version 3, 29 June 2007'
+    }
+
+    It 'is complete — carries the final "How to Apply" section' {
+        $text = Get-Content $script:LicensePath -Raw
+        $text | Should -Match 'How to Apply These Terms to Your New Programs'
+        # The closing LGPL paragraph is the last thing in the document. It is
+        # matched across a line break because the canonical FSF text wraps it.
+        $text | Should -Match 'GNU Lesser General\s+Public License'
     }
 }
