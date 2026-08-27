@@ -30,6 +30,10 @@
     <Version>1.0.0</Version>
     <Product>TechnicianToolkit</Product>
     <Description>Self-contained portable launcher for the TechnicianToolkit PowerShell suite</Description>
+    <Copyright>Copyright (C) 2026 CursedTechnocrat and the Technician Toolkit contributors</Copyright>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/CursedTechnocrat/TechnicianToolkit</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/CursedTechnocrat/TechnicianToolkit</RepositoryUrl>
     <!-- Trim is intentionally OFF: trimming can strip reflection metadata the
          single-file resource extraction relies on. -->
     <PublishTrimmed>false</PublishTrimmed>
@@ -51,6 +55,15 @@
     </EmbeddedResource>
     <EmbeddedResource Include="..\config.json">
       <LogicalName>TKScripts.config.json</LogicalName>
+    </EmbeddedResource>
+    <!--
+      The GPL requires that every recipient of the program also receives a copy
+      of the licence. Because this .exe is the whole suite in one file, the
+      licence text has to travel inside it too. It shares the TKScripts. prefix
+      so ExtractScripts writes it out next to the scripts with no extra code.
+    -->
+    <EmbeddedResource Include="..\LICENSE">
+      <LogicalName>TKScripts.LICENSE</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
 

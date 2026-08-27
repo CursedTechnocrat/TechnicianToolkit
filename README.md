@@ -2,6 +2,10 @@
 
 > A PowerShell-based toolkit for IT technicians to automate common system administration tasks — forged in the arcane arts of automation.
 
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3%20or%20later-blue.svg)](LICENSE)
+
+**Free software for technicians, by technicians.** Use it, change it, share it — see [License](#license) and [Contributing](CONTRIBUTING.md).
+
 ---
 
 ## LiveConnect Suite
@@ -34,6 +38,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 - [Logging](#logging)
 - [Contributing](#contributing)
 - [Disclaimer](#disclaimer)
+- [License](#license)
 
 ---
 
@@ -1133,13 +1138,18 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 
 ## Contributing
 
-Contributions are welcome. Please ensure all additions maintain:
+This toolkit is built for working technicians, and it gets better when the people using it in the field push their fixes back. Bug reports, new tools, and corrections from real tickets are all welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
+
+Please ensure all additions maintain:
 
 - Consistent formatting and naming conventions
+- The GPL notice header block at the top of every new file (copy it from any existing script)
 - The standard `<# .SYNOPSIS / .DESCRIPTION / .USAGE / .NOTES #>` header block
 - Comprehensive error handling
 - Detailed logging and user feedback
 - Administrator privilege checks
+
+Contributions are accepted under the same license as the project, **GPL-3.0-or-later**. You keep the copyright in what you write; you are simply licensing it under the project's terms so it can ship with everything else.
 
 ---
 
@@ -1151,4 +1161,19 @@ These scripts modify system settings and may install software, updates, or chang
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+**GNU General Public License v3.0 or later (GPL-3.0-or-later)** — see [LICENSE](LICENSE) for the full text.
+
+This toolkit is free software. You may use it, study it, change it, and pass it on. The one condition is that it stays free: if you distribute a modified version, your recipients get the same source and the same rights you had.
+
+What that means day to day:
+
+| You want to… | GPL says |
+|---|---|
+| Run these tools on client machines, at any scale, commercially | **Go ahead.** Running the software is unrestricted — the GPL only attaches obligations when you *distribute* it. |
+| Modify a script for your own shop's workflow and keep it in-house | **Go ahead.** Internal use is not distribution. No obligation to publish anything. |
+| Share your modified version with other technicians, or ship it to clients as a tool | Fine — include the source and license it GPL-3.0-or-later too. |
+| Fold these scripts into a closed-source commercial RMM product | Not permitted. That is exactly what the copyleft is here to prevent. |
+
+Every script carries its own copyright and license notice in its header, so a single `.ps1` copied onto a technician's USB stick still tells the next person what it is and where it came from.
+
+Prior releases were published under the MIT License. That grant is not revoked — anyone who obtained a copy under MIT keeps those terms for that copy. Everything from this point forward is GPL-3.0-or-later.

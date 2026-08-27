@@ -1,4 +1,24 @@
-﻿<#
+﻿# grimoire.ps1 - G.R.I.M.O.I.R.E. — General Repository for Integrated Management and Orchestration of IT Resources & Executables
+# Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
+#
+# Copyright (C) 2026 CursedTechnocrat and the Technician Toolkit contributors
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+<#
 .SYNOPSIS
     G.R.I.M.O.I.R.E. — General Repository for Integrated Management and Orchestration of IT Resources & Executables
     Technician Toolkit Hub for PowerShell 5.1+
@@ -487,6 +507,12 @@ function Show-Banner {
     Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
     $toolCount = $Tools.Count
     Write-Host "  Technician Toolkit  |  Hub v3.6  |  $toolCount tools  |  Run as Administrator" -ForegroundColor $ColorSchema.Info
+    Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
+    # GPLv3 Appropriate Legal Notices. The toolkit is free software and is meant
+    # to be shared, forked, and improved by the technicians who use it -- say so
+    # where every operator will actually see it.
+    Write-Host "  Free software under the GNU GPL v3 or later, with NO WARRANTY." -ForegroundColor $ColorSchema.Info
+    Write-Host "  Source, licence, and contributions: github.com/CursedTechnocrat/TechnicianToolkit" -ForegroundColor $ColorSchema.Info
     Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
     if ($WhatIf) {
         Write-Host ""
