@@ -17,7 +17,7 @@ discoverable from the error messages. Both are recorded below.
 | Check | Result |
 |---|---|
 | 1 — Engine loads, `$PSHOME` resolves, CIM works | **PASS** — PowerShell 7.4.6 (Core), `Get-CimInstance` returned the OS caption |
-| 2 — A real toolkit script runs (WARD) | **Partial** — runs, imports the module, reaches its admin gate with zero error records; a full elevated run is still outstanding |
+| 2 — A real toolkit script runs (WARD) | **PASS** — elevated, end to end, zero error records; audited 6 local accounts and wrote a valid 13 KB HTML report |
 | 3 — The host carries Write-Host, prompts, streams, Clear-Host | **PASS** — 6 colors, `Clear-Host`, `Read-Host`, 2 progress records, warning + verbose streams |
 | Single file, both architectures | **PASS** — 83 MB `win-x64`, 80 MB `win-arm64`, one `.exe` and nothing beside it |
 
@@ -193,15 +193,34 @@ elevated.
 
 ---
 
+## The elevated run (check 2)
+
+Built with `app.manifest` (`requireAdministrator`) and launched normally, WARD
+runs to completion with **zero error records**:
+
+```
+Total Accounts : 6      Enabled : 2      Disabled : 4
+Administrators : 2      Flagged : 6
+[+] Report saved: ...\WARD_20260827_043645.html
+```
+
+Three things this confirms beyond "the script ran":
+
+- **The elevation decision works.** With the manifest requesting Administrator,
+  `Assert-AdminPrivilege` passes and never takes its `exit 1` branch. The same
+  will hold for `Invoke-AdminElevation`, which is the branch that would otherwise
+  spawn a stray elevated console and abandon the run.
+- **`-Unattended` suppresses the prompt.** `prompt calls: 0` — WARD's single
+  `Read-Host` was skipped, which is what makes generated parameter forms a
+  workable substitute for modal dialogs.
+- **The HTML report path works.** A well-formed 13 KB document with the shared
+  `tk-section` / `tk-summary-card` / `tk-table` classes intact — so the 28 tools
+  that emit reports should need nothing special from the app.
+
+---
+
 ## What this spike does *not* prove
 
-- **WARD has not run end to end.** It reaches its `Assert-AdminPrivilege` gate
-  cleanly, with zero error records, and prints the refusal in red through the
-  host — but the probe build is `asInvoker`, so the audit itself never executes.
-  The elevated run was attempted and the UAC prompt was declined, so this is
-  still open. To close it: run `dist-ship\TechnicianToolkit.Spike.exe --probe
-  report.txt` and accept the prompt, or run the `asInvoker` build from an
-  already-elevated shell.
 - It has only run on the development machine, which has PowerShell 7 installed
   independently. The claim that the `.exe` carries its own engine needs a clean
   VM with no PowerShell 7 to be confirmed properly.

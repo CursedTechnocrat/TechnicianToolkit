@@ -2,10 +2,11 @@
 
 **Status:** phase 00 complete · **Target release:** 5.0 — *bringing it together to be portable*
 
-> **Phase 00 outcome — the approach is viable.** A single-file self-contained WPF
-> app hosting PowerShell 7 loads the engine, resolves `$PSHOME`, runs CIM, and
-> carries the toolkit's console output, prompts, and streams through a custom
-> host. It needs two non-obvious build settings that nothing in the error
+> **Phase 00 outcome — the approach works.** A single-file self-contained WPF app
+> hosting PowerShell 7 ran `ward.ps1` end to end with zero error records: it
+> audited the machine's local accounts and wrote its HTML report, with the
+> toolkit's colored output, prompts, progress, and streams all arriving through a
+> custom host. It needs two non-obvious build settings that nothing in the error
 > messages points at. See [`app/spike/README.md`](../app/spike/README.md) for the
 > build recipe and the full findings; the corrections it forced are folded into
 > the sections below.
@@ -304,17 +305,21 @@ Settled in [`app/spike/`](../app/spike/).
 - ✅ The host carries the toolkit's colored output, prompts, progress, and
   streams — driven through the real module's own helpers
 - ✅ 83 MB `win-x64` / 80 MB `win-arm64`, one `.exe` and nothing beside it
-- ⬜ **WARD end to end.** It reaches its admin gate cleanly with zero error
-  records, but the probe build is `asInvoker`, so the audit never runs. Needs one
-  elevated run.
+- ✅ **WARD end to end, elevated, zero error records** — audited 6 local
+  accounts and wrote a valid 13 KB HTML report. This also confirms the
+  requestedExecutionLevel decision (`Assert-AdminPrivilege` passes rather than
+  exiting), that `-Unattended` suppresses the prompt (`prompt calls: 0`), and
+  that the shared HTML report path works untouched
 - ⬜ **Clean VM.** This machine has PowerShell 7 installed independently, so
   "the `.exe` carries its own engine" is not yet honestly proven.
 - ⬜ **ARM64 on real hardware.** It bundles; it has never been executed.
 - ⬜ **SignPath Foundation application** — still to submit, still the longest
   lead time in the plan.
 
-The three open boxes are cheap and should be closed before phase 02 commits to
-the architecture, but none of them blocks starting phase 01.
+The two *verification* boxes — clean VM, ARM64 hardware — are cheap and should be
+closed before phase 02 commits to the architecture, but neither blocks starting
+phase 01. SignPath is not a verification task; it is paperwork with a review
+attached, and it should be submitted now regardless of when phase 01 begins.
 
 ### 01 — Engine · 1–2 weeks
 
