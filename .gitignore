@@ -1,4 +1,4 @@
-# ─── Runtime Output ───────────────────────────────────────────────────────────
+﻿# ─── Runtime Output ───────────────────────────────────────────────────────────
 # AUSPEX — HTML diagnostic reports (saved to Desktop by default)
 AUSPEX_*.html
 
@@ -12,6 +12,10 @@ RESTORATION_*.log
 *.log
 *.csv
 *.html
+
+# Write-TKError's monthly error log — lands beside the scripts whenever a tool
+# (or the test suite) runs from a checkout with no LogDirectory configured.
+TK_Errors_*.jsonl
 
 # ─── Windows & PowerShell ─────────────────────────────────────────────────────
 # PowerShell transcript files

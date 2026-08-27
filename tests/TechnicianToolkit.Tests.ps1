@@ -909,6 +909,71 @@ Describe 'HERALD LDAP and DN helpers' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# HERALD report-section guard — HERALD renders a whole domain's roster, so a
+# single unrenderable row must not cost the technician the entire document. The
+# guard replaces a failed section with a visible placeholder and reports where
+# the fault came from, rather than losing the report to one exception.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'HERALD report-section guard' {
+    BeforeAll {
+        $heraldPath = Join-Path $PSScriptRoot '..\herald.ps1'
+        $errs = $null
+        $ast  = [System.Management.Automation.Language.Parser]::ParseFile($heraldPath, [ref]$null, [ref]$errs)
+        $script:HeraldGuardLoaded = @()
+        foreach ($name in 'Invoke-ReportSection', 'Get-FaultLocation') {
+            $fn = $ast.FindAll({
+                param($n)
+                $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq $name
+            }, $true) | Select-Object -First 1
+            if ($fn) {
+                . ([scriptblock]::Create($fn.Extent.Text))
+                $script:HeraldGuardLoaded += $name
+            }
+        }
+    }
+
+    It 'herald.ps1 defines the section guard and the fault locator' {
+        $script:HeraldGuardLoaded | Should -Contain 'Invoke-ReportSection'
+        $script:HeraldGuardLoaded | Should -Contain 'Get-FaultLocation'
+    }
+
+    It 'passes a section that renders cleanly straight through' {
+        Invoke-ReportSection -Name 'clean' -ColSpan 3 -Build { '<tr><td>ok</td></tr>' } |
+            Should -Be '<tr><td>ok</td></tr>'
+    }
+
+    It 'swallows a failing section into a placeholder row rather than throwing' {
+        $row = Invoke-ReportSection -Name 'boom' -ColSpan 7 -Build { throw 'kaboom' }
+        $row | Should -Match 'could not be rendered'
+    }
+
+    It 'spans the placeholder across the real column count of the failed table' {
+        # A placeholder that does not span the table renders as a broken row.
+        Invoke-ReportSection -Name 'boom' -ColSpan 9 -Build { throw 'kaboom' } |
+            Should -Match 'colspan="9"'
+    }
+
+    It 'lets the sections either side of a failure still render' {
+        $before = Invoke-ReportSection -Name 'before' -ColSpan 2 -Build { '<tr><td>a</td></tr>' }
+        $failed = Invoke-ReportSection -Name 'failed' -ColSpan 2 -Build { throw 'nope' }
+        $after  = Invoke-ReportSection -Name 'after'  -ColSpan 2 -Build { '<tr><td>b</td></tr>' }
+        ($before + $failed + $after) | Should -Match '<tr><td>a</td></tr>'
+        ($before + $failed + $after) | Should -Match '<tr><td>b</td></tr>'
+    }
+
+    Context 'Get-FaultLocation' {
+        It 'reports the originating file and line for a script-borne error' {
+            try { throw 'boom' } catch { $rec = $_ }
+            Get-FaultLocation $rec | Should -Match 'line \d+'
+        }
+        It 'degrades to a bare line number when the error carries no script origin' {
+            $rec = [PSCustomObject]@{ InvocationInfo = [PSCustomObject]@{ ScriptLineNumber = 42; ScriptName = '' } }
+            Get-FaultLocation $rec | Should -Be 'line 42'
+        }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # License header compliance — the toolkit is GPL-3.0-or-later and its whole
 # distribution model is "copy one .ps1 onto the machine and run it". A lone
 # script that travels without its notice cannot tell the next technician what

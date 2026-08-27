@@ -5,6 +5,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.7.1] - 2026-08-27
+
+### Fixed
+- **`H.E.R.A.L.D.` lost the entire HTML report to a single failed section, and said only "Argument types do not match".** On a live 91-account domain every collection stage succeeded — groups resolved, nested membership expanded, roles classified, console summary and review CSV all correct — but the HTML export threw a bare `ArgumentException` and produced no file. The failure message named neither the section, the exception type, nor the line, so it was unactionable from the field, and one unrenderable row cost the whole document even though four of the five sections were fine.
+
+  Report rendering is now staged behind `Invoke-ReportSection`. Each of the five sections builds inside its own guard; a section that throws is replaced by a placeholder row spanning that table's real column count and is reported with its **section name, exception type, and originating file and line** (via a new `Get-FaultLocation`, which names the shared module rather than the script when the fault surfaces from there). The remaining sections still render, so the technician gets a usable report plus a message precise enough to act on instead of an empty directory. The outer HTML/`WriteAllText` catch gained the same detail, and both paths now record it through `Write-TKError`.
+
+  Verified by injecting the exact field exception into a section builder: the three affected sections degraded to placeholders, the other two rendered, and the document still closed. Rendering is otherwise byte-identical to 3.7.0 on a reproduction of the failing run (91 accounts, 20 privileged and custom groups) — the only diff is the version string.
+
+### Changed
+- **`H.E.R.A.L.D.` role lookups no longer index the `[ordered]` tier table directly.** `$RoleTiers` stays ordered because the report renders tiers most-privileged first and the Pester suite asserts on the literal, but every lookup now goes through plain `$RoleTierMap` / `$RoleTierOrder` copies built once at load. `OrderedDictionary` exposes both `Item[Int32]` and `Item[Object]`, and a key reaching that indexer typed as `[object]` is a known way to get "Argument types do not match" out of Windows PowerShell 5.1. This was not confirmed as the cause of the failure above — the same pattern demonstrably works elsewhere in the script on the affected machine — but the shim costs nothing and removes the class of risk from the one code path that had no equivalent in the tools already proven on 5.1.
+- New Pester `Describe 'HERALD report-section guard'` covers the guard (clean pass-through, placeholder substitution, correct colspan, neighbouring sections surviving a failure) and `Get-FaultLocation` (file+line, and the bare-line fallback when an error carries no script origin).
+
+---
+
 ## [3.7.0] - 2026-08-27
 
 ### Added
