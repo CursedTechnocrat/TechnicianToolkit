@@ -149,8 +149,15 @@ curl -sSL -o pwsh.tar.gz https://github.com/PowerShell/PowerShell/releases/downl
 curl -sSL -o psa.zip    https://github.com/PowerShell/PSScriptAnalyzer/releases/download/1.22.0/PSScriptAnalyzer.1.22.0.nupkg
 ```
 
-Pester cannot be obtained this way — it needs a compiled assembly built with the .NET SDK — so
-the Pester suite stays CI-only. What *is* reachable offline, and worth running before pushing:
+Pester cannot be obtained this way. Its GitHub releases carry **source**, and building it needs
+the .NET SDK for its compiled assembly. Note the distinction: PSGallery ships Pester **prebuilt,
+assembly included**, so `Install-Module Pester` is the route that works — it is only unavailable
+when PSGallery itself is blocked. If you can get the gallery allowed through the sandbox's egress
+policy, most of the suite then runs on Linux pwsh; `Describe 'Test-IsAdmin'` still fails there,
+since `[Security.Principal.WindowsPrincipal]` does not exist off Windows. Otherwise the suite
+stays CI-only.
+
+What *is* reachable offline, and worth running before pushing:
 
 - `Invoke-ScriptAnalyzer -Path . -Recurse -Settings .github/PSScriptAnalyzerSettings.psd1 -ExcludeRule PSAvoidUsingWriteHost`
   (CI fails on `Error` severity only; warnings are advisory).
