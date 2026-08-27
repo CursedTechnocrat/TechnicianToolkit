@@ -11,7 +11,7 @@
 > build recipe and the full findings; the corrections it forced are folded into
 > the sections below.
 
-The suite ships today as 41 standalone PowerShell scripts plus a prototype `.exe`
+The suite ships today as 42 standalone PowerShell scripts plus a prototype `.exe`
 launcher. Version 5.0 replaces that arrangement with a single signed Windows
 application: a real GUI over the existing engine, with PowerShell 7 hosted inside
 the executable so nothing needs installing on the machine it runs on.
@@ -52,11 +52,11 @@ the app.
 
 | | |
 |---|---|
-| 41 | tool scripts, ~31k lines of PowerShell — all of it kept |
-| 3,512 | `Write-Host` calls that must land in a GUI output pane |
-| 220 | `Read-Host` prompts that must become dialogs |
-| 39 / 41 | tools that already accept `-Unattended` |
-| 28 | tools emitting an HTML report to open afterwards |
+| 42 | tool scripts, ~31k lines of PowerShell — all of it kept |
+| 3,546 | `Write-Host` calls that must land in a GUI output pane |
+| 222 | `Read-Host` prompts that must become dialogs |
+| 40 / 42 | tools that already accept `-Unattended` |
+| 29 | tools emitting an HTML report to open afterwards |
 | 11 | cmdlet call sites blocking PowerShell 7 — the entire compatibility debt |
 
 ---
@@ -183,7 +183,7 @@ else in the suite blocks the move.
 **Severity corrected by the spike.** `[Console]::OutputEncoding` was rated
 "crashes app". It does not: it surfaces as a *non-terminating error record* and
 the module still imports. It was fixed anyway — the module runs it at import
-time, so without the fix all 41 tools open with a spurious error. Windows
+time, so without the fix all 42 tools open with a spurious error. Windows
 PowerShell 5.1 was re-checked afterwards and still sets UTF-8 when a console is
 attached, so the standalone script path does not regress.
 
@@ -230,7 +230,7 @@ there is a single coherent line.
 **Why 5.0 and not 4.0.** `cipher.ps1` is already at 4.2 — it drifted ahead of the
 rest of the suite. Unifying on 4.0 would have versioned one script *backwards*,
 which is the one thing a version number must never do. Starting at 5.0 clears every
-existing header, so all 41 scripts move forward and no reader has to be told about
+existing header, so all 42 scripts move forward and no reader has to be told about
 an exception. The toolkit simply never has a 4.x line, and the CHANGELOG jumps
 `[3.6.4] → [5.0.0]`; say so in one line in that entry so the gap reads as
 deliberate rather than as a missing release.
@@ -254,7 +254,7 @@ the `.csproj` use three-part (`5.0.0`), matching what each already does.
 
 - **`talisman.ps1:41` reads `Version  : 3.6` with two spaces.** A naive
   `sed 's/Version : 3.6/Version : 5.0/'` silently skips it. Match on
-  `Version\s*:` instead, and verify all 41 files afterwards.
+  `Version\s*:` instead, and verify all 42 files afterwards.
 - **`restoration.ps1` is three-part (`3.6.2`)** where every other header is
   two-part, so a pattern anchored to `3.6` alone will leave a stray `.2`.
 
@@ -365,7 +365,7 @@ without leaving the window.
   attach both to the tagged release
 - winget manifest as `CursedTechnocrat.TechnicianToolkit`, installer type
   `portable`, both architectures, generated with `wingetcreate`
-- The 5.0 version bump across all 41 scripts, the registry, and the `.csproj`
+- The 5.0 version bump across all 42 scripts, the registry, and the `.csproj`
 - Extend the Pester license gate to `.cs` and `.xaml`; add the version-consistency
   gate; add xUnit tests for the AST readers and the extractor
 - `README.md` and `CLAUDE.md` rewritten around two ways to run the suite: the app,
