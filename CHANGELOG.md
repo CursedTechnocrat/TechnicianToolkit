@@ -5,6 +5,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.8.0] - 2026-08-27
+
+### Added
+- **`H.E.R.A.L.D.` now answers the authentication half of an access review, not just the access half.** A customer security questionnaire asks *"what authentication and access mechanisms are in place — password length and complexity, password history, password expiration, and lockout for failed attempts?"* Nothing in the toolkit reported that: SIGIL *enforces* a local password policy through `net accounts` but is write-only, covers local policy rather than domain policy, and cannot set complexity at all; CITADEL reads `Get-ADDefaultDomainPasswordPolicy` but pulls only `MaxPasswordAge.Days` for its expiry report. Minimum length, complexity, history, lockout and fine-grained policies were read by nothing.
+
+  A new **section 01, Authentication Policy**, reads the default domain password and lockout policy and scores each setting **Strong / Acceptable / Weak** against a baseline declared in `$PasswordPolicyBaseline`, with a plain-English reason per row. Above the table, the four questionnaire items are written out as finished sentences the technician can paste straight into the response rather than re-derive from the numbers.
+
+  **Fine-grained password policies (PSOs) are enumerated too**, with precedence and targets. A PSO overrides the domain default for the principals it applies to, so answering an audit from the default policy alone can be flatly wrong — CITADEL already hinted at this in a warning but never listed them.
+
+  The meaningful zeros are interpreted rather than printed raw, because each means something different and none of them means "smallest": lockout threshold `0` disables lockout entirely (**Weak**), maximum password age `0` means passwords never expire (**reported, not failed** — NIST SP 800-63B advises against routine expiry where length and breach screening are strong, so a deliberate no-expiry policy can be defensible), and lockout duration `0` means the account stays locked until an administrator unlocks it, which is the **strictest** option available rather than the weakest. The last of these was caught in review: scoring duration as plain higher-is-better rated the safest possible configuration `Weak`.
+
+  A summary card reports the count of settings below baseline, the console prints the same verdicts as the report, and the whole section degrades to a stated reason if the policy cannot be read — the account roster is unaffected either way.
+
+  Covered by new Pester contexts asserting the baseline table (every setting carries a `Kind` the verdict logic understands, a label and a rationale; lockout duration is a `Duration` and not a `Number`; reversible encryption is a finding when enabled) and the verdict and formatting helpers, including all four zero cases and the Unknown fallbacks. The verdict tests assert the baseline map actually loaded first, because a null map silently scores every setting `Strong`.
+
+---
+
 ## [3.7.1] - 2026-08-27
 
 ### Fixed

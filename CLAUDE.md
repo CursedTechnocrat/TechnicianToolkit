@@ -315,6 +315,7 @@ Both are Active Directory tools; they sit on opposite sides of the act/report di
 |----------|-----------|
 | "Unlock this account / reset this password / add them to a group." | **CITADEL** (interactive AD management — it changes the directory) |
 | "Give the customer a list of every account and what each one can do." | **HERALD** (read-only roster: full name / alias / access level, plus a review CSV) |
+| "What are the password and lockout rules on this domain?" | **HERALD** (reads and scores the default domain policy and any fine-grained policies; SIGIL *sets* local policy but never reports domain policy) |
 
 CITADEL's reports (stale accounts, password expiry) answer *account hygiene* questions about the
 directory. HERALD answers an *access review* question — who holds privilege, and through which
