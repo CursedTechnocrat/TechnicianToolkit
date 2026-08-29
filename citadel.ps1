@@ -153,7 +153,7 @@ function Test-DomainJoined {
         return $true
     }
     try {
-        $cs = Get-WmiObject -Class Win32_ComputerSystem -ErrorAction SilentlyContinue
+        $cs = Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction SilentlyContinue
         return ($cs.PartOfDomain -eq $true)
     } catch {
         return $false

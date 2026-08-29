@@ -329,19 +329,19 @@ function Get-EventErrors {
     if ($script:RemoteTarget) {
         $target = $script:RemoteTarget
         $sysErrors = try {
-            Get-EventLog -LogName System -EntryType Error -After $since -Newest 50 -ComputerName $target -ErrorAction Stop
+            Get-WinEvent -FilterHashtable @{ LogName = 'System'; Level = 2; StartTime = $since } -MaxEvents 50 -ComputerName $target -ErrorAction Stop
         } catch { @() }
 
         $appErrors = try {
-            Get-EventLog -LogName Application -EntryType Error -After $since -Newest 50 -ComputerName $target -ErrorAction Stop
+            Get-WinEvent -FilterHashtable @{ LogName = 'Application'; Level = 2; StartTime = $since } -MaxEvents 50 -ComputerName $target -ErrorAction Stop
         } catch { @() }
     } else {
         $sysErrors = try {
-            Get-EventLog -LogName System -EntryType Error -After $since -Newest 50 -ErrorAction Stop
+            Get-WinEvent -FilterHashtable @{ LogName = 'System'; Level = 2; StartTime = $since } -MaxEvents 50 -ErrorAction Stop
         } catch { @() }
 
         $appErrors = try {
-            Get-EventLog -LogName Application -EntryType Error -After $since -Newest 50 -ErrorAction Stop
+            Get-WinEvent -FilterHashtable @{ LogName = 'Application'; Level = 2; StartTime = $since } -MaxEvents 50 -ErrorAction Stop
         } catch { @() }
     }
 
@@ -349,21 +349,21 @@ function Get-EventErrors {
     foreach ($e in $sysErrors) {
         $allErrors.Add([PSCustomObject]@{
             Log           = 'System'
-            TimeGenerated = $e.TimeGenerated
-            EntryType     = $e.EntryType.ToString()
-            Source        = $e.Source
-            EventID       = $e.EventID
-            Message       = if ($e.Message.Length -gt 120) { $e.Message.Substring(0,120) + '...' } else { $e.Message }
+            TimeGenerated = $e.TimeCreated
+            EntryType     = $e.LevelDisplayName
+            Source        = $e.ProviderName
+            EventID       = $e.Id
+            Message       = if ($e.Message -and $e.Message.Length -gt 120) { $e.Message.Substring(0,120) + '...' } else { $e.Message }
         })
     }
     foreach ($e in $appErrors) {
         $allErrors.Add([PSCustomObject]@{
             Log           = 'Application'
-            TimeGenerated = $e.TimeGenerated
-            EntryType     = $e.EntryType.ToString()
-            Source        = $e.Source
-            EventID       = $e.EventID
-            Message       = if ($e.Message.Length -gt 120) { $e.Message.Substring(0,120) + '...' } else { $e.Message }
+            TimeGenerated = $e.TimeCreated
+            EntryType     = $e.LevelDisplayName
+            Source        = $e.ProviderName
+            EventID       = $e.Id
+            Message       = if ($e.Message -and $e.Message.Length -gt 120) { $e.Message.Substring(0,120) + '...' } else { $e.Message }
         })
     }
 

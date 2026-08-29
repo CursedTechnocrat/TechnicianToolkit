@@ -151,7 +151,7 @@ try {
     # SMART failure prediction via WMI
     $smartData = @{}
     try {
-        $smartRaw = Get-WmiObject -Namespace root\wmi -Class MSStorageDriver_FailurePredictStatus -ErrorAction SilentlyContinue
+        $smartRaw = Get-CimInstance -Namespace root\wmi -ClassName MSStorageDriver_FailurePredictStatus -ErrorAction SilentlyContinue
         foreach ($s in $smartRaw) {
             # InstanceName typically ends in _0, _1, etc. — use it as a loose key
             $key = ($s.InstanceName -split '\\' | Select-Object -Last 1) -replace '_\d+$',''

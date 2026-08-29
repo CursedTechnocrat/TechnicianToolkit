@@ -968,8 +968,17 @@ if ($rebootRequired) {
                 Write-Host "  [~] Would restart this computer now" -ForegroundColor Cyan
                 Write-Host ""
             } else {
+            # [Console]::KeyAvailable throws when no console is attached — the GUI host, a
+            # WinRM runspace, a scheduled task. Probe once and degrade to a plain wait.
+            $canPollKeys = $false
+            try { $null = [Console]::KeyAvailable; $canPollKeys = $true } catch { }
+
             Write-Host ""
-            Write-Host "  Rebooting in 30 seconds. Press Escape to cancel..." -ForegroundColor $ColorSchema.Warning
+            if ($canPollKeys) {
+                Write-Host "  Rebooting in 30 seconds. Press Escape to cancel..." -ForegroundColor $ColorSchema.Warning
+            } else {
+                Write-Host "  Rebooting in 30 seconds..." -ForegroundColor $ColorSchema.Warning
+            }
             Write-Host ""
             Write-Host "   30 [============================================]" -ForegroundColor $ColorSchema.Accent
 
@@ -981,7 +990,7 @@ if ($rebootRequired) {
                 Write-Host -NoNewline "`r   $i  [$bar$remaining]" -ForegroundColor $ColorSchema.Accent
 
                 for ($tick = 0; $tick -lt 10; $tick++) {
-                    if ([Console]::KeyAvailable) {
+                    if ($canPollKeys -and [Console]::KeyAvailable) {
                         $key = [Console]::ReadKey($true)
                         if ($key.Key -eq [ConsoleKey]::Escape) { $cancelled = $true; break }
                     }

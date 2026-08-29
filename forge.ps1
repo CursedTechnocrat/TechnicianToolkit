@@ -133,7 +133,7 @@ function Invoke-DeviceAudit {
 
     Write-Host "  [*] Scanning device tree..." -ForegroundColor $C.Progress
 
-    $allDevices = Get-WmiObject Win32_PnPEntity -ErrorAction SilentlyContinue |
+    $allDevices = Get-CimInstance -ClassName Win32_PnPEntity -ErrorAction SilentlyContinue |
                   Where-Object { $_.DeviceID -notmatch '^HTREE\\' } |
                   Sort-Object ConfigManagerErrorCode, Name
 
@@ -377,10 +377,10 @@ function Export-DriverReport {
     $logPath = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) ("FORGE_DriverReport_{0}.csv" -f (Get-Date -Format 'yyyyMMdd_HHmmss'))
 
     try {
-        $drivers = Get-WmiObject Win32_PnPSignedDriver -ErrorAction SilentlyContinue |
+        $drivers = Get-CimInstance -ClassName Win32_PnPSignedDriver -ErrorAction SilentlyContinue |
                    Where-Object { $_.DeviceName } |
                    Select-Object DeviceName, DriverVersion, DriverDate, Manufacturer,
-                                 @{N='Status'; E={ (Get-WmiObject Win32_PnPEntity | Where-Object { $_.Name -eq $_.DeviceName } | Select-Object -First 1).Status }} |
+                                 @{N='Status'; E={ (Get-CimInstance -ClassName Win32_PnPEntity | Where-Object { $_.Name -eq $_.DeviceName } | Select-Object -First 1).Status }} |
                    Sort-Object DeviceName
 
         $drivers | Export-Csv -Path $logPath -NoTypeInformation -Encoding UTF8

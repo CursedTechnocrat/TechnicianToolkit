@@ -605,7 +605,7 @@ function Apply-LegacyProtocols {
     # ── NetBIOS over TCP/IP ────────────────────────────────────────────────────
     # Legacy protocol; disabling reduces attack surface for NBNS poisoning.
     try {
-        $adapters = Get-WmiObject Win32_NetworkAdapterConfiguration -ErrorAction Stop |
+        $adapters = Get-CimInstance -ClassName Win32_NetworkAdapterConfiguration -ErrorAction Stop |
                     Where-Object { $_.IPEnabled }
 
         $toDisable = $adapters | Where-Object { $_.TcpipNetbiosOptions -ne 2 }
@@ -619,7 +619,9 @@ function Apply-LegacyProtocols {
         } else {
             $changed = 0
             foreach ($adapter in $toDisable) {
-                $result = $adapter.SetTcpipNetbios(2)   # 2 = Disable NetBIOS over TCP/IP
+                # A CIM instance carries no methods, so the call goes through Invoke-CimMethod.
+                $result = Invoke-CimMethod -InputObject $adapter -MethodName SetTcpipNetbios `
+                                           -Arguments @{ TcpipNetbiosOptions = [uint32]2 }   # 2 = Disable
                 if ($result.ReturnValue -eq 0) { $changed++ }
             }
             Write-Host "    [+] NetBIOS over TCP/IP — disabled on $changed adapter(s)." -ForegroundColor $ColorSchema.Success

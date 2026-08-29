@@ -687,7 +687,7 @@ catch {
 }
 
 try {
-    $thirdParty = Get-WmiObject -Namespace 'root\SecurityCenter2' -Class AntiVirusProduct -ErrorAction SilentlyContinue |
+    $thirdParty = Get-CimInstance -Namespace 'root\SecurityCenter2' -ClassName AntiVirusProduct -ErrorAction SilentlyContinue |
                   Where-Object { $_.displayName -notmatch 'Windows Defender|Microsoft Defender' }
     foreach ($av in $thirdParty) {
         $avProducts.Add([PSCustomObject]@{

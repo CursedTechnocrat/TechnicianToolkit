@@ -342,8 +342,17 @@ elseif ($rebootRequired) {
         $rebootPrompt = Read-Host "Is it safe to reboot this computer now? (Y/N)"
 
         if ($rebootPrompt -eq 'Y' -or $rebootPrompt -eq 'y') {
+            # [Console]::KeyAvailable throws when no console is attached — the GUI host, a
+            # WinRM runspace, a scheduled task. Probe once and degrade to a plain wait.
+            $canPollKeys = $false
+            try { $null = [Console]::KeyAvailable; $canPollKeys = $true } catch { }
+
             Write-Host ""
-            Write-Host "Initiating reboot in 30 seconds. Press Escape to cancel..." -ForegroundColor $ColorSchema.Warning
+            if ($canPollKeys) {
+                Write-Host "Initiating reboot in 30 seconds. Press Escape to cancel..." -ForegroundColor $ColorSchema.Warning
+            } else {
+                Write-Host "Initiating reboot in 30 seconds..." -ForegroundColor $ColorSchema.Warning
+            }
             Write-Host ""
             Write-Host "   30 [============================================]" -ForegroundColor $ColorSchema.Accent
 
@@ -357,7 +366,7 @@ elseif ($rebootRequired) {
 
                 # Poll for Escape key in 100ms intervals
                 for ($tick = 0; $tick -lt 10; $tick++) {
-                    if ([Console]::KeyAvailable) {
+                    if ($canPollKeys -and [Console]::KeyAvailable) {
                         $key = [Console]::ReadKey($true)
                         if ($key.Key -eq [ConsoleKey]::Escape) {
                             $cancelled = $true
