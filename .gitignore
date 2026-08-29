@@ -37,6 +37,10 @@ $RECYCLE.BIN/
 .idea/
 *.code-workspace
 
+# Visual Studio per-user cache. Appeared once the app/ solution was opened
+# locally; it is machine-specific state and must never be committed.
+.vs/
+
 # ─── Claude Code ──────────────────────────────────────────────────────────────
 .claude/settings.local.json
 
