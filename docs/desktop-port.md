@@ -1,6 +1,6 @@
 # Desktop Port — turning the toolkit into one portable application
 
-**Status:** phase 00 complete · **Target release:** 5.0 — *bringing it together to be portable*
+**Status:** phase 01 engine landed · **Target release:** 5.0 — *bringing it together to be portable*
 
 > **Phase 00 outcome — the approach works.** A single-file self-contained WPF app
 > hosting PowerShell 7 ran `ward.ps1` end to end with zero error records: it
@@ -168,16 +168,25 @@ way, so the technique has precedent here.
 ## The compatibility debt, in full
 
 Moving from Windows PowerShell 5.1 to PowerShell 7 costs far less than it sounds.
-This is the complete list — every call site, found by scanning the tree. Nothing
-else in the suite blocks the move.
+
+This list was **not** complete as first written: it covered the WMI and EventLog
+families but not the rest of what left `Microsoft.PowerShell.Management` in the
+same release, and it prescribed a cmdlet swap at two sites where a swap alone
+would have failed. It has since been re-swept against the removed-cmdlet set
+(`*-WmiObject`, `*-EventLog`, `*-Computer`, `*-ComputerRestore*`,
+`New-WebServiceProxy`) and the `[WMI]` / `[WMICLASS]` / `[WMISEARCHER]` type
+accelerators. `Add-Computer` is the only blocker that sweep found still standing.
 
 | Site | Problem | Fix | Severity |
 |---|---|---|---|
-| `augur.ps1:154`, `auspex.ps1:690`, `citadel.ps1:156`, `forge.ps1:136,380,383`, `sigil.ps1:608` | `Get-WmiObject` was removed in PowerShell 7 — 7 sites across 5 files | Replace with `Get-CimInstance`; `-Namespace` carries over unchanged | must fix |
-| `gargoyle.ps1:332–344` | `Get-EventLog` was removed in PowerShell 7 — 4 sites | Replace with `Get-WinEvent -FilterHashtable`, which keeps `-ComputerName` | must fix |
+| `augur.ps1:154`, `auspex.ps1:690`, `citadel.ps1:156`, `forge.ps1:136,380,383`, `sigil.ps1:608` | `Get-WmiObject` was removed in PowerShell 7 — 7 sites across 5 files | Replaced with `Get-CimInstance`; `-Namespace` carries over unchanged | ~~must fix~~ **DONE** |
+| `sigil.ps1:622` | `$adapter.SetTcpipNetbios(2)` — a WMI *instance method*. A CIM instance carries no methods, so swapping the cmdlet alone would have left a call that throws at runtime | Rewritten as `Invoke-CimMethod -InputObject $adapter -MethodName SetTcpipNetbios` | ~~missed by the original scan~~ **DONE** |
+| `gargoyle.ps1:332–344` | `Get-EventLog` was removed in PowerShell 7 — 4 sites | Replaced with `Get-WinEvent -FilterHashtable`, using `Level = 2` for exact parity with `-EntryType Error`, plus the property remap below | ~~must fix~~ **DONE** |
+| `gargoyle.ps1:352–366` | `Get-WinEvent` returns `TimeCreated` / `LevelDisplayName` / `ProviderName` / `Id`, not `TimeGenerated` / `EntryType` / `Source` / `EventID`. A straight cmdlet swap would have emptied the console table and the HTML report without erroring | Remapped at the two consumer loops, keeping the emitted shape identical; `Message` is now null-guarded because `Get-WinEvent` leaves it null when a provider resource DLL is missing | ~~missed by the original scan~~ **DONE** |
+| `covenant.ps1:304,307,529,532` | **`Add-Computer` was removed in PowerShell 7** — 4 sites, all in the AD domain-join path | Not yet fixed. See *The site the first scan missed* below | must fix |
 | `TechnicianToolkit.psm1:32` | `[Console]::OutputEncoding` throws `"The handle is invalid"` when no console is attached | Wrap in `try/catch` | ~~crashes app~~ **DONE** |
-| `covenant.ps1:984–985`, `restoration.ps1:360–361` | `[Console]::KeyAvailable` / `ReadKey` in press-a-key-to-skip loops | Guard on a host-capability check; skip the poll entirely when hosted | must fix |
-| `scryer.ps1:108` | `[Console]::Clear()` bypasses the host | Use `Clear-Host`, which the custom host implements | must fix |
+| `covenant.ps1:984–985`, `restoration.ps1:360–361` | `[Console]::KeyAvailable` / `ReadKey` in press-a-key-to-skip loops | Each countdown now probes `[Console]::KeyAvailable` once in a `try/catch` and degrades to a plain wait. The banner is conditional too, so a console-less host no longer promises an Escape key that cannot be pressed | ~~must fix~~ **DONE** |
+| `scryer.ps1:108` | `[Console]::Clear()` bypasses the host | Now `Clear-Host`, which the custom host implements | ~~must fix~~ **DONE** |
 | `grimoire.ps1` ×4 | Same `[Console]::Clear()`, but in the hub the app replaces | Leave alone — console mode still uses it | no action |
 
 **Severity corrected by the spike.** `[Console]::OutputEncoding` was rated
@@ -187,9 +196,35 @@ time, so without the fix all 42 tools open with a spurious error. Windows
 PowerShell 5.1 was re-checked afterwards and still sets UTF-8 when a console is
 attached, so the standalone script path does not regress.
 
-The `[Console]::KeyAvailable` sites are **not** yet verified either way; they sit
-behind interactive branches the spike never reached. Treat their severity as
-unknown until a prompt-heavy tool is actually run.
+The `[Console]::KeyAvailable` sites are guarded but still **not exercised**: they
+sit behind reboot countdowns that only a full COVENANT or RESTORATION run reaches.
+The guard is written to be safe either way — it probes the call it is about to
+make rather than inferring from the host name — but it has not been watched
+running.
+
+### The site the first scan missed
+
+`Add-Computer` is removed in PowerShell 7, and `covenant.ps1` calls it at four
+sites to join a machine to an Active Directory domain. The original sweep looked
+for the WMI and EventLog families and did not cover the `*-Computer` cmdlets that
+left `Microsoft.PowerShell.Management` in the same release.
+
+It is deliberately **not** fixed yet, because none of the options is a mechanical
+swap and all of them change a credentialed, destructive operation:
+
+- **`Invoke-CimMethod` on `Win32_ComputerSystem.JoinDomainOrWorkgroup`.** Native
+  and dependency-free, but it takes the password as plain text and the join
+  behaviour is driven by an `FJoinOptions` bitmask rather than named switches.
+  It needs testing against a real domain before it can be trusted.
+- **`Import-Module Microsoft.PowerShell.Management -UseWindowsPowerShell`.** Keeps
+  `Add-Computer` verbatim, but runs it in a Windows PowerShell 5.1 compatibility
+  session — a separate runspace, so its output and prompts do not travel through
+  the custom host. It also quietly reintroduces a dependency on the machine own
+  PowerShell, which is the thing hosting the engine was meant to remove.
+- **Leave the AD-join path console-only for 5.0** and have the app surface it as
+  unavailable, deferring the rewrite.
+
+This is the one decision in the port that a domain is required to validate.
 
 ### Found while scanning
 
@@ -208,7 +243,7 @@ touches almost nothing outside its own directory.
 | Touches | Action |
 |---|---|
 | `launcher/` (4 files) | Delete, after lifting `Program.cs`'s extraction logic into the app |
-| `.github/workflows/release-launcher.yml` | Replace with `release-app.yml` (signing + ARM64 + winget, below) |
+| `.github/workflows/release-launcher.yml` | Replace with `release-app.yml` (signing + ARM64 + winget, below). **This has to land in the same change as the directory deletion**, or a tag builds a workflow whose source is gone |
 | `tests/…Tests.ps1:355–361` | Update the BOM test's comment — see the note below |
 | `README.md` | Nothing to remove; add the app instead |
 
@@ -310,8 +345,12 @@ Settled in [`app/spike/`](../app/spike/).
   requestedExecutionLevel decision (`Assert-AdminPrivilege` passes rather than
   exiting), that `-Unattended` suppresses the prompt (`prompt calls: 0`), and
   that the shared HTML report path works untouched
-- ⬜ **Clean VM.** This machine has PowerShell 7 installed independently, so
-  "the `.exe` carries its own engine" is not yet honestly proven.
+- ⬜ **Clean VM.** Weaker than recorded, but still open. This machine turns out
+  to have **no PowerShell 7 installed at all** — no `pwsh` on `PATH`, nothing under
+  `Program Files\PowerShell` — and the phase 00 probe reported `$PSHOME` resolving
+  into the single-file extraction directory, not a system install. Phase 01 then
+  ran two whole tools on it. That is good evidence the engine travels in the
+  bundle; a genuinely clean VM is still the honest proof.
 - ⬜ **ARM64 on real hardware.** It bundles; it has never been executed.
 - ⬜ **SignPath Foundation application** — still to submit, still the longest
   lead time in the plan.
@@ -321,19 +360,39 @@ closed before phase 02 commits to the architecture, but neither blocks starting
 phase 01. SignPath is not a verification task; it is paperwork with a review
 attached, and it should be submitted now regardless of when phase 01 begins.
 
-### 01 — Engine · 1–2 weeks
+### 01 — Engine · 1–2 weeks · **exit criteria met**
 
-Headless and testable, with no window yet.
+Headless and testable, with no window yet. Lives in
+[`app/TechnicianToolkit.Engine`](../app/TechnicianToolkit.Engine/) with the console
+harness in [`app/TechnicianToolkit.Harness`](../app/TechnicianToolkit.Harness/).
 
-- Lift resource extraction out of `launcher/Program.cs` into the app, then delete
-  `launcher/`
-- Full `PSHost` / `PSHostUserInterface` / `PSHostRawUserInterface` implementation,
-  with async events for every stream
-- AST readers for the `$Tools` catalog and for each tool's `param()` block
-- Apply the compatibility fixes above
+- ✅ Resource extraction lifted out of `launcher/Program.cs` into `ScriptExtractor`.
+  It embeds and writes out 45 files — 42 tools, the module, `config.json` and the
+  licence — byte for byte, so the UTF-8 BOM every script carries survives
+- ✅ Full `PSHost` / `PSHostUserInterface` / `PSHostRawUserInterface`, with the
+  streams handled asynchronously and `[securestring]` fields answered without ever
+  materialising a managed string
+- ✅ AST readers for the `$Tools` catalog and for each tool's `param()` block.
+  The catalog reads all 41 registry entries out of `grimoire.ps1`; the parameter
+  reader turns `ValidateSet` into a dropdown, `ValidateScript` into a path picker
+  and `[securestring]` into a masked field, with no per-tool knowledge in C#
+- ✅ The compatibility fixes above, except the newly found `Add-Computer` sites
+- ⬜ `launcher/` is **not** deleted yet. Its extraction logic has been lifted, so
+  nothing depends on it any more, but `.github/workflows/release-launcher.yml`
+  still builds it — the deletion and the `release-app.yml` swap have to land
+  together or the tagged release breaks
 
 **Exit:** a console harness runs any tool by name with parameters, streams its
-output live, and cancels it mid-run.
+output live, and cancels it mid-run. **Met**, and verified on this machine:
+
+| Check | Result |
+|---|---|
+| Extraction | 45 files written, every BOM intact |
+| Catalog by AST | 41 tools read from the `grimoire.ps1` registry, grouped by its own `$CategoryOrder` |
+| Parameters by AST | CIPHER renders its 8-value `ValidateSet` as a dropdown and its `ValidatePattern` verbatim |
+| A tool end to end | EXHUME ran unelevated through the hosted engine, colours and sections intact, and wrote its HTML report |
+| Cancel mid-run | `PowerShell.Stop()` interrupted EXHUME mid-scan at 3.2s; harness exit 130 |
+| Elevation refusal | WARD prints its refusal and stops. `exit` inside a module function never reaches `SetShouldExit`, so the harness pre-flights elevation instead |
 
 ### 02 — The window · 2–3 weeks
 
@@ -382,7 +441,7 @@ without leaving the window.
 | Risk | Why it bites | Response |
 |---|---|---|
 | ~~**high**~~ **retired** — PowerShell SDK with single-file publish | Both failure modes found and fixed in phase 00; neither was discoverable from its error message | Locked in via two build settings. Keep the spike's `--probe` check in CI so a dependency bump cannot silently reintroduce either |
-| **low** — the clean-VM claim is unverified | The dev box has PowerShell 7 installed independently, so a stray dependency on it would not show up here | One run on a VM with no PowerShell 7 before phase 02 |
+| **low** — the clean-VM claim is unverified | Recorded as *the dev box has PowerShell 7 installed independently*. It does not — see phase 00 above — so the risk is smaller than it was written, but a machine that never had it is still the only real proof | One run on a VM with no PowerShell 7 before phase 02 |
 | **med** — SignPath application lead time | It is an application with a review, not a purchase | Submitted during phase 00. Unsigned builds trip SmartScreen, which is fatal for a tool run on client machines |
 | **med** — Antivirus false positives | A single-file executable that unpacks scripts to disk and runs them elevated is, structurally, what a dropper looks like | Signing helps most. Submit to Microsoft and the major vendors for whitelisting ahead of the release |
 | **med** — Prompt-heavy tools | `covenant.ps1` has 26 `Read-Host` calls and `citadel.ps1` has 17; a separate dialog for each is a miserable experience | Prefer `-Unattended` driven by the generated form. Treat modal prompts as the fallback path, not the primary one |

@@ -1,0 +1,99 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    PHASE 01 exit criterion - the console harness.
+
+    Runs any tool by name with parameters, streams its output live, and cancels
+    it mid-run. No window: this exists so the engine can be exercised and
+    regression-tested before phase 02 puts a GUI on it, and it stays afterwards
+    as the headless entry point.
+
+    The two build settings that make single-file publish work live HERE rather
+    than in the engine library, because both act on the publish output of the
+    executable project.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>TechnicianToolkit.Harness</AssemblyName>
+    <RootNamespace>TechnicianToolkit.Harness</RootNamespace>
+    <Version>5.0.0</Version>
+    <Product>TechnicianToolkit</Product>
+    <Description>Headless console harness for the Technician Toolkit engine</Description>
+    <Copyright>Copyright (C) 2026 CursedTechnocrat and the Technician Toolkit contributors</Copyright>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+
+    <!--
+      MANDATORY (phase 00). Without this, constructing PSHostUserInterface throws
+      TypeInitializationException on PowerShellConfig before a single script runs:
+      PowerShell derives $PSHOME from Assembly.Location, which is empty under
+      single-file. It fails inside the host constructor, so no script-level
+      try/catch can reach it.
+    -->
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+
+    <!-- Trimming must stay off: it strips the reflection metadata the PowerShell
+         engine resolves cmdlets and types through. -->
+    <PublishTrimmed>false</PublishTrimmed>
+
+    <!-- PowerShell needs real globalization data; invariant mode breaks it. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+
+    <NoWarn>$(NoWarn);IL3000;NETSDK1179</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TechnicianToolkit.Engine\TechnicianToolkit.Engine.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- GeneratePathProperty exposes $(PkgMicrosoft_PowerShell_SDK), which the
+         module-remap target below needs. -->
+    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.4.6" GeneratePathProperty="true" />
+  </ItemGroup>
+
+  <!--
+    MANDATORY (phase 00). THE FIX THAT MAKES SINGLE-FILE WORK.
+
+    The SDK ships PowerShell built-in modules (CimCmdlets, Utility, Management,
+    Security, Diagnostics, WSMan) as *content* under a RID-relative path:
+    contentFiles/any/any/runtimes/win/lib/net8.0/Modules. Assemblies flatten into
+    the bundle root, but content keeps its relative path - so the modules extract
+    to runtimes\win\lib\net8.0\Modules while PowerShell only ever looks in
+    $PSHOME\Modules. Every built-in cmdlet then fails to resolve, including
+    Get-CimInstance, which 35 sites in the suite depend on.
+
+    Re-linking them to Modules\** puts them where $PSHOME expects. The unix
+    copies are dropped: this is a Windows-only application and they are dead
+    weight in the bundle.
+  -->
+  <Target Name="RemapPowerShellModules" BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <_PSBuiltInModule Include="$(PkgMicrosoft_PowerShell_SDK)\contentFiles\any\any\runtimes\win\lib\net8.0\Modules\**\*" />
+      <Content Include="@(_PSBuiltInModule)">
+        <Link>Modules\%(RecursiveDir)%(Filename)%(Extension)</Link>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </Content>
+    </ItemGroup>
+  </Target>
+
+  <!-- Drop the stranded RID-path copies so the bundle carries one set. -->
+  <Target Name="DropRidPathModules" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish
+        Remove="@(ResolvedFileToPublish)"
+        Condition="$([System.String]::Copy('%(ResolvedFileToPublish.RelativePath)').Replace('/', '\').Contains('runtimes\unix\lib\net8.0\Modules\')) OR
+                   $([System.String]::Copy('%(ResolvedFileToPublish.RelativePath)').Replace('/', '\').Contains('runtimes\win\lib\net8.0\Modules\'))" />
+    </ItemGroup>
+  </Target>
+
+</Project>

@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="TechnicianToolkit.Engine/TechnicianToolkit.Engine.csproj" />
+  <Project Path="TechnicianToolkit.Harness/TechnicianToolkit.Harness.csproj" />
+</Solution>

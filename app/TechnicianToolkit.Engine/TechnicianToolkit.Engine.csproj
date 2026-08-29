@@ -1,0 +1,67 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    PHASE 01 - the engine, headless and testable.
+
+    Everything the application needs to run a toolkit tool without a window:
+    the embedded suite, the PSHost that carries its console output, the AST
+    readers for the GRIMOIRE registry and each tool param() block, and the
+    runner itself.
+
+    The tool scripts are NOT modified by this project. They are embedded
+    verbatim from the repository root and remain independently runnable under
+    Windows PowerShell 5.1, which stays the primary documented path.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>TechnicianToolkit.Engine</AssemblyName>
+    <RootNamespace>TechnicianToolkit.Engine</RootNamespace>
+    <Version>5.0.0</Version>
+    <Product>TechnicianToolkit</Product>
+    <Description>Hosted PowerShell engine for the Technician Toolkit desktop application</Description>
+    <Copyright>Copyright (C) 2026 CursedTechnocrat and the Technician Toolkit contributors</Copyright>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/CursedTechnocrat/TechnicianToolkit</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/CursedTechnocrat/TechnicianToolkit</RepositoryUrl>
+
+    <!-- The SDK warns that single-file publishing is unverified for some of its
+         transitive dependencies. Phase 00 measured it; the warning must not fail
+         the build. -->
+    <NoWarn>$(NoWarn);IL3000;NETSDK1179</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.4.6" />
+  </ItemGroup>
+
+  <!--
+    Embed the whole suite. The glob is single-level, so it matches the root .ps1
+    files but not tests/ and not the app/ tree. LogicalName flattens each
+    resource to TKScripts.<file> so ScriptExtractor can enumerate and write them
+    out by stripping the prefix.
+  -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\*.ps1">
+      <LogicalName>TKScripts.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\TechnicianToolkit.psm1">
+      <LogicalName>TKScripts.TechnicianToolkit.psm1</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\config.json">
+      <LogicalName>TKScripts.config.json</LogicalName>
+    </EmbeddedResource>
+    <!--
+      The GPL requires that every recipient of the program also receives a copy
+      of the licence. Because the shipped .exe is the whole suite in one file,
+      the licence text has to travel inside it too. It shares the TKScripts.
+      prefix so the extractor writes it out beside the scripts with no extra code.
+    -->
+    <EmbeddedResource Include="..\..\LICENSE">
+      <LogicalName>TKScripts.LICENSE</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>
