@@ -104,8 +104,7 @@ namespace TechnicianToolkit.Harness
 
         private static int Extract()
         {
-            string workDir = ScriptExtractor.Extract();
-            int count = Directory.GetFiles(workDir).Length;
+            string workDir = ScriptExtractor.Extract(out int count);
             Console.WriteLine("Extracted " + count + " file(s) to:");
             Console.WriteLine("  " + workDir);
             return 0;

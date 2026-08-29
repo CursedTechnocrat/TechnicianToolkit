@@ -53,10 +53,18 @@ namespace TechnicianToolkit.Engine
         /// <summary>
         /// Extract the suite and return the directory holding it.
         /// </summary>
-        public static string Extract()
+        public static string Extract() => Extract(out _);
+
+        /// <summary>
+        /// Extract the suite, reporting how many files were written. Callers must
+        /// use this count rather than counting the directory afterwards: tools
+        /// write their HTML reports into the same working directory, so a
+        /// directory listing grows with every run.
+        /// </summary>
+        public static string Extract(out int fileCount)
         {
             string workDir = ResolveWorkDir();
-            Extract(workDir);
+            fileCount = Extract(workDir);
             return workDir;
         }
 
