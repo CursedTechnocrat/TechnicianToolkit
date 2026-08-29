@@ -355,10 +355,14 @@ Describe 'PowerShell syntax — all scripts' {
 # ─────────────────────────────────────────────────────────────────────────────
 # UTF-8 BOM — every .ps1/.psm1 must start with a UTF-8 byte-order mark.
 # Windows PowerShell 5.1 reads a BOM-less file as ANSI (Windows-1252), which
-# mangles the Unicode box-drawing banners and menu glyphs at parse time (the
-# launcher invokes powershell.exe 5.1, so it hits this every run). A BOM forces
-# UTF-8 decoding. CI runs under pwsh (PS7, which assumes UTF-8) so it would not
-# otherwise catch a missing BOM — this test does.
+# mangles the Unicode box-drawing banners and menu glyphs at parse time. A BOM
+# forces UTF-8 decoding.
+#
+# This used to justify itself by the launcher shelling out to powershell.exe 5.1.
+# The launcher is gone and the desktop app hosts PowerShell 7, which assumes
+# UTF-8 — but the gate stays, because the scripts remain runnable standalone
+# under Windows PowerShell 5.1 and that is still the primary documented path.
+# CI runs under pwsh (PS7) so it would not otherwise catch a missing BOM.
 # ─────────────────────────────────────────────────────────────────────────────
 Describe 'UTF-8 BOM — all scripts' {
     $bomCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Include '*.ps1', '*.psm1' -File -Recurse |

@@ -39,12 +39,11 @@ Nothing is left open. The rationale for each choice is in the sections below.
 
 ## Where the repo stands
 
-[`launcher/`](../launcher/) (added in #22) already produces a self-contained
-single-file `.exe` that embeds every script and shells out to `powershell.exe` to
-run the GRIMOIRE console menu. It was the proof that a one-file distribution
-works, and it did its job. The app supersedes it, so it goes — but its
-resource-embedding and extraction logic is lifted into the app first, not
-rewritten.
+`launcher/` (added in #22) produced a self-contained single-file `.exe` that
+embedded every script and shelled out to `powershell.exe` to run the GRIMOIRE
+console menu. It was the proof that a one-file distribution works, and it did its
+job. Its resource-embedding and extraction logic was lifted into the app as
+`ScriptExtractor`, and the directory has since been **deleted**.
 
 What changes is everything above and below the extractor: the console hub becomes
 a window, and the child `powershell.exe` process becomes a runspace living inside
@@ -237,15 +236,26 @@ and worth a separate fix so the two changes stay reviewable apart.
 
 ## Removing the launcher
 
-Smaller than expected: `launcher/` was never documented in `README.md`, so removal
-touches almost nothing outside its own directory.
+**Done.** Smaller than expected, as predicted: every `launcher` match in
+`README.md` and `CLAUDE.md` turned out to refer to `grimoire.ps1` as the *hub
+launcher*, not to the directory, so removal touched nothing outside its own
+directory but the workflow and one test comment.
 
 | Touches | Action |
 |---|---|
-| `launcher/` (4 files) | Delete, after lifting `Program.cs`'s extraction logic into the app |
-| `.github/workflows/release-launcher.yml` | Replace with `release-app.yml` (signing + ARM64 + winget, below). **This has to land in the same change as the directory deletion**, or a tag builds a workflow whose source is gone |
-| `tests/…Tests.ps1:355–361` | Update the BOM test's comment — see the note below |
+| `launcher/` (4 files) | ✅ Deleted, after lifting `Program.cs`'s extraction logic into `ScriptExtractor` |
+| `.github/workflows/release-launcher.yml` | ✅ Deleted in the same commit. Its **replacement is deliberately not written yet** — see below |
+| `tests/…Tests.ps1:355–361` | ✅ BOM gate kept, comment rewritten around the 5.1 standalone path |
 | `README.md` | Nothing to remove; add the app instead |
+
+**There is no release workflow on `main` right now, and that is intentional.**
+`release-app.yml` is phase 04 work and its whole point is signed artifacts, but
+the SignPath application has not been submitted, so there are no credentials to
+write against. Shipping an unsigned single-file `.exe` that unpacks scripts and
+runs them elevated is precisely the SmartScreen and antivirus problem this plan
+calls fatal, so a stopgap workflow would be worse than none. Until phase 04,
+tagging `v*` publishes nothing — which is correct, because the app has no window
+yet and is not shippable.
 
 **Keep the UTF-8 BOM gate.** Its comment currently justifies itself by saying "the
 launcher invokes powershell.exe 5.1, so it hits this every run." That reason
@@ -377,10 +387,8 @@ harness in [`app/TechnicianToolkit.Harness`](../app/TechnicianToolkit.Harness/).
   reader turns `ValidateSet` into a dropdown, `ValidateScript` into a path picker
   and `[securestring]` into a masked field, with no per-tool knowledge in C#
 - ✅ The compatibility fixes above, except the newly found `Add-Computer` sites
-- ⬜ `launcher/` is **not** deleted yet. Its extraction logic has been lifted, so
-  nothing depends on it any more, but `.github/workflows/release-launcher.yml`
-  still builds it — the deletion and the `release-app.yml` swap have to land
-  together or the tagged release breaks
+- ✅ `launcher/` deleted, together with `release-launcher.yml`, which was the only
+  thing that built it. No release workflow replaces it until phase 04 can sign
 
 **Exit:** a console harness runs any tool by name with parameters, streams its
 output live, and cancels it mid-run. **Met**, and verified on this machine:
