@@ -1,5 +1,5 @@
 <!--
-  MainWindow.xaml - catalog, detail and output.
+  MainWindow.xaml - catalog, detail, and the output / reports / history / queue panes.
   Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
   Copyright (C) 2026 CursedTechnocrat and the Technician Toolkit contributors
   SPDX-License-Identifier: GPL-3.0-or-later
@@ -47,6 +47,8 @@
         </StackPanel>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+          <Button Content="Settings" Style="{StaticResource GhostButton}" Padding="12,5"
+                  Margin="0,0,12,0" Click="OnOpenSettings" />
           <Border x:Name="ElevationBadge" Style="{StaticResource Badge}"
                   Background="{StaticResource GreenDim}">
             <TextBlock x:Name="ElevationText" Style="{StaticResource BadgeText}"
@@ -143,7 +145,7 @@
 
       <Border Grid.Column="1" Background="{StaticResource BorderBrushDim}" />
 
-      <!-- Detail + output -->
+      <!-- Detail + panes -->
       <Grid Grid.Column="2">
         <Grid.RowDefinitions>
           <RowDefinition Height="Auto" />
@@ -181,6 +183,8 @@
               <StackPanel Orientation="Horizontal">
                 <Button x:Name="RunButton" Content="Run" Style="{StaticResource PrimaryButton}"
                         Click="OnRun" IsEnabled="False" />
+                <Button x:Name="QueueButton" Content="Add to queue" Style="{StaticResource GhostButton}"
+                        Click="OnAddToQueue" IsEnabled="False" Margin="10,0,0,0" />
                 <Button x:Name="CancelButton" Content="Cancel" Style="{StaticResource DangerButton}"
                         Click="OnCancel" IsEnabled="False" Margin="10,0,0,0" />
               </StackPanel>
@@ -199,21 +203,30 @@
           </StackPanel>
         </Border>
 
-        <!-- Output -->
+        <!-- Panes -->
         <Grid Grid.Row="1" Background="{StaticResource Bg}">
           <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
           </Grid.RowDefinitions>
 
-          <Border Grid.Row="0" Padding="28,10" Background="#FF0D1219"
+          <Border Grid.Row="0" Padding="22,8" Background="#FF0D1219"
                   BorderBrush="{StaticResource BorderBrushDim}" BorderThickness="0,0,0,1">
             <Grid>
               <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock Text="OUTPUT" Style="{StaticResource TagLabel}" />
-                <TextBlock x:Name="OutputCount" Style="{StaticResource DimLabel}" Margin="12,0,0,0" />
+                <RadioButton x:Name="TabOutput" Style="{StaticResource PaneTab}" Content="OUTPUT"
+                             IsChecked="True" Checked="OnPaneChanged" />
+                <RadioButton x:Name="TabReports" Style="{StaticResource PaneTab}" Content="REPORTS"
+                             Checked="OnPaneChanged" />
+                <RadioButton x:Name="TabHistory" Style="{StaticResource PaneTab}" Content="HISTORY"
+                             Checked="OnPaneChanged" />
+                <RadioButton x:Name="TabQueue" Style="{StaticResource PaneTab}" Content="QUEUE"
+                             Checked="OnPaneChanged" />
+                <TextBlock x:Name="PaneCount" Style="{StaticResource DimLabel}" Margin="12,0,0,0"
+                           VerticalAlignment="Center" />
               </StackPanel>
-              <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+
+              <StackPanel x:Name="OutputActions" Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="Copy" Style="{StaticResource GhostButton}" Padding="12,5"
                         Click="OnCopyOutput" />
                 <Button Content="Save" Style="{StaticResource GhostButton}" Padding="12,5"
@@ -221,40 +234,177 @@
                 <Button Content="Clear" Style="{StaticResource GhostButton}" Padding="12,5"
                         Margin="8,0,0,0" Click="OnClearOutput" />
               </StackPanel>
+
+              <StackPanel x:Name="ReportActions" Orientation="Horizontal" HorizontalAlignment="Right"
+                          Visibility="Collapsed">
+                <Button Content="Open folder" Style="{StaticResource GhostButton}" Padding="12,5"
+                        Click="OnOpenReportFolder" />
+                <Button Content="Refresh" Style="{StaticResource GhostButton}" Padding="12,5"
+                        Margin="8,0,0,0" Click="OnRefreshReports" />
+              </StackPanel>
+
+              <StackPanel x:Name="HistoryActions" Orientation="Horizontal" HorizontalAlignment="Right"
+                          Visibility="Collapsed">
+                <Button Content="Clear history" Style="{StaticResource GhostButton}" Padding="12,5"
+                        Click="OnClearHistory" />
+              </StackPanel>
+
+              <StackPanel x:Name="QueueActions" Orientation="Horizontal" HorizontalAlignment="Right"
+                          Visibility="Collapsed">
+                <Button x:Name="RunQueueButton" Content="Run queue" Style="{StaticResource PrimaryButton}"
+                        Padding="14,5" Click="OnRunQueue" />
+                <Button Content="Remove" Style="{StaticResource GhostButton}" Padding="12,5"
+                        Margin="8,0,0,0" Click="OnRemoveQueued" />
+                <Button Content="Clear" Style="{StaticResource GhostButton}" Padding="12,5"
+                        Margin="8,0,0,0" Click="OnClearQueue" />
+              </StackPanel>
             </Grid>
           </Border>
 
-          <ListBox x:Name="OutputList" Grid.Row="1" Background="Transparent" BorderThickness="0"
-                   Padding="22,12" ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                   VirtualizingStackPanel.IsVirtualizing="True"
-                   VirtualizingStackPanel.VirtualizationMode="Recycling">
-            <ListBox.ItemContainerStyle>
-              <Style TargetType="ListBoxItem">
-                <Setter Property="Padding" Value="0" />
-                <Setter Property="Margin" Value="0" />
-                <Setter Property="Focusable" Value="False" />
-                <Setter Property="Template">
-                  <Setter.Value>
-                    <ControlTemplate TargetType="ListBoxItem">
-                      <ContentPresenter />
-                    </ControlTemplate>
-                  </Setter.Value>
-                </Setter>
-              </Style>
-            </ListBox.ItemContainerStyle>
-            <ListBox.ItemTemplate>
-              <DataTemplate>
-                <TextBlock local:InlineBinder.Segments="{Binding Segments}"
-                           FontFamily="{StaticResource MonoFont}" FontSize="12.5"
-                           Foreground="{StaticResource Text}" TextWrapping="NoWrap"
-                           LineHeight="17" />
-              </DataTemplate>
-            </ListBox.ItemTemplate>
-          </ListBox>
+          <Grid Grid.Row="1">
+            <!-- OUTPUT -->
+            <Grid x:Name="OutputPane">
+              <ListBox x:Name="OutputList" Background="Transparent" BorderThickness="0"
+                       Padding="22,12" ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                       VirtualizingStackPanel.IsVirtualizing="True"
+                       VirtualizingStackPanel.VirtualizationMode="Recycling">
+                <ListBox.ItemContainerStyle>
+                  <Style TargetType="ListBoxItem">
+                    <Setter Property="Padding" Value="0" />
+                    <Setter Property="Margin" Value="0" />
+                    <Setter Property="Focusable" Value="False" />
+                    <Setter Property="Template">
+                      <Setter.Value>
+                        <ControlTemplate TargetType="ListBoxItem">
+                          <ContentPresenter />
+                        </ControlTemplate>
+                      </Setter.Value>
+                    </Setter>
+                  </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock local:InlineBinder.Segments="{Binding Segments}"
+                               FontFamily="{StaticResource MonoFont}" FontSize="12.5"
+                               Foreground="{StaticResource Text}" TextWrapping="NoWrap"
+                               LineHeight="17" />
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
 
-          <TextBlock x:Name="OutputEmpty" Grid.Row="1" HorizontalAlignment="Center"
-                     VerticalAlignment="Center" Style="{StaticResource DimLabel}"
-                     Text="Select a tool and press Run." />
+              <TextBlock x:Name="OutputEmpty" HorizontalAlignment="Center" VerticalAlignment="Center"
+                         Style="{StaticResource DimLabel}" Text="Select a tool and press Run." />
+            </Grid>
+
+            <!-- REPORTS -->
+            <Grid x:Name="ReportsPane" Visibility="Collapsed">
+              <ListBox x:Name="ReportsList" Style="{StaticResource PlainList}" Margin="14,10"
+                       MouseDoubleClick="OnOpenReport">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <StackPanel Grid.Column="0">
+                        <TextBlock Text="{Binding FileName}" FontFamily="{StaticResource MonoFont}"
+                                   FontSize="12.5" Foreground="{StaticResource Text}" />
+                        <TextBlock FontFamily="{StaticResource UiFont}" FontSize="11"
+                                   Foreground="{StaticResource TextDim}" Margin="0,2,0,0">
+                          <Run Text="{Binding ToolName, Mode=OneWay}" />
+                          <Run Text="  ·  " />
+                          <Run Text="{Binding SizeDisplay, Mode=OneWay}" />
+                        </TextBlock>
+                      </StackPanel>
+                      <TextBlock Grid.Column="1" Style="{StaticResource DimLabel}" VerticalAlignment="Center"
+                                 Text="{Binding WrittenLocalDisplay}" />
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+
+              <TextBlock x:Name="ReportsEmpty" HorizontalAlignment="Center" VerticalAlignment="Center"
+                         Style="{StaticResource DimLabel}"
+                         Text="No reports yet. Run a tool that generates one." />
+            </Grid>
+
+            <!-- HISTORY -->
+            <Grid x:Name="HistoryPane" Visibility="Collapsed">
+              <ListBox x:Name="HistoryList" Style="{StaticResource PlainList}" Margin="14,10"
+                       MouseDoubleClick="OnOpenHistoryArtifact">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+
+                      <Border Grid.Column="0" Style="{StaticResource Badge}" Padding="7,2"
+                              Background="{Binding OutcomeBackground}" VerticalAlignment="Top"
+                              Margin="0,1,10,0">
+                        <TextBlock Text="{Binding Record.OutcomeDisplay}"
+                                   Style="{StaticResource BadgeText}"
+                                   Foreground="{Binding OutcomeForeground}" />
+                      </Border>
+
+                      <StackPanel Grid.Column="1">
+                        <StackPanel Orientation="Horizontal">
+                          <TextBlock Text="{Binding Record.Tool}" FontFamily="{StaticResource MonoFont}"
+                                     FontSize="12.5" Foreground="{StaticResource Text}" />
+                          <TextBlock Text="{Binding ParametersDisplay}" Style="{StaticResource DimLabel}"
+                                     Margin="10,1,0,0" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding ArtifactsDisplay}" FontFamily="{StaticResource UiFont}"
+                                   FontSize="11" Foreground="{StaticResource TextDim}"
+                                   TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                      </StackPanel>
+
+                      <TextBlock Grid.Column="2" Style="{StaticResource DimLabel}" VerticalAlignment="Top"
+                                 TextAlignment="Right" Text="{Binding WhenDisplay}" />
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+
+              <TextBlock x:Name="HistoryEmpty" HorizontalAlignment="Center" VerticalAlignment="Center"
+                         Style="{StaticResource DimLabel}" Text="Nothing has run yet." />
+            </Grid>
+
+            <!-- QUEUE -->
+            <Grid x:Name="QueuePane" Visibility="Collapsed">
+              <ListBox x:Name="QueueList" Style="{StaticResource PlainList}" Margin="14,10">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="28" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <TextBlock Grid.Column="0" Text="{Binding Position}" Style="{StaticResource DimLabel}"
+                                 VerticalAlignment="Center" />
+                      <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding Tool.ShortName}" FontFamily="{StaticResource MonoFont}"
+                                   FontSize="12.5" Foreground="{StaticResource Text}" />
+                        <TextBlock Text="{Binding ParametersDisplay}" FontFamily="{StaticResource UiFont}"
+                                   FontSize="11" Foreground="{StaticResource TextDim}"
+                                   TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                      </StackPanel>
+                      <TextBlock Grid.Column="2" Text="{Binding StateDisplay}"
+                                 Style="{StaticResource DimLabel}" VerticalAlignment="Center" />
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+
+              <TextBlock x:Name="QueueEmpty" HorizontalAlignment="Center" VerticalAlignment="Center"
+                         Style="{StaticResource DimLabel}" TextAlignment="Center"
+                         Text="Nothing queued.&#10;Pick a tool, set its parameters, and choose Add to queue." />
+            </Grid>
+          </Grid>
         </Grid>
       </Grid>
     </Grid>

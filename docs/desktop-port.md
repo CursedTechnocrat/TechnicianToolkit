@@ -1,6 +1,6 @@
 # Desktop Port — turning the toolkit into one portable application
 
-**Status:** phase 02 window landed, groundwork for 03 in · **Target release:** 5.0 — *bringing it together to be portable*
+**Status:** phase 03 landed · **Target release:** 5.0 — *bringing it together to be portable*
 
 > **Phase 00 outcome — the approach works.** A single-file self-contained WPF app
 > hosting PowerShell 7 ran `ward.ps1` end to end with zero error records: it
@@ -537,20 +537,58 @@ of its own, and every output line rendering empty because the segments were
 surfaced through a dependency property but mutated in place, so WPF compared the
 same list reference against itself and concluded nothing had changed.
 
+Phase 03 extended it: `--pane <output|reports|history|queue|settings>` chooses
+what to capture, and `--queue A,B` stages a queue that `--run` then executes for
+real. `--pane settings` renders the settings dialog, which switching panes
+cannot reach. That is how the settings screen was found unable to read its own
+configuration — it built its script from a string, where `$PSScriptRoot` is
+null, so `Join-Path` failed with a binding error naming neither the file nor the
+variable.
+
 Build with `-p:Elevate=false` to get the asInvoker manifest and run any of this
 from an unelevated shell.
 
-### 03 — What makes it a program rather than a launcher · 1–2 weeks
+### 03 — What makes it a program rather than a launcher · 1–2 weeks · **exit criteria met**
 
-- Report handling: watch the configured log directory, surface new HTML reports,
-  open on click
-- Run history: what ran, when, exit status, and which artifacts it produced
-- Settings screen over `config.json` using `Get-TKConfig` / `Set-TKConfig` —
-  `hearth.ps1` stays for console users
-- Queue several tools in sequence, mirroring what `ritual.ps1` does for recipes
+The window's lower half became four panes: OUTPUT, REPORTS, HISTORY, QUEUE.
+
+- ✅ **Report handling.** The report directory is listed and watched, and an
+  artifact opens in the default application on double-click. The watcher only
+  says *something changed*; the list itself always comes from a directory
+  listing, because a watcher can coalesce or miss events under load and a report
+  that never appeared would be worse than one that appeared slowly
+- ✅ **Run history.** Tool, time, duration, outcome, exit code, parameters and the
+  artifacts produced, persisted to `history.json` beside the suite. Artifacts are
+  attributed by diffing the report directory across the run rather than by
+  watching it during: a tool can write several files, none, or rewrite one it
+  produced earlier, and a diff answers all three
+- ✅ **Settings.** A form over `config.json`, reading through `Get-TKConfig` and
+  writing through `Set-TKConfig` rather than touching the file. `hearth.ps1` is
+  untouched and remains the console way to do the same thing
+- ✅ **Queue.** Tools are queued with the parameters captured at the moment they
+  were added, so the same tool can be queued twice with different arguments.
+  Cancelling stops the queue rather than only the tool in flight — a technician
+  who cancels a workup means the workup
 
 **Exit:** a technician can run a machine's full workup and collect every report
-without leaving the window.
+without leaving the window. **Met**, and verified end to end:
+
+| Check | Result |
+|---|---|
+| A real queue | EXHUME then WARD queued and run in sequence through the window |
+| History | EXHUME recorded `OK` with its HTML report attached, 14.2s; WARD recorded `REFUSED`, no artifacts, exit 1 |
+| Reports | Both runs' artifacts listed with tool, size and timestamp, newest first |
+| Queue | Three tools queued, each carrying its own captured parameters — CIPHER kept `-Action Status -Drive C` |
+| Settings read | The form is populated from `Get-TKConfig`, report directory included |
+| Settings write | A top-level key and a sectioned key both round-trip through `Set-TKConfig` and survive re-extraction |
+
+That WARD row is the pre-phase-03 work paying off. Before it, the same run would
+have been filed as a success.
+
+**Still unproven.** The same two things as phase 02, and for the same reason: no
+live `Read-Host` has opened a prompt dialog, and output auto-scroll has never
+been watched working. Both need a person at the keyboard. Nothing in phase 03
+changed either.
 
 ### 04 — Ship 5.0 · 1 week
 

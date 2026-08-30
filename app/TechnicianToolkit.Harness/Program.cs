@@ -52,6 +52,7 @@ namespace TechnicianToolkit.Harness
                 {
                     "extract" => Extract(),
                     "probe" => await ProbeAsync().ConfigureAwait(false),
+                    "config" => Config(rest),
                     "list" => List(),
                     "show" => Show(rest),
                     "run" => await RunAsync(rest).ConfigureAwait(false),
@@ -74,6 +75,7 @@ namespace TechnicianToolkit.Harness
             Console.WriteLine();
             Console.WriteLine("  extract               Write the embedded suite to disk and report where.");
             Console.WriteLine("  probe                 Open a runspace and prove the hosted engine works (CI gate).");
+            Console.WriteLine("  config [set K V [S]]  Show or write toolkit configuration.");
             Console.WriteLine("  list                  List every tool in the GRIMOIRE registry.");
             Console.WriteLine("  show <tool>           Show a tool declared parameters.");
             Console.WriteLine("  run <tool> [args]     Run a tool. Ctrl+C cancels it mid-run.");
@@ -184,6 +186,60 @@ Write-Progress -Activity 'Probe' -Status 'done' -Completed
 Clear-Host
 Write-Ok 'host surface OK'
 ";
+
+        /// <summary>
+        /// Read or write toolkit configuration, through the same Get-TKConfig and
+        /// Set-TKConfig the window and hearth.ps1 use. Headless configuration is
+        /// useful on its own for imaging a technician's stick, and it is what
+        /// makes the settings write path testable without clicking Save.
+        /// </summary>
+        private static int Config(string[] args)
+        {
+            string suite = EnsureExtracted();
+
+            if (args.Length == 0)
+            {
+                foreach (ConfigField current in ToolkitConfig.Read(suite))
+                {
+                    Console.WriteLine(string.Format("  {0,-32}{1}",
+                        current.DisplayName,
+                        string.IsNullOrEmpty(current.Value) ? "(unset)" : current.Value));
+                }
+                return 0;
+            }
+
+            if (!string.Equals(args[0], "set", StringComparison.OrdinalIgnoreCase) || args.Length < 3)
+            {
+                Error("Usage: config          (list values)");
+                Error("       config set <Key> <Value> [Section]");
+                return 2;
+            }
+
+            var field = new ConfigField
+            {
+                Key = args[1],
+                Value = args[2],
+                Section = args.Length > 3 ? args[3] : string.Empty,
+            };
+
+            ToolkitConfig.Write(suite, new[] { field });
+            Console.WriteLine("set " + field.DisplayName + " = " + field.Value);
+
+            // Read it back rather than trusting the write: Set-TKConfig rewrites
+            // the whole file, so a bad section or a serialisation quirk would
+            // otherwise only surface later, in a tool.
+            ConfigField? readBack = ToolkitConfig.Read(suite)
+                .FirstOrDefault(f => f.Key == field.Key && f.Section == field.Section);
+
+            if (readBack == null || readBack.Value != field.Value)
+            {
+                Error("read-back mismatch: got " + (readBack?.Value ?? "(missing)"));
+                return 1;
+            }
+
+            Console.WriteLine("verified.");
+            return 0;
+        }
 
         private static int List()
         {

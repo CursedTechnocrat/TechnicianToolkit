@@ -22,6 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -33,8 +34,10 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using TechnicianToolkit.Engine;
 
@@ -73,6 +76,16 @@ namespace TechnicianToolkit.App
         private readonly List<ToolItem> _catalog = new List<ToolItem>();
         private readonly List<ParameterField> _fields = new List<ParameterField>();
 
+        private readonly ObservableCollection<ReportArtifact> _reports =
+            new ObservableCollection<ReportArtifact>();
+        private readonly ObservableCollection<HistoryItem> _historyItems =
+            new ObservableCollection<HistoryItem>();
+        private readonly ObservableCollection<QueueItem> _queue =
+            new ObservableCollection<QueueItem>();
+
+        private RunHistory? _history;
+        private FileSystemWatcher? _reportWatcher;
+
         private string _workDir = string.Empty;
 
         /// <summary>
@@ -92,9 +105,21 @@ namespace TechnicianToolkit.App
             OutputList.ItemsSource = _lines;
             _lines.CollectionChanged += (_, _) =>
             {
-                OutputCount.Text = _lines.Count == 0 ? string.Empty : _lines.Count + " lines";
                 OutputEmpty.Visibility = _lines.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+                UpdatePaneChrome();
                 ScrollOutputToEnd();
+            };
+
+            ReportsList.ItemsSource = _reports;
+            HistoryList.ItemsSource = _historyItems;
+            QueueList.ItemsSource = _queue;
+
+            _reports.CollectionChanged += (_, _) => UpdatePaneChrome();
+            _historyItems.CollectionChanged += (_, _) => UpdatePaneChrome();
+            _queue.CollectionChanged += (_, _) =>
+            {
+                Renumber();
+                UpdatePaneChrome();
             };
 
             _sink = new WpfHostSink(Dispatcher, _lines, ApplyProgress, () => this);
@@ -149,6 +174,41 @@ namespace TechnicianToolkit.App
 
             // SelectionChanged does not fire on a list that has never rendered.
             SelectTool(pick);
+        }
+
+        /// <summary>Queue named tools with their default form values, for the render.</summary>
+        internal void QueueForRender(IEnumerable<string> toolNames)
+        {
+            foreach (string name in toolNames)
+            {
+                ToolItem? tool = _catalog.FirstOrDefault(t =>
+                    string.Equals(t.ShortName, name.Replace(".", string.Empty), StringComparison.OrdinalIgnoreCase)
+                 || string.Equals(t.Key, name, StringComparison.OrdinalIgnoreCase));
+
+                if (tool == null)
+                {
+                    continue;
+                }
+
+                // Go through the real selection path so the parameters come from
+                // the generated form, exactly as a technician's would.
+                SelectTool(tool);
+                _queue.Add(new QueueItem { Tool = tool, Parameters = CollectParameters() });
+            }
+        }
+
+        /// <summary>Switch panes for the render.</summary>
+        internal void ShowPane(string pane)
+        {
+            switch (pane.ToLowerInvariant())
+            {
+                case "reports": TabReports.IsChecked = true; break;
+                case "history": TabHistory.IsChecked = true; break;
+                case "queue": TabQueue.IsChecked = true; break;
+                default: TabOutput.IsChecked = true; break;
+            }
+
+            UpdatePaneChrome();
         }
 
         /// <summary>
@@ -226,6 +286,64 @@ namespace TechnicianToolkit.App
             }
 
             CatalogCount.Text = _catalog.Count + " tools";
+
+            _history = new RunHistory(_layout.RootDirectory);
+            foreach (RunRecord record in _history.Records)
+            {
+                _historyItems.Add(new HistoryItem { Record = record });
+            }
+
+            RefreshReports();
+            WatchReports();
+            UpdatePaneChrome();
+        }
+
+        /// <summary>
+        /// Keep the reports pane live while a tool is running, so a report appears
+        /// as it is written rather than only once the run ends. The definitive
+        /// list still comes from a directory listing: the watcher only says
+        /// "something changed", because it can coalesce or miss events under load
+        /// and a report that never appeared would be worse than a slow one.
+        /// </summary>
+        private void WatchReports()
+        {
+            if (string.IsNullOrEmpty(_layout.ReportDirectory) || !Directory.Exists(_layout.ReportDirectory))
+            {
+                return;
+            }
+
+            try
+            {
+                _reportWatcher = new FileSystemWatcher(_layout.ReportDirectory)
+                {
+                    NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size,
+                    EnableRaisingEvents = true,
+                };
+
+                FileSystemEventHandler onChange = (_, _) =>
+                    Dispatcher.InvokeAsync(RefreshReports, DispatcherPriority.Background);
+
+                _reportWatcher.Created += onChange;
+                _reportWatcher.Changed += onChange;
+                _reportWatcher.Deleted += onChange;
+                _reportWatcher.Renamed += (_, _) =>
+                    Dispatcher.InvokeAsync(RefreshReports, DispatcherPriority.Background);
+            }
+            catch (Exception)
+            {
+                // Watching is a convenience; Refresh is always available. A path
+                // that cannot be watched (a network share, an exotic filesystem)
+                // must not stop the window from opening.
+            }
+        }
+
+        private void RefreshReports()
+        {
+            _reports.Clear();
+            foreach (ReportArtifact artifact in ReportIndex.List(_layout.ReportDirectory))
+            {
+                _reports.Add(artifact);
+            }
         }
 
         /// <summary>
@@ -301,6 +419,14 @@ namespace TechnicianToolkit.App
 
         private void SelectTool(ToolItem tool)
         {
+            // Keep the list in step when selection is driven from code rather than
+            // by a click. Assigning re-raises SelectionChanged, which lands back
+            // here once with the same item and then stops.
+            if (!ReferenceEquals(CatalogList.SelectedItem, tool))
+            {
+                CatalogList.SelectedItem = tool;
+            }
+
             _selected = tool;
             ToolName.Text = tool.Entry.Name;
             ToolVersion.Text = "v" + tool.Entry.Version;
@@ -580,8 +706,12 @@ namespace TechnicianToolkit.App
             return null;
         }
 
-        private void UpdateRunEnabled() =>
-            RunButton.IsEnabled = !_running && _selected != null && _fields.All(f => f.IsValid());
+        private void UpdateRunEnabled()
+        {
+            bool ready = !_running && _selected != null && _fields.All(f => f.IsValid());
+            RunButton.IsEnabled = ready;
+            QueueButton.IsEnabled = ready;
+        }
 
         // ─── Running ──────────────────────────────────────────────────────────
 
@@ -598,7 +728,25 @@ namespace TechnicianToolkit.App
                 return;
             }
 
+            ToolItem tool = _selected;
+            Dictionary<string, object?> parameters = CollectParameters();
+
+            BeginRun();
+            try
+            {
+                await ExecuteAsync(tool, parameters, _cancellation!.Token).ConfigureAwait(true);
+            }
+            finally
+            {
+                EndRun();
+            }
+        }
+
+        /// <summary>Read the generated form back into the parameters a run takes.</summary>
+        private Dictionary<string, object?> CollectParameters()
+        {
             var parameters = new Dictionary<string, object?>();
+
             foreach (ParameterField field in _fields)
             {
                 object? value = field.ReadValue();
@@ -608,38 +756,110 @@ namespace TechnicianToolkit.App
                 }
             }
 
-            _running = true;
-            RunButton.IsEnabled = false;
-            CancelButton.IsEnabled = true;
-            CatalogList.IsEnabled = false;
+            return parameters;
+        }
 
-            _cancellation = new CancellationTokenSource();
+        /// <summary>
+        /// The single path every run goes through, whether it came from the Run
+        /// button or from the queue. Owning the history record here is what keeps
+        /// the two from drifting: a queued run that did not get recorded would be
+        /// the obvious way for this feature to rot.
+        /// </summary>
+        private async Task<ToolRunResult> ExecuteAsync(
+            ToolItem tool, Dictionary<string, object?> parameters, CancellationToken cancellation)
+        {
+            // Snapshot before, diff after: a tool may write several artifacts,
+            // none, or rewrite one it produced earlier, and a diff answers all
+            // three without having to catch an event mid-run.
+            HashSet<string> before = ReportIndex.Snapshot(_layout.ReportDirectory);
+            DateTime startedUtc = DateTime.UtcNow;
+            var clock = Stopwatch.StartNew();
+
             var runner = new ToolRunner(Sink, _workDir);
+            ToolRunResult result;
 
             try
             {
-                ToolRunResult result = await runner
-                    .RunAsync(_selected.ScriptPath, parameters, _cancellation.Token)
+                result = await runner
+                    .RunAsync(tool.ScriptPath, parameters, cancellation)
                     .ConfigureAwait(true);
-
-                Sink.Flush();
-                ReportResult(result);
             }
             catch (Exception ex)
             {
                 Sink.Write("EXCEPTION: " + ex.Message + Environment.NewLine, ConsoleColor.Red, null);
-                Sink.Flush();
+                result = new ToolRunResult { Errors = new[] { ex.Message } };
             }
-            finally
+
+            clock.Stop();
+            Sink.Flush();
+            ReportResult(result);
+
+            IReadOnlyList<ReportArtifact> produced =
+                ReportIndex.Since(_layout.ReportDirectory, before, startedUtc);
+
+            RecordRun(tool, parameters, result, startedUtc, clock.Elapsed, produced);
+            RefreshReports();
+
+            return result;
+        }
+
+        private void RecordRun(
+            ToolItem tool,
+            Dictionary<string, object?> parameters,
+            ToolRunResult result,
+            DateTime startedUtc,
+            TimeSpan duration,
+            IReadOnlyList<ReportArtifact> produced)
+        {
+            if (_history == null)
             {
-                _running = false;
-                CancelButton.IsEnabled = false;
-                CatalogList.IsEnabled = true;
-                ProgressPanel.Visibility = Visibility.Collapsed;
-                _cancellation?.Dispose();
-                _cancellation = null;
-                UpdateRunEnabled();
+                return;
             }
+
+            var record = new RunRecord
+            {
+                Tool = tool.ShortName,
+                StartedUtc = startedUtc,
+                DurationSeconds = duration.TotalSeconds,
+                Outcome =
+                    result.Cancelled ? RunOutcome.Cancelled
+                    : result.RefusedNeedsAdmin ? RunOutcome.RefusedNeedsAdmin
+                    : result.Errors.Count > 0 ? RunOutcome.CompletedWithErrors
+                    : RunOutcome.Succeeded,
+                ErrorCount = result.Errors.Count,
+                ExitCode = result.ExitCode,
+                Parameters = RunHistory.DescribeParameters(parameters),
+                Artifacts = produced.Select(a => a.FullPath).ToList(),
+            };
+
+            _history.Add(record);
+            _historyItems.Insert(0, new HistoryItem { Record = record });
+        }
+
+        private void BeginRun()
+        {
+            _running = true;
+            RunButton.IsEnabled = false;
+            QueueButton.IsEnabled = false;
+            RunQueueButton.IsEnabled = false;
+            CancelButton.IsEnabled = true;
+            CatalogList.IsEnabled = false;
+
+            _cancellation = new CancellationTokenSource();
+        }
+
+        private void EndRun()
+        {
+            _running = false;
+            CancelButton.IsEnabled = false;
+            RunQueueButton.IsEnabled = true;
+            CatalogList.IsEnabled = true;
+            ProgressPanel.Visibility = Visibility.Collapsed;
+
+            _cancellation?.Dispose();
+            _cancellation = null;
+
+            UpdateRunEnabled();
         }
 
         private void ReportResult(ToolRunResult result)
@@ -760,6 +980,271 @@ namespace TechnicianToolkit.App
         }
 
         private void OnClearOutput(object sender, RoutedEventArgs e) => _lines.Clear();
+
+        // ─── Panes ────────────────────────────────────────────────────────────
+
+        private void OnPaneChanged(object sender, RoutedEventArgs e)
+        {
+            // Fires during InitializeComponent, before the panes exist.
+            if (OutputPane == null)
+            {
+                return;
+            }
+
+            UpdatePaneChrome();
+        }
+
+        private void UpdatePaneChrome()
+        {
+            if (OutputPane == null)
+            {
+                return;
+            }
+
+            bool output = TabOutput.IsChecked == true;
+            bool reports = TabReports.IsChecked == true;
+            bool history = TabHistory.IsChecked == true;
+            bool queue = TabQueue.IsChecked == true;
+
+            OutputPane.Visibility = output ? Visibility.Visible : Visibility.Collapsed;
+            ReportsPane.Visibility = reports ? Visibility.Visible : Visibility.Collapsed;
+            HistoryPane.Visibility = history ? Visibility.Visible : Visibility.Collapsed;
+            QueuePane.Visibility = queue ? Visibility.Visible : Visibility.Collapsed;
+
+            OutputActions.Visibility = output ? Visibility.Visible : Visibility.Collapsed;
+            ReportActions.Visibility = reports ? Visibility.Visible : Visibility.Collapsed;
+            HistoryActions.Visibility = history ? Visibility.Visible : Visibility.Collapsed;
+            QueueActions.Visibility = queue ? Visibility.Visible : Visibility.Collapsed;
+
+            ReportsEmpty.Visibility = _reports.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            HistoryEmpty.Visibility = _historyItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            QueueEmpty.Visibility = _queue.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+            PaneCount.Text =
+                output ? (_lines.Count == 0 ? string.Empty : _lines.Count + " lines")
+                : reports ? _reports.Count + " file(s)"
+                : history ? _historyItems.Count + " run(s)"
+                : _queue.Count + " queued";
+
+            // The queue tab is where a technician looks when something is waiting,
+            // so it says so from wherever they are.
+            TabQueue.Content = _queue.Count == 0 ? "QUEUE" : "QUEUE (" + _queue.Count + ")";
+        }
+
+        // ─── Reports ──────────────────────────────────────────────────────────
+
+        private void OnRefreshReports(object sender, RoutedEventArgs e) => RefreshReports();
+
+        private void OnOpenReport(object sender, MouseButtonEventArgs e)
+        {
+            if (ReportsList.SelectedItem is ReportArtifact artifact)
+            {
+                OpenExternally(artifact.FullPath);
+            }
+        }
+
+        private void OnOpenReportFolder(object sender, RoutedEventArgs e) =>
+            OpenExternally(_layout.ReportDirectory);
+
+        /// <summary>
+        /// Hand the path to the shell. Reports open in the default browser
+        /// rather than an embedded viewer on purpose: WebView2 would be another
+        /// runtime dependency on a tool whose whole pitch is having none.
+        /// </summary>
+        private void OpenExternally(string path)
+        {
+            if (string.IsNullOrEmpty(path) || (!File.Exists(path) && !Directory.Exists(path)))
+            {
+                MessageBox.Show(this, "That file is no longer there.", "Technician Toolkit",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                RefreshReports();
+                return;
+            }
+
+            try
+            {
+                Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Could not open it: " + ex.Message, "Technician Toolkit",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        // ─── History ──────────────────────────────────────────────────────────
+
+        private void OnOpenHistoryArtifact(object sender, MouseButtonEventArgs e)
+        {
+            if (HistoryList.SelectedItem is not HistoryItem item)
+            {
+                return;
+            }
+
+            string? first = item.Record.Artifacts.FirstOrDefault();
+            if (first == null)
+            {
+                return;
+            }
+
+            OpenExternally(first);
+        }
+
+        private void OnClearHistory(object sender, RoutedEventArgs e)
+        {
+            if (_historyItems.Count == 0)
+            {
+                return;
+            }
+
+            MessageBoxResult answer = MessageBox.Show(this,
+                "Clear the run history? The reports themselves are not touched.",
+                "Technician Toolkit", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+            if (answer != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            _history?.Clear();
+            _historyItems.Clear();
+        }
+
+        // ─── Queue ────────────────────────────────────────────────────────────
+
+        private void OnAddToQueue(object sender, RoutedEventArgs e)
+        {
+            if (_selected == null)
+            {
+                return;
+            }
+
+            _queue.Add(new QueueItem
+            {
+                Tool = _selected,
+                Parameters = CollectParameters(),
+            });
+
+            TabQueue.IsChecked = true;
+        }
+
+        private void Renumber()
+        {
+            for (int i = 0; i < _queue.Count; i++)
+            {
+                _queue[i].Position = i + 1;
+            }
+        }
+
+        private void OnRemoveQueued(object sender, RoutedEventArgs e)
+        {
+            if (QueueList.SelectedItem is QueueItem item && !_running)
+            {
+                _queue.Remove(item);
+            }
+        }
+
+        private void OnClearQueue(object sender, RoutedEventArgs e)
+        {
+            if (!_running)
+            {
+                _queue.Clear();
+            }
+        }
+
+        /// <summary>
+        /// Run the queue in order. Cancelling stops the queue rather than just
+        /// the tool in flight: a technician who cancels a workup means the
+        /// workup, and silently starting the next tool would be the wrong answer.
+        /// </summary>
+        private async void OnRunQueue(object sender, RoutedEventArgs e) => await RunQueueAsync();
+
+        /// <summary>
+        /// Exposed so the screenshot render can drive a real queue rather than
+        /// staging one, which is the only way to verify the phase 03 exit
+        /// criterion without a person clicking through it.
+        /// </summary>
+        internal async Task RunQueueAsync()
+        {
+            if (_running || _queue.Count == 0)
+            {
+                return;
+            }
+
+            foreach (QueueItem waiting in _queue)
+            {
+                waiting.State = QueueState.Waiting;
+            }
+
+            BeginRun();
+            TabOutput.IsChecked = true;
+
+            try
+            {
+                foreach (QueueItem item in _queue.ToList())
+                {
+                    if (_cancellation == null || _cancellation.IsCancellationRequested)
+                    {
+                        item.State = QueueState.Skipped;
+                        continue;
+                    }
+
+                    item.State = QueueState.Running;
+
+                    Sink.Write(Environment.NewLine + "===== " + item.Tool.ShortName
+                        + "  (" + item.Position + " of " + _queue.Count + ") ====="
+                        + Environment.NewLine, ConsoleColor.Cyan, null);
+
+                    ToolRunResult result = await ExecuteAsync(
+                        item.Tool, item.Parameters, _cancellation.Token).ConfigureAwait(true);
+
+                    item.State =
+                        result.Cancelled ? QueueState.Skipped
+                        : result.Succeeded ? QueueState.Done
+                        : QueueState.Failed;
+                }
+            }
+            finally
+            {
+                EndRun();
+            }
+        }
+
+        // ─── Settings ─────────────────────────────────────────────────────────
+
+        private void OnOpenSettings(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_workDir))
+            {
+                return;
+            }
+
+            var settings = new SettingsWindow(_workDir, _layout.ReportDirectory) { Owner = this };
+
+            if (settings.ShowDialog() == true)
+            {
+                // The report directory may have moved, so the watcher and the
+                // listing have to follow it.
+                _reportWatcher?.Dispose();
+                _reportWatcher = null;
+
+                string? chosen = settings.ReportDirectory;
+                if (!string.IsNullOrWhiteSpace(chosen))
+                {
+                    _layout = new ToolkitLayout
+                    {
+                        RootDirectory = _layout.RootDirectory,
+                        SuiteDirectory = _layout.SuiteDirectory,
+                        ReportDirectory = chosen!,
+                        FilesWritten = _layout.FilesWritten,
+                    };
+                }
+
+                RefreshReports();
+                WatchReports();
+                UpdatePaneChrome();
+            }
+        }
 
         protected override void OnClosing(CancelEventArgs e)
         {

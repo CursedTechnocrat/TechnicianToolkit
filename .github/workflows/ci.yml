@@ -122,6 +122,23 @@ jobs:
             exit 1
           }
 
+      # Round-trips a value through Get-TKConfig and Set-TKConfig, which is the
+      # path the settings screen writes on. It also proves config.json survives
+      # re-extraction -- it is seeded once and preserved, and a regression there
+      # would silently wipe a technician's settings on the next launch.
+      - name: Round-trip the configuration
+        shell: pwsh
+        run: |
+          $exe = './publish/harness/TechnicianToolkit.Harness.exe'
+          & $exe config set OrgName 'CI Round Trip'
+          if ($LASTEXITCODE -ne 0) { Write-Error 'config write failed'; exit 1 }
+          $after = & $exe config
+          $after
+          if ($after -notmatch 'CI Round Trip') {
+            Write-Error 'the value did not survive being read back'
+            exit 1
+          }
+
       # asInvoker so the render runs without a UAC prompt the runner cannot answer.
       - name: Publish single-file window
         run: >

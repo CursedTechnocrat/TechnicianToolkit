@@ -403,6 +403,35 @@
     <Setter Property="ItemContainerStyle" Value="{StaticResource CatalogRow}" />
   </Style>
 
+  <!-- ─── Pane tabs ───────────────────────────────────────────────────────── -->
+  <!-- RadioButtons rather than a TabControl: the panes share a header row with
+       their own actions, and a TabControl would insist on owning that row. -->
+  <Style x:Key="PaneTab" TargetType="RadioButton">
+    <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="Foreground" Value="{StaticResource TextDim}" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Margin" Value="0,0,4,0" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="RadioButton">
+          <Border x:Name="Chrome" Background="Transparent" CornerRadius="4" Padding="11,5">
+            <ContentPresenter VerticalAlignment="Center" />
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter Property="Foreground" Value="{StaticResource Text}" />
+            </Trigger>
+            <Trigger Property="IsChecked" Value="True">
+              <Setter TargetName="Chrome" Property="Background" Value="{StaticResource CyanDim}" />
+              <Setter Property="Foreground" Value="{StaticResource Cyan}" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
   <!-- ─── Badge ───────────────────────────────────────────────────────────── -->
   <Style x:Key="Badge" TargetType="Border">
     <Setter Property="CornerRadius" Value="10" />

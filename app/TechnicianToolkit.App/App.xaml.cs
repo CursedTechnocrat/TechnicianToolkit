@@ -26,6 +26,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using TechnicianToolkit.Engine;
 
 namespace TechnicianToolkit.App
 {
@@ -55,7 +56,9 @@ namespace TechnicianToolkit.App
                 int exitCode = Screenshot(
                     args[flag + 1],
                     ValueAfter(args, "--tool"),
-                    args.Any(a => string.Equals(a, "--run", StringComparison.OrdinalIgnoreCase)));
+                    args.Any(a => string.Equals(a, "--run", StringComparison.OrdinalIgnoreCase)),
+                    ValueAfter(args, "--pane"),
+                    ValueAfter(args, "--queue"));
 
                 Shutdown(exitCode);
                 return;
@@ -72,24 +75,48 @@ namespace TechnicianToolkit.App
             return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
         }
 
-        private int Screenshot(string path, string? tool, bool run)
+        private int Screenshot(string path, string? tool, bool run, string? pane, string? queue)
         {
             try
             {
+                // The settings screen is a dialog, so it cannot be reached by
+                // switching panes. Render it directly instead -- it is a whole
+                // window's worth of layout that would otherwise never be looked at
+                // without a person clicking Settings.
+                if (string.Equals(pane, "settings", StringComparison.OrdinalIgnoreCase))
+                {
+                    return ScreenshotSettings(path);
+                }
+
                 var window = new MainWindow();
                 window.InitializeForRender(tool);
+
+                bool queued = false;
+                if (!string.IsNullOrWhiteSpace(queue))
+                {
+                    window.QueueForRender(queue!.Split(',', StringSplitOptions.RemoveEmptyEntries));
+                    queued = true;
+                }
 
                 var root = (FrameworkElement)window.Content;
                 Layout(root);
 
                 if (run)
                 {
-                    RunToCompletion(window);
+                    // With a queue staged, running means running the queue -- the
+                    // phase 03 exit criterion, driven end to end.
+                    RunToCompletion(window, queued);
 
                     // Lay out first so the output list has a real viewport, then
                     // scroll, then lay out again so the new offset is applied.
                     Layout(root);
                     window.ScrollOutputToEnd();
+                    Layout(root);
+                }
+
+                if (!string.IsNullOrWhiteSpace(pane))
+                {
+                    window.ShowPane(pane!);
                     Layout(root);
                 }
 
@@ -121,6 +148,33 @@ namespace TechnicianToolkit.App
             }
         }
 
+        private int ScreenshotSettings(string path)
+        {
+            ToolkitLayout layout = ScriptExtractor.Prepare();
+
+            var window = new SettingsWindow(layout.SuiteDirectory, layout.ReportDirectory);
+            window.PopulateForRender();
+
+            var root = (FrameworkElement)window.Content;
+            root.Width = 620;
+            root.Height = 580;
+            root.Measure(new Size(620, 580));
+            root.Arrange(new Rect(0, 0, 620, 580));
+            root.UpdateLayout();
+            Drain();
+
+            var bitmap = new RenderTargetBitmap(620 * 2, 580 * 2, 192, 192, PixelFormats.Pbgra32);
+            bitmap.Render(root);
+
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmap));
+
+            using FileStream file = File.Create(path);
+            encoder.Save(file);
+
+            return 0;
+        }
+
         private static void Layout(FrameworkElement root)
         {
             root.Width = RenderWidth;
@@ -138,11 +192,11 @@ namespace TechnicianToolkit.App
         /// Run the selected tool to completion while pumping the dispatcher,
         /// since a render-only process never starts a message loop of its own.
         /// </summary>
-        private static void RunToCompletion(MainWindow window)
+        private static void RunToCompletion(MainWindow window, bool queue)
         {
             var frame = new DispatcherFrame();
 
-            Task run = window.RunSelectedAsync();
+            Task run = queue ? window.RunQueueAsync() : window.RunSelectedAsync();
             run.ContinueWith(_ => frame.Continue = false, TaskScheduler.Default);
 
             Dispatcher.PushFrame(frame);

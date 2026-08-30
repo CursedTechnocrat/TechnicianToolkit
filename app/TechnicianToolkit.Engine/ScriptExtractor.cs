@@ -32,6 +32,13 @@ namespace TechnicianToolkit.Engine
     /// <summary>Where the prepared toolkit lives on disk.</summary>
     public sealed class ToolkitLayout
     {
+        /// <summary>
+        /// The folder holding the suite and the reports. Application state that
+        /// is neither an extracted script nor a technician's artifact -- the run
+        /// history, for one -- belongs here, beside them rather than among them.
+        /// </summary>
+        public string RootDirectory { get; init; } = string.Empty;
+
         /// <summary>The extracted suite: 42 tools, the module, config.json, the licence.</summary>
         public string SuiteDirectory { get; init; } = string.Empty;
 
@@ -91,6 +98,7 @@ namespace TechnicianToolkit.Engine
 
             return new ToolkitLayout
             {
+                RootDirectory = root,
                 SuiteDirectory = suite,
                 ReportDirectory = reports,
                 FilesWritten = written,
