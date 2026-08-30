@@ -35,7 +35,7 @@
     PS C:\> .\reliquary.ps1 -Unattended        # Auto-connect and export full audit report
 
 .NOTES
-    Version : 3.6
+    Version : 5.0
 
 #>
 

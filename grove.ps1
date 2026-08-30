@@ -37,7 +37,7 @@
     PS C:\> .\grove.ps1 -Unattended        # Silent: auto-connect + export HTML
 
 .NOTES
-    Version : 3.6
+    Version : 5.0
 
 #>
 

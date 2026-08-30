@@ -37,7 +37,7 @@
     PS C:\> .\threshold.ps1 -Unattended             # Run health check and export HTML report silently
 
 .NOTES
-    Version : 3.6
+    Version : 5.0
 
 #>
 

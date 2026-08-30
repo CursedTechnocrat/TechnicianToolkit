@@ -35,7 +35,7 @@
     PS C:\> .\artifact.ps1 -Unattended -Targets "srv1.contoso.com,srv2.contoso.com:8443"
 
 .NOTES
-    Version : 3.6
+    Version : 5.0
 
 #>
 

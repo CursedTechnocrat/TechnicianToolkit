@@ -36,7 +36,7 @@
     PS C:\> .\anvil.ps1 -Unattended        # Silent: export HTML and exit
 
 .NOTES
-    Version : 3.6
+    Version : 5.0
 
 #>
 

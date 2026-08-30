@@ -40,7 +40,7 @@
     PS C:\> .\cipher.ps1 -Unattended -Action Export -OutputPath D:\Reports
 
 .NOTES
-    Version : 4.2
+    Version : 5.0
 
     Credits : Thanks to Steve the Killer for help and letting me use his
               script BERET: https://tools.thekiller.net/killer-scripts

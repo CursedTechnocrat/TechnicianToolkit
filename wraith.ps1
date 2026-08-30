@@ -38,7 +38,7 @@
     PS C:\> .\wraith.ps1 -Unattended        # Silent mode — auto-connect and export HTML
 
 .NOTES
-    Version : 3.6
+    Version : 5.0
 
 #>
 

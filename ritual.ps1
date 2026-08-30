@@ -52,7 +52,7 @@
     PS C:\> .\ritual.ps1 -Recipe Retire -ContinueOnError    # Ignore per-step failures
 
 .NOTES
-    Version : 3.6
+    Version : 5.0
 
 #>
 

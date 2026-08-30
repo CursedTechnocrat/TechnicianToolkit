@@ -38,7 +38,7 @@
     PS C:\> .\talisman.ps1 -OutputPath "C:\Reports\azure.html" -NoOpen
 
 .NOTES
-    Version  : 3.6
+    Version  : 5.0
     All required Az modules are installed automatically on first run.
 
 #>
