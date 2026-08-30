@@ -1,0 +1,113 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    PHASE 02 - the window.
+
+    A WPF front end over the phase 01 engine. It owns no toolkit logic: the
+    catalog, the parameter forms, the host and the runner all come from
+    TechnicianToolkit.Engine, and the tools themselves are the same 42 scripts,
+    unmodified and still runnable standalone.
+
+    The two build settings phase 00 established as mandatory for single-file
+    publish live here, because both act on the publish output of the executable.
+  -->
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>TechnicianToolkit</AssemblyName>
+    <RootNamespace>TechnicianToolkit.App</RootNamespace>
+    <Version>5.0.0</Version>
+    <Product>TechnicianToolkit</Product>
+    <Description>Technician Toolkit - portable desktop application</Description>
+    <Copyright>Copyright (C) 2026 CursedTechnocrat and the Technician Toolkit contributors</Copyright>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/CursedTechnocrat/TechnicianToolkit</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/CursedTechnocrat/TechnicianToolkit</RepositoryUrl>
+
+    <!-- Bracket-and-bar mark in the report palette, at 256/64/48/32/16. WPF also
+         takes the window and taskbar icon from here. -->
+    <ApplicationIcon>icon.ico</ApplicationIcon>
+
+    <!--
+      Shipping configuration requests Administrator. Build with -p:Elevate=false
+      to get the asInvoker manifest instead, which is how the window and the
+      screenshot render are exercised from an unelevated shell.
+
+      This is a project-specific property rather than setting ApplicationManifest
+      on the command line: that name is well known, so MSBuild would hand it to
+      the referenced Engine project too, which has no such file.
+    -->
+    <ApplicationManifest Condition=" '$(Elevate)' == 'false' ">app.asinvoker.manifest</ApplicationManifest>
+    <ApplicationManifest Condition=" '$(Elevate)' != 'false' ">app.manifest</ApplicationManifest>
+
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+
+    <!--
+      MANDATORY (phase 00). Without this, constructing PSHostUserInterface throws
+      TypeInitializationException on PowerShellConfig before a single script runs:
+      PowerShell derives $PSHOME from Assembly.Location, which is empty under
+      single-file. It fails inside the host constructor, so no script-level
+      try/catch can reach it.
+    -->
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+
+    <!-- Trimming must stay off: it strips the reflection metadata the PowerShell
+         engine resolves cmdlets and types through. -->
+    <PublishTrimmed>false</PublishTrimmed>
+
+    <!-- PowerShell needs real globalization data; invariant mode breaks it. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+
+    <NoWarn>$(NoWarn);IL3000;NETSDK1179</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TechnicianToolkit.Engine\TechnicianToolkit.Engine.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- GeneratePathProperty exposes $(PkgMicrosoft_PowerShell_SDK), which the
+         module-remap target below needs. -->
+    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.4.6" GeneratePathProperty="true" />
+  </ItemGroup>
+
+  <!--
+    MANDATORY (phase 00). THE FIX THAT MAKES SINGLE-FILE WORK.
+
+    The SDK ships PowerShell built-in modules (CimCmdlets, Utility, Management,
+    Security, Diagnostics, WSMan) as *content* under a RID-relative path:
+    contentFiles/any/any/runtimes/win/lib/net8.0/Modules. Assemblies flatten into
+    the bundle root, but content keeps its relative path - so the modules extract
+    to runtimes\win\lib\net8.0\Modules while PowerShell only ever looks in
+    $PSHOME\Modules. Every built-in cmdlet then fails to resolve, including
+    Get-CimInstance, which 35 sites in the suite depend on.
+  -->
+  <Target Name="RemapPowerShellModules" BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <_PSBuiltInModule Include="$(PkgMicrosoft_PowerShell_SDK)\contentFiles\any\any\runtimes\win\lib\net8.0\Modules\**\*" />
+      <Content Include="@(_PSBuiltInModule)">
+        <Link>Modules\%(RecursiveDir)%(Filename)%(Extension)</Link>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </Content>
+    </ItemGroup>
+  </Target>
+
+  <!-- Drop the stranded RID-path copies so the bundle carries one set. -->
+  <Target Name="DropRidPathModules" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish
+        Remove="@(ResolvedFileToPublish)"
+        Condition="$([System.String]::Copy('%(ResolvedFileToPublish.RelativePath)').Replace('/', '\').Contains('runtimes\unix\lib\net8.0\Modules\')) OR
+                   $([System.String]::Copy('%(ResolvedFileToPublish.RelativePath)').Replace('/', '\').Contains('runtimes\win\lib\net8.0\Modules\'))" />
+    </ItemGroup>
+  </Target>
+
+</Project>

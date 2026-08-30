@@ -373,11 +373,7 @@ namespace TechnicianToolkit.Harness
                 return;
             }
 
-            string source = File.ReadAllText(scriptPath);
-            bool needsAdmin = source.Contains("Assert-AdminPrivilege", StringComparison.Ordinal)
-                           || source.Contains("Invoke-AdminElevation", StringComparison.Ordinal);
-
-            if (!needsAdmin)
+            if (!ToolTraits.Inspect(scriptPath).RequiresAdmin)
             {
                 return;
             }

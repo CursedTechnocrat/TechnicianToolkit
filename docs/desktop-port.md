@@ -1,6 +1,6 @@
 # Desktop Port — turning the toolkit into one portable application
 
-**Status:** phase 01 engine landed · **Target release:** 5.0 — *bringing it together to be portable*
+**Status:** phase 02 window landed · **Target release:** 5.0 — *bringing it together to be portable*
 
 > **Phase 00 outcome — the approach works.** A single-file self-contained WPF app
 > hosting PowerShell 7 ran `ward.ps1` end to end with zero error records: it
@@ -72,6 +72,12 @@ one-file-on-a-USB-stick requirement.
 *Cost:* WPF's default look is dated. Budget real time for styling, or the app will
 look older than the console it replaces.
 
+**Paid, in phase 02.** `app/TechnicianToolkit.App/Theme.xaml` templates every
+control a technician touches -- scrollbars, buttons, text fields, dropdowns,
+checkboxes, list rows -- and takes its palette verbatim from the tk custom
+properties the HTML reports already use. The app and the reports it produces
+read as one product, and nothing is left at a WPF default.
+
 ### PowerShell 7 hosted in-process
 
 A runspace inside the app gives live stream capture, real objects instead of
@@ -115,6 +121,12 @@ never reached and `Assert-AdminPrivilege` never error-exits.
 
 *Cost:* one UAC prompt at launch, every launch, for every tool — including
 read-only ones. Document it plainly rather than trying to be clever about it.
+
+One trap for anyone editing `app.manifest` or `app.asinvoker.manifest`: Windows
+parses them as XML, so a double hyphen inside an XML comment makes the manifest
+invalid and the application dies at startup with *"the side-by-side configuration
+is incorrect"* — which names neither the file nor the reason. The build does not
+catch it.
 
 ---
 
@@ -402,17 +414,58 @@ output live, and cancels it mid-run. **Met**, and verified on this machine:
 | Cancel mid-run | `PowerShell.Stop()` interrupted EXHUME mid-scan at 3.2s; harness exit 130 |
 | Elevation refusal | WARD prints its refusal and stops. `exit` inside a module function never reaches `SetShouldExit`, so the harness pre-flights elevation instead |
 
-### 02 — The window · 2–3 weeks
+### 02 — The window · 2–3 weeks · **exit criteria met**
 
-- Catalog pane: categories from the registry, search across name and description
-- Detail pane: generated parameter form, Run and Cancel, admin-required and
-  destructive badges
-- Output pane preserving console colors, with copy and save
-- Prompt dialogs wired to the host's `ReadLine` and `PromptForChoice`
-- Manifest requesting Administrator; app icon; version metadata
+In [`app/TechnicianToolkit.App`](../app/TechnicianToolkit.App/). It owns no toolkit
+logic: the catalog, the forms, the host and the runner all come from the engine.
 
-**Exit:** every tool in the catalog is runnable from the GUI. This is the first
-build worth showing anyone.
+- ✅ Catalog pane: all 41 tools grouped by the hub's own `$CategoryOrder`, with
+  search across name and description
+- ✅ Detail pane: the form generates itself from each tool's `param()` block, with
+  Run and Cancel and REQUIRES ADMIN / CHANGES THIS MACHINE / READ ONLY badges read
+  from the script rather than maintained by hand
+- ✅ Output pane preserving console colours, with copy, save and clear
+- ✅ Prompt dialogs wired to `ReadLine`, `ReadLineAsSecureString`,
+  `PromptForCredential` and `PromptForChoice`
+- ✅ Manifest requesting Administrator, app icon, version metadata
+
+**Exit:** every tool in the catalog is runnable from the GUI.
+
+| Check | Result |
+|---|---|
+| Catalog and badges | 41 tools, correctly grouped and badged, from the registry and the scripts |
+| Generated form | CIPHER renders its `ValidateSet` as a dropdown, its `ValidatePattern` live-validated, defaults pre-filled |
+| A tool end to end in the GUI | EXHUME ran through the hosted engine and its output arrived with full colour fidelity |
+| Published single file | 84 MB `win-x64` one-file `.exe` ran the same tool end to end, so the two mandatory build settings carry over |
+| Elevation state | Shown in the title bar, because a tool refusing for want of Administrator is otherwise silent |
+
+**Honestly still unproven.** Only EXHUME has actually been executed from the
+window. The path is uniform -- every tool goes through the same catalog entry,
+the same generated form and the same runner -- but most of the suite needs
+Administrator or a cloud sign-in, so "every tool is runnable" is an argument from
+uniformity, not 41 observations. The prompt dialogs are wired and compile but no
+live `Read-Host` has yet opened one, since `-Unattended` is ticked by default and
+suppresses exactly that. Auto-scrolling the output to the tail is likewise
+unverified: it does not take effect in the headless render, which may be a
+limitation of rendering a window that was never shown rather than a defect.
+
+### Seeing the window without a person in the loop
+
+`TechnicianToolkit.exe --screenshot <path> [--tool NAME] [--run]` lays the window
+out and renders it to a PNG without ever showing it. It follows the precedent
+phase 00 set with `--probe`: a GUI has no console to report into, so the result
+goes to a file.
+
+With `--run` it executes the named tool through the real engine first, so the
+capture is of genuine output rather than staged text. This is how the layout and
+theme were reviewed, and it is what CI should use to catch a visual regression.
+It found two defects that a build cannot: the detail pane painting no background
+of its own, and every output line rendering empty because the segments were
+surfaced through a dependency property but mutated in place, so WPF compared the
+same list reference against itself and concluded nothing had changed.
+
+Build with `-p:Elevate=false` to get the asInvoker manifest and run any of this
+from an unelevated shell.
 
 ### 03 — What makes it a program rather than a launcher · 1–2 weeks
 
