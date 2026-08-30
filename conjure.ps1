@@ -34,7 +34,7 @@
     PS C:\> .\conjure.ps1 -Unattended     # Unattended mode — Required packages only, no prompts
 
 .NOTES
-    Version : 3.6
+    Version : 5.0
 
 #>
 

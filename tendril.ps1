@@ -61,7 +61,7 @@
     PS C:\> .\tendril.ps1 -GroupName 'All_CNP_Users' -Unattended
 
 .NOTES
-    Version : 1.0
+    Version : 5.0
     Read-only — never modifies the target group or any dependency.
 
 #>

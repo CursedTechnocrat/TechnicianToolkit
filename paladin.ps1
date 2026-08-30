@@ -43,7 +43,7 @@
     PS C:\> .\paladin.ps1 -SignatureMaxAgeDays 3   # Tighter signature-age threshold (default 7)
 
 .NOTES
-    Version : 3.6
+    Version : 5.0
 
 #>
 

@@ -5,6 +5,55 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased] — staged for 5.0.0
+
+**The toolkit skips 4.x entirely, and that is deliberate.** `cipher.ps1` had already
+drifted to 4.2 ahead of the rest of the suite, so unifying on 4.0 would have versioned
+one script *backwards* — the one thing a version number must never do. Starting at 5.0
+moves every file forward and leaves no exception a reader has to be told about. There
+is simply no 4.x line.
+
+Not yet released: the release workflow, the winget package, and the README and CLAUDE.md
+rewrites are still ahead. The scripts themselves are at 5.0 and gated.
+
+### Changed
+- **Every script reports one version.** The suite had been shipping five at once — `3.6`
+  on thirty-eight scripts, `3.6.2` on RESTORATION, `3.8.3` on HERALD, `4.2` on CIPHER and
+  `1.0` on TENDRIL. All forty-two headers and all forty-one GRIMOIRE registry rows now
+  read `5.0`, keeping the existing convention of two parts for headers and the registry
+  and three for the `.csproj` and this file.
+
+  The split ran across languages, not just within the scripts: the `.csproj` files were
+  bumped to `5.0.0` when the desktop app landed, so the application already called itself
+  5.0.0 while every script it drives still called itself 3.6.
+
+  A script's header and its registry row are two hand-maintained copies of one fact, and
+  two of them had already come apart — CIPHER read `4.2` in its header against `3.6` in
+  the registry, RESTORATION `3.6.2` against `3.6`. Nothing in the suite detected it.
+
+### Added
+- **A version-consistency gate.** A new Pester `Describe` pins each tool's `.NOTES Version`
+  against its GRIMOIRE registry entry, and asserts the registry declares exactly one version
+  across the whole suite — so the next tool added at its own number fails loudly instead of
+  drifting quietly. Verified by forcing CIPHER back to `4.2` in the registry and confirming
+  the gate fails on both counts and names the file.
+- **The license gate now covers the desktop application sources.** It follows the two shapes
+  already established in the tree rather than imposing a third: `.cs` carries the full GPL
+  notice as the scripts do, `.xaml` a short comment with the copyright line and SPDX tag.
+  `bin/` and `obj/` are excluded as build output. This surfaced the only two unlicensed
+  files in the repository — both XAML in the phase 00 spike — which now carry the same
+  short header the application's own XAML uses.
+
+### Fixed
+- **The test suite was red locally and green in CI at the same time.** Three gates enumerate
+  the working tree recursively and excluded only `.git`, so the five PowerShell hook scripts
+  the Visual Studio integration installs under `.claude/` were held to the toolkit's own
+  header, BOM and naming rules and failed four assertions each — twenty failures on any local
+  run. CI never saw it because those files are untracked. `.claude` is now treated as
+  non-source alongside `.git`.
+
+---
+
 ## [3.8.3] - 2026-08-27
 
 ### Fixed

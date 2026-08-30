@@ -31,6 +31,14 @@ BeforeAll {
     Import-Module $ModulePath -Force
 }
 
+# Directories that live in the working tree but are not repository source.
+# .git is version-control internals; .claude is local editor/agent tooling that
+# happens to be written in PowerShell, so the recursive gates below would other-
+# wise hold hook scripts to the toolkit's own header, BOM and naming rules and
+# fail on every one. Defined at file scope because the file enumerations run
+# during Pester's discovery phase, before any BeforeAll body executes.
+$NonSourceDir = '{0}(\.git|\.claude){0}' -f [regex]::Escape([string][IO.Path]::DirectorySeparatorChar)
+
 # ─────────────────────────────────────────────────────────────────────────────
 # EscHtml
 # ─────────────────────────────────────────────────────────────────────────────
@@ -366,7 +374,7 @@ Describe 'PowerShell syntax — all scripts' {
 # ─────────────────────────────────────────────────────────────────────────────
 Describe 'UTF-8 BOM — all scripts' {
     $bomCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Include '*.ps1', '*.psm1' -File -Recurse |
-        Where-Object { $_.FullName -notmatch ([regex]::Escape([IO.Path]::DirectorySeparatorChar + '.git' + [IO.Path]::DirectorySeparatorChar)) } |
+        Where-Object { $_.FullName -notmatch $NonSourceDir } |
         ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
 
     It '<Name> begins with a UTF-8 BOM' -ForEach $bomCases {
@@ -456,6 +464,56 @@ Describe 'GRIMOIRE registry integrity' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Version consistency — a tool's .NOTES Version and its GRIMOIRE registry entry
+# are two hand-maintained copies of one fact, and they drifted: before 5.0 the
+# suite carried 3.6, 3.6.2, 3.8.3, 4.2 and 1.0 at once, with cipher.ps1 and
+# restoration.ps1 disagreeing with their own registry rows. Nothing detected it.
+#
+# The header pattern deliberately tolerates irregular spacing — talisman.ps1
+# writes 'Version  : 5.0' with two spaces — because a stricter pattern would
+# silently skip that file rather than fail, which is how it drifted unnoticed.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'Version consistency — script header matches the GRIMOIRE registry' {
+    $ToolkitRoot     = Join-Path $PSScriptRoot '..'
+    $registryContent = Get-Content (Join-Path $ToolkitRoot 'grimoire.ps1') -Raw
+
+    # Each registry entry is a hashtable literal; pair the File with the Version
+    # declared in the same entry rather than matching the two lists positionally.
+    $versionCases = [regex]::Matches(
+            $registryContent, "File\s*=\s*'([^']+)'[\s\S]{0,400}?Version\s*=\s*'([^']+)'") |
+        ForEach-Object {
+            @{
+                FileName        = $_.Groups[1].Value
+                RegistryVersion = $_.Groups[2].Value
+                FullPath        = (Join-Path $ToolkitRoot $_.Groups[1].Value)
+            }
+        }
+
+    # Guards the regex itself: a silently empty case list would make every
+    # -ForEach below vacuous and the whole gate would pass by doing nothing.
+    # The count rides in as test data because $versionCases is a discovery-time
+    # variable and an It body runs later, in a scope where it no longer exists.
+    It 'the registry yielded version entries to check' -ForEach @{ CaseCount = $versionCases.Count } {
+        $CaseCount | Should -BeGreaterThan 40
+    }
+
+    It "<FileName> header version matches its registry entry (<RegistryVersion>)" -ForEach $versionCases {
+        $raw = Get-Content $FullPath -Raw
+        $raw | Should -Match '(?m)^\s*(?:#\s*)?Version\s*:\s*[0-9][0-9.]*' -Because "$FileName must declare a .NOTES Version"
+
+        $headerVersion = ([regex]::Match($raw, '(?m)^\s*(?:#\s*)?Version\s*:\s*([0-9][0-9.]*)')).Groups[1].Value
+        $headerVersion | Should -Be $RegistryVersion -Because "$FileName's header and its GRIMOIRE registry entry are the same fact and must agree"
+    }
+
+    # The suite ships as one product; a split version line is what 5.0 set out
+    # to end. This fails loudly on the next tool added at its own number.
+    It 'every registered tool reports one single version across the suite' -ForEach @{
+            Declared = @($versionCases | ForEach-Object { $_.RegistryVersion } | Select-Object -Unique) } {
+        $Declared.Count | Should -Be 1 -Because "the registry declares: $($Declared -join ', ')"
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Legacy-name regression — the v3.0 rename retired eight tool acronyms; the
 # v3.1 cleanup deleted their forwarding stubs. New source or documentation
 # must never reintroduce the retired names. CHANGELOG (which documents the
@@ -479,7 +537,7 @@ Describe 'Legacy tool names must not reappear' {
     $root  = Resolve-Path (Join-Path $PSScriptRoot '..')
     $files = Get-ChildItem -Path $root -Recurse -File -Include '*.ps1','*.md' |
         Where-Object {
-            $_.FullName -notmatch [regex]::Escape([IO.Path]::DirectorySeparatorChar + '.git' + [IO.Path]::DirectorySeparatorChar) -and
+            $_.FullName -notmatch $NonSourceDir -and
             $_.Name -notin $allowlist
         } |
         ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
@@ -1235,7 +1293,7 @@ Describe 'ConvertTo-HeraldArray' {
 # ─────────────────────────────────────────────────────────────────────────────
 Describe 'License header compliance — all source files' {
     $licenseCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Include '*.ps1', '*.psm1' -File -Recurse |
-        Where-Object { $_.FullName -notmatch ([regex]::Escape([IO.Path]::DirectorySeparatorChar + '.git' + [IO.Path]::DirectorySeparatorChar)) } |
+        Where-Object { $_.FullName -notmatch $NonSourceDir } |
         ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
 
     It '<Name> carries the SPDX license identifier' -ForEach $licenseCases {
@@ -1259,6 +1317,48 @@ Describe 'License header compliance — all source files' {
         if ($helpAt -ge 0) {
             $spdxAt | Should -BeLessThan $helpAt -Because "$Name must declare its license before its help block"
         }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# License header compliance — the desktop application sources.
+#
+# The application is a distributable unit of this GPL work just as the scripts
+# are, so its sources carry the notice too. Two established shapes, and the gate
+# follows the code rather than imposing a third: .cs files carry the full notice
+# like the scripts do, while .xaml files carry a short comment with the
+# copyright line and the SPDX tag — a XAML file is markup, and five of the seven
+# already did it this way before this gate existed.
+#
+# bin/ and obj/ are build output, not source; generated assembly-info files
+# there would otherwise be held to a header nobody wrote.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'License header compliance — desktop app sources' {
+    $appRoot = Join-Path $PSScriptRoot '..\app'
+
+    $appCases = if (Test-Path $appRoot) {
+        Get-ChildItem -Path $appRoot -Include '*.cs', '*.xaml' -File -Recurse |
+            Where-Object { $_.FullName -notmatch ('{0}(bin|obj){0}' -f [regex]::Escape([string][IO.Path]::DirectorySeparatorChar)) } |
+            ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName; Ext = $_.Extension.ToLowerInvariant() } }
+    } else { @() }
+
+    # Without this an empty or moved app/ would make every case below vacuous
+    # and the gate would pass while checking nothing. Carried as test data for
+    # the same discovery-versus-run scoping reason as the version gate above.
+    It 'the app directory yielded sources to check' -ForEach @{ CaseCount = $appCases.Count } {
+        $CaseCount | Should -BeGreaterThan 20
+    }
+
+    It '<Name> carries the SPDX license identifier' -ForEach $appCases {
+        (Get-Content $FullName -Raw) | Should -Match 'SPDX-License-Identifier:\s*GPL-3\.0-or-later' -Because "$Name must declare its license in its own header"
+    }
+
+    It '<Name> carries a copyright line' -ForEach $appCases {
+        (Get-Content $FullName -Raw) | Should -Match 'Copyright \(C\) \d{4}' -Because "$Name must name the copyright holder and year"
+    }
+
+    It '<Name> carries the full GPL notice (.cs only)' -ForEach ($appCases | Where-Object { $_.Ext -eq '.cs' }) {
+        (Get-Content $FullName -Raw) | Should -Match 'GNU General Public License'
     }
 }
 

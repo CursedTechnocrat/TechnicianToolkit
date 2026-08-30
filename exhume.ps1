@@ -37,7 +37,7 @@
     PS C:\> .\exhume.ps1 -ScanDrives C:,D: -IncludeOst  # Custom drive list and include .ost
 
 .NOTES
-    Version : 3.6
+    Version : 5.0
 
 #>
 

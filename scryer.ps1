@@ -35,7 +35,7 @@
     PS C:\> .\scryer.ps1 -OutputPath "D:\Reports" # Write report to a specific directory
 
 .NOTES
-    Version : 3.6
+    Version : 5.0
 
 #>
 

@@ -35,7 +35,7 @@
     PS C:\> .\hearth.ps1 -Unattended        # Display current config and run environment checks silently
 
 .NOTES
-    Version : 3.6
+    Version : 5.0
 
 #>
 
