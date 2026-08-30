@@ -1,0 +1,100 @@
+name: Bug report
+description: A tool crashed, hung, or did the wrong thing on a real machine.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Field reports are the most valuable thing this project gets — real failure
+        modes are the hardest thing to find from a dev machine. You do not need a
+        patch, or a diagnosis. "AUGUR crashes on a machine with no physical disks"
+        is a complete and useful bug report.
+
+        **If this is a security problem, stop here** and use
+        [Report a vulnerability](https://github.com/CursedTechnocrat/TechnicianToolkit/security/advisories/new) instead, so it is not
+        disclosed publicly before there is a fix. See [SECURITY.md](https://github.com/CursedTechnocrat/TechnicianToolkit/blob/main/SECURITY.md).
+
+  - type: input
+    id: tool
+    attributes:
+      label: Which tool
+      description: The script name, or the acronym.
+      placeholder: augur.ps1 — A.U.G.U.R.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Tool version
+      description: The `Version :` line in the script's `.NOTES` block, near the top of the file.
+      placeholder: "3.8"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: edition
+    attributes:
+      label: PowerShell edition
+      options:
+        - Windows PowerShell 5.1
+        - PowerShell 7
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: windows
+    attributes:
+      label: Windows build
+      description: Run `winver`, or paste the output of `[System.Environment]::OSVersion.Version`.
+      placeholder: Windows 11 Pro 24H2 (26100.3624)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: elevated
+    attributes:
+      label: Was it running elevated?
+      options:
+        - "Yes — Administrator"
+        - "No"
+        - "Not sure"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you expected, and what you got instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: >
+        The command line you ran, including parameters, and anything unusual about
+        the machine — no physical disks, no domain, a locked-down GPO, offline.
+      placeholder: |
+        .\augur.ps1 -Unattended
+        Machine is a VM with only a virtual disk.
+    validations:
+      required: true
+
+  - type: textarea
+    id: error
+    attributes:
+      label: Error text
+      description: >
+        Paste the console output or the error record. A screenshot is fine too —
+        drag it into this box. This is rendered as PowerShell, so no backticks needed.
+      render: powershell
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Whatever did not fit above.

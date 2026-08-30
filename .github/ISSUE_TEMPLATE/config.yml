@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/CursedTechnocrat/TechnicianToolkit/security/advisories/new
+    about: Privately, so it is not disclosed before there is a fix. Do not open a public issue.
+  - name: Running through Kaseya VSA LiveConnect?
+    url: https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect
+    about: That shell cannot handle prompts or menus. The companion repo has parameter-only scripts.
+  - name: How to contribute
+    url: https://github.com/CursedTechnocrat/TechnicianToolkit/blob/main/CONTRIBUTING.md
+    about: Conventions, ground rules, and how to run the test suite before opening a pull request.

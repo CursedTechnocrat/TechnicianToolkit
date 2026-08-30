@@ -1,0 +1,71 @@
+name: New tool or feature
+description: A job that lands on the queue often enough to be worth automating.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The toolkit covers work a technician does **at a machine** — physically, or
+        through a full interactive session such as RDP. Parameter-only scripts for a
+        remote shell belong in
+        [TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)
+        instead.
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What is this
+      options:
+        - A new tool
+        - A change to an existing tool
+    validations:
+      required: true
+
+  - type: input
+    id: existing
+    attributes:
+      label: Which existing tool
+      description: Leave blank if this is a new tool.
+      placeholder: threshold.ps1
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The job it does
+      description: >
+        Describe the task as it actually arrives on the queue, not the solution.
+        What is the technician doing by hand today, and how often?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: shape
+    attributes:
+      label: What should it produce
+      options:
+        - An HTML report to attach to a ticket
+        - It changes system state
+        - Both — it changes state and reports what it did
+        - Not sure yet
+    validations:
+      required: true
+
+  - type: textarea
+    id: overlap
+    attributes:
+      label: Does an existing tool nearly cover it?
+      description: >
+        The suite already has 42 tools and several pairs deliberately sit close
+        together — CLAUDE.md has a *Tool Distinctions* section covering the ones
+        that overlap. If something is close but not right, saying why is more
+        useful than a new tool.
+
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Ground rules
+      description: These are the conventions every tool in the suite follows. Just confirming you have seen them.
+      options:
+        - label: It would work on Windows PowerShell 5.1 (the floor — do not require PowerShell 7)
+        - label: If it changes system state, it should support `-WhatIf`
+        - label: If it is documented as an audit, it must stay read-only
