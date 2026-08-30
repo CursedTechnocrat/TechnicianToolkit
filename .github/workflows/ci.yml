@@ -117,7 +117,11 @@ jobs:
           $out = ./publish/harness/TechnicianToolkit.Harness.exe list
           $out
           if ($LASTEXITCODE -ne 0) { Write-Error 'catalog listing failed'; exit 1 }
-          if ($out -notmatch 'tools in the registry') {
+          # -match on a collection filters it and returns the matching items;
+          # only a single string gives back a boolean. Left as an array, the
+          # non-matching lines come back, which is truthy, and the check fires
+          # even when the text is present. Join before matching.
+          if (($out -join "`n") -notmatch 'tools in the registry') {
             Write-Error 'catalog listing produced no registry count'
             exit 1
           }
@@ -134,7 +138,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { Write-Error 'config write failed'; exit 1 }
           $after = & $exe config
           $after
-          if ($after -notmatch 'CI Round Trip') {
+          if (($after -join "`n") -notmatch 'CI Round Trip') {
             Write-Error 'the value did not survive being read back'
             exit 1
           }
