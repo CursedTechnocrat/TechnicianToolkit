@@ -29,8 +29,8 @@ and they remain the engine — the application drives them, it does not replace 
 | Engine | PowerShell 7 hosted in-process via `Microsoft.PowerShell.SDK` |
 | Prototype launcher | **Removed** — `launcher/` is superseded by the app |
 | Distribution | Portable single `.exe`, plus a winget package |
-| Signing | **SignPath Foundation** free open-source tier |
-| Architectures | `win-x64` **and** `win-arm64`, both built and signed in CI |
+| Signing | **Certum Open Source Code Signing** on SimplySign — certificate already held |
+| Architectures | `win-x64` **and** `win-arm64`, both built in CI; both signed locally |
 | Versioning | Everything to **5.0** |
 
 Nothing is left open. The rationale for each choice is in the sections below.
@@ -261,13 +261,21 @@ directory but the workflow and one test comment.
 | `README.md` | Nothing to remove; add the app instead |
 
 **There is no release workflow on `main` right now, and that is intentional.**
-`release-app.yml` is phase 04 work and its whole point is signed artifacts, but
-the SignPath application has not been submitted, so there are no credentials to
-write against. Shipping an unsigned single-file `.exe` that unpacks scripts and
-runs them elevated is precisely the SmartScreen and antivirus problem this plan
-calls fatal, so a stopgap workflow would be worse than none. Until phase 04,
-tagging `v*` publishes nothing — which is correct, because the app has no window
-yet and is not shippable.
+`release-app.yml` is phase 04 work and its whole point is signed artifacts.
+Shipping an unsigned single-file `.exe` that unpacks scripts and runs them
+elevated is precisely the SmartScreen and antivirus problem this plan calls
+fatal, so a stopgap workflow would be worse than none. Until phase 04, tagging
+`v*` publishes nothing, which is correct — phase 03 landed the window and the
+run history, but the 5.0 bump, the winget package and the release path itself
+are all still ahead.
+
+The reason has changed shape since this was written, and it is now permanent
+rather than a wait. There are no CI signing credentials to write against and
+there never will be: the certificate exists, but its key lives in SimplySign and
+cannot be reached from a hosted runner at all (see *Signing* below). So
+`release-app.yml` is not blocked on paperwork arriving — it is waiting on phase
+04 to define a workflow whose output is deliberately **unsigned**, with signing
+as a documented manual step afterwards.
 
 **Keep the UTF-8 BOM gate.** Its comment currently justifies itself by saying "the
 launcher invokes powershell.exe 5.1, so it hits this every run." That reason
@@ -324,27 +332,70 @@ already read by AST elsewhere in the suite, so it is cheap.
 
 ---
 
-## Signing — SignPath Foundation
+## Signing — Certum Open Source Code Signing, on SimplySign
 
-The free open-source tier. GPL-3.0-or-later qualifies, the repository is public,
-and the build runs on GitHub Actions, which is the CI SignPath Foundation requires
-so that the signed artifact is reproducible from public source.
+**The certificate already exists**, which removes the longest external lead time
+this plan had. It is Certum's Open Source Code Signing certificate with the key
+held in **SimplySign**, Certum's cloud HSM (FIPS 140-2 Level 3 / CC EAL 4+). The
+subject is a natural person prefixed `Open Source Developer`, so the publisher
+string on the UAC prompt is a developer name rather than an organization. Say so
+in the README — a personal name where users expect a company reads as suspicious
+only when it is left unexplained.
 
-Setup, in order:
+**This costs the plan its automated signing step.** The key is non-exportable by
+design — that is the point of the CA/B hardware requirement — so it cannot be
+imported into a signing service, and reaching it needs the SimplySign Desktop
+client to mount a virtual smart card against a session authenticated with the
+SimplySign mobile app. Ephemeral GitHub-hosted runners cannot do that. Certum has
+said CI/CD support is planned, with no date attached.
 
-1. Apply to the SignPath Foundation open-source programme. **Do this first** — it
-   is an application with a review, and it is the only item in this plan with
-   external lead time.
-2. Once approved, record the organization ID, project slug, and signing-policy slug,
-   and store the API token as a repository secret.
-3. In `release-app.yml`, after the build and before the release attach, submit each
-   artifact with `signpath/github-action-submit-signing-request` and download the
-   signed binary back.
-4. Sign both architectures. The winget manifest points at the signed artifacts.
+Three ways out, in the order they were considered:
 
-Note that SignPath Foundation signs with *its* certificate, not one attributed to
-this project — that is the trade for it being free, and it is the normal
-arrangement for open-source tooling.
+| Approach | Verdict |
+|---|---|
+| **Build in CI, sign locally, attach the signed binaries** | **Chosen.** One manual step per release |
+| Self-hosted runner holding a SimplySign session open | Rejected for 5.0 — an always-on Windows box, with sessions that expire, to save one step on a release that happens a few times a year |
+| Script the OTP by extracting the TOTP secret | Rejected. Fragile, and it defeats the second factor the certificate's assurance rests on |
+
+So the release is **built in public CI and signed on the maintainer's machine**:
+
+1. `release-app.yml` builds `win-x64` and `win-arm64` and uploads both as workflow
+   artifacts — unsigned, and *not* attached to the release yet.
+2. Download both. Start SimplySign Desktop and authenticate with the mobile app;
+   the certificate appears in the Windows certificate store through the virtual
+   card.
+3. Sign each with **timestamping** — not optional. The certificate is short-lived,
+   and a timestamped signature stays valid after it expires where an
+   un-timestamped one dies with it:
+
+   ```
+   signtool sign /n "Open Source Developer" /fd SHA256 ^
+       /tr http://time.certum.pl /td SHA256 TechnicianToolkit.exe
+   ```
+
+4. `signtool verify /pa /v` each binary, then attach both to the tagged release.
+   The winget manifest carries the artifact hashes, so it is generated *after*
+   signing — a hash taken from the unsigned artifact will not match.
+
+Signing appends to the PE rather than rebuilding it, so the published binary is
+still the CI-built one plus a signature. The public-CI provenance survives the
+manual step.
+
+**ARM64 needs no separate arrangement.** `signtool` signs any PE regardless of its
+target architecture, so both binaries sign from the same x64 machine in the same
+session. That retires ARM64 as a *signing* problem; it remains an *execution*
+problem (see Risks).
+
+**It is not an EV certificate.** Certum sells EV separately, and this product's own
+description is that it "supports building" SmartScreen reputation — which is what
+a non-EV certificate does. EV grants reputation immediately; OV accrues it over
+downloads and time. Early 5.0 downloads may therefore still meet a SmartScreen
+warning even though the binary is correctly signed. Signing remains worth it: it
+makes the publisher identifiable, it removes the "Unknown publisher" prompt, and
+it is the precondition for reputation ever accruing. But do not promise
+technicians a clean first-run experience on day one.
+
+*Practical limit:* 5,000 signatures per month. A release signs two files.
 
 ---
 
@@ -447,13 +498,14 @@ Settled in [`app/spike/`](../app/spike/).
   ran two whole tools on it. That is good evidence the engine travels in the
   bundle; a genuinely clean VM is still the honest proof.
 - ⬜ **ARM64 on real hardware.** It bundles; it has never been executed.
-- ⬜ **SignPath Foundation application** — still to submit, still the longest
-  lead time in the plan.
+- ✅ **Signing certificate obtained** — Certum Open Source Code Signing on
+  SimplySign. This was the longest-lead item in the plan and it is closed. It
+  arrives with a constraint rather than for free: no unattended CI signing.
+  See *Signing* below.
 
-The two *verification* boxes — clean VM, ARM64 hardware — are cheap and should be
-closed before phase 02 commits to the architecture, but neither blocks starting
-phase 01. SignPath is not a verification task; it is paperwork with a review
-attached, and it should be submitted now regardless of when phase 01 begins.
+Both remaining boxes are *verification* — clean VM, ARM64 hardware. They are
+cheap and should be closed before phase 02 commits to the architecture, but
+neither blocks starting phase 01.
 
 ### 01 — Engine · 1–2 weeks · **exit criteria met**
 
@@ -592,8 +644,12 @@ changed either.
 
 ### 04 — Ship 5.0 · 1 week
 
-- `release-app.yml`: build `win-x64` and `win-arm64`, sign both through SignPath,
-  attach both to the tagged release
+- `release-app.yml`: build `win-x64` and `win-arm64` and publish both as unsigned
+  workflow artifacts. Signing is the documented manual step that follows; the
+  release attach and the winget manifest both run after it, on the signed files
+- A `RELEASING.md` checklist for that manual step, so it is not carried in one
+  person's head: SimplySign session, `signtool` with timestamp, `signtool verify`,
+  attach, then `wingetcreate` against the signed hashes
 - winget manifest as `CursedTechnocrat.TechnicianToolkit`, installer type
   `portable`, both architectures, generated with `wingetcreate`
 - The 5.0 version bump across all 42 scripts, the registry, and the `.csproj`
@@ -614,10 +670,12 @@ changed either.
 |---|---|---|
 | ~~**high**~~ **retired** — PowerShell SDK with single-file publish | Both failure modes found and fixed in phase 00; neither was discoverable from its error message | Locked in via two build settings, and **now gated in CI**: the `Desktop app` job publishes single-file and runs `TechnicianToolkit.Harness.exe probe`, which opens a real runspace and resolves `Get-CimInstance`. Both failures live in exactly that path, so an SDK bump or a dropped `.csproj` property fails the build rather than the field |
 | **low** — the clean-VM claim is unverified | Recorded as *the dev box has PowerShell 7 installed independently*. It does not — see phase 00 above — so the risk is smaller than it was written, but a machine that never had it is still the only real proof | One run on a VM with no PowerShell 7 before phase 02 |
-| **med** — SignPath application lead time | It is an application with a review, not a purchase | Submitted during phase 00. Unsigned builds trip SmartScreen, which is fatal for a tool run on client machines |
+| ~~**med**~~ **retired** — signing certificate lead time | Was the only item in the plan with external lead time | Certum Open Source Code Signing obtained. Superseded by the two rows below |
+| **med** — signing cannot run in CI | SimplySign needs an interactive session with phone 2FA, which GitHub-hosted runners cannot hold. A release therefore carries a manual step, and a manual step can be skipped or botched | `RELEASING.md` checklist, and `signtool verify /pa` on both binaries before the release is published. Revisit if Certum ships CI/CD support |
+| **med** — SmartScreen on early downloads | The certificate is OV, not EV, so reputation accrues rather than being granted. A correctly signed 5.0 can still warn on first run | Sign and timestamp from the first release so reputation starts accruing. Set the expectation in the README rather than treating the warning as a bug |
 | **med** — Antivirus false positives | A single-file executable that unpacks scripts to disk and runs them elevated is, structurally, what a dropper looks like | Signing helps most. Submit to Microsoft and the major vendors for whitelisting ahead of the release |
 | **med** — Prompt-heavy tools | `covenant.ps1` has 26 `Read-Host` calls and `citadel.ps1` has 17; a separate dialog for each is a miserable experience | Prefer `-Unattended` driven by the generated form. Treat modal prompts as the fallback path, not the primary one |
-| **med** — ARM64 has no signed precedent here | The prototype workflow built ARM64 but nothing ever verified it on real hardware | Test the ARM64 build on an actual ARM device before tagging, not just that it compiles |
+| **med** — ARM64 unverified on hardware | The prototype workflow built ARM64 but nothing ever ran it on a real device. Signing is *not* the gap — `signtool` signs any PE from the same x64 session | Run the ARM64 build on an actual ARM device before tagging, not merely confirm it compiles |
 | **low** — Everything runs elevated | Read-only tools like `ward.ps1` get Administrator they do not need | Accept for 5.0 and say so in the README. A split-process design is a later refinement |
 | **low** — Binary size | Roughly 150 MB against about 40 MB today | Compression stays on. Trimming stays off — it breaks the reflection the SDK depends on |
 
