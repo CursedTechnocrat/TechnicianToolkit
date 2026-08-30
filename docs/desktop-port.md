@@ -1,6 +1,6 @@
 # Desktop Port — turning the toolkit into one portable application
 
-**Status:** phase 02 window landed · **Target release:** 5.0 — *bringing it together to be portable*
+**Status:** phase 02 window landed, groundwork for 03 in · **Target release:** 5.0 — *bringing it together to be portable*
 
 > **Phase 00 outcome — the approach works.** A single-file self-contained WPF app
 > hosting PowerShell 7 ran `ward.ps1` end to end with zero error records: it
@@ -348,6 +348,79 @@ arrangement for open-source tooling.
 
 ---
 
+## Groundwork for phase 03
+
+Four things were fixed before starting phase 03, because its features would
+have been built directly on top of them.
+
+### A run that did nothing reported success
+
+`ToolRunResult.Succeeded` returned true for WARD refusing to start without
+Administrator: no error records, no exit code, nothing to distinguish it from a
+clean run. Phase 03's run history is specified as *what ran, when, exit status,
+and which artifacts it produced* — built on that, it would have recorded a
+success for a tool that did no work.
+
+Two changes, because there are two separate problems hiding in one symptom:
+
+- **Refusal is now determined before the run.** A tool that asserts
+  Administrator while the process is not elevated is reported as
+  `RefusedNeedsAdmin`. It has to be decided up front, because a refusal leaves
+  nothing behind to read afterwards.
+- **The exit code is now actually captured.** The tool is invoked through a
+  wrapper that reads `$LASTEXITCODE` in a `finally` block. A script's `exit`
+  never reaches `SetShouldExit`, but it does set `$LASTEXITCODE`, and the
+  `finally` runs even when the tool exits.
+
+The exit code is deliberately **not** part of `Succeeded`. Five tools end on
+`robocopy`, `manage-bde` or `netsh`, and robocopy returns 1 for *files were
+copied* — treating non-zero as failure would invent failures for ARCHIVE and
+REVENANT. It is recorded as information for the run history, not as a verdict.
+
+### Reports were written in among the extracted scripts
+
+`LogDirectory` is empty in the shipped `config.json`, so `Resolve-LogDirectory`
+fell back to each tool's own directory — which is where the suite gets
+extracted. Phase 03 wants to *watch* that directory for new reports, and
+watching a folder where 45 files reappear on every launch is the wrong
+foundation. It was also the cause of the extractor miscounting its own output.
+
+The layout is now explicit: `TechnicianToolkit\suite` for the extracted tools,
+`TechnicianToolkit\reports` for what they produce, and the app writes the
+report path into the extracted `config.json` so the toolkit's own
+`Resolve-LogDirectory` honours it. An existing non-empty `LogDirectory` is left
+alone, because a technician who set one through HEARTH meant it.
+
+`config.json` is also no longer overwritten on launch — it is seeded when
+missing and preserved thereafter. It was being replaced from the embedded copy
+every time, which would have quietly wiped whatever the phase 03 settings
+screen had just written.
+
+### The working directory was resolved from the wrong place
+
+Found while dry-running the CI gate. `AppContext.BaseDirectory` and the
+executable's own directory are the same thing in a normal build and *different*
+in the configuration that ships: `IncludeAllContentForSelfExtract` is mandatory
+for the PowerShell SDK under single-file, and it makes `BaseDirectory` point at
+the bundle's extraction folder under `%TEMP%` — a hashed path that changes with
+every build and gets cleaned up.
+
+So the published application was extracting the suite, and would have written
+every report, into a temporary directory no technician could find. That defeats
+both the USB-stick promise and the report-watching phase 03 is built around.
+The root is now resolved from `Environment.ProcessPath`, with
+`LocalApplicationData` rather than `%TEMP%` as the fallback, so reports survive
+even when the medium is read-only.
+
+### Output was dropped silently
+
+The output pane keeps the last 20,000 lines. For one chatty tool that is fine;
+for the queue of them phase 03 introduces it is not, because the first tool's
+output would vanish and *Save* would then write an incomplete log with nothing
+to say so. Trimming now leaves a visible notice line carrying the count.
+
+---
+
 ## Phases
 
 ### 00 — Spike: prove the runtime · ~~2–3 days~~ **DONE**
@@ -412,7 +485,7 @@ output live, and cancels it mid-run. **Met**, and verified on this machine:
 | Parameters by AST | CIPHER renders its 8-value `ValidateSet` as a dropdown and its `ValidatePattern` verbatim |
 | A tool end to end | EXHUME ran unelevated through the hosted engine, colours and sections intact, and wrote its HTML report |
 | Cancel mid-run | `PowerShell.Stop()` interrupted EXHUME mid-scan at 3.2s; harness exit 130 |
-| Elevation refusal | WARD prints its refusal and stops. `exit` inside a module function never reaches `SetShouldExit`, so the harness pre-flights elevation instead |
+| Elevation refusal | WARD prints its refusal and stops. `exit` inside a module function never reaches `SetShouldExit`, so the refusal is detected before the run — see *Groundwork for phase 03* |
 
 ### 02 — The window · 2–3 weeks · **exit criteria met**
 
@@ -501,7 +574,7 @@ without leaving the window.
 
 | Risk | Why it bites | Response |
 |---|---|---|
-| ~~**high**~~ **retired** — PowerShell SDK with single-file publish | Both failure modes found and fixed in phase 00; neither was discoverable from its error message | Locked in via two build settings. Keep the spike's `--probe` check in CI so a dependency bump cannot silently reintroduce either |
+| ~~**high**~~ **retired** — PowerShell SDK with single-file publish | Both failure modes found and fixed in phase 00; neither was discoverable from its error message | Locked in via two build settings, and **now gated in CI**: the `Desktop app` job publishes single-file and runs `TechnicianToolkit.Harness.exe probe`, which opens a real runspace and resolves `Get-CimInstance`. Both failures live in exactly that path, so an SDK bump or a dropped `.csproj` property fails the build rather than the field |
 | **low** — the clean-VM claim is unverified | Recorded as *the dev box has PowerShell 7 installed independently*. It does not — see phase 00 above — so the risk is smaller than it was written, but a machine that never had it is still the only real proof | One run on a VM with no PowerShell 7 before phase 02 |
 | **med** — SignPath application lead time | It is an application with a review, not a purchase | Submitted during phase 00. Unsigned builds trip SmartScreen, which is fatal for a tool run on client machines |
 | **med** — Antivirus false positives | A single-file executable that unpacks scripts to disk and runs them elevated is, structurally, what a dropper looks like | Signing helps most. Submit to Microsoft and the major vendors for whitelisting ahead of the release |

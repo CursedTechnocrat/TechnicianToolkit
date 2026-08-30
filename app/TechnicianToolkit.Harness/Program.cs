@@ -22,7 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Principal;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using TechnicianToolkit.Engine;
@@ -51,6 +51,7 @@ namespace TechnicianToolkit.Harness
                 return command switch
                 {
                     "extract" => Extract(),
+                    "probe" => await ProbeAsync().ConfigureAwait(false),
                     "list" => List(),
                     "show" => Show(rest),
                     "run" => await RunAsync(rest).ConfigureAwait(false),
@@ -72,6 +73,7 @@ namespace TechnicianToolkit.Harness
             Console.WriteLine("Technician Toolkit - console harness (phase 01)");
             Console.WriteLine();
             Console.WriteLine("  extract               Write the embedded suite to disk and report where.");
+            Console.WriteLine("  probe                 Open a runspace and prove the hosted engine works (CI gate).");
             Console.WriteLine("  list                  List every tool in the GRIMOIRE registry.");
             Console.WriteLine("  show <tool>           Show a tool declared parameters.");
             Console.WriteLine("  run <tool> [args]     Run a tool. Ctrl+C cancels it mid-run.");
@@ -96,19 +98,92 @@ namespace TechnicianToolkit.Harness
         /// Every command needs the suite on disk first, since the tools run by
         /// path and the AST readers read the real files.
         /// </summary>
-        private static string EnsureExtracted()
-        {
-            string workDir = ScriptExtractor.Extract();
-            return workDir;
-        }
+        private static string EnsureExtracted() => ScriptExtractor.Prepare().SuiteDirectory;
 
         private static int Extract()
         {
-            string workDir = ScriptExtractor.Extract(out int count);
-            Console.WriteLine("Extracted " + count + " file(s) to:");
-            Console.WriteLine("  " + workDir);
+            ToolkitLayout layout = ScriptExtractor.Prepare();
+            Console.WriteLine("Extracted " + layout.FilesWritten + " file(s).");
+            Console.WriteLine("  suite   : " + layout.SuiteDirectory);
+            Console.WriteLine("  reports : " + layout.ReportDirectory);
             return 0;
         }
+
+        /// <summary>
+        /// The CI gate the plan asks for: open a real runspace and prove the
+        /// hosted engine works, so that a dependency bump cannot silently
+        /// reintroduce either of the two single-file failures phase 00 found.
+        ///
+        /// It has to construct the host and run something, because that is where
+        /// both failures live. Constructing PSHostUserInterface is what throws
+        /// without IncludeAllContentForSelfExtract, and resolving Get-CimInstance
+        /// is what fails when PowerShell's built-in modules land outside $PSHOME.
+        /// Extracting and reading the catalog would exercise neither.
+        /// </summary>
+        private static async Task<int> ProbeAsync()
+        {
+            ToolkitLayout layout = ScriptExtractor.Prepare();
+            Console.WriteLine("suite   : " + layout.SuiteDirectory);
+            Console.WriteLine("reports : " + layout.ReportDirectory);
+            Console.WriteLine("files   : " + layout.FilesWritten);
+            Console.WriteLine("elevated: " + Elevation.IsElevated());
+            Console.WriteLine();
+
+            // A throwaway script beside the suite, so it runs by path with the
+            // module next to it exactly as a real tool does.
+            string probeScript = Path.Combine(layout.SuiteDirectory, "__probe.ps1");
+            File.WriteAllText(probeScript, ProbeScript, new UTF8Encoding(true));
+
+            try
+            {
+                var sink = new ConsoleSink();
+                var runner = new ToolRunner(sink, layout.SuiteDirectory);
+
+                ToolRunResult result = await runner
+                    .RunAsync(probeScript, new Dictionary<string, object?>())
+                    .ConfigureAwait(false);
+
+                Console.WriteLine();
+                if (result.Errors.Count > 0)
+                {
+                    Error("probe produced " + result.Errors.Count + " error record(s).");
+                    return 1;
+                }
+
+                Console.WriteLine("[probe] engine OK.");
+                return 0;
+            }
+            finally
+            {
+                try { File.Delete(probeScript); } catch { /* best effort */ }
+            }
+        }
+
+        /// <summary>
+        /// Deliberately touches the two things phase 00 found broken, plus the
+        /// module's own console helpers so the host surface is exercised too.
+        /// </summary>
+        private const string ProbeScript = @"
+Import-Module (Join-Path $PSScriptRoot 'TechnicianToolkit.psm1') -Force -ErrorAction Stop
+
+Write-Section 'Engine probe'
+Write-Info ('PowerShell : ' + $PSVersionTable.PSVersion + ' (' + $PSVersionTable.PSEdition + ')')
+Write-Info ('PSHOME     : ' + $PSHOME)
+
+# 35 sites in the suite depend on this resolving.
+$os = (Get-CimInstance Win32_OperatingSystem -ErrorAction Stop).Caption
+Write-Ok ('CIM        : ' + $os)
+
+$mgmt = (Get-Module -ListAvailable Microsoft.PowerShell.Management | Select-Object -First 1).Version
+Write-Ok ('Management : ' + $mgmt)
+
+Write-Warn 'warning stream reaches the host'
+Write-Fail 'error-coloured line reaches the host'
+Write-Progress -Activity 'Probe' -Status 'halfway' -PercentComplete 50
+Write-Progress -Activity 'Probe' -Status 'done' -Completed
+Clear-Host
+Write-Ok 'host surface OK'
+";
 
         private static int List()
         {
@@ -271,8 +346,14 @@ namespace TechnicianToolkit.Harness
                     return 130;
                 }
 
+                if (result.RefusedNeedsAdmin)
+                {
+                    Console.WriteLine("[harness] REFUSED: this tool asserts Administrator and did no work.");
+                    return 1;
+                }
+
                 Console.WriteLine("[harness] finished. errors: " + result.Errors.Count
-                                  + ", script exit code: "
+                                  + ", exit code: "
                                   + (result.ExitCode.HasValue ? result.ExitCode.Value.ToString() : "(none)"));
 
                 return result.Succeeded ? 0 : 1;
@@ -368,7 +449,7 @@ namespace TechnicianToolkit.Harness
         /// </summary>
         private static void WarnIfToolNeedsElevation(string scriptPath)
         {
-            if (IsElevated())
+            if (Elevation.IsElevated())
             {
                 return;
             }
@@ -384,12 +465,6 @@ namespace TechnicianToolkit.Harness
             Console.WriteLine("[harness] It will print its refusal and stop. Re-run the harness elevated.");
             Console.ForegroundColor = previous;
             Console.WriteLine();
-        }
-
-        private static bool IsElevated()
-        {
-            using WindowsIdentity identity = WindowsIdentity.GetCurrent();
-            return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
         }
 
         private static string Truncate(string value, int max) =>

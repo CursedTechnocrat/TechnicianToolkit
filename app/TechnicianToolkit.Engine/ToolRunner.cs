@@ -19,6 +19,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Management.Automation;
@@ -34,12 +35,32 @@ namespace TechnicianToolkit.Engine
     {
         public bool Cancelled { get; init; }
 
-        /// <summary>The code a script passed to exit, if it called it at all.</summary>
+        /// <summary>
+        /// The tool asserts Administrator and this process is not elevated, so it
+        /// printed its refusal and stopped without doing any work.
+        ///
+        /// This is determined before the run rather than read from it, because a
+        /// refusal is otherwise invisible: Assert-AdminPrivilege calls exit, and a
+        /// script exit inside a hosted runspace raises no error record and never
+        /// reaches PSHost.SetShouldExit. Without this the run reports a clean
+        /// success, which is exactly the wrong thing to write into a run history.
+        /// </summary>
+        public bool RefusedNeedsAdmin { get; init; }
+
+        /// <summary>
+        /// $LASTEXITCODE after the tool returned.
+        ///
+        /// Informational, and deliberately NOT part of Succeeded. A script's exit
+        /// sets it, but so does the last native command the script ran, and five
+        /// tools end on robocopy, manage-bde or netsh -- robocopy returns 1 for
+        /// "files were copied", which is success. A non-zero value here means the
+        /// run ended with a non-zero status, not that it failed.
+        /// </summary>
         public int? ExitCode { get; init; }
 
         public IReadOnlyList<string> Errors { get; init; } = Array.Empty<string>();
 
-        public bool Succeeded => !Cancelled && Errors.Count == 0 && (ExitCode ?? 0) == 0;
+        public bool Succeeded => !Cancelled && !RefusedNeedsAdmin && Errors.Count == 0;
     }
 
     /// <summary>
@@ -52,6 +73,27 @@ namespace TechnicianToolkit.Engine
     {
         private readonly IHostSink _sink;
         private readonly string _workDir;
+
+        /// <summary>
+        /// Runs the tool by path and records the exit code it leaves behind.
+        ///
+        /// Out-String -Stream sits inside the wrapper so that anything reaching
+        /// the success stream without Write-Host is still formatted the way a
+        /// console would render it.
+        /// </summary>
+        private const string WrapperScript = @"
+param([string]$TkScriptPath, [hashtable]$TkParams)
+
+$global:LASTEXITCODE = 0
+try {
+    & $TkScriptPath @TkParams | Out-String -Stream
+}
+finally {
+    # Runs even when the tool calls exit, which is the whole point: exit never
+    # reaches the host, but it does leave $LASTEXITCODE behind.
+    $global:TkLastExitCode = $LASTEXITCODE
+}
+";
 
         public ToolRunner(IHostSink sink, string workDir)
         {
@@ -74,6 +116,10 @@ namespace TechnicianToolkit.Engine
                 throw new FileNotFoundException("Tool script not found.", scriptPath);
             }
 
+            // Determined before the run: a refusal leaves no trace to read after it.
+            bool refusedNeedsAdmin =
+                !Elevation.IsElevated() && ToolTraits.Inspect(scriptPath).RequiresAdmin;
+
             var recorder = new ExitCodeRecordingSink(_sink);
             var errors = new List<string>();
 
@@ -91,9 +137,12 @@ namespace TechnicianToolkit.Engine
             using var shell = PowerShell.Create();
             shell.Runspace = runspace;
 
-            // By path, never from a string: the tool bootstrap blocks depend on
-            // $PSScriptRoot and $PSCommandPath resolving to a real location.
-            shell.AddCommand(scriptPath, useLocalScope: false);
+            // The tool is still invoked BY PATH -- the bootstrap blocks depend on
+            // $PSScriptRoot and $PSCommandPath resolving to a real location -- but
+            // through a wrapper, so that $LASTEXITCODE can be read back afterwards.
+            // A script's exit does not stop the caller, and the finally block runs
+            // even when the tool exits, so the code is captured either way.
+            var splat = new Hashtable();
             foreach (KeyValuePair<string, object?> parameter in parameters)
             {
                 if (parameter.Value is bool flag)
@@ -102,17 +151,17 @@ namespace TechnicianToolkit.Engine
                     // when false so the script sees its own default.
                     if (flag)
                     {
-                        shell.AddParameter(parameter.Key, new SwitchParameter(true));
+                        splat[parameter.Key] = new SwitchParameter(true);
                     }
                     continue;
                 }
 
-                shell.AddParameter(parameter.Key, parameter.Value);
+                splat[parameter.Key] = parameter.Value;
             }
 
-            // Anything reaching the success stream without Write-Host still has to
-            // be visible, formatted the way a console would render it.
-            shell.AddCommand("Out-String").AddParameter("Stream", true);
+            shell.AddScript(WrapperScript)
+                 .AddParameter("TkScriptPath", scriptPath)
+                 .AddParameter("TkParams", splat);
 
             var output = new PSDataCollection<PSObject>();
             output.DataAdded += (_, _) =>
@@ -168,9 +217,33 @@ namespace TechnicianToolkit.Engine
             return new ToolRunResult
             {
                 Cancelled = cancelled,
-                ExitCode = recorder.ExitCode,
+                RefusedNeedsAdmin = refusedNeedsAdmin,
+                ExitCode = ReadExitCode(runspace) ?? recorder.ExitCode,
                 Errors = errors,
             };
+        }
+
+        /// <summary>
+        /// Read back what the wrapper stashed. Absent if the pipeline was stopped
+        /// before the finally block could run.
+        /// </summary>
+        private static int? ReadExitCode(Runspace runspace)
+        {
+            try
+            {
+                object? raw = runspace.SessionStateProxy.PSVariable.GetValue("TkLastExitCode");
+                return raw switch
+                {
+                    int value => value,
+                    PSObject wrapped when wrapped.BaseObject is int boxed => boxed,
+                    _ => null,
+                };
+            }
+            catch
+            {
+                // A stopped or broken runspace has no session state left to read.
+                return null;
+            }
         }
 
         /// <summary>

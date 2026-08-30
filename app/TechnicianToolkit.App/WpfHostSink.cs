@@ -69,6 +69,8 @@ namespace TechnicianToolkit.App
 
         // Touched only on the UI thread.
         private OutputLine? _current;
+        private OutputLine? _notice;
+        private int _dropped;
 
         public WpfHostSink(
             Dispatcher dispatcher,
@@ -144,10 +146,41 @@ namespace TechnicianToolkit.App
                 Emit(write.Text, ConsolePalette.For(write.Foreground));
             }
 
+            Trim();
+        }
+
+        /// <summary>
+        /// Enforce the cap, but say so. Dropping the oldest lines silently is fine
+        /// for one chatty tool and wrong for a queue of them: the first tool's
+        /// output would vanish, and Save would then write an incomplete log with
+        /// nothing to indicate it. The notice line keeps the loss visible and
+        /// keeps saved output honest.
+        /// </summary>
+        private void Trim()
+        {
+            if (_lines.Count <= MaxLines)
+            {
+                return;
+            }
+
             while (_lines.Count > MaxLines)
             {
-                _lines.RemoveAt(0);
+                // Never drop the notice itself, or the count would reset to zero.
+                _lines.RemoveAt(_dropped > 0 ? 1 : 0);
+                _dropped++;
             }
+
+            if (_notice == null)
+            {
+                _notice = new OutputLine();
+                _lines.Insert(0, _notice);
+            }
+
+            _notice.Reset();
+            _notice.Append(
+                "-- " + _dropped + " earlier line(s) dropped; the buffer holds the last "
+                + MaxLines + " --" + Environment.NewLine,
+                ConsolePalette.For(ConsoleColor.Yellow));
         }
 
         /// <summary>
@@ -213,6 +246,8 @@ namespace TechnicianToolkit.App
             Flush();
             _lines.Clear();
             _current = null;
+            _notice = null;
+            _dropped = 0;
         });
 
         public void Progress(string activity, string status, int percentComplete, bool completed) =>

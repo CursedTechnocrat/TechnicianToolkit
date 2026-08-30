@@ -74,6 +74,12 @@ namespace TechnicianToolkit.App
         private readonly List<ParameterField> _fields = new List<ParameterField>();
 
         private string _workDir = string.Empty;
+
+        /// <summary>
+        /// Where the suite and the reports live. Phase 03 watches
+        /// <see cref="ToolkitLayout.ReportDirectory"/> for new artifacts.
+        /// </summary>
+        private ToolkitLayout _layout = new ToolkitLayout();
         private WpfHostSink? _sink;
         private CancellationTokenSource? _cancellation;
         private ToolItem? _selected;
@@ -169,10 +175,7 @@ namespace TechnicianToolkit.App
 
         private void ShowElevationState()
         {
-            using WindowsIdentity identity = WindowsIdentity.GetCurrent();
-            bool elevated = new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
-
-            if (elevated)
+            if (Elevation.IsElevated())
             {
                 return;
             }
@@ -188,7 +191,8 @@ namespace TechnicianToolkit.App
 
         private void LoadCatalog()
         {
-            _workDir = ScriptExtractor.Extract();
+            _layout = ScriptExtractor.Prepare();
+            _workDir = _layout.SuiteDirectory;
 
             string grimoire = Path.Combine(_workDir, "grimoire.ps1");
             IReadOnlyList<ToolEntry> entries = ToolCatalog.Load(grimoire);
@@ -644,6 +648,14 @@ namespace TechnicianToolkit.App
             {
                 Sink.Write(Environment.NewLine + "-- cancelled --" + Environment.NewLine,
                     ConsoleColor.Yellow, null);
+            }
+            else if (result.RefusedNeedsAdmin)
+            {
+                // Without this the pane shows one line of refusal and then a green
+                // "finished", which reads as success for a run that did nothing.
+                Sink.Write(Environment.NewLine
+                    + "-- refused: this tool requires Administrator and did no work --"
+                    + Environment.NewLine, ConsoleColor.Yellow, null);
             }
             else if (result.Errors.Count > 0)
             {

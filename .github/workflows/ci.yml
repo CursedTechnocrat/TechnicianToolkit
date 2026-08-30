@@ -78,3 +78,73 @@ jobs:
         with:
           name: pester-results
           path: TestResults.xml
+
+  app:
+    name: Desktop app
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build
+        run: dotnet build app/TechnicianToolkit.slnx -c Release --nologo
+
+      # Publishing single-file is the configuration under test, not just a
+      # packaging step. Microsoft does not support Microsoft.PowerShell.SDK
+      # together with PublishSingleFile, and phase 00 found two failures that
+      # only appear in a published bundle. A plain build would catch neither.
+      - name: Publish single-file harness
+        run: >
+          dotnet publish app/TechnicianToolkit.Harness -c Release -r win-x64
+          -o publish/harness --nologo
+
+      # THE GATE. Opens a real runspace, constructs the host, and resolves
+      # Get-CimInstance. Without IncludeAllContentForSelfExtract the host
+      # constructor throws; without the module remap the CIM call fails. Either
+      # regression -- an SDK bump, a property dropped from the .csproj -- fails
+      # here rather than in the field.
+      - name: Probe the hosted engine
+        run: ./publish/harness/TechnicianToolkit.Harness.exe probe
+
+      - name: Read the tool catalog
+        shell: pwsh
+        run: |
+          $out = ./publish/harness/TechnicianToolkit.Harness.exe list
+          $out
+          if ($LASTEXITCODE -ne 0) { Write-Error 'catalog listing failed'; exit 1 }
+          if ($out -notmatch 'tools in the registry') {
+            Write-Error 'catalog listing produced no registry count'
+            exit 1
+          }
+
+      # asInvoker so the render runs without a UAC prompt the runner cannot answer.
+      - name: Publish single-file window
+        run: >
+          dotnet publish app/TechnicianToolkit.App -c Release -r win-x64
+          -p:Elevate=false -o publish/app --nologo
+
+      - name: Render the window
+        shell: pwsh
+        run: |
+          $exe = './publish/app/TechnicianToolkit.exe'
+          $png = 'window.png'
+          $p = Start-Process -FilePath $exe -ArgumentList @('--screenshot', $png) -PassThru -Wait
+          if (Test-Path "$png.error.txt") { Get-Content "$png.error.txt"; Write-Error 'render failed'; exit 1 }
+          if ($p.ExitCode -ne 0) { Write-Error "render exited $($p.ExitCode)"; exit 1 }
+          if (-not (Test-Path $png)) { Write-Error 'no image produced'; exit 1 }
+          Write-Host "rendered $((Get-Item $png).Length) bytes"
+
+      # A XAML resource that fails to resolve, or a control template that throws,
+      # shows up as a broken image rather than a broken build. Keeping the render
+      # means a human can look at what CI actually produced.
+      - name: Upload the render
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: window-render
+          path: window.png

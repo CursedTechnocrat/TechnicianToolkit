@@ -23,22 +23,42 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace TechnicianToolkit.Engine
 {
+    /// <summary>Where the prepared toolkit lives on disk.</summary>
+    public sealed class ToolkitLayout
+    {
+        /// <summary>The extracted suite: 42 tools, the module, config.json, the licence.</summary>
+        public string SuiteDirectory { get; init; } = string.Empty;
+
+        /// <summary>
+        /// Where tools write their HTML reports, CSVs and transcripts. Deliberately
+        /// NOT the suite directory: that one is rewritten from the embedded copy on
+        /// every launch, and something that watches for new reports should not have
+        /// to ignore 45 files reappearing underneath it each time.
+        /// </summary>
+        public string ReportDirectory { get; init; } = string.Empty;
+
+        public int FilesWritten { get; init; }
+    }
+
     /// <summary>
     /// Every toolkit script, the shared module, config.json and the licence are
     /// embedded in this assembly. They are written to a working directory before
     /// anything runs.
     ///
     /// Lifted from the launcher prototype (launcher/Program.cs, added in #22),
-    /// which is superseded by this application.
+    /// which the application superseded.
     ///
     /// Two properties of this are load-bearing and must not be optimised away:
     ///
     /// 1. Scripts run BY PATH, never from a string. Every tool bootstrap block
     ///    depends on $PSScriptRoot and $PSCommandPath resolving to a real
-    ///    location, and on the shared module sitting beside the script.
+    ///    location, and on the shared module sitting beside it.
     /// 2. Because the whole suite is present locally, neither the GRIMOIRE hub
     ///    nor any tool ever reaches out to GitHub for a missing file. That is
     ///    the offline guarantee, and it holds exactly as it does today.
@@ -48,37 +68,50 @@ namespace TechnicianToolkit.Engine
         /// <summary>Prefix applied to every embedded resource by the .csproj.</summary>
         private const string ResourcePrefix = "TKScripts.";
 
-        private const string WorkFolderName = "TechnicianToolkit";
+        private const string RootFolderName = "TechnicianToolkit";
+        private const string SuiteFolderName = "suite";
+        private const string ReportFolderName = "reports";
+        private const string ConfigFileName = "config.json";
 
         /// <summary>
-        /// Extract the suite and return the directory holding it.
+        /// Extract the suite, settle where reports go, and point the toolkit's own
+        /// configuration at that directory.
         /// </summary>
-        public static string Extract() => Extract(out _);
-
-        /// <summary>
-        /// Extract the suite, reporting how many files were written. Callers must
-        /// use this count rather than counting the directory afterwards: tools
-        /// write their HTML reports into the same working directory, so a
-        /// directory listing grows with every run.
-        /// </summary>
-        public static string Extract(out int fileCount)
+        public static ToolkitLayout Prepare()
         {
-            string workDir = ResolveWorkDir();
-            fileCount = Extract(workDir);
-            return workDir;
+            string root = ResolveRoot();
+            string suite = Path.Combine(root, SuiteFolderName);
+            string reports = Path.Combine(root, ReportFolderName);
+
+            Directory.CreateDirectory(suite);
+            Directory.CreateDirectory(reports);
+
+            int written = Extract(suite);
+            PointConfigAtReports(suite, reports);
+
+            return new ToolkitLayout
+            {
+                SuiteDirectory = suite,
+                ReportDirectory = reports,
+                FilesWritten = written,
+            };
         }
 
         /// <summary>
         /// Extract the suite into a specific directory. Files are overwritten on
         /// every run so what executes is always the known-good embedded version --
         /// that is what makes the build reproducible in the field.
+        ///
+        /// config.json is the one exception: it is seeded when missing and never
+        /// overwritten, because HEARTH and the settings screen write to it and a
+        /// technician's org name and log path must survive the next launch.
         /// </summary>
-        public static int Extract(string workDir)
+        public static int Extract(string suiteDir)
         {
-            Directory.CreateDirectory(workDir);
+            Directory.CreateDirectory(suiteDir);
 
             // The resources live beside this type, so this works identically in
-            // the console harness and in the phase 02 window.
+            // the console harness and in the window.
             Assembly assembly = typeof(ScriptExtractor).Assembly;
 
             List<string> resources = assembly
@@ -89,7 +122,14 @@ namespace TechnicianToolkit.Engine
             int count = 0;
             foreach (string resource in resources)
             {
-                string target = Path.Combine(workDir, resource.Substring(ResourcePrefix.Length));
+                string fileName = resource.Substring(ResourcePrefix.Length);
+                string target = Path.Combine(suiteDir, fileName);
+
+                if (string.Equals(fileName, ConfigFileName, StringComparison.OrdinalIgnoreCase)
+                    && File.Exists(target))
+                {
+                    continue;
+                }
 
                 using Stream? source = assembly.GetManifestResourceStream(resource);
                 if (source == null)
@@ -115,19 +155,83 @@ namespace TechnicianToolkit.Engine
         }
 
         /// <summary>
-        /// Prefer a writable folder next to the executable, which keeps
-        /// everything on the USB stick together. Fall back to TEMP when the
-        /// medium is read-only.
+        /// Set LogDirectory in the extracted config.json, which is what
+        /// Resolve-LogDirectory reads. Without it every tool falls back to its own
+        /// directory and writes its reports in among the extracted scripts.
+        ///
+        /// An existing non-empty LogDirectory is left alone: a technician who set
+        /// one through HEARTH means it.
         /// </summary>
-        private static string ResolveWorkDir()
+        private static void PointConfigAtReports(string suiteDir, string reportDir)
         {
-            string preferred = Path.Combine(AppContext.BaseDirectory, WorkFolderName);
-            if (TryEnsureWritable(preferred))
+            string configPath = Path.Combine(suiteDir, ConfigFileName);
+
+            try
             {
-                return preferred;
+                JsonNode? root = File.Exists(configPath)
+                    ? JsonNode.Parse(File.ReadAllText(configPath))
+                    : new JsonObject();
+
+                if (root is not JsonObject config)
+                {
+                    return;
+                }
+
+                string? current = config["LogDirectory"]?.GetValue<string>();
+                if (!string.IsNullOrWhiteSpace(current))
+                {
+                    return;
+                }
+
+                config["LogDirectory"] = reportDir;
+
+                File.WriteAllText(
+                    configPath,
+                    config.ToJsonString(new JsonSerializerOptions { WriteIndented = true }),
+                    new UTF8Encoding(false));
+            }
+            catch (Exception)
+            {
+                // A malformed config.json is the technician's to fix, and
+                // Get-TKConfig already falls back to defaults. Reports landing in
+                // the suite directory is untidy, not fatal, so this must not stop
+                // the application from starting.
+            }
+        }
+
+        /// <summary>
+        /// Prefer a writable folder beside the executable, which keeps everything
+        /// on the USB stick together.
+        ///
+        /// Resolved from <see cref="Environment.ProcessPath"/>, NOT from
+        /// AppContext.BaseDirectory. Those differ in exactly the configuration
+        /// that ships: IncludeAllContentForSelfExtract is mandatory for the
+        /// PowerShell SDK under single-file, and it makes BaseDirectory point at
+        /// the bundle's extraction folder under TEMP -- a hashed path that changes
+        /// with every build and gets cleaned up. Reports written there would be
+        /// unfindable, which defeats the point of watching for them.
+        ///
+        /// The fallback is LocalApplicationData rather than TEMP for the same
+        /// reason: when the medium is read-only, a technician's reports still have
+        /// to survive being generated.
+        /// </summary>
+        private static string ResolveRoot()
+        {
+            string? exeDir = Path.GetDirectoryName(Environment.ProcessPath ?? string.Empty);
+
+            if (!string.IsNullOrEmpty(exeDir))
+            {
+                string beside = Path.Combine(exeDir, RootFolderName);
+                if (TryEnsureWritable(beside))
+                {
+                    return beside;
+                }
             }
 
-            string fallback = Path.Combine(Path.GetTempPath(), WorkFolderName);
+            string fallback = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                RootFolderName);
+
             Directory.CreateDirectory(fallback);
             return fallback;
         }
