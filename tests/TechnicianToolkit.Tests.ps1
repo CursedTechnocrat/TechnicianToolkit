@@ -31,6 +31,14 @@ BeforeAll {
     Import-Module $ModulePath -Force
 }
 
+# Directories that live in the working tree but are not repository source.
+# .git is version-control internals; .claude is local editor/agent tooling that
+# happens to be written in PowerShell, so the recursive gates below would other-
+# wise hold hook scripts to the toolkit's own header, BOM and naming rules and
+# fail on every one. Defined at file scope because the file enumerations run
+# during Pester's discovery phase, before any BeforeAll body executes.
+$NonSourceDir = '{0}(\.git|\.claude){0}' -f [regex]::Escape([string][IO.Path]::DirectorySeparatorChar)
+
 # ─────────────────────────────────────────────────────────────────────────────
 # EscHtml
 # ─────────────────────────────────────────────────────────────────────────────
@@ -366,7 +374,7 @@ Describe 'PowerShell syntax — all scripts' {
 # ─────────────────────────────────────────────────────────────────────────────
 Describe 'UTF-8 BOM — all scripts' {
     $bomCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Include '*.ps1', '*.psm1' -File -Recurse |
-        Where-Object { $_.FullName -notmatch ([regex]::Escape([IO.Path]::DirectorySeparatorChar + '.git' + [IO.Path]::DirectorySeparatorChar)) } |
+        Where-Object { $_.FullName -notmatch $NonSourceDir } |
         ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
 
     It '<Name> begins with a UTF-8 BOM' -ForEach $bomCases {
@@ -479,7 +487,7 @@ Describe 'Legacy tool names must not reappear' {
     $root  = Resolve-Path (Join-Path $PSScriptRoot '..')
     $files = Get-ChildItem -Path $root -Recurse -File -Include '*.ps1','*.md' |
         Where-Object {
-            $_.FullName -notmatch [regex]::Escape([IO.Path]::DirectorySeparatorChar + '.git' + [IO.Path]::DirectorySeparatorChar) -and
+            $_.FullName -notmatch $NonSourceDir -and
             $_.Name -notin $allowlist
         } |
         ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
@@ -1235,7 +1243,7 @@ Describe 'ConvertTo-HeraldArray' {
 # ─────────────────────────────────────────────────────────────────────────────
 Describe 'License header compliance — all source files' {
     $licenseCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Include '*.ps1', '*.psm1' -File -Recurse |
-        Where-Object { $_.FullName -notmatch ([regex]::Escape([IO.Path]::DirectorySeparatorChar + '.git' + [IO.Path]::DirectorySeparatorChar)) } |
+        Where-Object { $_.FullName -notmatch $NonSourceDir } |
         ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
 
     It '<Name> carries the SPDX license identifier' -ForEach $licenseCases {
