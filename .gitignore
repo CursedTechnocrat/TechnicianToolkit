@@ -43,6 +43,11 @@ $RECYCLE.BIN/
 
 # ─── Claude Code ──────────────────────────────────────────────────────────────
 .claude/settings.local.json
+.claude/*.ps1
+
+# Visual Studio MCP wiring - points at the local .claude shim above, so it
+# only makes sense on the machine that has it.
+.mcp.json
 
 # ─── .NET build output ────────────────────────────────────────────────────────
 # The launcher prototype was only ever built in CI, so the repo had no .NET
