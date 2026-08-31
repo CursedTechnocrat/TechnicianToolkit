@@ -1,0 +1,145 @@
+name: Release app
+
+# Builds the portable application for both architectures and publishes them as
+# workflow artifacts. It deliberately does NOT create the GitHub release.
+#
+# Signing cannot run here. The certificate's key lives in Certum's SimplySign
+# cloud HSM and is reachable only through the SimplySign Desktop client, which
+# needs an interactive session authenticated with a phone. An ephemeral
+# GitHub-hosted runner cannot hold one, and there are no credentials to write
+# against -- not "not yet", but by the design of the CA/B hardware requirement.
+#
+# So the release is built in public CI and finished by hand. RELEASING.md
+# carries that checklist. Signing appends to the PE rather than rebuilding it,
+# so the published binary is still the CI-built one plus a signature, and the
+# public provenance survives the manual step.
+#
+# 5.0 ships unsigned while the certificate is in validation. The checklist and
+# this workflow are written for the signed end state so nothing has to be
+# redesigned when it lands; until then the signing steps are simply skipped and
+# the release notes say so.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Tag or SHA to build (defaults to the current branch)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Publish ${{ matrix.rid }}
+    runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        rid: [win-x64, win-arm64]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build
+        run: dotnet build app/TechnicianToolkit.slnx -c Release --nologo
+
+      # The engine tests run on the release build too. A tag is the last place
+      # to discover that the embedded-resource globs stopped matching the suite.
+      - name: Run engine unit tests
+        run: dotnet test app/TechnicianToolkit.Engine.Tests -c Release --no-build --nologo
+
+      - name: Publish the application
+        run: >
+          dotnet publish app/TechnicianToolkit.App -c Release -r ${{ matrix.rid }}
+          -o publish/${{ matrix.rid }} --nologo
+
+      # win-x64 can be executed on the runner; win-arm64 cannot. Building ARM64
+      # proves it compiles and links, which is all this job can honestly claim.
+      # Running it on real hardware is still open -- see the ARM64 row in
+      # docs/desktop-port.md, and the request for help in CONTRIBUTING.md.
+      - name: Smoke-test the harness (x64 only)
+        if: matrix.rid == 'win-x64'
+        run: |
+          dotnet publish app/TechnicianToolkit.Harness -c Release -r win-x64 -o publish/harness --nologo
+          ./publish/harness/TechnicianToolkit.Harness.exe probe
+
+      - name: Verify the artifact exists and record its hash
+        shell: pwsh
+        run: |
+          $exe = "publish/${{ matrix.rid }}/TechnicianToolkit.exe"
+          if (-not (Test-Path $exe)) { Write-Error "no executable produced for ${{ matrix.rid }}"; exit 1 }
+
+          $item = Get-Item $exe
+          $hash = (Get-FileHash -Path $exe -Algorithm SHA256).Hash
+          $mb   = [math]::Round($item.Length / 1MB, 1)
+
+          # Published in the release notes so a download can be checked. It
+          # matters more than usual while the binaries are unsigned: without a
+          # signature the hash is the only thing a cautious user can verify.
+          $lines = @(
+              "TechnicianToolkit.exe (${{ matrix.rid }})"
+              "  size    : $mb MB"
+              "  sha256  : $hash"
+          )
+          $lines | Tee-Object -FilePath SHA256SUMS.txt
+
+          $summary = @(
+              "### ${{ matrix.rid }}"
+              ""
+              "- size: $mb MB"
+              "- SHA-256: ``$hash``"
+              ""
+          )
+          $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+      - name: Upload the unsigned build
+        uses: actions/upload-artifact@v4
+        with:
+          name: TechnicianToolkit-${{ matrix.rid }}-unsigned
+          path: |
+            publish/${{ matrix.rid }}/TechnicianToolkit.exe
+            SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
+
+  next-steps:
+    name: What happens now
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Print the manual checklist
+        shell: bash
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'NOTE'
+          ## These builds are unsigned
+
+          Signing is a manual step -- SimplySign needs an interactive session with
+          phone 2FA that a hosted runner cannot hold. Nothing is attached to a
+          release automatically.
+
+          Follow **RELEASING.md**:
+
+          1. Download both `TechnicianToolkit-*-unsigned` artifacts.
+          2. Sign and timestamp each one, if the certificate is available.
+          3. `signtool verify /pa /v` both binaries.
+          4. Create the release and attach them, with the SHA-256 of the files
+             you are actually attaching.
+          5. Generate the winget manifest against those hashes, last.
+
+          Until the certificate clears validation, skip 2 and 3 and say plainly in
+          the release notes that the binaries are unsigned and SmartScreen will
+          warn on first run.
+          NOTE

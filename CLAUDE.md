@@ -6,6 +6,19 @@ A collection of PowerShell 5.1+ scripts for IT technicians. Each script is a sel
 with a themed acronym name (GRIMOIRE, AUSPEX, REVENANT, etc.). All tools share a common module
 (`TechnicianToolkit.psm1`) that provides logging, privilege checks, HTML helpers, and config I/O.
 
+## Two ways to run the suite
+
+Since 5.0 the toolkit ships both as standalone scripts and as one portable
+desktop application. **The scripts are the engine; the app drives them.** No tool
+logic lives in C#, and porting any there is explicitly out of scope — see
+`docs/desktop-port.md`.
+
+The practical consequence when editing: a change to a tool script is a change to
+the application too, because the app embeds the scripts verbatim at build time.
+The scripts must stay independently runnable under Windows PowerShell 5.1, which
+remains the primary documented path — that is why the UTF-8 BOM gate still exists
+even though the app hosts PowerShell 7.
+
 ## Repository Layout
 
 ```
@@ -15,8 +28,27 @@ TechnicianToolkit/
 ├── config.json              # Optional runtime config (org name, log dir, webhooks, defaults)
 ├── hearth.ps1               # Setup wizard — writes config.json
 ├── <tool>.ps1               # Individual tool scripts
-└── tests/
-    └── TechnicianToolkit.Tests.ps1   # Pester 5 test suite
+├── tests/
+│   └── TechnicianToolkit.Tests.ps1   # Pester 5 test suite — guards the scripts
+├── app/                     # The desktop application (.NET 8, WPF)
+│   ├── TechnicianToolkit.Engine/       # Headless: embeds the suite, hosts PS7,
+│   │                                   #   AST readers, runner
+│   ├── TechnicianToolkit.Engine.Tests/ # xUnit — guards the C# that reads the scripts
+│   ├── TechnicianToolkit.Harness/      # Console front end; the CI gate runs this
+│   ├── TechnicianToolkit.App/          # The WPF window
+│   └── spike/                          # Phase 00 proof of concept, kept for reference
+├── packaging/winget/        # winget manifest source
+├── RELEASING.md             # The manual half of a release, including signing
+└── docs/desktop-port.md     # The port's plan, decisions and open risks
+```
+
+Two test suites, and neither sees the other's regressions. Pester guards the
+PowerShell; xUnit guards the C# that parses it. A `param()` block the form builder
+misreads is still valid PowerShell, so nothing on the script side would notice.
+
+```powershell
+Invoke-Pester -Path .\tests\TechnicianToolkit.Tests.ps1 -Output Detailed
+dotnet test app/TechnicianToolkit.Engine.Tests
 ```
 
 ## Architecture: Shared Module Pattern
@@ -269,6 +301,30 @@ updates the file.
 4. Add the script's filename to the Quick Launch and Usage sections in `README.md`.
 5. The syntax-validation, module-bootstrap, and license-header compliance Pester tests will
    cover it automatically.
+6. Nothing needs doing for the desktop application. The `.csproj` glob embeds every root
+   `.ps1`, and the app reads `grimoire.ps1` at runtime — so a correctly registered tool
+   appears in the window with a generated form and no C# change. That is the point of
+   reading the registry rather than duplicating it.
+
+### What the application reads out of a tool
+
+The app never hardcodes anything about a tool. Three readers in
+`app/TechnicianToolkit.Engine/` parse the scripts, which is what keeps the two halves from
+drifting — and which means these conventions are load-bearing, not cosmetic:
+
+| Reader | Reads | Breaks if |
+|---|---|---|
+| `ToolCatalog` | `$Tools` and `$CategoryOrder` in `grimoire.ps1` | The registry stops being an array of hashtable literals with a `File` key |
+| `ToolParameters` | The **top-level** `param()` block | A tool takes input some other way; a nested function's params are correctly ignored |
+| `ToolTraits` | `-WhatIf` / `-Unattended`, and the admin-gate call | A tool invents its own name for either switch |
+
+`ToolParameters` turns type and validation attributes into form controls, so the attributes
+are worth writing precisely: `[switch]` → checkbox, `[securestring]` → masked field,
+`[ValidateSet]` → dropdown, `[ValidateScript]` → path picker, everything else → text box.
+A `[ValidatePattern]` is carried through for the form to enforce.
+
+The xUnit suite covers all three plus the extractor. Run it after touching anything in
+`app/`, and after any change to the registry's shape.
 
 ## Tool Distinctions
 

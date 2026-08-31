@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    PHASE 04 - unit tests for the engine's AST readers and the script extractor.
+
+    These cover the parts of the engine that read the PowerShell suite: the
+    GRIMOIRE registry reader, the param() block reader that builds forms, the
+    trait inspector, and the extractor that writes the embedded suite to disk.
+    Everything here runs headless, so it needs no runspace and no elevation.
+
+    The Pester suite guards the scripts; this guards the C# that reads them.
+    Neither can see the other's regressions.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <AssemblyName>TechnicianToolkit.Engine.Tests</AssemblyName>
+    <RootNamespace>TechnicianToolkit.Engine.Tests</RootNamespace>
+    <Copyright>Copyright (C) 2026 CursedTechnocrat and the Technician Toolkit contributors</Copyright>
+
+    <!-- Same SDK warnings the engine suppresses; they arrive transitively. -->
+    <NoWarn>$(NoWarn);IL3000;NETSDK1179</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TechnicianToolkit.Engine\TechnicianToolkit.Engine.csproj" />
+  </ItemGroup>
+
+</Project>

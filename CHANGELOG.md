@@ -5,7 +5,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [Unreleased] — staged for 5.0.0
+## [5.0.0] - 2026-08-31
+
+**The release where the toolkit stops being a folder of scripts and becomes a program.**
+The same 42 tools now also ship as one portable Windows application with PowerShell 7
+hosted inside it, so the machine it runs on needs no runtime, no modules and no internet
+connection. The scripts are not going anywhere: they remain the engine, they remain
+independently runnable under Windows PowerShell 5.1, and that stays the primary documented
+path. The application drives them — it does not replace them, and no tool logic was ported
+to C#.
 
 **The toolkit skips 4.x entirely, and that is deliberate.** `cipher.ps1` had already
 drifted to 4.2 ahead of the rest of the suite, so unifying on 4.0 would have versioned
@@ -13,10 +21,28 @@ one script *backwards* — the one thing a version number must never do. Startin
 moves every file forward and leaves no exception a reader has to be told about. There
 is simply no 4.x line.
 
-Not yet released: the release workflow, the winget package, and the README and CLAUDE.md
-rewrites are still ahead. The scripts themselves are at 5.0 and gated.
+**Two things 5.0 ships without, stated plainly rather than glossed over:**
+
+- **The binaries are unsigned.** The Certum code-signing certificate is still in
+  validation. SmartScreen will warn on first run, and antivirus heuristics may object to a
+  single-file executable that unpacks scripts and runs them elevated — structurally that is
+  what a dropper looks like, and a signature is what normally offsets it. The SHA-256 of
+  both binaries is published in the release notes so a download can be checked. Signing
+  ships as **5.0.1**: the same build, re-released with a signature appended, no code change.
+- **ARM64 has never run on real hardware.** It is built, published and labelled untested.
+  There is no ARM device here to close it on, so it is a request for help rather than a
+  defect to hide — see `CONTRIBUTING.md`.
 
 ### Changed
+- **README and CLAUDE.md are written around two ways to run the suite.** Both described a
+  script-only repository and did not mention the application at all. The README now opens
+  with the choice between them and what each is for, splits requirements and installation
+  accordingly, and states the unsigned-binary and untested-ARM64 positions where a user will
+  actually meet them rather than in a document they will not read. CLAUDE.md gains the
+  `app/` layout, the two-test-suite split, and — the part that matters for contributors —
+  what the application reads out of a tool: the registry shape, the top-level `param()`
+  block, and the type and validation attributes that become form controls. Those
+  conventions were already load-bearing; they were just undocumented.
 - **Every script reports one version.** The suite had been shipping five at once — `3.6`
   on thirty-eight scripts, `3.6.2` on RESTORATION, `3.8.3` on HERALD, `4.2` on CIPHER and
   `1.0` on TENDRIL. All forty-two headers and all forty-one GRIMOIRE registry rows now
@@ -32,6 +58,36 @@ rewrites are still ahead. The scripts themselves are at 5.0 and gated.
   the registry, RESTORATION `3.6.2` against `3.6`. Nothing in the suite detected it.
 
 ### Added
+- **A release path for the application.** `release-app.yml` builds `win-x64` and `win-arm64`
+  on a tag and publishes both as unsigned workflow artifacts with their SHA-256 recorded. It
+  deliberately does not create the GitHub release, because signing cannot run in CI: the
+  certificate's key lives in Certum's SimplySign cloud HSM and is reachable only through an
+  interactive session with phone 2FA that an ephemeral runner cannot hold. That is a
+  property of the CA/B hardware requirement, not a missing secret someone could add later.
+
+  `RELEASING.md` carries the manual half so it is not held in one person's head — collect
+  artifacts, check hashes, smoke-test, sign with timestamping, `signtool verify /pa`,
+  re-hash what is actually being shipped, publish, and generate the winget manifest last
+  against the final files. Signing appends to the PE, so a hash taken from the unsigned
+  artifact will not match a signed download; that ordering constraint is why the manifest
+  comes last.
+- **A winget package.** `packaging/winget/` holds the three-file manifest source for
+  `CursedTechnocrat.TechnicianToolkit`, both architectures, `InstallerType: portable`. The
+  README beside it records why `portable` rather than `exe` — the latter would tell winget
+  the file is a setup program and run it with switches it does not have, so the application
+  would open its window in the middle of `winget install` and appear to hang.
+- **xUnit tests for the engine's readers and the extractor.** 52 tests over `ToolCatalog`,
+  `ToolParameters`, `ToolTraits` and `ScriptExtractor`, running headless in CI beside the
+  Pester suite. The two guard different halves and neither sees the other's regressions: a
+  `param()` block the form builder misreads is still perfectly valid PowerShell, so nothing
+  on the script side would notice.
+
+  The AST readers are tested against purpose-written fixtures rather than the repository's
+  own scripts — a test that asserts on `grimoire.ps1` fails the day someone adds a tool,
+  which teaches the team to edit the test rather than read it, and it cannot express the
+  malformed cases that matter most. The extractor tests run against the resources genuinely
+  embedded in the engine assembly, so a `.csproj` glob that stops matching the suite fails
+  the build instead of shipping a useless executable.
 - **CONJURE installs from a direct download link.** Not everything a technician deploys
   exists in winget or Chocolatey — RMM agents in particular are almost always a per-tenant
   URL with a token in it and no package ID at all. Paste an HTTPS link, pass `-DirectUrl`,

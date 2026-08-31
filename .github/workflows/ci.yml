@@ -94,6 +94,22 @@ jobs:
       - name: Build
         run: dotnet build app/TechnicianToolkit.slnx -c Release --nologo
 
+      # The AST readers and the extractor, headless. The Pester suite guards the
+      # scripts; this guards the C# that reads them. Neither sees the other's
+      # regressions -- a param() block the form builder misreads is valid
+      # PowerShell, so nothing on the script side would notice.
+      - name: Run engine unit tests
+        run: >
+          dotnet test app/TechnicianToolkit.Engine.Tests -c Release --no-build --nologo
+          --logger "trx;LogFileName=engine-tests.trx" --results-directory TestResults
+
+      - name: Upload engine test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: engine-test-results
+          path: TestResults/engine-tests.trx
+
       # Publishing single-file is the configuration under test, not just a
       # packaging step. Microsoft does not support Microsoft.PowerShell.SDK
       # together with PublishSingleFile, and phase 00 found two failures that

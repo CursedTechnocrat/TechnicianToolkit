@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="TechnicianToolkit.Engine/TechnicianToolkit.Engine.csproj" />
+  <Project Path="TechnicianToolkit.Engine.Tests/TechnicianToolkit.Engine.Tests.csproj" />
   <Project Path="TechnicianToolkit.Harness/TechnicianToolkit.Harness.csproj" />
   <Project Path="TechnicianToolkit.App/TechnicianToolkit.App.csproj" />
 </Solution>

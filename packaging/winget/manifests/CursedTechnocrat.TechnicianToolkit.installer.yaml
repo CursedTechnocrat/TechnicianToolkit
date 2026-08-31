@@ -1,0 +1,50 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
+#
+# Installer manifest.
+#
+# InstallerType is 'portable': the application is a single self-contained .exe
+# that installs nothing, writes its working files beside itself, and is removed
+# by deleting it. Do not change this to 'exe' -- that would tell winget to run
+# the binary with installer switches it does not have, and the toolkit would
+# launch its window during 'winget install'.
+#
+# THE HASHES BELOW ARE PLACEHOLDERS. They must be the SHA-256 of the files
+# actually attached to the GitHub release, computed AFTER signing -- signing
+# appends to the PE and changes the hash. Generate this file with
+# `wingetcreate update` against the published URLs rather than editing the
+# hashes by hand; see RELEASING.md step 8.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+PackageIdentifier: CursedTechnocrat.TechnicianToolkit
+PackageVersion: 5.0.0
+
+MinimumOSVersion: 10.0.17763.0
+InstallerType: portable
+UpgradeBehavior: install
+ReleaseDate: 1970-01-01
+
+# The command alias winget creates. For a bare portable executable this is the
+# root-level field; PortableCommandAlias belongs to NestedInstallerFiles, which
+# is only for a portable shipped inside a zip -- winget reports it as an unknown
+# field here. Without either, the alias is derived from the file name.
+Commands:
+  - techniciantoolkit
+
+InstallModes:
+  - interactive
+
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/CursedTechnocrat/TechnicianToolkit/releases/download/v5.0.0/TechnicianToolkit-5.0.0-win-x64.exe
+    InstallerSha256: 0000000000000000000000000000000000000000000000000000000000000000
+
+  # Built by CI but not yet run on real ARM hardware. Shipping it is deliberate
+  # -- see the ARM64 row in docs/desktop-port.md and the request for a field
+  # report in CONTRIBUTING.md.
+  - Architecture: arm64
+    InstallerUrl: https://github.com/CursedTechnocrat/TechnicianToolkit/releases/download/v5.0.0/TechnicianToolkit-5.0.0-win-arm64.exe
+    InstallerSha256: 0000000000000000000000000000000000000000000000000000000000000000
+
+ManifestType: installer
+ManifestVersion: 1.6.0

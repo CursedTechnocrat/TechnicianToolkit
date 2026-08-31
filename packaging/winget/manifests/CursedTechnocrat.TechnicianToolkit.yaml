@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.version.1.6.0.schema.json
+#
+# Version manifest. One of three files that make up a winget submission; the
+# other two are the installer manifest and the en-US locale manifest, and all
+# three must carry the same PackageIdentifier and PackageVersion.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+PackageIdentifier: CursedTechnocrat.TechnicianToolkit
+PackageVersion: 5.0.0
+DefaultLocale: en-US
+ManifestType: version
+ManifestVersion: 1.6.0

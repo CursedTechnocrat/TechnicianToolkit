@@ -8,6 +8,56 @@
 
 ---
 
+## Two ways to run it
+
+As of 5.0 the suite ships in two forms. They run the same 42 tools from the same
+source — the application drives the scripts, it does not replace them.
+
+| | **The application** | **The scripts** |
+|---|---|---|
+| What it is | One portable `.exe` with a window | 42 `.ps1` files plus the shared module |
+| Needs on the target machine | Nothing | Windows PowerShell 5.1 (built into Windows) |
+| PowerShell | 7, hosted inside the executable | 5.1, the one already there |
+| Best for | Carrying on a USB stick; walking up to a machine | Remote sessions, scripted runs, dropping a single tool onto a box |
+| Install | `winget install CursedTechnocrat.TechnicianToolkit`, or download from [Releases](https://github.com/CursedTechnocrat/TechnicianToolkit/releases) | Clone the repo, or fetch one script — see [Quick Launch](#quick-launch) |
+
+Neither is deprecated. The scripts remain the primary documented path and stay
+independently runnable; if you only need one tool on one machine, a single `.ps1`
+is still the smallest thing that works.
+
+### The application
+
+A single self-contained executable. PowerShell 7 is hosted inside it, so the
+machine it runs on needs no runtime, no modules, and no internet connection. It
+extracts the suite beside itself, runs tools through a real window with live
+output, and watches for the HTML reports they produce.
+
+It requests **Administrator at launch**, once, because most of what it does needs
+it — including read-only tools that do not. That is a deliberate simplification
+for 5.0 and is called out here rather than buried.
+
+> **5.0 binaries are not code-signed.** The certificate is in validation.
+> SmartScreen will warn on first run, and some antivirus products may flag a
+> single-file executable that unpacks scripts and runs them elevated — that is
+> structurally what a dropper looks like, and a signature is what normally
+> offsets it. Check the SHA-256 published in the release notes against your
+> download. Signed builds follow in 5.0.1.
+
+> **The ARM64 build has never run on real hardware.** It is built and published
+> because withholding it helps nobody, but nothing has verified it beyond
+> compiling and linking. If you have a Snapdragon X, Surface Pro, or any
+> Windows-on-ARM machine, **[telling us what happened](https://github.com/CursedTechnocrat/TechnicianToolkit/issues)**
+> is one of the most useful things you can contribute — a report that it simply
+> worked is as valuable as a bug.
+
+Building it yourself needs the .NET 8 SDK:
+
+```powershell
+dotnet publish app/TechnicianToolkit.App -c Release -r win-x64 -o publish
+```
+
+---
+
 ## LiveConnect Suite
 
 > **Deploying remotely via Kaseya VSA LiveConnect?** Use the companion repository instead:
@@ -29,6 +79,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 
 ## Table of Contents
 
+- [Two ways to run it](#two-ways-to-run-it)
 - [Tools Overview](#tools-overview)
 - [Requirements](#requirements)
 - [Installation](#installation)
@@ -792,6 +843,14 @@ Outlook data-file discovery that inventories every PST (and optionally OST) on t
 
 ## Requirements
 
+**Running the application:** Windows 10 1809 or later, x64 or ARM64. Nothing else
+— PowerShell, the shared module, and every tool ship inside the executable. The
+per-tool requirements below still apply to what each tool *does* (RSAT for the AD
+tools, a BitLocker-capable edition for CIPHER, and so on), but nothing in the
+first four rows is needed.
+
+**Running the scripts:** everything below.
+
 | Requirement | Notes |
 |-------------|-------|
 | Windows PowerShell 5.1+ | All scripts |
@@ -819,6 +878,24 @@ Outlook data-file discovery that inventories every PST (and optionally OST) on t
 
 ## Installation
 
+### The application
+
+```powershell
+winget install CursedTechnocrat.TechnicianToolkit
+```
+
+Or download `TechnicianToolkit.exe` for your architecture from
+[Releases](https://github.com/CursedTechnocrat/TechnicianToolkit/releases) and
+run it. There is no installer and nothing to uninstall — it writes its working
+files into a `TechnicianToolkit` folder beside itself, or under
+`%LOCALAPPDATA%` when the medium is read-only, and deleting the `.exe` removes
+it. Copying it to a USB stick is a supported way to deploy it.
+
+Verify the SHA-256 against the release notes before running it — see the note on
+[unsigned binaries](#the-application) above.
+
+### The scripts
+
 1. Clone or download this repository
 2. Extract **all files** (`.ps1` and `TechnicianToolkit.psm1`) into the same folder — the module must be co-located with the scripts
 3. Open PowerShell as Administrator
@@ -827,6 +904,10 @@ Outlook data-file discovery that inventories every PST (and optionally OST) on t
 ```powershell
 cd C:\Path\To\Toolkit
 ```
+
+Any single tool also bootstraps itself: drop one `.ps1` onto a machine and it
+fetches the shared module from GitHub on first run. See [Quick Launch](#quick-launch)
+for one-liners that do exactly that.
 
 ---
 
