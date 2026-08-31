@@ -6,6 +6,8 @@
 
 **Free software for technicians, by technicians.** Use it, change it, share it — see [License](#license) and [Contributing](CONTRIBUTING.md).
 
+Written and maintained by **John Joseph Bejarana** ([@CursedTechnocrat](https://github.com/CursedTechnocrat)).
+
 ---
 
 ## Two ways to run it
@@ -1293,5 +1295,7 @@ What that means day to day:
 | Fold these scripts into a closed-source commercial RMM product | Not permitted. That is exactly what the copyleft is here to prevent. |
 
 Every script carries its own copyright and license notice in its header, so a single `.ps1` copied onto a technician's USB stick still tells the next person what it is and where it came from.
+
+Copyright © 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors.
 
 Prior releases were published under the MIT License. That grant is not revoked — anyone who obtained a copy under MIT keeps those terms for that copy. Everything from this point forward is GPL-3.0-or-later.

@@ -12,12 +12,17 @@ Publisher: CursedTechnocrat
 PublisherUrl: https://github.com/CursedTechnocrat
 PublisherSupportUrl: https://github.com/CursedTechnocrat/TechnicianToolkit/issues
 
+# The maintainer's name. Publisher stays the GitHub handle because the first
+# segment of PackageIdentifier is derived from it, and changing one without the
+# other breaks the tie winget validation expects.
+Author: John Joseph Bejarana (CursedTechnocrat)
+
 PackageName: Technician Toolkit
 PackageUrl: https://github.com/CursedTechnocrat/TechnicianToolkit
 
 License: GPL-3.0-or-later
 LicenseUrl: https://github.com/CursedTechnocrat/TechnicianToolkit/blob/main/LICENSE
-Copyright: Copyright (C) 2026 CursedTechnocrat and the Technician Toolkit contributors
+Copyright: Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
 CopyrightUrl: https://github.com/CursedTechnocrat/TechnicianToolkit/blob/main/LICENSE
 
 ShortDescription: A portable diagnostic and deployment toolkit for Windows technicians.

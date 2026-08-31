@@ -1,7 +1,7 @@
 ﻿# lantern.ps1 - L.A.N.T.E.R.N. — Locates & Audits Network Topology, Enumerating Resources & Nodes
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
-# Copyright (C) 2026 CursedTechnocrat and the Technician Toolkit contributors
+# Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

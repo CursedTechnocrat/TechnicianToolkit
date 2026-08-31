@@ -27,7 +27,7 @@ change only the first two lines:
 # <filename> - <A.C.R.O.N.Y.M.> — <what it does>
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
-# Copyright (C) 2026 CursedTechnocrat and the Technician Toolkit contributors
+# Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
 #
 # This program is free software: you can redistribute it and/or modify
 # ... (rest of the notice, unchanged)
