@@ -19,7 +19,8 @@
     <IsPackable>false</IsPackable>
     <AssemblyName>TechnicianToolkit.Engine.Tests</AssemblyName>
     <RootNamespace>TechnicianToolkit.Engine.Tests</RootNamespace>
-    <Copyright>Copyright (C) 2026 CursedTechnocrat and the Technician Toolkit contributors</Copyright>
+    <Authors>John Joseph Bejarana (CursedTechnocrat)</Authors>
+    <Copyright>Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors</Copyright>
 
     <!-- Same SDK warnings the engine suppresses; they arrive transitively. -->
     <NoWarn>$(NoWarn);IL3000;NETSDK1179</NoWarn>

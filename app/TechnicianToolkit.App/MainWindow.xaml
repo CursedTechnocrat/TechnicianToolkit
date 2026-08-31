@@ -1,7 +1,7 @@
 <!--
   MainWindow.xaml - catalog, detail, and the output / reports / history / queue panes.
   Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
-  Copyright (C) 2026 CursedTechnocrat and the Technician Toolkit contributors
+  Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
   SPDX-License-Identifier: GPL-3.0-or-later
 -->
 <Window x:Class="TechnicianToolkit.App.MainWindow"

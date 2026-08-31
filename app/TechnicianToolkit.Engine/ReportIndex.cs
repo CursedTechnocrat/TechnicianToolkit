@@ -1,7 +1,7 @@
 // ReportIndex.cs - The artifacts a run leaves behind.
 // Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 //
-// Copyright (C) 2026 CursedTechnocrat and the Technician Toolkit contributors
+// Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by

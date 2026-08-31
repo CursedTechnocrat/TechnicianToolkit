@@ -22,7 +22,8 @@
     <Version>5.0.0</Version>
     <Product>TechnicianToolkit</Product>
     <Description>Hosted PowerShell engine for the Technician Toolkit desktop application</Description>
-    <Copyright>Copyright (C) 2026 CursedTechnocrat and the Technician Toolkit contributors</Copyright>
+    <Authors>John Joseph Bejarana (CursedTechnocrat)</Authors>
+    <Copyright>Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors</Copyright>
     <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/CursedTechnocrat/TechnicianToolkit</PackageProjectUrl>
     <RepositoryUrl>https://github.com/CursedTechnocrat/TechnicianToolkit</RepositoryUrl>

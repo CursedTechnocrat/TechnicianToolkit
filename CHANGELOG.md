@@ -34,6 +34,17 @@ is simply no 4.x line.
   defect to hide — see `CONTRIBUTING.md`.
 
 ### Changed
+- **The copyright notice names the maintainer, not just the handle.** Every `.ps1`, `.psm1`,
+  `.cs` and `.xaml` header, the four `.csproj` files, and the winget locale manifest now read
+  `Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit
+  contributors`, and the README names the maintainer under the title and in the License
+  section. The four `.csproj` files also gain an `<Authors>` element, so the name reaches the
+  built binary's metadata; the winget manifest gains `Author`, with `Publisher` left as the
+  handle because `PackageIdentifier`'s first segment is derived from it. This is a
+  requirement of Certum's Open Source Code Signing validation, which asks for a public
+  repository or site where the applicant's full name can be read and tied to their identity
+  documents — see `RELEASING.md`. The pseudonym is kept alongside the name so the handle
+  Certum sees on the account and the repository URL resolves to the same person.
 - **README and CLAUDE.md are written around two ways to run the suite.** Both described a
   script-only repository and did not mention the application at all. The README now opens
   with the choice between them and what each is for, splits requirements and installation

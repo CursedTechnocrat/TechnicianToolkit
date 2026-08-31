@@ -157,3 +157,16 @@ The certificate subject is a natural person prefixed `Open Source Developer`, so
 the UAC prompt names a developer rather than an organization. That is normal for
 this certificate type, and it reads as suspicious only when left unexplained —
 so explain it in the README rather than treating it as a problem to hide.
+
+## Validation asked for the name in public
+
+Certum's validation asks for a GitHub repository, website or similar where the
+applicant's full name is publicly readable, so it can be tied to the identity
+documents on file. That is why the copyright notice in every source file, the
+four `.csproj` files, the winget locale manifest and the README all name
+**John Joseph Bejarana (CursedTechnocrat)** rather than the handle alone.
+
+It is deliberate, and it is the name the certificate subject will carry. Do not
+tidy it back to the pseudonym — the public record and the certificate have to
+agree, and the handle is kept beside the name precisely so the GitHub account
+and the person resolve to each other.

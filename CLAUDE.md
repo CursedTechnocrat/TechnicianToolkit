@@ -243,7 +243,7 @@ header, above the comment-based help block:
 # <filename> - <A.C.R.O.N.Y.M.> — <one-line description>
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
-# Copyright (C) 2026 CursedTechnocrat and the Technician Toolkit contributors
+# Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
 #
 # This program is free software: you can redistribute it and/or modify
 # ... (standard GPLv3 notice, copied verbatim from any existing script)
