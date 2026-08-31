@@ -46,6 +46,11 @@ The Pester suite enforces the presence of this header, so a new tool without it 
 | **Add a tool** | Follow *Adding a New Tool* in [CLAUDE.md](CLAUDE.md) — header block, shared-module bootstrap, GRIMOIRE registration, README entry. |
 | **Improve the docs** | The README is the front door for technicians who have never seen the toolkit. Clarity fixes are genuinely valuable. |
 | **Report what broke in the field** | Even without a patch. Real-world failure modes are the hardest thing to find from a dev machine. |
+| **Test the ARM64 build** | **Actively wanted.** The `win-arm64` binary is built and published but has never run on a real ARM device — there is none here to test on. If you have a Snapdragon X, Surface Pro, or any Windows-on-ARM machine, running it and saying what happened is one of the most useful things you can contribute. A report that it simply worked is as valuable as a bug. |
+
+The toolkit is GPL-3.0 and collaborative by design — it was never meant to be one
+person's. If you use it in the field, you know things about how it behaves that
+cannot be discovered from a dev box, and that knowledge is welcome here.
 
 ## Ground rules for code
 

@@ -12,9 +12,12 @@
 > the sections below.
 
 The suite ships today as 42 standalone PowerShell scripts plus a prototype `.exe`
-launcher. Version 5.0 replaces that arrangement with a single signed Windows
+launcher. Version 5.0 replaces that arrangement with a single Windows
 application: a real GUI over the existing engine, with PowerShell 7 hosted inside
 the executable so nothing needs installing on the machine it runs on.
+
+5.0 itself ships **unsigned** — the code-signing certificate is in validation, and
+signing arrives in a follow-up minor release rather than holding the port back.
 
 The scripts themselves are not going anywhere. They remain runnable standalone,
 and they remain the engine — the application drives them, it does not replace them.
@@ -29,8 +32,8 @@ and they remain the engine — the application drives them, it does not replace 
 | Engine | PowerShell 7 hosted in-process via `Microsoft.PowerShell.SDK` |
 | Prototype launcher | **Removed** — `launcher/` is superseded by the app |
 | Distribution | Portable single `.exe`, plus a winget package |
-| Signing | **Certum Open Source Code Signing** on SimplySign — certificate already held |
-| Architectures | `win-x64` **and** `win-arm64`, both built in CI; both signed locally |
+| Signing | **Certum Open Source Code Signing** on SimplySign — validation in progress; 5.0 ships unsigned, signing follows in a minor release |
+| Architectures | `win-x64` **and** `win-arm64`, both built in CI. **ARM64 is untested on real hardware — help wanted** |
 | Versioning | Everything to **5.0** |
 
 Nothing is left open. The rationale for each choice is in the sections below.
@@ -334,8 +337,17 @@ already read by AST elsewhere in the suite, so it is cheap.
 
 ## Signing — Certum Open Source Code Signing, on SimplySign
 
-**The certificate already exists**, which removes the longest external lead time
-this plan had. It is Certum's Open Source Code Signing certificate with the key
+**Signing is the intent, and the certificate is in progress — paperwork submitted,
+validation not yet cleared.** That changes what 5.0 ships, not where it is headed:
+5.0 goes out **unsigned**, and signing lands in a follow-up minor release the moment
+the certificate is in hand. The release path below is written against the finished
+state so nothing has to be redesigned later; only the timing moved.
+
+Nothing else in the plan is blocked on it. The binaries, the workflow, the winget
+manifest and the checklist can all be built and shipped now, and the signing step
+slots into a checklist that already has a slot for it.
+
+It is Certum's Open Source Code Signing certificate with the key
 held in **SimplySign**, Certum's cloud HSM (FIPS 140-2 Level 3 / CC EAL 4+). The
 subject is a natural person prefixed `Open Source Developer`, so the publisher
 string on the UAC prompt is a developer name rather than an organization. Say so
@@ -659,8 +671,22 @@ changed either.
   and the scripts standalone
 - `CHANGELOG.md` entry for `[5.0.0]`
 
-**Exit:** a tagged release publishes signed `win-x64` and `win-arm64` binaries, and
+**Exit:** a tagged release publishes `win-x64` and `win-arm64` binaries, and
 `winget install` works.
+
+**Two things 5.0 ships without, both stated openly rather than quietly:**
+
+- **Signed binaries.** The certificate is in validation. `RELEASING.md` carries the
+  signing step from the start so it is ready the day the certificate lands; until
+  then the release notes and the README say the binaries are unsigned and warn
+  that SmartScreen will object. Signing ships as **5.0.1**, a re-release of the
+  same build with a signature appended — no code change.
+- **ARM64 verified on hardware.** The build is produced and published, labelled
+  untested. Closing it needs someone with an ARM device, which is a request for
+  help, not a defect to hide.
+
+Neither is a reason to hold the port. Both are reasons to be specific in the
+release notes about what a user is getting.
 
 ---
 
@@ -670,12 +696,12 @@ changed either.
 |---|---|---|
 | ~~**high**~~ **retired** — PowerShell SDK with single-file publish | Both failure modes found and fixed in phase 00; neither was discoverable from its error message | Locked in via two build settings, and **now gated in CI**: the `Desktop app` job publishes single-file and runs `TechnicianToolkit.Harness.exe probe`, which opens a real runspace and resolves `Get-CimInstance`. Both failures live in exactly that path, so an SDK bump or a dropped `.csproj` property fails the build rather than the field |
 | **low** — the clean-VM claim is unverified | Recorded as *the dev box has PowerShell 7 installed independently*. It does not — see phase 00 above — so the risk is smaller than it was written, but a machine that never had it is still the only real proof | One run on a VM with no PowerShell 7 before phase 02 |
-| ~~**med**~~ **retired** — signing certificate lead time | Was the only item in the plan with external lead time | Certum Open Source Code Signing obtained. Superseded by the two rows below |
+| **med** — signing certificate still in validation | Paperwork is submitted and validation has not cleared. 5.0 therefore ships unsigned, which is exactly the SmartScreen and antivirus exposure the row below describes | Ship 5.0 unsigned and say so plainly in the README, then sign in a follow-up minor release. The release path is already written against the signed end state, so only the timing moves |
 | **med** — signing cannot run in CI | SimplySign needs an interactive session with phone 2FA, which GitHub-hosted runners cannot hold. A release therefore carries a manual step, and a manual step can be skipped or botched | `RELEASING.md` checklist, and `signtool verify /pa` on both binaries before the release is published. Revisit if Certum ships CI/CD support |
-| **med** — SmartScreen on early downloads | The certificate is OV, not EV, so reputation accrues rather than being granted. A correctly signed 5.0 can still warn on first run | Sign and timestamp from the first release so reputation starts accruing. Set the expectation in the README rather than treating the warning as a bug |
-| **med** — Antivirus false positives | A single-file executable that unpacks scripts to disk and runs them elevated is, structurally, what a dropper looks like | Signing helps most. Submit to Microsoft and the major vendors for whitelisting ahead of the release |
+| **high** — SmartScreen on early downloads | Raised from med: 5.0 is unsigned, so this is a certainty rather than a risk. Even once signed it persists — the certificate is OV, not EV, so reputation accrues rather than being granted, and reputation does not begin accruing until the first signed build | Say plainly in the README and the release notes that 5.0 is unsigned and will warn, with the reason and the route past it. Treating a predicted warning as a documented fact is the only honest option; hiding it costs more trust than the warning does |
+| **high** — Antivirus false positives | Raised from med: a single-file executable that unpacks scripts to disk and runs them elevated is structurally what a dropper looks like, and an unsigned one has nothing to offset that | Signing helps most and is not available yet. Submit to Microsoft and the major vendors for whitelisting ahead of the release, and publish the SHA-256 of both binaries in the release notes so a suspicious download can be checked against them |
 | **med** — Prompt-heavy tools | `covenant.ps1` has 26 `Read-Host` calls and `citadel.ps1` has 17; a separate dialog for each is a miserable experience | Prefer `-Unattended` driven by the generated form. Treat modal prompts as the fallback path, not the primary one |
-| **med** — ARM64 unverified on hardware | The prototype workflow built ARM64 but nothing ever ran it on a real device. Signing is *not* the gap — `signtool` signs any PE from the same x64 session | Run the ARM64 build on an actual ARM device before tagging, not merely confirm it compiles |
+| **med** — ARM64 unverified on hardware | The workflow builds ARM64 but nothing has ever run it on a real device. Signing is *not* the gap — `signtool` signs any PE from the same x64 session. The maintainer has no ARM hardware, so this cannot be closed in-house | **Collaboration wanted.** Ship the ARM64 build labelled untested, say so in the README and the release notes, and ask for a report from anyone running a Snapdragon X / Surface Pro device. One field report closes this row |
 | **low** — Everything runs elevated | Read-only tools like `ward.ps1` get Administrator they do not need | Accept for 5.0 and say so in the README. A split-process design is a later refinement |
 | **low** — Binary size | Roughly 150 MB against about 40 MB today | Compression stays on. Trimming stays off — it breaks the reflection the SDK depends on |
 
