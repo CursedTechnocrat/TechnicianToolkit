@@ -173,11 +173,14 @@ Manages software deployment using the Windows Package Manager (winget) or Chocol
 
 Automates printer driver extraction, installation, and network printer configuration via a command-line interface.
 
-- Supports ZIP, EXE, and MSI driver formats
-- Handles automatic driver extraction and INF-based installation via pnputil
-- Configures network printers via IP (TCP/IP port) or UNC path post-install
+- Supports already-extracted driver folders (bare INF) plus ZIP, EXE, and MSI packages
+- `-DriverPath` points the tool at any folder or file, so the driver need not be copied next to the script
+- Installs an INF in the two steps Windows requires: `pnputil` to stage it in the DriverStore, then `Add-PrinterDriver` to register it with the print spooler — staging alone leaves the driver invisible to `Get-PrinterDriver` and unusable by `Add-Printer`
+- Picks the INF matching the machine's architecture and reads the model name out of it, so x86 INFs in a combined package are skipped
+- Verifies EXE and MSI installs against the spooler rather than trusting the exit code, and warns when a vendor bootstrapper exits cleanly having registered nothing
+- Configures network printers via IP (TCP/IP port) or UNC path post-install, with a printui fallback for devices that are offline at setup time
 - Generates a timestamped installation log (CSV) in the script directory
-- `-WhatIf` previews each driver install (pnputil / EXE silent / msiexec) and skips the network-printer stage, leaving no files or printers behind
+- `-WhatIf` previews each driver install (pnputil + spooler registration / EXE silent / msiexec) and skips the network-printer stage, leaving no files or printers behind
 
 ---
 
@@ -1074,7 +1077,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **grimoire.ps1** | None — tool list is defined in the `$Tools` array in the script |
 | **covenant.ps1** | `config.json` — `Covenant.DefaultTimezone`, `Covenant.DefaultLocalAdminUser` |
 | **conjure.ps1** | `$RequiredCatalog` / `$OptionalCatalog` — single-source package catalog (each entry has `Name` / `Winget` / `Choco`); `$AdobeReader` / `$AdobePro` — Adobe edition entries; `$PackageManager` — default manager (`winget` or `choco`); `$InstallExitInfo` — winget/installer exit-code → human-readable reason + class (`Success`/`Failed`) map used by `Resolve-InstallExit` |
-| **runepress.ps1** | `$ExtractRoot` — driver extraction staging folder (defaults to `.\ExtractedDrivers`); `-WhatIf` for dry run |
+| **runepress.ps1** | `-DriverPath` — folder or file to install the driver from (defaults to the script directory); `$ExtractRoot` — driver extraction staging folder (defaults to `.\ExtractedDrivers`); `-WhatIf` for dry run |
 | **forge.ps1** | None — driver sources scanned from current folder automatically; `-WhatIf` previews Windows Update and local driver installs |
 | **restoration.ps1** | None — power settings are detected and restored automatically; `-WhatIf` lists available updates without installing |
 | **hearth.ps1** | None — all settings entered via the interactive wizard; `config.json` is the output (see config key table above) |
