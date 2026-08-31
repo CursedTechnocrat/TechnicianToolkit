@@ -571,7 +571,7 @@ Describe '-WhatIf declared on destructive tools' {
     # and Windows Update installs, printer driver / network printer additions.
     $destructiveCases = @(
         'revenant.ps1','archive.ps1','covenant.ps1','sigil.ps1','cleanse.ps1','cipher.ps1',
-        'forge.ps1','restoration.ps1','runepress.ps1'
+        'forge.ps1','restoration.ps1','runepress.ps1','conjure.ps1'
     ) | ForEach-Object {
         @{ Name = $_; FullName = (Join-Path $PSScriptRoot "..\$_") }
     }

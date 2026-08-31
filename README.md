@@ -160,8 +160,11 @@ Manages software deployment using the Windows Package Manager (winget) or Chocol
 - **All operator prompts are front-loaded** — package manager, operation, Adobe edition, optional-software selection, and any custom package IDs are gathered up front, then the install/upgrade work runs start-to-finish with no further input (no babysitting the machine)
 - **Custom packages** — after the curated optional list, the operator can type their own comma-separated winget/Chocolatey package IDs to install alongside the built-ins (passed through verbatim to the selected manager)
 - **Adobe Acrobat edition prompt** — choose Reader (`Adobe.Acrobat.Reader.64-bit`) or Pro (`Adobe.Acrobat.Pro`) at runtime; under Chocolatey, which has no Acrobat Pro package, a Pro request installs Reader with a note to sign in and run the in-app upgrade against a Pro license
+- **Direct download installs** — for software with no winget or Chocolatey package, most often an RMM agent whose installer is a per-tenant link with a token in the URL. Paste an HTTPS link (or pass `-DirectUrl`) and the installer is fetched and run silently. Because this downloads an executable and runs it elevated, it is deliberately stricter than the package-manager path: plain HTTP is refused outright, the payload is identified by its own magic bytes rather than by the URL — so a link whose token has expired and returns an HTML error page with HTTP 200 is caught instead of executed — and a pinned SHA-256, when given, is verified *before* anything runs. The computed hash is always printed and recorded so it can be pinned next time. The installer is deleted afterwards.
+- **Repeat deployments** — direct downloads can be stored in `config.json` under `Conjure.DirectDownloads` (`Name` / `Url` / `Args` / `Sha256`), so a tenant's RMM agent is entered once and then deploys unattended on every machine after that. A missing or broken package manager no longer aborts the run when direct downloads are queued — they need neither winget nor Chocolatey
 - Upgrade-all mode for keeping existing packages current
 - Tracks and displays installation status per package
+- `-WhatIf` previews every install, upgrade, and direct download without fetching or running anything
 
 **Default required packages:** Microsoft Teams, Microsoft 365, 7-Zip, Google Chrome, Zoom, plus Adobe Acrobat (Reader or Pro — prompted at runtime)
 
@@ -1076,7 +1079,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 |--------|------------------------|
 | **grimoire.ps1** | None — tool list is defined in the `$Tools` array in the script |
 | **covenant.ps1** | `config.json` — `Covenant.DefaultTimezone`, `Covenant.DefaultLocalAdminUser` |
-| **conjure.ps1** | `$RequiredCatalog` / `$OptionalCatalog` — single-source package catalog (each entry has `Name` / `Winget` / `Choco`); `$AdobeReader` / `$AdobePro` — Adobe edition entries; `$PackageManager` — default manager (`winget` or `choco`); `$InstallExitInfo` — winget/installer exit-code → human-readable reason + class (`Success`/`Failed`) map used by `Resolve-InstallExit` |
+| **conjure.ps1** | `$RequiredCatalog` / `$OptionalCatalog` — single-source package catalog (each entry has `Name` / `Winget` / `Choco`); `$AdobeReader` / `$AdobePro` — Adobe edition entries; `$PackageManager` — default manager (`winget` or `choco`); `$InstallExitInfo` — winget/installer exit-code → human-readable reason + class (`Success`/`Failed`) map used by `Resolve-InstallExit`; `config.json` — `Conjure.DirectDownloads` (array of `Name` / `Url` / `Args` / `Sha256`); `-DirectUrl` for one-off direct downloads; `-WhatIf` for dry run |
 | **runepress.ps1** | `-DriverPath` — folder or file to install the driver from (defaults to the script directory); `$ExtractRoot` — driver extraction staging folder (defaults to `.\ExtractedDrivers`); `-WhatIf` for dry run |
 | **forge.ps1** | None — driver sources scanned from current folder automatically; `-WhatIf` previews Windows Update and local driver installs |
 | **restoration.ps1** | None — power settings are detected and restored automatically; `-WhatIf` lists available updates without installing |

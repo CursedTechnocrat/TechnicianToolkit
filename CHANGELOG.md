@@ -32,6 +32,29 @@ rewrites are still ahead. The scripts themselves are at 5.0 and gated.
   the registry, RESTORATION `3.6.2` against `3.6`. Nothing in the suite detected it.
 
 ### Added
+- **CONJURE installs from a direct download link.** Not everything a technician deploys
+  exists in winget or Chocolatey — RMM agents in particular are almost always a per-tenant
+  URL with a token in it and no package ID at all. Paste an HTTPS link, pass `-DirectUrl`,
+  or store recurring ones in `config.json` under `Conjure.DirectDownloads`, and the
+  installer is fetched and run silently. MSI gets `/qn /norestart` automatically; extra
+  properties and EXE switches are supplied per entry.
+
+  This path downloads an executable and runs it elevated, so it is deliberately stricter
+  than the package-manager path. Plain HTTP is refused rather than warned about — the file
+  would be run as Administrator and cannot be trusted over a channel that can be tampered
+  with in transit. The payload is identified by its own magic bytes instead of by the URL,
+  which catches the common failure where an expired token returns an HTML error page with
+  HTTP 200 that would otherwise have been renamed `.exe` and executed. A pinned SHA-256 is
+  verified before anything runs, and the computed hash is always printed and recorded so it
+  can be pinned on the next deployment. The downloaded installer is deleted afterwards.
+
+  A missing or broken package manager no longer aborts the whole run when direct downloads
+  are queued: they need neither winget nor Chocolatey, so the manager work is skipped and
+  they still deploy.
+- **`-WhatIf` on CONJURE.** It installs software and now downloads and executes binaries, so
+  it joins the destructive set that GRIMOIRE's dry-run mode passes through. Previews every
+  package install, every upgrade, and every direct download without fetching or running
+  anything.
 - **A version-consistency gate.** A new Pester `Describe` pins each tool's `.NOTES Version`
   against its GRIMOIRE registry entry, and asserts the registry declares exactly one version
   across the whole suite — so the next tool added at its own number fails loudly instead of
@@ -45,6 +68,11 @@ rewrites are still ahead. The scripts themselves are at 5.0 and gated.
   short header the application's own XAML uses.
 
 ### Fixed
+- **CONJURE's summary counted a dry run as a successful deployment.** The installed tally
+  matched status text with `-like "*INSTALLED*"`, and `-like` is case-insensitive, so the
+  new `WHATIF - not installed` rows matched on the word *installed* inside *not installed* —
+  a `-WhatIf` preview that touched nothing reported eight packages installed. Preview rows
+  are now excluded from the live tallies and counted separately.
 - **The test suite was red locally and green in CI at the same time.** Three gates enumerate
   the working tree recursively and excluded only `.git`, so the five PowerShell hook scripts
   the Visual Studio integration installs under `.claude/` were held to the toolkit's own

@@ -11,5 +11,8 @@
   "Covenant": {
     "DefaultTimezone": "",
     "DefaultLocalAdminUser": ""
+  },
+  "Conjure": {
+    "DirectDownloads": []
   }
 }

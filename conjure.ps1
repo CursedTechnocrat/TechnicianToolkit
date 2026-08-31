@@ -29,9 +29,18 @@
     an upgrade-all mode for keeping existing packages current, and tracks
     installation status per package.
 
+    Software with no winget or Chocolatey package — RMM agents especially,
+    which are usually a per-tenant link with a token in the URL — can be
+    installed from a direct HTTPS download instead. Those installers are
+    fetched, identified by their own magic bytes, optionally checked against
+    a pinned SHA-256, and run silently. Recurring ones can be stored in
+    config.json under Conjure.DirectDownloads so they deploy unattended.
+
 .USAGE
     PS C:\> .\conjure.ps1                 # Interactive mode — Must be run as Administrator
     PS C:\> .\conjure.ps1 -Unattended     # Unattended mode — Required packages only, no prompts
+    PS C:\> .\conjure.ps1 -DirectUrl 'https://vendor.example/agent.msi'
+    PS C:\> .\conjure.ps1 -Unattended -WhatIf   # Preview everything; install nothing
 
 .NOTES
     Version : 5.0
@@ -39,8 +48,10 @@
 #>
 
 param(
+    [string[]]$DirectUrl,
     [switch]$Unattended,
-    [switch]$Transcript
+    [switch]$Transcript,
+    [switch]$WhatIf
 )
 
 # ===========================
@@ -381,6 +392,14 @@ function Install-Software {
                        -PercentComplete ([math]::Floor($i / $total * 100))
         Write-Host "[$i/$total] Installing: $item..." -ForegroundColor $Colors.Info
 
+        if ($WhatIf) {
+            $mgr = if ($script:PackageManager -eq "chocolatey") { "choco install $item -y" }
+                   else { "winget install -e --id $item -h" }
+            Write-Host "[~] WhatIf: would run  $mgr" -ForegroundColor $Colors.Accent
+            Add-InstallationRecord -Software $item -Status "WHATIF - not installed"
+            continue
+        }
+
         try {
             $startTime = Get-Date
 
@@ -425,12 +444,310 @@ function Install-Software {
     Write-Progress -Activity "Installing $Type software" -Completed
 }
 
+# ---------------------------------------------------------------------------
+# DIRECT DOWNLOAD INSTALLS
+# ---------------------------------------------------------------------------
+# Not everything a technician has to deploy exists in winget or Chocolatey.
+# RMM agents in particular are almost always a per-tenant download link with a
+# token in the URL, and there is no package ID to install by. These functions
+# take a URL, fetch the installer, and run it silently.
+#
+# This path downloads an executable over the network and runs it elevated, so
+# it verifies more than the package-manager path does: HTTPS is required, the
+# file is identified by its own magic bytes rather than by a trusted URL, and
+# a pinned SHA-256 (when supplied) is checked before anything is executed.
+
+# Entries are { Name; Url; Args; Sha256 }. Validated once at collection time so
+# PHASE 2 never has to stop and ask.
+function New-DirectDownloadEntry {
+    param(
+        [Parameter(Mandatory)][string]$Url,
+        [string]$Name,
+        [string]$InstallArgs,
+        [string]$Sha256
+    )
+
+    $trimmed = $Url.Trim()
+
+    [Uri]$parsed = $null
+    if (-not [Uri]::TryCreate($trimmed, [UriKind]::Absolute, [ref]$parsed)) {
+        Write-Host "[ERROR] Not a valid URL, skipping: $trimmed" -ForegroundColor $Colors.Error
+        return $null
+    }
+
+    # An installer fetched over plain HTTP can be swapped in transit and is then
+    # run with Administrator rights. Refuse rather than warn.
+    if ($parsed.Scheme -ne 'https') {
+        Write-Host "[ERROR] Refusing a non-HTTPS installer URL: $trimmed" -ForegroundColor $Colors.Error
+        Write-Host "        The file would be run elevated and cannot be trusted over $($parsed.Scheme)." -ForegroundColor $Colors.Error
+        return $null
+    }
+
+    if ([string]::IsNullOrWhiteSpace($Name)) {
+        $leaf = [IO.Path]::GetFileName($parsed.AbsolutePath)
+        $Name = if ([string]::IsNullOrWhiteSpace($leaf)) { $parsed.Host } else { $leaf }
+    }
+
+    if ($Sha256) {
+        $Sha256 = ($Sha256 -replace '[^0-9A-Fa-f]', '')
+        if ($Sha256.Length -ne 64) {
+            Write-Host "[ERROR] SHA-256 for '$Name' is not 64 hex characters, skipping." -ForegroundColor $Colors.Error
+            return $null
+        }
+    }
+
+    return [PSCustomObject]@{
+        Name   = $Name
+        Url    = $trimmed
+        Args   = $InstallArgs
+        Sha256 = $Sha256
+    }
+}
+
+# Direct downloads saved in config.json, so a per-tenant RMM agent is entered
+# once and then deploys unattended on every machine afterwards.
+function Get-ConfiguredDirectDownload {
+    $entries = New-Object System.Collections.ArrayList
+
+    try { $cfg = Get-TKConfig } catch { return $entries }
+    if (-not $cfg.PSObject.Properties['Conjure']) { return $entries }
+    if (-not $cfg.Conjure -or -not $cfg.Conjure.PSObject.Properties['DirectDownloads']) { return $entries }
+
+    # Get-TKConfig fills absent nested keys with '', so coerce and drop blanks.
+    foreach ($item in @($cfg.Conjure.DirectDownloads)) {
+        if (-not $item -or -not $item.PSObject.Properties['Url'] -or [string]::IsNullOrWhiteSpace($item.Url)) { continue }
+        $entry = New-DirectDownloadEntry -Url $item.Url `
+                                         -Name   $(if ($item.PSObject.Properties['Name'])   { $item.Name }   else { '' }) `
+                                         -InstallArgs $(if ($item.PSObject.Properties['Args'])   { $item.Args }   else { '' }) `
+                                         -Sha256 $(if ($item.PSObject.Properties['Sha256']) { $item.Sha256 } else { '' })
+        if ($entry) { [void]$entries.Add($entry) }
+    }
+
+    return $entries
+}
+
+function Read-DirectDownload {
+    $entries = New-Object System.Collections.ArrayList
+
+    Write-Host ""
+    Write-Host "========================================" -ForegroundColor $Colors.Header
+    Write-Host "DIRECT DOWNLOAD INSTALLS" -ForegroundColor $Colors.Header
+    Write-Host "========================================" -ForegroundColor $Colors.Header
+    Write-Host ""
+    Write-Host "For software with no winget or Chocolatey package — RMM agents," -ForegroundColor $Colors.Info
+    Write-Host "vendor portals, per-tenant installers with a token in the link." -ForegroundColor $Colors.Info
+    Write-Host "Paste a direct HTTPS link to an .exe or .msi." -ForegroundColor $Colors.Info
+    Write-Host "Leave blank and press Enter to skip." -ForegroundColor $Colors.Info
+    Write-Host ""
+
+    while ($true) {
+        $url = Read-Host "Installer URL"
+        if ([string]::IsNullOrWhiteSpace($url)) { break }
+
+        $name = Read-Host "  Display name for the log (blank = use the filename)"
+
+        Write-Host "  Silent install arguments." -ForegroundColor $Colors.Info
+        Write-Host "    MSI : /qn /norestart is applied automatically; add properties here (e.g. TOKEN=abc123)" -ForegroundColor $Colors.Info
+        Write-Host "    EXE : varies by vendor — common ones are /S, /s, /silent, /quiet, /verysilent" -ForegroundColor $Colors.Info
+        $instArgs = Read-Host "  Arguments (blank = none)"
+
+        $sha = Read-Host "  Expected SHA-256 (blank = skip verification)"
+
+        $entry = New-DirectDownloadEntry -Url $url -Name $name -InstallArgs $instArgs -Sha256 $sha
+        if ($entry) {
+            [void]$entries.Add($entry)
+            Write-Host "[OK] Queued: $($entry.Name)" -ForegroundColor $Colors.Success
+        }
+
+        Write-Host ""
+    }
+
+    if ($entries.Count -eq 0) {
+        Write-Host "[!!] No direct downloads queued" -ForegroundColor $Colors.Warning
+    }
+
+    return $entries
+}
+
+# Identify the payload from its own leading bytes rather than trusting the URL.
+# RMM links routinely end in '?id=...' with no extension at all, and a link
+# whose token has expired returns an HTML error page with HTTP 200 — which
+# would otherwise be renamed .exe and executed.
+function Get-InstallerKind {
+    param([Parameter(Mandatory)][string]$Path)
+
+    $buf = New-Object byte[] 8
+    $read = 0
+    $fs = [IO.File]::OpenRead($Path)
+    try { $read = $fs.Read($buf, 0, 8) } finally { $fs.Dispose() }
+    if ($read -lt 2) { return 'Unknown' }
+
+    # MSI (and other OLE compound files): D0 CF 11 E0 A1 B1 1A E1
+    $ole = @(0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1)
+    if ($read -eq 8) {
+        $match = $true
+        for ($i = 0; $i -lt 8; $i++) { if ($buf[$i] -ne $ole[$i]) { $match = $false; break } }
+        if ($match) { return 'MSI' }
+    }
+
+    # PE executable: 'MZ'
+    if ($buf[0] -eq 0x4D -and $buf[1] -eq 0x5A) { return 'EXE' }
+
+    return 'Unknown'
+}
+
+function Install-DirectDownload {
+    param(
+        [PSObject[]]$Entries
+    )
+
+    Write-Host ""
+    Write-Host "========================================" -ForegroundColor $Colors.Header
+    Write-Host "Installing Direct Downloads" -ForegroundColor $Colors.Header
+    Write-Host "========================================" -ForegroundColor $Colors.Header
+    Write-Host ""
+
+    $total = @($Entries).Count
+    $i     = 0
+
+    foreach ($entry in $Entries) {
+        $i++
+        Write-Progress -Activity "Installing direct downloads" `
+                       -Status        "[$i/$total] $($entry.Name)" `
+                       -PercentComplete ([math]::Floor($i / $total * 100))
+        Write-Host "[$i/$total] $($entry.Name)" -ForegroundColor $Colors.Info
+        Write-Host "        $($entry.Url)" -ForegroundColor $Colors.Info
+
+        if ($WhatIf) {
+            Write-Host "[~] WhatIf: would download and run it silently. Nothing was fetched." -ForegroundColor $Colors.Accent
+            Add-InstallationRecord -Software $entry.Name -Status "WHATIF - not installed"
+            continue
+        }
+
+        $workDir = Join-Path ([IO.Path]::GetTempPath()) ("conjure_" + [Guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Path $workDir -Force | Out-Null
+
+        try {
+            # --- Fetch -------------------------------------------------------
+            $payload = Join-Path $workDir 'payload.bin'
+            Write-Host "        Downloading..." -ForegroundColor $Colors.Info
+            try {
+                [Net.ServicePointManager]::SecurityProtocol =
+                    [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+
+                # Invoke-WebRequest's own progress rendering slows large downloads
+                # by orders of magnitude on 5.1; ours is enough.
+                $prevProgress = $ProgressPreference
+                $ProgressPreference = 'SilentlyContinue'
+                try {
+                    Invoke-WebRequest -Uri $entry.Url -OutFile $payload -UseBasicParsing -ErrorAction Stop
+                }
+                finally { $ProgressPreference = $prevProgress }
+            }
+            catch {
+                Write-Host "[ERROR] $($entry.Name) — download failed: $($_.Exception.Message)" -ForegroundColor $Colors.Error
+                Add-InstallationRecord -Software $entry.Name -Status "FAILED - download failed"
+                Write-TKError -ScriptName 'conjure' -Message "Direct download failed ('$($entry.Name)' from '$($entry.Url)'): $($_.Exception.Message)" -Category 'Package Install'
+                continue
+            }
+
+            $sizeMb = [math]::Round((Get-Item $payload).Length / 1MB, 2)
+            Write-Host "        Downloaded ${sizeMb} MB" -ForegroundColor $Colors.Info
+
+            # --- Verify ------------------------------------------------------
+            $actualHash = (Get-FileHash -Path $payload -Algorithm SHA256).Hash
+            Write-Host "        SHA-256: $actualHash" -ForegroundColor $Colors.Info
+
+            if ($entry.Sha256) {
+                if ($actualHash -ne $entry.Sha256.ToUpperInvariant()) {
+                    Write-Host "[ERROR] $($entry.Name) — SHA-256 mismatch. Nothing was run." -ForegroundColor $Colors.Error
+                    Write-Host "        expected $($entry.Sha256.ToUpperInvariant())" -ForegroundColor $Colors.Error
+                    Add-InstallationRecord -Software $entry.Name -Status "FAILED - SHA-256 mismatch"
+                    Write-TKError -ScriptName 'conjure' -Message "Direct download hash mismatch ('$($entry.Name)' from '$($entry.Url)'): expected $($entry.Sha256), got $actualHash" -Category 'Package Install'
+                    continue
+                }
+                Write-Host "        Hash verified against the pinned value." -ForegroundColor $Colors.Success
+            }
+
+            $kind = Get-InstallerKind -Path $payload
+            if ($kind -eq 'Unknown') {
+                Write-Host "[ERROR] $($entry.Name) — the download is neither an EXE nor an MSI." -ForegroundColor $Colors.Error
+                Write-Host "        A link whose token has expired often returns an error page with HTTP 200." -ForegroundColor $Colors.Error
+                Add-InstallationRecord -Software $entry.Name -Status "FAILED - not an installer"
+                Write-TKError -ScriptName 'conjure' -Message "Direct download for '$($entry.Name)' is not a PE or MSI payload (from '$($entry.Url)')" -Category 'Package Install'
+                continue
+            }
+
+            # --- Run ---------------------------------------------------------
+            $installer = Join-Path $workDir ("installer." + $kind.ToLowerInvariant())
+            Rename-Item -Path $payload -NewName (Split-Path -Leaf $installer) -Force
+
+            $startTime = Get-Date
+            if ($kind -eq 'MSI') {
+                $argList = "/i `"$installer`" /qn /norestart"
+                if ($entry.Args) { $argList = "$argList $($entry.Args)" }
+                Write-Host "        Running: msiexec $argList" -ForegroundColor $Colors.Info
+                $proc = Start-Process -FilePath 'msiexec.exe' -ArgumentList $argList -Wait -PassThru -ErrorAction Stop
+            }
+            else {
+                if ($entry.Args) {
+                    Write-Host "        Running: installer.exe $($entry.Args)" -ForegroundColor $Colors.Info
+                    $proc = Start-Process -FilePath $installer -ArgumentList $entry.Args -Wait -PassThru -ErrorAction Stop
+                }
+                else {
+                    Write-Host "[!!] No silent arguments given — this installer may open its window" -ForegroundColor $Colors.Warning
+                    Write-Host "     and the run will wait until it is closed." -ForegroundColor $Colors.Warning
+                    $proc = Start-Process -FilePath $installer -Wait -PassThru -ErrorAction Stop
+                }
+            }
+
+            $elapsed = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
+            $verdict = Resolve-InstallExit -ExitCode $proc.ExitCode
+
+            switch ($verdict.Class) {
+                'Success' {
+                    Write-Host "[OK] $($entry.Name) — $($verdict.Reason) (${elapsed}s)" -ForegroundColor $Colors.Success
+                    Add-InstallationRecord -Software $entry.Name -Status "INSTALLED (direct download, SHA-256 $actualHash)"
+                }
+                'Failed' {
+                    Write-Host "[ERROR] $($entry.Name) failed — $($verdict.Reason) [exit code $($proc.ExitCode)]" -ForegroundColor $Colors.Error
+                    Add-InstallationRecord -Software $entry.Name -Status "FAILED - $($verdict.Reason)"
+                    Write-TKError -ScriptName 'conjure' -Message "Direct download install failed ('$($entry.Name)'): $($verdict.Reason) [exit code $($proc.ExitCode)]" -Category 'Package Install'
+                }
+                default {
+                    Write-Host "[!!] $($entry.Name) — $($verdict.Reason)" -ForegroundColor $Colors.Warning
+                    Add-InstallationRecord -Software $entry.Name -Status "INSTALLED (with warnings - Exit Code: $($proc.ExitCode))"
+                }
+            }
+        }
+        catch {
+            Write-Host "[ERROR] $($entry.Name) — $($_.Exception.Message)" -ForegroundColor $Colors.Error
+            Add-InstallationRecord -Software $entry.Name -Status "FAILED"
+            Write-TKError -ScriptName 'conjure' -Message "Direct download install failed ('$($entry.Name)'): $($_.Exception.Message)" -Category 'Package Install'
+        }
+        finally {
+            # The installer is a downloaded executable; do not leave it on disk.
+            Remove-Item -Path $workDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    Write-Progress -Activity "Installing direct downloads" -Completed
+}
+
 function Update-AllSoftware {
     Write-Host ""
     Write-Host "========================================" -ForegroundColor $Colors.Header
     Write-Host "Running Package Updates" -ForegroundColor $Colors.Header
     Write-Host "========================================" -ForegroundColor $Colors.Header
     Write-Host ""
+
+    if ($WhatIf) {
+        $cmd = if ($script:PackageManager -eq "chocolatey") { "choco upgrade all -y" }
+               else { "winget upgrade --all -h" }
+        Write-Host "[~] WhatIf: would run  $cmd" -ForegroundColor $Colors.Accent
+        Add-InstallationRecord -Software "All packages" -Status "WHATIF - not upgraded"
+        return
+    }
 
     try {
         if ($script:PackageManager -eq "chocolatey") {
@@ -625,11 +942,20 @@ function Show-InstallationSummary {
     }
     
     Write-Host ""
-    $successCount = ($InstallationLog | Where-Object { $_.Status -like "*INSTALLED*" } | Measure-Object).Count
-    $failCount = ($InstallationLog | Where-Object { $_.Status -like "*FAILED*" } | Measure-Object).Count
-    $updateCount = ($InstallationLog | Where-Object { $_.Status -like "*UPDATED*" } | Measure-Object).Count
-    
+    # Preview rows are counted on their own. "WHATIF - not installed" contains
+    # the word "installed", so a contains-match would report a dry run as a
+    # successful deployment — the one number nobody can afford to misread.
+    $whatIfCount = ($InstallationLog | Where-Object { $_.Status -like "WHATIF*" }    | Measure-Object).Count
+    $live        =  $InstallationLog | Where-Object { $_.Status -notlike "WHATIF*" }
+
+    $successCount = ($live | Where-Object { $_.Status -like "INSTALLED*" } | Measure-Object).Count
+    $failCount    = ($live | Where-Object { $_.Status -like "*FAILED*" }   | Measure-Object).Count
+    $updateCount  = ($live | Where-Object { $_.Status -like "*UPDATED*" }  | Measure-Object).Count
+
     Write-Host "Summary: Installed: $successCount | Failed: $failCount | Updated: $updateCount" -ForegroundColor $Colors.Header
+    if ($whatIfCount -gt 0) {
+        Write-Host "WhatIf: $whatIfCount previewed, nothing was installed or upgraded." -ForegroundColor $Colors.Accent
+    }
     Write-Host ""
 }
 
@@ -698,6 +1024,31 @@ if ($doInstall) {
     }
 }
 
+# Direct downloads, gathered here in PHASE 1 like every other prompt. Sources
+# stack: anything saved in config.json, plus -DirectUrl, plus whatever the
+# operator pastes in. All of it is validated now so PHASE 2 never stops to ask.
+$directList = New-Object System.Collections.ArrayList
+
+if ($doInstall) {
+    foreach ($entry in (Get-ConfiguredDirectDownload)) {
+        [void]$directList.Add($entry)
+        Write-Host "[OK] Direct download from config.json: $($entry.Name)" -ForegroundColor $Colors.Success
+    }
+
+    foreach ($url in @($DirectUrl)) {
+        if ([string]::IsNullOrWhiteSpace($url)) { continue }
+        $entry = New-DirectDownloadEntry -Url $url
+        if ($entry) {
+            [void]$directList.Add($entry)
+            Write-Host "[OK] Direct download from -DirectUrl: $($entry.Name)" -ForegroundColor $Colors.Success
+        }
+    }
+
+    if (-not $Unattended) {
+        foreach ($entry in (Read-DirectDownload)) { [void]$directList.Add($entry) }
+    }
+}
+
 if ($doUpgrade -and -not $doInstall) {
     Write-Host "[OK] Selected: Upgrade Mode" -ForegroundColor $Colors.Success
 }
@@ -712,17 +1063,22 @@ Write-Host "[*] All selections captured — beginning unattended execution. No f
 # PHASE 2 — EXECUTION (no operator prompts)
 # ---------------------------------------------------------------------------
 
-# Check that the selected package manager is available
-if ($PackageManager -eq "chocolatey") {
-    if (-not (Test-ChocolateyAvailable)) {
-        Write-Host "[ERROR] Cannot proceed without Chocolatey" -ForegroundColor $Colors.Error
-        if (-not $Unattended) { Read-Host "Press Enter to exit" }
-        exit 1
+# Check that the selected package manager is available. A missing manager is
+# only fatal when there is manager work to do — direct downloads need neither
+# winget nor Chocolatey, so an RMM agent still deploys on a machine where the
+# package manager is broken or absent.
+$mgrName = if ($PackageManager -eq "chocolatey") { "Chocolatey" } else { "Winget" }
+$mgrAvailable = if ($PackageManager -eq "chocolatey") { Test-ChocolateyAvailable } else { Test-WingetAvailable }
+
+if (-not $mgrAvailable) {
+    if ($directList.Count -gt 0) {
+        Write-Host "[!!] $mgrName is unavailable — skipping package installs and upgrades." -ForegroundColor $Colors.Warning
+        Write-Host "     Direct downloads need no package manager and will still run." -ForegroundColor $Colors.Warning
+        $doInstall = $false
+        $doUpgrade = $false
     }
-}
-else {
-    if (-not (Test-WingetAvailable)) {
-        Write-Host "[ERROR] Cannot proceed without Winget" -ForegroundColor $Colors.Error
+    else {
+        Write-Host "[ERROR] Cannot proceed without $mgrName" -ForegroundColor $Colors.Error
         if (-not $Unattended) { Read-Host "Press Enter to exit" }
         exit 1
     }
@@ -741,6 +1097,12 @@ if ($doInstall) {
     if ($customList.Count -gt 0) {
         Install-Software -SoftwareList $customList -Type "Custom"
     }
+}
+
+# Runs independently of the package manager, so it sits outside the $doInstall
+# guard above — which is cleared when the manager is missing.
+if ($directList.Count -gt 0) {
+    Install-DirectDownload -Entries $directList.ToArray()
 }
 
 if ($doUpgrade) {

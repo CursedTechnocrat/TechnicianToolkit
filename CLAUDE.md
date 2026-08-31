@@ -198,8 +198,8 @@ $ColorSchema = @{
 - All interactive tools expose `[switch]$Unattended` — skips prompts, runs defaults.
 - Destructive or state-changing tools also expose `[switch]$WhatIf` — previews actions without
   executing them. The current set is REVENANT, ARCHIVE, COVENANT, SIGIL, CLEANSE, CIPHER, FORGE,
-  RESTORATION, and RUNEPRESS. GRIMOIRE auto-detects and passes `-WhatIf` to any tool that declares
-  it, and the Pester suite (`'-WhatIf declared on destructive tools'`) enforces the list.
+  RESTORATION, RUNEPRESS, and CONJURE. GRIMOIRE auto-detects and passes `-WhatIf` to any tool that
+  declares it, and the Pester suite (`'-WhatIf declared on destructive tools'`) enforces the list.
 - Tools that write logs expose `[switch]$Transcript`.
 
 ### License Notice Block
@@ -242,9 +242,18 @@ every rename. The canonical tool list lives in `grimoire.ps1`'s `$Tools` registr
   "TeamsWebhook": "",
   "Archive": { "DefaultDestination": "" },
   "Revenant": { "DefaultDestination": "" },
-  "Covenant": { "DefaultTimezone": "", "DefaultLocalAdminUser": "" }
+  "Covenant": { "DefaultTimezone": "", "DefaultLocalAdminUser": "" },
+  "Conjure": {
+    "DirectDownloads": [
+      { "Name": "Acme RMM Agent", "Url": "https://...", "Args": "/S", "Sha256": "" }
+    ]
+  }
 }
 ```
+
+`Conjure.DirectDownloads` is the one array in the shape. `Get-TKConfig`'s nested-key
+fill matches the default's type, so an absent array key comes back as `@()` rather
+than `''` — a caller iterating it would otherwise get a single empty string.
 
 `Get-TKConfig` returns these defaults if `config.json` is absent; `Set-TKConfig` creates or
 updates the file.

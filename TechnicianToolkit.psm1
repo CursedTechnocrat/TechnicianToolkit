@@ -427,6 +427,9 @@ function Get-TKConfig {
         Archive       = [PSCustomObject]@{ DefaultDestination   = '' }
         Revenant      = [PSCustomObject]@{ DefaultDestination   = '' }
         Covenant      = [PSCustomObject]@{ DefaultTimezone = ''; DefaultLocalAdminUser = '' }
+        # DirectDownloads is an array of { Name; Url; Args; Sha256 } — installers
+        # CONJURE fetches by URL because they have no winget/Chocolatey package.
+        Conjure       = [PSCustomObject]@{ DirectDownloads = @() }
     }
 
     if (-not (Test-Path $configPath)) { return $defaults }
@@ -455,13 +458,16 @@ function Get-TKConfig {
             }
         }
         # Ensure nested keys exist
-        foreach ($section in @('Archive','Revenant','Covenant')) {
+        foreach ($section in @('Archive','Revenant','Covenant','Conjure')) {
             if ($raw.$section -isnot [PSCustomObject]) {
                 $raw | Add-Member -NotePropertyName $section -NotePropertyValue $defaults.$section -Force
             } else {
                 foreach ($key in ($defaults.$section | Get-Member -MemberType NoteProperty).Name) {
                     if ($null -eq $raw.$section.$key) {
-                        $raw.$section | Add-Member -NotePropertyName $key -NotePropertyValue '' -Force
+                        # Carry the default's own type: filling an absent array key
+                        # with '' would hand the caller a string to iterate.
+                        $fallback = if ($defaults.$section.$key -is [Array]) { @() } else { '' }
+                        $raw.$section | Add-Member -NotePropertyName $key -NotePropertyValue $fallback -Force
                     }
                 }
             }
