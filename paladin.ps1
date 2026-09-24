@@ -34,6 +34,12 @@
     signatures, scan history, threats, exclusions, ASR rules, third-party
     AV products, service health, and recent events.
 
+    Also audits the platform protections that limit what an attacker with
+    admin rights can take from memory -- virtualization-based security,
+    memory integrity (HVCI), Credential Guard, LSA protection (RunAsPPL) and
+    the vulnerable driver blocklist -- with a verdict of its own that does not
+    change the AV verdict.
+
     Read-only audit -- no state-changing actions are performed.
 
 .USAGE
@@ -152,6 +158,24 @@ function Get-AsrActionLabel {
         6       { 'Warn' }
         default { "Unknown ($Action)" }
     }
+}
+
+# Win32_DeviceGuard SecurityServicesConfigured / SecurityServicesRunning codes.
+$DeviceGuardServiceNames = @{
+    1 = 'Credential Guard'
+    2 = 'Memory integrity (HVCI)'
+    3 = 'System Guard Secure Launch'
+    4 = 'SMM Firmware Measurement'
+    5 = 'Kernel-mode Hardware-enforced Stack Protection'
+    6 = 'Kernel-mode Hardware-enforced Stack Protection (audit)'
+    7 = 'Hypervisor-Enforced Paging Translation'
+}
+
+# Win32_DeviceGuard VirtualizationBasedSecurityStatus.
+$VbsStatusLabels = @{
+    0 = 'Not enabled'
+    1 = 'Enabled, not running'
+    2 = 'Running'
 }
 
 # Defender services we care about.
@@ -407,6 +431,130 @@ function Get-DefenderEvents {
     return [PSCustomObject]@{ Available = $true; Events = @($rows) }
 }
 
+function Get-PlatformProtection {
+    # The OS-level protections that decide how much an attacker with admin
+    # rights can take from memory: VBS and the services it hosts, LSASS as a
+    # protected process, and the kernel's vulnerable-driver blocklist. Read-only.
+    $dg = $null
+    try {
+        $dg = Get-CimInstance -Namespace 'root\Microsoft\Windows\DeviceGuard' -ClassName 'Win32_DeviceGuard' -ErrorAction Stop
+    } catch {
+        $dg = $null
+    }
+
+    $running    = if ($dg) { @($dg.SecurityServicesRunning    | ForEach-Object { [int]$_ }) } else { @() }
+    $configured = if ($dg) { @($dg.SecurityServicesConfigured | ForEach-Object { [int]$_ }) } else { @() }
+    $vbsStatus  = if ($dg -and $null -ne $dg.VirtualizationBasedSecurityStatus) { [int]$dg.VirtualizationBasedSecurityStatus } else { $null }
+
+    $lsa = Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa' -ErrorAction SilentlyContinue
+    # RunAsPPL 1 = on with a UEFI lock, 2 = on without one (Windows 11 22H2+).
+    $lsaPplConfigured = ($lsa -and $lsa.RunAsPPL -in 1, 2)
+
+    # Wininit 12 at boot reports the protection level LSASS actually started with.
+    $lsaPplRunning = $null
+    try {
+        $boot = (Get-CimInstance Win32_OperatingSystem -ErrorAction Stop).LastBootUpTime
+        $ev = Get-WinEvent -FilterHashtable @{ LogName = 'System'; ProviderName = 'Microsoft-Windows-Wininit'; Id = 12; StartTime = $boot } -MaxEvents 1 -ErrorAction Stop
+        $lsaPplRunning = [bool]$ev
+    } catch {
+        $lsaPplRunning = $null
+    }
+
+    $ci = Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\CI\Config' -ErrorAction SilentlyContinue
+    $blocklist = if ($ci -and $null -ne $ci.VulnerableDriverBlocklistEnable) { [int]$ci.VulnerableDriverBlocklistEnable } else { $null }
+
+    $sac = Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy' -ErrorAction SilentlyContinue
+    $sacLabel = if ($sac -and $null -ne $sac.VerifiedAndReputablePolicyState) {
+        switch ([int]$sac.VerifiedAndReputablePolicyState) { 0 { 'Off' } 1 { 'On' } 2 { 'Evaluation' } default { "Code $($sac.VerifiedAndReputablePolicyState)" } }
+    } else { 'Not present' }
+
+    # Credential Guard is only offered on Enterprise, Education and Server editions.
+    $edition = ''
+    try { $edition = (Get-CimInstance Win32_OperatingSystem -ErrorAction Stop).Caption } catch { $edition = '' }
+    $credGuardSupported = $edition -match 'Enterprise|Education|Server'
+
+    return [PSCustomObject]@{
+        Available          = [bool]$dg
+        VbsStatus          = $vbsStatus
+        VbsLabel           = if ($null -ne $vbsStatus -and $VbsStatusLabels.ContainsKey($vbsStatus)) { $VbsStatusLabels[$vbsStatus] } elseif ($dg) { "Code $vbsStatus" } else { 'Unavailable' }
+        Running            = $running
+        Configured         = $configured
+        HvciRunning        = ($running -contains 2)
+        CredGuardRunning   = ($running -contains 1)
+        CredGuardSupported = $credGuardSupported
+        LsaPplConfigured   = $lsaPplConfigured
+        LsaPplRunning      = $lsaPplRunning
+        DriverBlocklist    = $blocklist
+        SmartAppControl    = $sacLabel
+        Edition            = $edition
+    }
+}
+
+function Get-PlatformProtectionVerdict {
+    # Pure: scores the platform protections on their own. Kept apart from the
+    # AV verdict on purpose -- a machine can be fully protected by Defender and
+    # still lack memory integrity, and folding the two together would make
+    # the AV verdict mean something different on older hardware.
+    param(
+        [bool]$Available,
+        $VbsStatus,
+        [bool]$HvciRunning,
+        [bool]$CredGuardRunning,
+        [bool]$CredGuardSupported,
+        [bool]$LsaPplConfigured,
+        $DriverBlocklist
+    )
+
+    $findings = [System.Collections.Generic.List[object]]::new()
+    function _f { param([string]$Severity, [string]$Text) $findings.Add([PSCustomObject]@{ Severity = $Severity; Text = $Text }) }
+
+    $core = 0; $on = 0
+
+    if (-not $Available) {
+        _f 'Info' 'VBS state could not be read (Win32_DeviceGuard unavailable) -- older OS, or not supported on this edition.'
+    } else {
+        if ($VbsStatus -ne 2) {
+            _f 'Warning' 'Virtualization-based security is not running, so memory integrity and Credential Guard cannot run. Needs virtualization enabled in firmware and Secure Boot.'
+        }
+        $core++
+        if ($HvciRunning) { $on++ } else {
+            _f 'Warning' 'Memory integrity (HVCI) is off -- the hypervisor is not enforcing kernel code integrity, so a malicious or vulnerable driver can run.'
+        }
+        if ($CredGuardSupported) {
+            $core++
+            if ($CredGuardRunning) { $on++ } else {
+                _f 'Warning' 'Credential Guard is off -- NTLM hashes and Kerberos tickets in LSASS memory can be dumped by an attacker with admin rights.'
+            }
+        } else {
+            _f 'Info' 'Credential Guard is only available on Enterprise, Education and Server editions.'
+        }
+    }
+
+    $core++
+    if ($LsaPplConfigured) { $on++ } else {
+        _f 'Warning' 'LSA protection (RunAsPPL) is off -- LSASS runs as an ordinary process that admin-level tools can read.'
+    }
+
+    if ($null -ne $DriverBlocklist -and [int]$DriverBlocklist -eq 0) {
+        _f 'Warning' 'The Microsoft vulnerable driver blocklist is explicitly disabled.'
+    }
+
+    $verdict = if ($on -eq $core) { 'Hardened' } elseif ($on -gt 0) { 'Partial' } else { 'Not hardened' }
+    $class   = if ($on -eq $core) { 'ok' }       elseif ($on -gt 0) { 'warn' }    else { 'err' }
+    # Unreadable VBS state leaves only LSA protection scored; that alone is not "Hardened".
+    if ($class -eq 'ok' -and (-not $Available -or @($findings | Where-Object { $_.Severity -eq 'Warning' }).Count -gt 0)) {
+        $verdict = 'Partial'; $class = 'warn'
+    }
+
+    return [PSCustomObject]@{
+        Verdict  = $verdict
+        Class    = $class
+        Enabled  = $on
+        Total    = $core
+        Findings = @($findings)
+    }
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # VERDICT
 # ─────────────────────────────────────────────────────────────────────────────
@@ -517,7 +665,7 @@ function Get-PaladinVerdict {
 # ─────────────────────────────────────────────────────────────────────────────
 
 function Build-PaladinReport {
-    param($State, $Pref, $Threats, $Detections, $ThirdParty, $Services, $Events, $Verdict)
+    param($State, $Pref, $Threats, $Detections, $ThirdParty, $Services, $Events, $Verdict, $Platform, $PlatformVerdict)
 
     $reportDate = Get-Date -Format 'MMMM d, yyyy HH:mm'
     $machine    = $env:COMPUTERNAME
@@ -717,6 +865,22 @@ function Build-PaladinReport {
         }
     }
 
+    # Platform protection
+    function _onOff { param($b, [string]$OffClass = 'warn') if ($b) { "<span class='tk-badge-ok'>On</span>" } else { "<span class='tk-badge-$OffClass'>Off</span>" } }
+    $ppFindings = [System.Text.StringBuilder]::new()
+    foreach ($f in $PlatformVerdict.Findings) {
+        $cls = if ($f.Severity -eq 'Warning') { 'warn' } else { 'info' }
+        [void]$ppFindings.Append("<li class='tk-badge-$cls'>$(EscHtml $f.Text)</li>`n")
+    }
+    if ($PlatformVerdict.Findings.Count -eq 0) {
+        [void]$ppFindings.Append("<li class='tk-badge-ok'>VBS, memory integrity, Credential Guard and LSA protection are all running.</li>")
+    }
+    $ppServices = if ($Platform.Running.Count -gt 0) {
+        (@($Platform.Running | Where-Object { $_ -ne 0 } | ForEach-Object { if ($DeviceGuardServiceNames.ContainsKey($_)) { $DeviceGuardServiceNames[$_] } else { "Code $_" } }) -join ', ')
+    } else { 'None' }
+    $lsaRunningText = if ($null -eq $Platform.LsaPplRunning) { 'Not confirmed (no Wininit 12 event since boot)' } elseif ($Platform.LsaPplRunning) { 'Confirmed at boot (Wininit 12)' } else { 'Not confirmed' }
+    $blocklistText  = if ($null -eq $Platform.DriverBlocklist) { 'Not set (OS default)' } elseif ($Platform.DriverBlocklist -eq 0) { 'Disabled' } else { 'Enabled' }
+
     # Summary cards
     $rtClass = if ($State.RealTimeProtectionEnabled) { 'ok' } else { 'err' }
     $tpClass = if ($State.IsTamperProtected -or $State.TamperProtected) { 'ok' } else { 'err' }
@@ -736,7 +900,7 @@ function Build-PaladinReport {
             'Engine'        = $State.AMEngineVersion
             'AV Sig Version'= $State.AntivirusSignatureVersion
         }) `
-        -NavItems   @('Verdict', 'Defender Core', 'Cloud & Sample', 'Signatures', 'Scans', 'Threats', 'Detections', 'Exclusions', 'ASR Rules', 'Third-Party AV', 'Services', 'Events')
+        -NavItems   @('Verdict', 'Defender Core', 'Platform Protection', 'Cloud & Sample', 'Signatures', 'Scans', 'Threats', 'Detections', 'Exclusions', 'ASR Rules', 'Third-Party AV', 'Services', 'Events')
 
     $htmlFoot = Get-TKHtmlFoot -ScriptName 'P.A.L.A.D.I.N. v3.6'
 
@@ -749,6 +913,7 @@ function Build-PaladinReport {
     <div class="tk-summary-card $sigClass"><div class="tk-summary-num">$(if ($null -eq $State.AntivirusSignatureAge) { '?' } else { "$($State.AntivirusSignatureAge)d" })</div><div class="tk-summary-lbl">AV Signature Age</div></div>
     <div class="tk-summary-card $threatClass"><div class="tk-summary-num">$($Threats.Threats.Count)</div><div class="tk-summary-lbl">Threats in History</div></div>
     <div class="tk-summary-card info"><div class="tk-summary-num">$(EscHtml $State.AMRunningMode)</div><div class="tk-summary-lbl">AM Running Mode</div></div>
+    <div class="tk-summary-card $($PlatformVerdict.Class)"><div class="tk-summary-num">$(EscHtml $PlatformVerdict.Verdict)</div><div class="tk-summary-lbl">Platform Protection</div></div>
   </div>
 
   <div class="tk-section">
@@ -773,6 +938,23 @@ function Build-PaladinReport {
         <tr><th>On-access Protection</th><td>$(_ynWarn $State.OnAccessProtectionEnabled)</td></tr>
         <tr><th>Network Inspection (NIS)</th><td>$(_ynWarn $State.NISEnabled)</td></tr>
         <tr><th>Tamper Protected</th><td>$(_yn ($State.IsTamperProtected -or $State.TamperProtected))</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+
+  <div class="tk-section">
+    <div class="tk-card-header"><span class="tk-section-title">Platform Protection</span><span class="tk-section-num">$(EscHtml $PlatformVerdict.Verdict) ($($PlatformVerdict.Enabled) of $($PlatformVerdict.Total))</span></div>
+    <div class="tk-card">
+      <ul class="tk-info-box" style="list-style:none;padding-left:0;">$($ppFindings.ToString())</ul>
+      <table class="tk-table"><tbody>
+        <tr><th>Virtualization-based security</th><td>$(EscHtml $Platform.VbsLabel)</td></tr>
+        <tr><th>Memory integrity (HVCI)</th><td>$(_onOff $Platform.HvciRunning)</td></tr>
+        <tr><th>Credential Guard</th><td>$(if ($Platform.CredGuardSupported) { _onOff $Platform.CredGuardRunning } else { "<span class='tk-badge-info'>Not available on this edition</span>" })</td></tr>
+        <tr><th>VBS services running</th><td>$(EscHtml $ppServices)</td></tr>
+        <tr><th>LSA protection (RunAsPPL)</th><td>$(_onOff $Platform.LsaPplConfigured) $(EscHtml $lsaRunningText)</td></tr>
+        <tr><th>Vulnerable driver blocklist</th><td>$(EscHtml $blocklistText)</td></tr>
+        <tr><th>Smart App Control</th><td>$(EscHtml $Platform.SmartAppControl)</td></tr>
+        <tr><th>Edition</th><td>$(EscHtml $Platform.Edition)</td></tr>
       </tbody></table>
     </div>
   </div>
@@ -961,6 +1143,18 @@ if (-not $events.Available) {
 }
 Write-Host ""
 
+Write-Section "PLATFORM PROTECTION (VBS / HVCI / Credential Guard / LSA)"
+$platform = Get-PlatformProtection
+$platformVerdict = Get-PlatformProtectionVerdict -Available $platform.Available -VbsStatus $platform.VbsStatus `
+    -HvciRunning $platform.HvciRunning -CredGuardRunning $platform.CredGuardRunning -CredGuardSupported $platform.CredGuardSupported `
+    -LsaPplConfigured $platform.LsaPplConfigured -DriverBlocklist $platform.DriverBlocklist
+Write-Host ("  VBS                  : {0}" -f $platform.VbsLabel) -ForegroundColor $(if ($platform.VbsStatus -eq 2) { $C.Success } else { $C.Warning })
+Write-Host ("  Memory integrity     : {0}" -f $(if ($platform.HvciRunning) { 'On' } else { 'Off' })) -ForegroundColor $(if ($platform.HvciRunning) { $C.Success } else { $C.Warning })
+Write-Host ("  Credential Guard     : {0}" -f $(if (-not $platform.CredGuardSupported) { 'n/a (edition)' } elseif ($platform.CredGuardRunning) { 'On' } else { 'Off' })) -ForegroundColor $(if ($platform.CredGuardRunning -or -not $platform.CredGuardSupported) { $C.Success } else { $C.Warning })
+Write-Host ("  LSA protection       : {0}" -f $(if ($platform.LsaPplConfigured) { 'On' } else { 'Off' })) -ForegroundColor $(if ($platform.LsaPplConfigured) { $C.Success } else { $C.Warning })
+Write-Host ("  Platform verdict     : {0} ({1} of {2})" -f $platformVerdict.Verdict, $platformVerdict.Enabled, $platformVerdict.Total) -ForegroundColor $(switch ($platformVerdict.Class) { 'ok' { $C.Success } 'warn' { $C.Warning } default { $C.Error } })
+Write-Host ""
+
 $verdict = Get-PaladinVerdict -State $state -Pref $pref -Threats $threats -ThirdParty $thirdParty -Services $services
 
 Write-Section "AV / DEFENDER VERDICT"
@@ -974,7 +1168,7 @@ if ($verdict.Issues.Count -eq 0 -and $verdict.Warns.Count -eq 0) {
 Write-Host ""
 
 Write-Step "Generating HTML report..."
-$html      = Build-PaladinReport -State $state -Pref $pref -Threats $threats -Detections $detections -ThirdParty $thirdParty -Services $services -Events $events -Verdict $verdict
+$html      = Build-PaladinReport -State $state -Pref $pref -Threats $threats -Detections $detections -ThirdParty $thirdParty -Services $services -Events $events -Verdict $verdict -Platform $platform -PlatformVerdict $platformVerdict
 $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 $outPath   = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "PALADIN_${timestamp}.html"
 

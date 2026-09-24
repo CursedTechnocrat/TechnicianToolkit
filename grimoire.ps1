@@ -192,7 +192,7 @@ $Tools = @(
         Color       = 'Cyan'
         Category    = 'Deployment & Onboarding'
     },
-    # ── Diagnostics & Reporting (10–19) ─────────────────────────────
+    # ── Diagnostics & Reporting (10–19, overflow 60–69) ─────────────
     [PSCustomObject]@{
         Key         = '10'
         Name        = 'A.U.S.P.E.X.'
@@ -281,6 +281,17 @@ $Tools = @(
         Version     = '5.1'
         Description = 'Toolkit report index  -  scans log directory for existing HTML reports, groups by tool, emits a single rollup with relative links'
         Color       = 'Blue'
+        Category    = 'Diagnostics & Reporting'
+    },
+    # 10–19 is full; Diagnostics continues at 60 rather than renumbering the
+    # keys technicians already know.
+    [PSCustomObject]@{
+        Key         = '60'
+        Name        = 'N.E.C.R.O.P.S.Y.'
+        File        = 'necropsy.ps1'
+        Version     = '5.1'
+        Description = 'Crash & unexpected-reboot analysis  -  bugchecks, Kernel-Power 41, WHEA hardware errors, display resets, dump files, change timeline'
+        Color       = 'Red'
         Category    = 'Diagnostics & Reporting'
     },
     # ── Security (20–29) ─────────────────────────────────────────────
@@ -464,6 +475,15 @@ $Tools = @(
         Version     = '5.1'
         Description = 'Entra ID group dependency audit  -  what breaks if we delete this group? Licensing, CA, apps, roles, AUs, Intune, SP, EXO, Azure RBAC'
         Color       = 'Blue'
+        Category    = 'Cloud & Identity'
+    },
+    [PSCustomObject]@{
+        Key         = '47'
+        Name        = 'R.A.V.E.N.'
+        File        = 'raven.ps1'
+        Version     = '5.1'
+        Description = 'Exchange Online mailbox security audit  -  external forwarding, suspicious inbox rules, SMTP AUTH, auditing, delegation, SPF / DKIM / DMARC'
+        Color       = 'Magenta'
         Category    = 'Cloud & Identity'
     },
     # ── Data & Migration (50–59) ─────────────────────────────────────

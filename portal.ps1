@@ -190,7 +190,7 @@ function _vpnRowFromCmdlet {
 }
 
 function Get-VpnConnections {
-    $rows = New-Object 'System.Collections.Generic.List[object]'
+    $rows = [System.Collections.Generic.List[object]]::new()
     try {
         $user = @(Get-VpnConnection -ErrorAction Stop)
         foreach ($v in $user) { $rows.Add((_vpnRowFromCmdlet -V $v -Scope 'User')) }
@@ -209,7 +209,7 @@ function Get-VpnConnections {
 function Get-AlwaysOnTriggers {
     param([array]$Connections)
 
-    $rows = New-Object 'System.Collections.Generic.List[object]'
+    $rows = [System.Collections.Generic.List[object]]::new()
     foreach ($conn in $Connections) {
         try {
             $params = @{ ConnectionName = $conn.Name; ErrorAction = 'Stop' }
@@ -288,7 +288,7 @@ function Get-VpnTunnelInterfaces {
 }
 
 function Get-ThirdPartyVpnClients {
-    $rows = New-Object 'System.Collections.Generic.List[object]'
+    $rows = [System.Collections.Generic.List[object]]::new()
     foreach ($entry in $ThirdPartyClients) {
         try {
             $svcs = @(Get-Service -Name $entry.Pattern -ErrorAction SilentlyContinue)
@@ -341,8 +341,8 @@ function Get-VpnEncryptionTier {
 function Get-PortalVerdict {
     param([array]$Vpns, [array]$Triggers, [array]$Nrpt, [array]$ThirdParty)
 
-    $issues = New-Object 'System.Collections.Generic.List[string]'
-    $warns  = New-Object 'System.Collections.Generic.List[string]'
+    $issues = [System.Collections.Generic.List[string]]::new()
+    $warns  = [System.Collections.Generic.List[string]]::new()
 
     if ($Vpns.Count -eq 0 -and $ThirdParty.Count -eq 0) {
         return [PSCustomObject]@{

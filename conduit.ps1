@@ -218,8 +218,8 @@ $ConduitFindings = @{
 # SESSION STATE
 # ─────────────────────────────────────────────────────────────────────────────
 
-$Findings = New-Object 'System.Collections.Generic.List[object]'
-$Actions  = New-Object 'System.Collections.Generic.List[object]'
+$Findings = [System.Collections.Generic.List[object]]::new()
+$Actions  = [System.Collections.Generic.List[object]]::new()
 
 function Add-ConduitFinding {
     param(

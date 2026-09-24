@@ -38,12 +38,14 @@
                        TETHER -> EXHUME -> ARCHIVE -> CLEANSE
       HealthCheck   -- Quarterly machine review:
                        AUSPEX -> WARD -> THRESHOLD -> AUGUR -> GARGOYLE -> ARTIFACT -> PALADIN
+                       -> NECROPSY
       SecuritySweep -- Endpoint security posture (read-only):
                        SIGIL -> TALON -> TOTEM -> PALADIN -> ARTIFACT
       NetworkSweep  -- Endpoint network posture (read-only):
                        LEYLINE -> LANTERN -> BEACON -> PORTAL
-      TenantSweep   -- Cloud tenant posture (one sign-in, six reports):
+      TenantSweep   -- Cloud tenant posture (seven reports):
                        TALISMAN -> RELIQUARY -> GOLEM -> WRAITH -> CONCLAVE -> GROVE
+                       -> RAVEN
 
 .USAGE
     PS C:\> .\ritual.ps1                                    # Interactive menu
@@ -169,6 +171,7 @@ $script:BuiltInRecipes = @{
             @{ Label = 'Services & tasks';          Tool = 'gargoyle.ps1';  Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Certificate health';        Tool = 'artifact.ps1';  Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'AV / Defender health';      Tool = 'paladin.ps1';   Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Crash & reboot history';    Tool = 'necropsy.ps1';  Args = @('-Unattended'); StopOnError = $false }
         )
     }
     'SecuritySweep' = @{
@@ -194,7 +197,7 @@ $script:BuiltInRecipes = @{
     }
     'TenantSweep' = @{
         Name        = 'Cloud Tenant Posture'
-        Description = 'Full tenant posture in one sign-in sequence: Azure, M365 licensing, Intune, Entra ID hygiene, Teams, SharePoint.'
+        Description = 'Full tenant posture in one sign-in sequence: Azure, M365 licensing, Intune, Entra ID hygiene, Teams, SharePoint, Exchange Online.'
         Steps       = @(
             @{ Label = 'Azure assessment';          Tool = 'talisman.ps1';  Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'M365 license audit';        Tool = 'reliquary.ps1'; Args = @('-Unattended'); StopOnError = $false }
@@ -202,6 +205,7 @@ $script:BuiltInRecipes = @{
             @{ Label = 'Entra ID identity hygiene'; Tool = 'wraith.ps1';    Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Microsoft Teams audit';     Tool = 'conclave.ps1';  Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'SharePoint Online audit';   Tool = 'grove.ps1';     Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Exchange Online security';  Tool = 'raven.ps1';     Args = @('-Unattended'); StopOnError = $false }
         )
     }
 }

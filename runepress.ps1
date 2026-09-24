@@ -296,7 +296,7 @@ function Get-InfPrinterModel {
         return $t
     }
 
-    $models = New-Object System.Collections.Generic.List[string]
+    $models = [System.Collections.Generic.List[string]]::new()
     $archOk = $false
 
     foreach ($line in $sections['manufacturer']) {

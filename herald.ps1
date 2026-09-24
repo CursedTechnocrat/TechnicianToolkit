@@ -685,7 +685,7 @@ function Get-ReviewFlag {
     #>
     param($User, [string]$Role, [int]$DaysInactive, [bool]$HasCurrentPrivilege)
 
-    $flags = New-Object System.Collections.Generic.List[string]
+    $flags = [System.Collections.Generic.List[string]]::new()
 
     if (-not $User.Enabled) {
         $flags.Add('Disabled')
@@ -723,7 +723,7 @@ function Build-AccountRoster {
         [hashtable]$GrantDetail
     )
 
-    $roster = New-Object System.Collections.Generic.List[object]
+    $roster = [System.Collections.Generic.List[object]]::new()
 
     foreach ($u in $Users) {
         $key    = $u.SamAccountName.ToLowerInvariant()
@@ -1385,15 +1385,15 @@ Write-Section 'PRIVILEGED GROUPS'
 
 $grantIndex   = @{}   # sam (lower-case) -> list of group labels granting access
 $grantDetail  = @{}   # group label      -> role + reason
-$groupSummary = New-Object System.Collections.Generic.List[object]
-$resolvedDns  = New-Object System.Collections.Generic.List[string]
+$groupSummary = [System.Collections.Generic.List[object]]::new()
+$resolvedDns  = [System.Collections.Generic.List[string]]::new()
 $primaryRid   = @{}   # primaryGroupID   -> group label
 
 function Add-Grant {
     param([string]$Sam, [string]$Label)
     $key = $Sam.ToLowerInvariant()
     if (-not $grantIndex.ContainsKey($key)) {
-        $grantIndex[$key] = New-Object System.Collections.Generic.List[string]
+        $grantIndex[$key] = [System.Collections.Generic.List[string]]::new()
     }
     if (-not $grantIndex[$key].Contains($Label)) { $grantIndex[$key].Add($Label) }
 }
@@ -1561,6 +1561,11 @@ $csvPath    = Join-Path $outDir "HERALD_Roster_$stamp.csv"
 # removed. The @() that wrapped $groupSummary is redundant because
 # Build-HeraldReport normalises both collections itself, and the inline Get-Date
 # becomes its own statement.
+#
+# Root cause, found in 5.1: under PowerShell 7.4, @() over a List[object] built
+# with New-Object throws "Argument types do not match" -- and $groupSummary was
+# one. The lists are now built with ::new(), which is immune, and the Pester gate
+# 'No generic collections built with New-Object' keeps the form from returning.
 #
 # One value per line means a failure names the argument by line number rather
 # than implicating the whole call, and splatting binds by name from a plain
