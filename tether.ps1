@@ -36,7 +36,7 @@
     PS C:\> .\tether.ps1 -Unattended        # Silent mode, export HTML and exit
 
 .NOTES
-    Version : 5.0
+    Version : 5.1
 
 #>
 

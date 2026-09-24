@@ -41,7 +41,7 @@
     PS C:\> .\beacon.ps1 -IncludeKey        # Render cleartext PSKs in the report (technician-managed audit only)
 
 .NOTES
-    Version : 5.0
+    Version : 5.1
 
 #>
 

@@ -37,7 +37,7 @@
     PS C:\> .\conclave.ps1 -Unattended        # Silent: auto-connect + export HTML
 
 .NOTES
-    Version : 5.0
+    Version : 5.1
 
 #>
 

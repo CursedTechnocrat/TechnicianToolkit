@@ -230,7 +230,7 @@ $ColorSchema = @{
 - All interactive tools expose `[switch]$Unattended` — skips prompts, runs defaults.
 - Destructive or state-changing tools also expose `[switch]$WhatIf` — previews actions without
   executing them. The current set is REVENANT, ARCHIVE, COVENANT, SIGIL, CLEANSE, CIPHER, FORGE,
-  RESTORATION, RUNEPRESS, and CONJURE. GRIMOIRE auto-detects and passes `-WhatIf` to any tool that
+  RESTORATION, RUNEPRESS, CONJURE, and CONDUIT. GRIMOIRE auto-detects and passes `-WhatIf` to any tool that
   declares it, and the Pester suite (`'-WhatIf declared on destructive tools'`) enforces the list.
 - Tools that write logs expose `[switch]$Transcript`.
 
@@ -337,6 +337,29 @@ The xUnit suite covers all three plus the extractor. Run it after touching anyth
 `app/`, and after any change to the registry's shape.
 
 ## Tool Distinctions
+
+### CONDUIT vs RESTORATION
+
+Both are Windows Update tools; they sit on opposite sides of the connect/deploy divide.
+
+| Question | Reach for |
+|----------|-----------|
+| "Windows Update says it couldn't connect to the update service." | **CONDUIT** (repairs the client's plumbing: WSUS pointer, WinHTTP proxy, blocking policies, time service, update services) |
+| "The client works — go install the updates." | **RESTORATION** (deploys updates via PSWindowsUpdate, handles power settings and reboots) |
+
+CONDUIT is RESTORATION's precondition. RESTORATION assumes the update client can reach *a*
+service and fails opaquely when it cannot; CONDUIT answers why. They compose in that order —
+CONDUIT until its verdict is Healthy, then RESTORATION.
+
+The split matters for scope: CONDUIT never installs an update and never touches
+`PSWindowsUpdate`, and RESTORATION never edits the WindowsUpdate policy key. Neither tool
+should grow into the other's half.
+
+CONDUIT also declines to auto-fix two policy values it reports —
+`DoNotConnectToWindowsUpdateInternetLocations` and `DisableWindowsUpdateAccess`. Both are
+deliberate administrative decisions often pushed by domain GPO, so silently clearing them
+would fight Group Policy and mask the real configuration. They are reported with the remedy
+and left to the technician.
 
 ### THRESHOLD vs AUGUR
 

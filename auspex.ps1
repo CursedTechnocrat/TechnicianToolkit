@@ -34,7 +34,7 @@
     PS C:\> .\auspex.ps1 -Unattended        # Silent mode — no prompts, no banner
 
 .NOTES
-    Version : 5.0
+    Version : 5.1
 
 #>
 

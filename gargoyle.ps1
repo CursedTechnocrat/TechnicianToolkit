@@ -35,7 +35,7 @@
     PS C:\> .\gargoyle.ps1 -Unattended -Target HOSTNAME  # Remote machine report
 
 .NOTES
-    Version : 5.0
+    Version : 5.1
 
 #>
 

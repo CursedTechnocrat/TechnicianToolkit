@@ -42,7 +42,7 @@
     PS C:\> .\runepress.ps1 -Unattended                      # Silent mode — auto-selects first INF, skips printer config
 
 .NOTES
-    Version : 5.0
+    Version : 5.1
 
 #>
 

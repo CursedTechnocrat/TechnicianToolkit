@@ -571,7 +571,7 @@ Describe '-WhatIf declared on destructive tools' {
     # and Windows Update installs, printer driver / network printer additions.
     $destructiveCases = @(
         'revenant.ps1','archive.ps1','covenant.ps1','sigil.ps1','cleanse.ps1','cipher.ps1',
-        'forge.ps1','restoration.ps1','runepress.ps1','conjure.ps1'
+        'forge.ps1','restoration.ps1','runepress.ps1','conjure.ps1','conduit.ps1'
     ) | ForEach-Object {
         @{ Name = $_; FullName = (Join-Path $PSScriptRoot "..\$_") }
     }
@@ -645,6 +645,7 @@ Describe 'Tier-mapper data tables' {
         $script:PortalPath  = Join-Path $script:ToolkitRoot 'portal.ps1'
         $script:ConjurePath = Join-Path $script:ToolkitRoot 'conjure.ps1'
         $script:HeraldPath  = Join-Path $script:ToolkitRoot 'herald.ps1'
+        $script:ConduitPath = Join-Path $script:ToolkitRoot 'conduit.ps1'
 
         function Import-ScriptHashtable {
             param([string]$ScriptPath, [string]$VarName)
@@ -721,6 +722,73 @@ Describe 'Tier-mapper data tables' {
         }
         It 'falls back to "Unknown (<n>)" for unmapped codes' {
             Get-AsrActionLabel -Action 99 | Should -Be 'Unknown (99)'
+        }
+    }
+
+    Context 'CONDUIT: $ConduitFindings catalog' {
+        It 'covers every finding code the tool can raise' {
+            $f = Import-ScriptHashtable -ScriptPath $script:ConduitPath -VarName 'ConduitFindings'
+            $f | Should -Not -BeNullOrEmpty
+            foreach ($code in @(
+                'TimeServiceStopped','WinHttpProxySet','WsusUnreachable','BlockInternetWU',
+                'WUAccessDisabled','AutoUpdateDisabled','MicrosoftEndpointsBlocked',
+                'ServiceDisabled','WUServerUnparsable'
+            )) {
+                $f.ContainsKey($code) | Should -BeTrue -Because "Add-ConduitFinding raises '$code'"
+            }
+        }
+        It 'gives every finding a Severity, Title, Summary and Remedy' {
+            $f = Import-ScriptHashtable -ScriptPath $script:ConduitPath -VarName 'ConduitFindings'
+            foreach ($code in $f.Keys) {
+                $f[$code].Severity | Should -Not -BeNullOrEmpty -Because "$code needs a severity"
+                $f[$code].Title    | Should -Not -BeNullOrEmpty -Because "$code needs a title"
+                $f[$code].Summary  | Should -Not -BeNullOrEmpty -Because "$code needs a summary"
+                $f[$code].Remedy   | Should -Not -BeNullOrEmpty -Because "$code needs a remedy"
+            }
+        }
+        It 'uses only severities the report can render as a badge class' {
+            $f = Import-ScriptHashtable -ScriptPath $script:ConduitPath -VarName 'ConduitFindings'
+            foreach ($code in $f.Keys) {
+                $f[$code].Severity | Should -BeIn @('Error','Warning','Info') -Because "Get-SeverityClass only maps these (saw '$($f[$code].Severity)' on $code)"
+            }
+        }
+        It 'ranks an unreachable WSUS pointer and a policy internet block as Errors' {
+            $f = Import-ScriptHashtable -ScriptPath $script:ConduitPath -VarName 'ConduitFindings'
+            $f['WsusUnreachable'].Severity  | Should -Be 'Error'
+            $f['BlockInternetWU'].Severity  | Should -Be 'Error'
+            $f['WUAccessDisabled'].Severity | Should -Be 'Error'
+        }
+        It 'ranks a stopped time service and a set proxy as Warnings, not Errors' {
+            # Neither blocks the update service outright -- a proxy may be
+            # intentional, and clock drift only breaks TLS past ~5 minutes.
+            $f = Import-ScriptHashtable -ScriptPath $script:ConduitPath -VarName 'ConduitFindings'
+            $f['TimeServiceStopped'].Severity | Should -Be 'Warning'
+            $f['WinHttpProxySet'].Severity    | Should -Be 'Warning'
+        }
+    }
+
+    Context 'CONDUIT: $UpdateServiceDefaults table' {
+        It 'covers the four services the update client depends on' {
+            $d = Import-ScriptHashtable -ScriptPath $script:ConduitPath -VarName 'UpdateServiceDefaults'
+            $d.Keys | Should -Contain 'wuauserv'
+            $d.Keys | Should -Contain 'bits'
+            $d.Keys | Should -Contain 'cryptsvc'
+            $d.Keys | Should -Contain 'usosvc'
+        }
+        It 'restores Windows defaults rather than forcing everything Automatic' {
+            # wuauserv and bits are demand-started by design; setting them
+            # Automatic would be a behaviour change, not a repair.
+            $d = Import-ScriptHashtable -ScriptPath $script:ConduitPath -VarName 'UpdateServiceDefaults'
+            $d['wuauserv'] | Should -Be 'Manual'
+            $d['bits']     | Should -Be 'Manual'
+            $d['cryptsvc'] | Should -Be 'Automatic'
+            $d['usosvc']   | Should -Be 'Automatic'
+        }
+        It 'names only start types Set-Service accepts' {
+            $d = Import-ScriptHashtable -ScriptPath $script:ConduitPath -VarName 'UpdateServiceDefaults'
+            foreach ($k in $d.Keys) {
+                $d[$k] | Should -BeIn @('Automatic','Manual','Disabled','Boot','System')
+            }
         }
     }
 

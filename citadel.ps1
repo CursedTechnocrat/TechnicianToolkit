@@ -34,7 +34,7 @@
     PS C:\> .\citadel.ps1 -Unattended -Action StaleReport   # Export stale accounts HTML report silently
 
 .NOTES
-    Version : 5.0
+    Version : 5.1
 
 #>
 

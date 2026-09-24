@@ -46,7 +46,7 @@
     PS C:\> .\codex.ps1 -Unattended             # Silent: write rollup and exit
 
 .NOTES
-    Version : 5.0
+    Version : 5.1
 
 #>
 
