@@ -9,7 +9,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- **CIPHER 5.1** — Enable on a drive that reads *FullyEncrypted* but holds only an unsecured
+- **CIPHER** — Enable on a drive that reads *FullyEncrypted* but holds only an unsecured
   clear key (no TPM, recovery password or other usable protector — typically OEM Device
   Encryption left "waiting for activation") now decrypts the drive, waits for decryption to
   finish, and re-encrypts it through the normal enable path with a fresh recovery password.
