@@ -260,10 +260,18 @@ Pester suite (`'License header compliance — all source files'`) enforces prese
 ### Script Header Block
 
 Every script carries a `.SYNOPSIS / .DESCRIPTION / .USAGE / .NOTES` comment block. The
-`.NOTES` section holds only the `Version : X.Y` line (bump when changing script behaviour).
+`.NOTES` section holds only the `Version : X.Y` line.
 Earlier versions embedded a cross-reference `Tools Available` list and a `Color Schema`
 legend in every header; those were removed in v3.0 because they drifted out of sync on
 every rename. The canonical tool list lives in `grimoire.ps1`'s `$Tools` registry.
+
+**The suite has one version.** Every tool's `Version` line and its `Version` field in
+`grimoire.ps1`'s `$Tools` registry carry the same suite-wide number. Do not
+bump a single tool when you change it; record the change in `CHANGELOG.md` under
+`[Unreleased]` instead. The version moves only at a release, when every header and every
+registry entry move together. The Pester suite (`'Version consistency — script header matches
+the GRIMOIRE registry'`) fails if any header disagrees with its registry row, or if the registry
+holds more than one version.
 
 ### config.json Shape
 
@@ -293,11 +301,13 @@ updates the file.
 ### Adding a New Tool
 
 1. Copy the GPL notice block and the header block from an existing tool; update the filename,
-   acronym, synopsis, and version. The notice must stay above the `<# .SYNOPSIS #>` block.
+   acronym, and synopsis. Keep the version at the current suite version. The notice must stay
+   above the `<# .SYNOPSIS #>` block.
 2. Add the shared-module bootstrap block (see the initialization pattern above) and the
    appropriate admin check (`Invoke-AdminElevation` or `Assert-AdminPrivilege`). Copy the
    block verbatim from an existing tool — the Pester suite enforces the exact shape.
-3. Register the tool in `grimoire.ps1`'s `$Tools` array with a unique numeric `Key`.
+3. Register the tool in `grimoire.ps1`'s `$Tools` array with a unique numeric `Key` and the
+   suite `Version`.
 4. Add the script's filename to the Quick Launch and Usage sections in `README.md`.
 5. The syntax-validation, module-bootstrap, and license-header compliance Pester tests will
    cover it automatically.
