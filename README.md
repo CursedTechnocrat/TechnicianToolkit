@@ -75,7 +75,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | Running through Kaseya VSA LiveConnect | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
 | Need a guided, menu-driven workflow | **This repo** — full prompts and confirmations at every step |
 | Need fire-and-forget with parameter-only input | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
-| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, CONCLAVE, GROVE, TENDRIL, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL, ANVIL, TALON, TOTEM, PYRE, PALADIN, BEACON, PORTAL) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
+| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, CONCLAVE, GROVE, TENDRIL, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL, ANVIL, TALON, TOTEM, PYRE, PALADIN, BEACON, PORTAL, NECROPSY, RAVEN) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
 
 ---
 
@@ -130,6 +130,9 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | 17 | **anvil.ps1** | **A.N.V.I.L.** — Audits & Notates Vendor Inventory & Lifecycle | BIOS / UEFI / firmware audit — system identity, Secure Boot posture, vendor update channels, pending Windows Update firmware, HTML report |
 | 18 | **pyre.ps1** | **P.Y.R.E.** — Power-Yield Reliability Evaluator | Laptop battery health audit — design vs current capacity, cycle count, red/yellow/green replacement verdict, `powercfg /batteryreport` enrichment, HTML report |
 | 19 | **codex.ps1** | **C.O.D.E.X.** — Compiles Output Documents into an EXhibit | Toolkit report index — scans the log directory for existing HTML reports, groups by tool, emits one rollup with relative links |
+| 60 | **necropsy.ps1** | **N.E.C.R.O.P.S.Y.** — Names Each Crash, Reboot & Outage — Post-mortem Summary Yield | Crash & unexpected-reboot analysis — bugchecks, Kernel-Power 41, WHEA hardware errors, display resets, dump files, change timeline, HTML report |
+
+Diagnostics outgrew keys 10–19, so it continues at 60 rather than renumbering the keys technicians already know.
 
 ### Security
 
@@ -165,6 +168,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | 44 | **conclave.ps1** | **C.O.N.C.L.A.V.E.** — Consolidates Organisational Networks, Chats, Licenses, Access, Visibility & Entitlements | Microsoft Teams audit — orphan teams, public teams, guest membership, large teams, stale teams, HTML report |
 | 45 | **grove.ps1** | **G.R.O.V.E.** — Gathers, Reports On, & Verifies Estates | SharePoint Online audit — site inventory, storage, external sharing, ownerless sites, stale sites, HTML report |
 | 46 | **tendril.ps1** | **T.E.N.D.R.I.L.** — Traces Entitlements, Nested Dependencies, Roles, Integrations & Licenses | Entra ID group dependency audit — "what breaks if we delete this group?" — group-based licensing, Conditional Access, enterprise apps, directory roles, nested membership, AUs, Intune, SharePoint, Exchange, Azure RBAC, HTML report |
+| 47 | **raven.ps1** | **R.A.V.E.N.** — Reviews Auto-forwarding, Vulnerable Exchange settings & Nefarious rules | Exchange Online mailbox security audit — external forwarding, suspicious inbox rules, auto-forward policy, SMTP AUTH, auditing, delegation, SPF / DKIM / DMARC, HTML report |
 
 ### Data & Migration
 
@@ -290,10 +294,10 @@ Workflow orchestrator. Runs an ordered sequence of toolkit scripts as a single n
 - **Built-in recipes** (pass via `-Recipe <Name>`):
   - `Onboard` — new machine bring-up: COVENANT → SIGIL → CONJURE → CIPHER → AUSPEX → ARTIFACT
   - `Retire` — pre-reimage workflow: TETHER → EXHUME → ARCHIVE → CLEANSE
-  - `HealthCheck` — quarterly machine review: AUSPEX → WARD → THRESHOLD → AUGUR → GARGOYLE → ARTIFACT → PALADIN
+  - `HealthCheck` — quarterly machine review: AUSPEX → WARD → THRESHOLD → AUGUR → GARGOYLE → ARTIFACT → PALADIN → NECROPSY
   - `SecuritySweep` — endpoint security posture (read-only): SIGIL → TALON → TOTEM → PALADIN → ARTIFACT
   - `NetworkSweep` — endpoint network posture (read-only): LEYLINE → LANTERN → BEACON → PORTAL
-  - `TenantSweep` — cloud posture in one sign-in: TALISMAN → RELIQUARY → GOLEM → WRAITH → CONCLAVE → GROVE
+  - `TenantSweep` — cloud tenant posture: TALISMAN → RELIQUARY → GOLEM → WRAITH → CONCLAVE → GROVE → RAVEN (RAVEN signs in to Exchange Online separately from the Graph tools)
 - **Custom recipes** via `-RecipeFile path\to\recipe.psd1` — a hashtable with `Name`, `Description`, and an ordered `Steps` array (each step specifies `Tool`, `Args`, `StopOnError`, `Label`)
 - Per-step log-directory snapshot — any new files produced during a step are attributed to that step and linked from the rollup report
 - Default behaviour: abort on first failure. Pass `-ContinueOnError` to run every step regardless, unless the step's own `StopOnError = $true` overrides
@@ -328,6 +332,7 @@ Audits all local user accounts and exports a dark-themed HTML report to the scri
 - Lists all local accounts: enabled/disabled status, last logon, password info
 - Identifies group memberships — flags all Administrator accounts
 - Flags potentially risky accounts: no password required, password never set, stale (no logon in 90+ days)
+- **LAPS status**: which implementation governs the local administrator password (Windows LAPS, Windows LAPS in legacy emulation, or legacy Microsoft LAPS) and from which policy source (Intune / CSP, Group Policy, local configuration — highest precedence wins); where the password is backed up (Entra ID / Active Directory) and whether the device is actually joined there; which account is managed and whether it exists; whether its password has been rotated within the policy's age; recent errors from the Windows LAPS operational log. A machine with enabled local admins and no LAPS policy is flagged
 - Console summary with highlighted flagged accounts
 - HTML report with color-coded badges and summary cards
 - Report saved to script directory as `WARD_<timestamp>.html`
@@ -447,6 +452,25 @@ Produces a single consolidated HTML report covering the most commonly requested 
 - `-Unattended` for silent run; `-OutputPath <dir>` to redirect the report destination
 
 > **SCRYER vs individual diagnostic tools:** SCRYER is a one-shot snapshot that rolls five checks into one file. Reach for AUSPEX, WARD, THRESHOLD, AUGUR, or GARGOYLE when you want a deeper single-domain report.
+
+---
+
+### N.E.C.R.O.P.S.Y.
+
+Answers "why does this machine keep crashing or rebooting?" from the evidence Windows leaves behind after an unplanned stop. Read-only.
+
+- **Bugchecks** from WER event 1001, with the code mapped to its name and the area it usually implicates (driver, memory, storage, graphics, hardware, power, system)
+- **Kernel-Power 41** classified three ways: a blue screen, a power-button press (the user forced off a hung machine), or neither — a sudden power loss or a freeze too hard to crash
+- **Dump files** in the minidump folder and `MEMORY.DMP`, with the bugcheck code read straight out of each dump's header — so a crash whose event has rolled out of the log is still counted
+- **WHEA hardware errors**, fatal and corrected, with the failing component; **display driver resets** (TDR, event 4101)
+- **Timeline** interleaving crashes with driver installs and Windows updates in the same window, so "it started after the update" is visible at a glance
+- **Crash dump readiness**: dump type, page file, automatic restart — dumps disabled or no page file means the next crash leaves nothing to analyse
+- Reliability Monitor stability index and boot count for the window
+- **Next steps** per implicated area, pointing at the toolkit tool that goes deeper (AUGUR for storage, FORGE for drivers, ANVIL for firmware, PYRE for batteries)
+- Verdict: Crashing / Unstable / Stable — a readiness gap such as disabled dumps never downgrades a machine that has not crashed
+- `-Days <1-365>` sets the look-back window (default 30)
+
+NECROPSY reads the bugcheck code and parameters, not the stack. Naming the faulting driver needs a debugger: open a dump it lists in WinDbg and run `!analyze -v`.
 
 ---
 
@@ -594,8 +618,9 @@ Antivirus and Microsoft Defender health audit. Answers the four questions that d
 - **Third-party AV products** via the `root\SecurityCenter2` namespace: each registered AV with its packed `productState` decoded into real-time and up-to-date flags; flags concurrent third-party real-time alongside Defender
 - **Service health** for `WinDefend`, `WdNisSvc`, `Sense`, `WdFilter`, `SecurityHealthService`, and `mpssvc`; critical services not running drive a red finding
 - **Recent Defender events** from `Microsoft-Windows-Windows Defender/Operational` (configurable lookback via `-EventDays`)
+- **Platform protection**: virtualization-based security, memory integrity (HVCI), Credential Guard (Enterprise / Education / Server editions), LSA protection (`RunAsPPL`, confirmed against the Wininit boot event), the vulnerable driver blocklist, and Smart App Control. Scored with a verdict of its own — Hardened / Partial / Not hardened — that does not change the AV verdict, so older hardware without HVCI still reads correctly on the AV side
 - **Red / yellow / green verdict** with explicit remediation hints. `Write-TKError` telemetry fires on `Get-MpComputerStatus` failure and on each unresolved high / severe threat
-- Dark-themed HTML report with six summary cards (posture, real-time, tamper, signature age, threats, AM mode)
+- Dark-themed HTML report with seven summary cards (posture, real-time, tamper, signature age, threats, AM mode, platform protection)
 - Auto-elevates; read-only audit
 
 ---
@@ -778,6 +803,23 @@ Connects to Microsoft Graph and inventories the SharePoint Online estate in a si
 
 ---
 
+### R.A.V.E.N.
+
+Exchange Online mailbox security audit — looks for the signs and preconditions of business email compromise, where an attacker signs in, quietly forwards or hides mail, and waits. Read-only.
+
+- **Mailbox forwarding** (`ForwardingSmtpAddress` / `ForwardingAddress`) classified external or internal against the tenant's accepted domains, noting whether a copy is kept
+- **Inbox rules** in every user and shared mailbox, flagged when they forward or redirect externally, move mail into rarely opened folders (RSS Feeds, Conversation History, Archive…) and mark it read, delete messages about payments or security, or carry a throwaway name like `.` — each flagged rule lists why
+- **Tenant settings**: outbound spam policies that allow automatic external forwarding, transport rules that redirect or copy mail outside the organisation, SMTP AUTH enabled org-wide or per mailbox, mailbox auditing disabled
+- **Delegation**: Full Access and Send As grants, for access review (`-SkipDelegation` to skip the per-mailbox permission sweep on large tenants)
+- **Email authentication** for each domain: SPF (missing, multiple, `+all`, `?all`), DMARC (missing, `p=none`, `pct` below 100), and DKIM signing state
+- **DNS-only mode**: `-DnsOnly -Domain contoso.com` runs the SPF / DKIM / DMARC checks with no sign-in and no module — useful before a tenant is taken on
+- Verdict: At Risk / Review / Clean
+- Requires `ExchangeOnlineManagement` (offered for install if missing) and a role that can read recipient and transport configuration — Global Reader or View-Only Organization Management is enough
+
+> **RAVEN vs RELIQUARY:** RELIQUARY audits *licensing and MFA registration* through Microsoft Graph. RAVEN audits *what the mailboxes are doing* through Exchange Online — forwarding, rules, and the settings that let a compromise go unnoticed.
+
+---
+
 ## Data & Migration
 
 ### R.E.V.E.N.A.N.T.
@@ -862,7 +904,7 @@ first four rows is needed.
 | Internet connectivity | All scripts |
 | Windows Package Manager (winget) | `conjure.ps1` (Chocolatey supported as alternative) |
 | PSWindowsUpdate module | `restoration.ps1`, `forge.ps1` (auto-installed if missing) |
-| *(none — built-in cmdlets only)* | `conduit.ps1` |
+| *(none — built-in cmdlets only)* | `conduit.ps1`, `necropsy.ps1` |
 | Entra ID account with device join permissions | `covenant.ps1` |
 | Robocopy (built into Windows) | `revenant.ps1`, `archive.ps1` |
 | BitLocker-capable Windows edition (Pro/Enterprise) | `cipher.ps1` |
@@ -870,10 +912,10 @@ first four rows is needed.
 | RSAT ActiveDirectory module | `citadel.ps1`, `herald.ps1` (auto-installed if missing) |
 | Az PowerShell modules | `talisman.ps1`, `tendril.ps1` (optional, auto-installed if -IncludeAzureRbac) |
 | Microsoft.Graph modules | `reliquary.ps1`, `golem.ps1`, `wraith.ps1`, `conclave.ps1`, `grove.ps1`, `tendril.ps1` (auto-installed if missing) |
-| ExchangeOnlineManagement module | `tendril.ps1` (optional, auto-installed if -IncludeExchange) |
+| ExchangeOnlineManagement module | `raven.ps1` (offered for install if missing; not needed for `-DnsOnly`), `tendril.ps1` (optional, auto-installed if -IncludeExchange) |
 | PnP.PowerShell module | `tendril.ps1` (optional, auto-installed if -IncludeSharePoint) |
 | Azure subscription + appropriate RBAC | `talisman.ps1` |
-| Microsoft 365 tenant + Global Reader or equivalent | `reliquary.ps1`, `golem.ps1`, `wraith.ps1`, `conclave.ps1`, `grove.ps1`, `tendril.ps1` |
+| Microsoft 365 tenant + Global Reader or equivalent | `reliquary.ps1`, `golem.ps1`, `wraith.ps1`, `conclave.ps1`, `grove.ps1`, `tendril.ps1`, `raven.ps1` |
 | Microsoft Intune licence + DeviceManagement Graph permissions | `golem.ps1`, `tendril.ps1` |
 | RoleManagement.Read.Directory + AuditLog.Read.All Graph scopes | `wraith.ps1`, `tendril.ps1` |
 | On-premises Active Directory domain membership | `citadel.ps1`, `herald.ps1` |
@@ -993,6 +1035,9 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\pyre.ps1";
 # C.O.D.E.X. — Toolkit report index (rolls up existing HTML reports)
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\codex.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/codex.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
+# N.E.C.R.O.P.S.Y. — Crash & unexpected-reboot analysis
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\necropsy.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/necropsy.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
 # ── Security ─────────────────────────────────────────────────────────────────
 
 # C.I.P.H.E.R. — BitLocker encryption management
@@ -1059,6 +1104,9 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\grove.ps1"
 # T.E.N.D.R.I.L. — Entra ID group dependency audit
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\tendril.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/tendril.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
+# R.A.V.E.N. — Exchange Online mailbox security audit
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\raven.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/raven.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
 # ── Data & Migration ─────────────────────────────────────────────────────────
 
 # R.E.V.E.N.A.N.T. — Profile migration
@@ -1112,6 +1160,7 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\anvil.ps1         # BIOS / UEFI / firmware audit and HTML report
 .\pyre.ps1          # Laptop battery health audit
 .\codex.ps1         # Toolkit report index — rolls up existing HTML reports into one bound exhibit
+.\necropsy.ps1      # Crash & unexpected-reboot analysis and HTML report
 
 # Security
 .\cipher.ps1        # BitLocker drive encryption management
@@ -1138,6 +1187,7 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\conclave.ps1      # Microsoft Teams audit and HTML report
 .\grove.ps1         # SharePoint Online audit and HTML report
 .\tendril.ps1       # Entra ID group dependency audit and HTML report
+.\raven.ps1         # Exchange Online mailbox security audit and HTML report
 
 # Data & Migration
 .\revenant.ps1       # Profile migration and data transfer
@@ -1176,7 +1226,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **ritual.ps1** | `-Recipe {Onboard\|Retire\|HealthCheck\|SecuritySweep\|NetworkSweep\|TenantSweep}` — named recipe to run; `-RecipeFile <path.psd1>` — custom recipe file; `-ContinueOnError` — tolerate per-step failures |
 | **conduit.ps1** | `-Action {Audit\|Repair\|ResetCache}` — Audit is read-only (default), Repair applies the safe fixes, ResetCache also rebuilds SoftwareDistribution / catroot2; `-Force` — remove the WSUS pointer even when the server is reachable, the device is domain-joined, or local Group Policy sets it; `-WhatIf` — preview every change without applying it |
 | **auspex.ps1** | `$ReportOutputPath` — folder where the HTML report is saved (defaults to script directory; accepts any local or UNC path) |
-| **ward.ps1** | None — audit runs automatically; stale threshold is 90 days (editable in script) |
+| **ward.ps1** | None — audit runs automatically; stale threshold is 90 days (editable in script); LAPS rotation is flagged overdue 3 days past the policy's `PasswordAgeDays` (`$LapsRotationGraceDays`) |
 | **threshold.ps1** | None — thresholds are Warning < 15% free, Critical < 5% free (editable in script); old profile threshold is 90 days |
 | **gargoyle.ps1** | None — critical service list editable in script; `-Target` accepts any WinRM-reachable hostname |
 | **augur.ps1** | None — scans all physical disks automatically; `-Unattended` for silent HTML export |
@@ -1185,6 +1235,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **anvil.ps1** | None — system identity, UEFI state, vendor channels, and Windows Update pending firmware are all auto-detected |
 | **pyre.ps1** | None — ROOT\WMI battery classes and Win32_Battery are queried unconditionally; thresholds (80/60 pct, 300/500 cycles) are editable constants in the script |
 | **codex.ps1** | `LogDirectory` (read) — defines which directory CODEX scans for existing HTML reports; CLI overrides via `-LogDir`. Optional `-DaysBack <int>` filter and pattern-strict file matching are constants in the script |
+| **necropsy.ps1** | `-Days <int>` — look-back window (default 30, range 1-365); read-only otherwise |
 | **cipher.ps1** | `LogDirectory` (read) — Export action writes the PDF report there unless `-OutputPath` overrides it. `OrgName` is shown in the report header. Drive and action are selected interactively at runtime |
 | **sigil.ps1** | None — categories selected interactively; screensaver timeout editable in script (default 600 s) |
 | **citadel.ps1** | None — user search and action selected interactively; stale threshold is 90 days (editable in script) |
@@ -1205,6 +1256,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **conclave.ps1** | None — tenant selected interactively; large-team and stale thresholds (250 members, 365 days) are editable constants in the script |
 | **grove.ps1** | None — tenant selected interactively; large-site and stale thresholds (100 GB, 180 days) are editable constants in the script |
 | **tendril.ps1** | `-GroupName` / `-GroupId` — target group (one required, prompted otherwise); `-IncludeSharePoint` + `-SharePointAdminUrl` — scan tenant SP sites via PnP (capped by `-SharePointSiteLimit`, default 200); `-IncludeExchange` — scan EXO transport rules, delegations, role groups, DL nesting; `-IncludeAzureRbac` — scan every visible subscription via Az; `-OutputPath` — HTML report destination; `-NoOpen` — suppress auto-open |
+| **raven.ps1** | `-DnsOnly` + `-Domain <name[,name]>` — SPF / DKIM / DMARC only, no sign-in; `-Domain` in a full audit limits the DNS checks to those domains (default: every accepted domain except `*.onmicrosoft.com`); `-SkipDelegation` — skip the per-mailbox Full Access / Send As sweep |
 | **revenant.ps1** | `config.json` — `Revenant.DefaultDestination`; source, items, and destination also selectable interactively |
 | **archive.ps1** | `config.json` — `Archive.DefaultDestination`; profile, items, and destination also selectable interactively |
 | **tether.ps1** | None — reads HKCU OneDrive and User Shell Folders registry and enumerates Desktop / Documents / Pictures for the currently logged-on user |
@@ -1236,6 +1288,7 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **scryer.ps1** | `-OutputPath` (defaults to log directory) — `SCRYER_Report_<timestamp>.html` (unified diagnostic report) |
 | **anvil.ps1** | Log directory — `ANVIL_<timestamp>.html` (BIOS / UEFI / firmware audit report) |
 | **pyre.ps1** | Log directory — `PYRE_<timestamp>.html` (laptop battery health audit), `PYRE_battery_report_<timestamp>.xml` (parsed `powercfg` data), `PYRE_battery_report_<timestamp>.html` (full Microsoft `powercfg /batteryreport` HTML) |
+| **necropsy.ps1** | Log directory — `NECROPSY_<timestamp>.html` (crash & unexpected-reboot analysis) |
 | **codex.ps1** | Log directory — `CODEX_<timestamp>.html` (rollup index of every other report in the log directory; CODEX excludes its own outputs from the index) |
 | **cipher.ps1** | Console only by default; the Export action writes `CIPHER_Report_<timestamp>.pdf` (status + recovery keys) to `-OutputPath` or the log directory, keeping `.html` if no Edge/Chrome is available to render it |
 | **sigil.ps1** | Log directory — `SIGIL_BaselineLog_<timestamp>.csv` |
@@ -1257,6 +1310,7 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **conclave.ps1** | Log directory — `CONCLAVE_<timestamp>.html` (Teams estate audit report) |
 | **grove.ps1** | Log directory — `GROVE_<timestamp>.html` (SharePoint Online estate audit) |
 | **tendril.ps1** | Log directory — `TENDRIL_<GroupName>_<timestamp>.html` (Entra ID group dependency audit) |
+| **raven.ps1** | Log directory — `RAVEN_<timestamp>.html` (Exchange Online mailbox security audit) |
 | **revenant.ps1** | Log directory — `REVENANT_MigrationLog_<timestamp>.csv` |
 | **archive.ps1** | Script directory — `ARCHIVE_Log_<timestamp>.csv`; manifest inside ZIP |
 | **tether.ps1** | Log directory — `TETHER_<timestamp>.html` (OneDrive KFM readiness report) |

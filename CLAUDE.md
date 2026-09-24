@@ -166,7 +166,12 @@ GRIMOIRE registry integrity, license-header compliance (GPL notice and SPDX tag 
 correctly positioned in every source file), LICENSE integrity, retired tool names and filename
 prefixes, removed deprecation stubs, no locally redefined shared helpers, and the PALADIN /
 BEACON / PORTAL / CONJURE tier-mapper data tables (extracted by AST lookup rather than
-dot-sourcing, since the tools launch their main flow on import).
+dot-sourcing, since the tools launch their main flow on import). The same AST extraction covers
+the pure helpers of NECROPSY (bugcheck and dump-header parsing), RAVEN (inbox-rule, SPF and
+DMARC scoring), WARD (LAPS policy precedence) and PALADIN (platform-protection verdict); the
+root `BeforeAll` provides `Get-ToolAst` / `Get-ToolAssignmentValue` / `Get-ToolFunctionText` for
+that. A finding catalog (CONDUIT, NECROPSY, RAVEN) is tested against the codes its script
+actually raises, so a new `Add-*Finding -Code` without a catalog entry fails CI.
 
 ### Verifying on Linux / in an agent sandbox
 
@@ -360,6 +365,29 @@ CONDUIT also declines to auto-fix two policy values it reports —
 deliberate administrative decisions often pushed by domain GPO, so silently clearing them
 would fight Group Policy and mask the real configuration. They are reported with the remedy
 and left to the technician.
+
+### NECROPSY vs GARGOYLE
+
+Both read the event log, but for different questions.
+
+| Question | Reach for |
+|----------|-----------|
+| "Why does this machine keep crashing, blue-screening or rebooting?" | **NECROPSY** (bugchecks, Kernel-Power 41, WHEA, TDR, dump files — one incident per unplanned stop) |
+| "Are the services and scheduled tasks healthy, and what errors is the log throwing?" | **GARGOYLE** (service / task state and recent event-log errors in general) |
+
+NECROPSY is read-only and stops at the bugcheck code and parameters. Walking the stack to name
+the faulting driver is a debugger's job (WinDbg `!analyze -v`), and it should not grow a parser
+for that.
+
+### RAVEN vs RELIQUARY vs TENDRIL
+
+All three touch Exchange Online or Microsoft 365, at different layers.
+
+| Question | Reach for |
+|----------|-----------|
+| "Is anyone's mailbox forwarding out, hiding mail, or otherwise showing signs of compromise? Is SPF / DKIM / DMARC right?" | **RAVEN** (Exchange Online, read-only) |
+| "Who is licensed, who is unlicensed, who has MFA registered?" | **RELIQUARY** (Microsoft Graph) |
+| "What breaks if I delete this group?" — including its Exchange transport rules and delegations | **TENDRIL** |
 
 ### THRESHOLD vs AUGUR
 

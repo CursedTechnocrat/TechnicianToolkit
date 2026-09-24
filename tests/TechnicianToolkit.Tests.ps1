@@ -29,6 +29,38 @@
 BeforeAll {
     $ModulePath = Join-Path $PSScriptRoot '..\TechnicianToolkit.psm1'
     Import-Module $ModulePath -Force
+
+    # Tool helper extraction for the NECROPSY / RAVEN / WARD / PALADIN blocks.
+    # Each tool launches its main flow on import, so its tables and pure
+    # helpers are pulled out of the AST and evaluated on their own.
+    function Get-ToolAst {
+        param([string]$FileName)
+        $errs = $null
+        return [System.Management.Automation.Language.Parser]::ParseFile(
+            (Join-Path (Join-Path $PSScriptRoot '..') $FileName), [ref]$null, [ref]$errs)
+    }
+
+    function Get-ToolAssignmentValue {
+        param($Ast, [string]$VarName)
+        $assign = $Ast.FindAll({
+            param($n)
+            $n -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+            $n.Left -is [System.Management.Automation.Language.VariableExpressionAst] -and
+            $n.Left.VariablePath.UserPath -eq $VarName
+        }, $true) | Select-Object -First 1
+        if (-not $assign) { return $null }
+        return & ([scriptblock]::Create($assign.Right.Extent.Text))
+    }
+
+    function Get-ToolFunctionText {
+        param($Ast, [string]$FuncName)
+        $fn = $Ast.FindAll({
+            param($n)
+            $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq $FuncName
+        }, $true) | Select-Object -First 1
+        if (-not $fn) { return $null }
+        return $fn.Extent.Text
+    }
 }
 
 # Directories that live in the working tree but are not repository source.
@@ -990,6 +1022,356 @@ Describe 'Tier-mapper data tables' {
                 $t[$k].Blurb | Should -Not -BeNullOrEmpty -Because "role $k is explained to the customer in the report"
             }
         }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NECROPSY — the finding catalog, the bugcheck catalog, and the pure parsers
+# that turn event text, Kernel-Power fields and dump headers into incidents.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'NECROPSY crash analysis helpers' {
+    BeforeAll {
+        $ast = Get-ToolAst -FileName 'necropsy.ps1'
+        $NecropsyFindings = Get-ToolAssignmentValue -Ast $ast -VarName 'NecropsyFindings'
+        $BugCheckCatalog  = Get-ToolAssignmentValue -Ast $ast -VarName 'BugCheckCatalog'
+        $AreaGuidance     = Get-ToolAssignmentValue -Ast $ast -VarName 'AreaGuidance'
+        foreach ($name in 'ConvertTo-BugCheckKey', 'ConvertFrom-BugCheckText', 'Get-KernelPowerCause',
+                          'Get-DumpHeaderInfo', 'Get-BugCheckInfo', 'Get-NecropsyVerdict') {
+            . ([scriptblock]::Create((Get-ToolFunctionText -Ast $ast -FuncName $name)))
+        }
+        $necropsySource = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'necropsy.ps1') -Raw
+
+        function New-DumpHeader {
+            param([string]$Signature, [int]$CodeOffset, [uint32]$Code)
+            $bytes = New-Object byte[] 0x60
+            [System.Text.Encoding]::ASCII.GetBytes($Signature).CopyTo($bytes, 0)
+            [BitConverter]::GetBytes($Code).CopyTo($bytes, $CodeOffset)
+            return , $bytes
+        }
+    }
+
+    Context 'finding catalog' {
+        It 'contains every code the tool raises' {
+            $raised = [regex]::Matches($necropsySource, "Add-NecropsyFinding\s+-Code\s+'([^']+)'") | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique
+            @($raised).Count | Should -BeGreaterThan 5
+            foreach ($code in $raised) {
+                $NecropsyFindings.ContainsKey($code) | Should -BeTrue -Because "Add-NecropsyFinding raises '$code'"
+            }
+        }
+        It 'gives every finding a Severity, Kind, Title, Summary and Remedy' {
+            foreach ($code in $NecropsyFindings.Keys) {
+                $f = $NecropsyFindings[$code]
+                $f.Severity | Should -BeIn @('Error', 'Warning', 'Info') -Because "$code needs a renderable severity"
+                $f.Kind     | Should -BeIn @('Crash', 'Instability', 'Readiness') -Because "the verdict reads Kind ($code)"
+                $f.Title    | Should -Not -BeNullOrEmpty
+                $f.Summary  | Should -Not -BeNullOrEmpty
+                $f.Remedy   | Should -Not -BeNullOrEmpty
+            }
+        }
+        It 'classes crash-dump configuration gaps as Readiness, not evidence' {
+            $NecropsyFindings['DumpsDisabled'].Kind | Should -Be 'Readiness'
+            $NecropsyFindings['NoPageFile'].Kind    | Should -Be 'Readiness'
+            $NecropsyFindings['BugCheck'].Kind      | Should -Be 'Crash'
+        }
+    }
+
+    Context 'bugcheck catalog' {
+        It 'uses the canonical key form ConvertTo-BugCheckKey produces' {
+            foreach ($k in $BugCheckCatalog.Keys) {
+                $k | Should -MatchExactly '^0x[0-9A-F]+$' -Because "'$k' would never be looked up"
+                ConvertTo-BugCheckKey -Code ([Convert]::ToUInt64($k.Substring(2), 16)) | Should -BeExactly $k
+            }
+        }
+        It 'maps every entry to an area the guidance table covers' {
+            foreach ($k in $BugCheckCatalog.Keys) {
+                $AreaGuidance.Contains($BugCheckCatalog[$k].Area) | Should -BeTrue -Because "$k names area '$($BugCheckCatalog[$k].Area)'"
+            }
+        }
+        It 'covers the common field bugchecks' {
+            foreach ($k in '0xA', '0x1A', '0x3B', '0x50', '0x7E', '0x9F', '0xD1', '0xEF', '0x124', '0x133') {
+                $BugCheckCatalog.ContainsKey($k) | Should -BeTrue -Because "$k is one of the most common stop codes"
+            }
+        }
+        It 'falls back to Unknown for a code outside the catalog' {
+            (Get-BugCheckInfo -Key '0xDEAD').Area | Should -Be 'Unknown'
+        }
+    }
+
+    Context 'parsers' {
+        It 'normalises padded, short and 32-bit-overflowing codes to one key' {
+            ConvertTo-BugCheckKey -Code 0x0000009f | Should -BeExactly '0x9F'
+            ConvertTo-BugCheckKey -Code 209        | Should -BeExactly '0xD1'
+            ConvertTo-BugCheckKey -Code 3221226010 | Should -BeExactly '0xC000021A'
+        }
+        It 'reads the code and four parameters out of WER 1001 text' {
+            $r = ConvertFrom-BugCheckText -Text '0x0000009f (0x0000000000000003, 0xffffe001d5c96060, 0xfffff80000000000, 0xffffe001d8c1f010)'
+            $r.Key               | Should -BeExactly '0x9F'
+            $r.Parameters.Count  | Should -Be 4
+            $r.Parameters[0]     | Should -Be '0x0000000000000003'
+        }
+        It 'returns nothing for text with no hex code' {
+            ConvertFrom-BugCheckText -Text 'no code here' | Should -BeNullOrEmpty
+        }
+        It 'classifies Kernel-Power 41 as bugcheck, power button or power loss' {
+            Get-KernelPowerCause -BugcheckCode 209                              | Should -Be 'Bugcheck'
+            Get-KernelPowerCause -BugcheckCode 0 -PowerButtonTimestamp 1324567  | Should -Be 'PowerButton'
+            Get-KernelPowerCause -BugcheckCode 0 -PowerButtonTimestamp 0        | Should -Be 'PowerLoss'
+        }
+        It 'reads the bugcheck code from a 64-bit dump header' {
+            $h = Get-DumpHeaderInfo -Bytes (New-DumpHeader -Signature 'PAGEDU64' -CodeOffset 0x38 -Code 0xD1)
+            $h.Format | Should -Be '64-bit'
+            $h.Key    | Should -BeExactly '0xD1'
+        }
+        It 'reads the bugcheck code from a 32-bit dump header' {
+            $h = Get-DumpHeaderInfo -Bytes (New-DumpHeader -Signature 'PAGEDUMP' -CodeOffset 0x28 -Code 0x124)
+            $h.Format | Should -Be '32-bit'
+            $h.Key    | Should -BeExactly '0x124'
+        }
+        It 'rejects a file that is not a kernel dump, or is too short' {
+            (Get-DumpHeaderInfo -Bytes (New-DumpHeader -Signature 'MDMP....' -CodeOffset 0x38 -Code 1)).Format | Should -Be 'Unknown'
+            (Get-DumpHeaderInfo -Bytes (New-Object byte[] 8)).Format | Should -Be 'Unknown'
+        }
+    }
+
+    Context 'verdict' {
+        It 'reports Stable when the only findings are readiness gaps' {
+            (Get-NecropsyVerdict -FindingList @([PSCustomObject]@{ Kind = 'Readiness' })).Verdict | Should -Be 'Stable'
+            (Get-NecropsyVerdict -FindingList @()).Verdict | Should -Be 'Stable'
+        }
+        It 'reports Unstable on instability and Crashing on any crash' {
+            (Get-NecropsyVerdict -FindingList @([PSCustomObject]@{ Kind = 'Instability' })).Verdict | Should -Be 'Unstable'
+            (Get-NecropsyVerdict -FindingList @([PSCustomObject]@{ Kind = 'Instability' }, [PSCustomObject]@{ Kind = 'Crash' })).Verdict | Should -Be 'Crashing'
+        }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RAVEN — the finding catalog and the pure scorers: recipient parsing, the
+# internal/external test, inbox-rule risk, and the SPF / DMARC verdicts.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'RAVEN mailbox security helpers' {
+    BeforeAll {
+        $ast = Get-ToolAst -FileName 'raven.ps1'
+        $RavenFindings             = Get-ToolAssignmentValue -Ast $ast -VarName 'RavenFindings'
+        $HiddenFolderPattern       = Get-ToolAssignmentValue -Ast $ast -VarName 'HiddenFolderPattern'
+        $SensitiveKeywordPattern   = Get-ToolAssignmentValue -Ast $ast -VarName 'SensitiveKeywordPattern'
+        $SuspiciousRuleNamePattern = Get-ToolAssignmentValue -Ast $ast -VarName 'SuspiciousRuleNamePattern'
+        foreach ($name in 'Get-SmtpAddressFromRecipient', 'Test-ExternalAddress', 'Get-InboxRuleRisk',
+                          'Get-SpfVerdict', 'Get-DmarcVerdict', 'Get-RavenVerdict') {
+            . ([scriptblock]::Create((Get-ToolFunctionText -Ast $ast -FuncName $name)))
+        }
+        $ravenSource = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'raven.ps1') -Raw
+        $internal    = @('contoso.com', 'contoso.onmicrosoft.com')
+    }
+
+    Context 'finding catalog' {
+        It 'contains every code the tool raises, directly or through a verdict helper' {
+            # Codes reach Add-RavenFinding three ways: a literal -Code, a Code
+            # field returned by the SPF / DMARC helpers, and the inbox-rule
+            # scorer's $codes list. All three must land in the catalog.
+            $patterns = @("-Code\s+'([^']+)'", "\bCode\s*=\s*'([A-Za-z]+)'", "\`$codes\.Add\('([^']+)'\)")
+            $raised = foreach ($p in $patterns) { [regex]::Matches($ravenSource, $p) | ForEach-Object { $_.Groups[1].Value } }
+            $raised = @($raised | Where-Object { $_ } | Select-Object -Unique)
+            $raised.Count | Should -BeGreaterThan 15
+            foreach ($code in $raised) {
+                $RavenFindings.ContainsKey($code) | Should -BeTrue -Because "raven.ps1 raises '$code'"
+            }
+        }
+        It 'gives every finding a renderable Severity, Title, Summary and Remedy' {
+            foreach ($code in $RavenFindings.Keys) {
+                $RavenFindings[$code].Severity | Should -BeIn @('Error', 'Warning', 'Info')
+                $RavenFindings[$code].Title    | Should -Not -BeNullOrEmpty
+                $RavenFindings[$code].Summary  | Should -Not -BeNullOrEmpty
+                $RavenFindings[$code].Remedy   | Should -Not -BeNullOrEmpty
+            }
+        }
+        It 'ranks the compromise indicators as Errors' {
+            $RavenFindings['ExternalForwarding'].Severity       | Should -Be 'Error'
+            $RavenFindings['InboxRuleExternalForward'].Severity | Should -Be 'Error'
+            $RavenFindings['InboxRuleHidesMail'].Severity       | Should -Be 'Error'
+        }
+    }
+
+    Context 'recipient parsing' {
+        It 'extracts the SMTP address from each form Exchange returns' {
+            Get-SmtpAddressFromRecipient -Value '"Evil" [SMTP:Evil@Gmail.com]' | Should -BeExactly 'evil@gmail.com'
+            Get-SmtpAddressFromRecipient -Value 'smtp:x@example.org'             | Should -BeExactly 'x@example.org'
+            Get-SmtpAddressFromRecipient -Value 'plain@contoso.com'              | Should -BeExactly 'plain@contoso.com'
+        }
+        It 'returns nothing for an internal EX: recipient' {
+            Get-SmtpAddressFromRecipient -Value '"Boss" [EX:/o=ExchangeLabs/ou=Exchange/cn=Recipients/cn=abc]' | Should -BeNullOrEmpty
+        }
+        It 'treats accepted domains and their subdomains as internal' {
+            Test-ExternalAddress -Address 'a@contoso.com'    -InternalDomains $internal | Should -BeFalse
+            Test-ExternalAddress -Address 'a@eu.contoso.com' -InternalDomains $internal | Should -BeFalse
+            Test-ExternalAddress -Address ''                 -InternalDomains $internal | Should -BeFalse
+        }
+        It 'treats a look-alike domain as external' {
+            Test-ExternalAddress -Address 'a@notcontoso.com' -InternalDomains $internal | Should -BeTrue
+            Test-ExternalAddress -Address 'a@gmail.com'      -InternalDomains $internal | Should -BeTrue
+        }
+    }
+
+    Context 'inbox rule risk' {
+        It 'flags an external forward as an Error' {
+            $rule = [PSCustomObject]@{ Name = 'Fwd'; ForwardTo = @('"X" [SMTP:x@gmail.com]') }
+            $r = Get-InboxRuleRisk -Rule $rule -InternalDomains $internal
+            $r.Severity | Should -Be 'Error'
+            $r.Codes    | Should -Contain 'InboxRuleExternalForward'
+        }
+        It 'flags moving mail to RSS Feeds and marking it read as hiding mail' {
+            $rule = [PSCustomObject]@{ Name = 'News'; MoveToFolder = 'jane:\RSS Feeds'; MarkAsRead = $true }
+            (Get-InboxRuleRisk -Rule $rule -InternalDomains $internal).Codes | Should -Contain 'InboxRuleHidesMail'
+        }
+        It 'flags deleting mail about payments' {
+            $rule = [PSCustomObject]@{ Name = 'cleanup'; DeleteMessage = $true; SubjectOrBodyContainsWords = @('invoice') }
+            (Get-InboxRuleRisk -Rule $rule -InternalDomains $internal).Codes | Should -Contain 'InboxRuleHidesMail'
+        }
+        It 'flags a throwaway rule name as a Warning on its own' {
+            $r = Get-InboxRuleRisk -Rule ([PSCustomObject]@{ Name = '..' }) -InternalDomains $internal
+            $r.Severity | Should -Be 'Warning'
+            $r.Codes    | Should -Contain 'InboxRuleSuspicious'
+        }
+        It 'leaves an ordinary filing rule unflagged' {
+            $rule = [PSCustomObject]@{ Name = 'Newsletters'; MoveToFolder = 'Inbox\Newsletters'; ForwardTo = @('"Boss" [SMTP:boss@contoso.com]') }
+            (Get-InboxRuleRisk -Rule $rule -InternalDomains $internal).Severity | Should -BeNullOrEmpty
+        }
+    }
+
+    Context 'SPF verdict' {
+        It 'reports a missing record' { (Get-SpfVerdict -Records @('MS=ms1234')).Code | Should -Be 'SpfMissing' }
+        It 'treats two SPF records as invalid' { (Get-SpfVerdict -Records @('v=spf1 -all', 'v=spf1 ~all')).Code | Should -Be 'SpfInvalid' }
+        It 'treats +all as invalid' { (Get-SpfVerdict -Records @('v=spf1 +all')).Code | Should -Be 'SpfInvalid' }
+        It 'treats ?all and a missing all as weak' {
+            (Get-SpfVerdict -Records @('v=spf1 mx ?all')).Code | Should -Be 'SpfWeak'
+            (Get-SpfVerdict -Records @('v=spf1 mx')).Code      | Should -Be 'SpfWeak'
+        }
+        It 'accepts ~all, -all and a redirect' {
+            (Get-SpfVerdict -Records @('v=spf1 include:spf.protection.outlook.com -all')).Code | Should -BeNullOrEmpty
+            (Get-SpfVerdict -Records @('v=spf1 include:spf.protection.outlook.com ~all')).Code | Should -BeNullOrEmpty
+            (Get-SpfVerdict -Records @('v=spf1 redirect=_spf.contoso.com')).Code              | Should -BeNullOrEmpty
+        }
+        It 'notices the Microsoft 365 include' {
+            (Get-SpfVerdict -Records @('v=spf1 include:spf.protection.outlook.com -all')).IncludesM365 | Should -BeTrue
+        }
+    }
+
+    Context 'DMARC verdict' {
+        It 'reports a missing record' { (Get-DmarcVerdict -Records @()).Code | Should -Be 'DmarcMissing' }
+        It 'treats a record without a valid policy as invalid' { (Get-DmarcVerdict -Records @('v=DMARC1; rua=mailto:a@b.com')).Code | Should -Be 'DmarcInvalid' }
+        It 'treats p=none and pct below 100 as monitor-only' {
+            (Get-DmarcVerdict -Records @('v=DMARC1; p=none')).Code                | Should -Be 'DmarcMonitorOnly'
+            (Get-DmarcVerdict -Records @('v=DMARC1; p=quarantine; pct=50')).Code | Should -Be 'DmarcMonitorOnly'
+        }
+        It 'accepts an enforcing policy and does not mistake sp= for p=' {
+            (Get-DmarcVerdict -Records @('v=DMARC1; p=reject; rua=mailto:a@b.com')).Code | Should -BeNullOrEmpty
+            (Get-DmarcVerdict -Records @('v=DMARC1; sp=none; p=reject')).Policy         | Should -Be 'reject'
+        }
+    }
+
+    Context 'verdict' {
+        It 'maps the worst severity to At Risk / Review / Clean' {
+            (Get-RavenVerdict -FindingList @([PSCustomObject]@{ Severity = 'Error' })).Verdict   | Should -Be 'At Risk'
+            (Get-RavenVerdict -FindingList @([PSCustomObject]@{ Severity = 'Warning' })).Verdict | Should -Be 'Review'
+            (Get-RavenVerdict -FindingList @([PSCustomObject]@{ Severity = 'Info' })).Verdict    | Should -Be 'Clean'
+        }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WARD — LAPS policy precedence. Windows LAPS reads the first policy root that
+# sets BackupDirectory, so the order of $LapsPolicySources is behaviour.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'WARD LAPS policy resolution' {
+    BeforeAll {
+        $ast = Get-ToolAst -FileName 'ward.ps1'
+        $LapsPolicySources = Get-ToolAssignmentValue -Ast $ast -VarName 'LapsPolicySources'
+        $LapsBackupTargets = Get-ToolAssignmentValue -Ast $ast -VarName 'LapsBackupTargets'
+        . ([scriptblock]::Create((Get-ToolFunctionText -Ast $ast -FuncName 'Resolve-LapsPolicy')))
+    }
+
+    It 'lists the policy roots in Windows LAPS precedence order' {
+        @($LapsPolicySources.Keys) | Should -Be @('CSP (Intune / MDM)', 'Group Policy', 'Local configuration')
+    }
+    It 'maps the three BackupDirectory values' {
+        $LapsBackupTargets[0] | Should -Be 'Disabled'
+        $LapsBackupTargets[1] | Should -Be 'Entra ID'
+        $LapsBackupTargets[2] | Should -Be 'Active Directory'
+    }
+    It 'lets an Intune policy win over a Group Policy one' {
+        $src = [ordered]@{ 'CSP (Intune / MDM)' = @{ BackupDirectory = 1; PasswordAgeDays = 14 }; 'Group Policy' = @{ BackupDirectory = 2 }; 'Local configuration' = $null }
+        $p = Resolve-LapsPolicy -Sources $src -LegacyPolicy $null -LegacyCseInstalled $false
+        $p.Mode            | Should -Be 'Windows LAPS'
+        $p.Source          | Should -Be 'CSP (Intune / MDM)'
+        $p.BackupDirectory | Should -Be 1
+        $p.PasswordAgeDays | Should -Be 14
+    }
+    It 'skips a root that does not set BackupDirectory' {
+        $src = [ordered]@{ 'CSP (Intune / MDM)' = @{ PasswordLength = 20 }; 'Group Policy' = @{ BackupDirectory = 2 }; 'Local configuration' = $null }
+        (Resolve-LapsPolicy -Sources $src -LegacyPolicy $null -LegacyCseInstalled $false).Source | Should -Be 'Group Policy'
+    }
+    It 'reports BackupDirectory 0 as Disabled' {
+        $src = [ordered]@{ 'Group Policy' = @{ BackupDirectory = 0 } }
+        (Resolve-LapsPolicy -Sources $src -LegacyPolicy $null -LegacyCseInstalled $false).Mode | Should -Be 'Disabled'
+    }
+    It 'distinguishes legacy LAPS from Windows LAPS emulating it' {
+        $none = [ordered]@{ 'Group Policy' = $null }
+        (Resolve-LapsPolicy -Sources $none -LegacyPolicy @{ AdmPwdEnabled = 1 } -LegacyCseInstalled $true).Mode  | Should -Be 'Legacy Microsoft LAPS'
+        (Resolve-LapsPolicy -Sources $none -LegacyPolicy @{ AdmPwdEnabled = 1 } -LegacyCseInstalled $false).Mode | Should -Be 'Windows LAPS (legacy emulation)'
+    }
+    It 'reports Not configured when nothing is set' {
+        (Resolve-LapsPolicy -Sources ([ordered]@{ 'Group Policy' = $null }) -LegacyPolicy $null -LegacyCseInstalled $false).Mode | Should -Be 'Not configured'
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PALADIN — platform protection scoring. Kept separate from the AV verdict, so
+# these tests pin down its own Hardened / Partial / Not hardened boundaries.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'PALADIN platform protection' {
+    BeforeAll {
+        $ast = Get-ToolAst -FileName 'paladin.ps1'
+        $DeviceGuardServiceNames = Get-ToolAssignmentValue -Ast $ast -VarName 'DeviceGuardServiceNames'
+        $VbsStatusLabels         = Get-ToolAssignmentValue -Ast $ast -VarName 'VbsStatusLabels'
+        . ([scriptblock]::Create((Get-ToolFunctionText -Ast $ast -FuncName 'Get-PlatformProtectionVerdict')))
+
+        function Get-TestPlatformVerdict {
+            param([hashtable]$Override)
+            $p = @{
+                Available = $true; VbsStatus = 2; HvciRunning = $true; CredGuardRunning = $true
+                CredGuardSupported = $true; LsaPplConfigured = $true; DriverBlocklist = $null
+            }
+            foreach ($k in $Override.Keys) { $p[$k] = $Override[$k] }
+            return Get-PlatformProtectionVerdict @p
+        }
+    }
+
+    It 'maps the Win32_DeviceGuard service codes for Credential Guard and HVCI' {
+        $DeviceGuardServiceNames[1] | Should -Be 'Credential Guard'
+        $DeviceGuardServiceNames[2] | Should -Match 'HVCI'
+        $VbsStatusLabels[2]         | Should -Be 'Running'
+    }
+    It 'reports Hardened when every applicable protection runs' {
+        (Get-TestPlatformVerdict @{}).Verdict | Should -Be 'Hardened'
+    }
+    It 'does not count Credential Guard against an edition that cannot run it' {
+        $v = Get-TestPlatformVerdict @{ CredGuardSupported = $false; CredGuardRunning = $false }
+        $v.Verdict | Should -Be 'Hardened'
+        $v.Total   | Should -Be 2
+    }
+    It 'reports Partial when one protection is off' {
+        (Get-TestPlatformVerdict @{ LsaPplConfigured = $false }).Verdict | Should -Be 'Partial'
+    }
+    It 'reports Not hardened when nothing runs' {
+        (Get-TestPlatformVerdict @{ VbsStatus = 0; HvciRunning = $false; CredGuardRunning = $false; LsaPplConfigured = $false }).Verdict | Should -Be 'Not hardened'
+    }
+    It 'never reports Hardened when VBS state could not be read' {
+        (Get-TestPlatformVerdict @{ Available = $false; VbsStatus = $null; HvciRunning = $false; CredGuardRunning = $false }).Verdict | Should -Be 'Partial'
+    }
+    It 'warns when the vulnerable driver blocklist is explicitly disabled' {
+        $v = Get-TestPlatformVerdict @{ DriverBlocklist = 0 }
+        $v.Verdict | Should -Be 'Partial'
+        @($v.Findings | Where-Object { $_.Text -match 'blocklist' }).Count | Should -Be 1
     }
 }
 

@@ -36,6 +36,59 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   severity, summary and remedy; the Pester suite extracts it by AST lookup and asserts that
   every code the tool raises exists in the catalog and vice versa, so the two cannot drift.
 
+- **N.E.C.R.O.P.S.Y. (`necropsy.ps1`) — crash and unexpected-reboot analysis.** Registered at
+  key 60 under Diagnostics & Reporting: keys 10–19 are all taken, and Diagnostics continues at 60
+  rather than renumbering keys technicians already know. Until now nothing in the suite read a
+  minidump or a BugCheck event, so "why does this machine keep rebooting?" had no tool. GARGOYLE
+  reports event-log errors in general, but nothing tied a bugcheck code, Kernel-Power 41, WHEA
+  hardware errors and the dump files together into one answer.
+
+  Kernel-Power 41 is classified three ways: a bugcheck, a power-button press, or neither (sudden
+  power loss or a hard hang). One crash leaves a WER 1001, a Kernel-Power 41 and a dump behind, and
+  these are merged into one incident. Every bugcheck code maps to its name and the area it usually
+  implicates, and the next-steps section points at the toolkit tool that goes deeper for that area.
+  The bugcheck code is also read out of each dump file's header, so a crash whose event has rolled
+  out of the log still counts. Driver installs and Windows updates are laid on the same timeline.
+  Crash-dump readiness (dumps disabled, no page file) is reported but never downgrades the verdict
+  of a machine that has not crashed; the finding catalog's `Kind` field is what keeps the two
+  apart. Read-only. It deliberately stops at the code and parameters. Naming the faulting driver
+  needs a stack, and the report says to use WinDbg `!analyze -v` on the dumps it lists.
+
+- **R.A.V.E.N. (`raven.ps1`) — Exchange Online mailbox security audit.** Registered at key 47
+  under Cloud & Identity. RELIQUARY covered licensing and MFA registration, but nothing looked at
+  the signs of a compromised mailbox. RAVEN checks for:
+  - mailbox forwarding to addresses outside the accepted domains
+  - inbox rules that forward externally, move mail to rarely opened folders and mark it read,
+    delete mail about payments or security, or carry throwaway names
+  - outbound spam policies that allow external auto-forwarding, and transport rules that copy mail
+    out of the organisation
+  - SMTP AUTH enabled org-wide or per mailbox, and mailbox auditing switched off
+  - Full Access and Send As delegation
+  - SPF, DKIM and DMARC per domain
+
+  `-DnsOnly -Domain` runs the email-authentication checks with no sign-in and no module.
+  Read-only. It runs as the last step of RITUAL's TenantSweep recipe, and NECROPSY as the last
+  step of HealthCheck.
+
+- **WARD — LAPS status.** WARD now reports:
+  - which LAPS implementation governs the local administrator password, and from which policy
+    source (Intune/CSP, Group Policy or local configuration, highest precedence first)
+  - where the password is backed up, and whether the device is actually joined to that directory
+  - which account is managed and whether it exists
+  - whether its password has been rotated within the policy's age
+  - recent errors from the Windows LAPS operational log
+
+  A machine with enabled local administrators and no LAPS policy is flagged. Rotation is judged
+  from the managed account's `PasswordLastSet` rather than from LAPS event IDs, so the check does
+  not depend on event numbering.
+
+- **PALADIN — platform protection.** PALADIN now audits virtualization-based security, memory
+  integrity (HVCI), Credential Guard (only where the edition offers it), LSA protection
+  (`RunAsPPL`, confirmed against the Wininit boot event), the vulnerable driver blocklist, and
+  Smart App Control. The result is scored as Hardened / Partial / Not hardened, **separately from
+  the AV verdict**. Folding it in would have turned every machine without HVCI yellow and changed
+  what the existing verdict means.
+
 ### Changed
 - **CIPHER** — Enable on a drive that reads *FullyEncrypted* but holds only an unsecured
   clear key (no TPM, recovery password or other usable protector — typically OEM Device
