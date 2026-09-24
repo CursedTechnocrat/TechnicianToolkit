@@ -5,6 +5,50 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [5.1.0] - Unreleased
+
+### Added
+- **C.O.N.D.U.I.T. (`conduit.ps1`) — Windows Update connectivity diagnosis and repair.**
+  Registered at key 8 under Deployment & Onboarding, next to RESTORATION. It closes a gap
+  the suite had carried since the beginning: RESTORATION, FORGE and ANVIL all deploy through
+  the Windows Update client, and every one of them assumed that client could reach a service.
+  When it could not — the "We couldn't connect to the update service" failure — no tool in the
+  toolkit could say why. Nothing read `WUServer`/`UseWUServer`, checked the WinHTTP proxy,
+  attributed a policy to domain versus local Group Policy, or tested the Microsoft Update
+  endpoints. CONDUIT is that missing precondition check, and RESTORATION is what you run once
+  it reports Healthy.
+
+  `-Action Audit` (the default) is read-only. `-Action Repair` backs the policy key up to the
+  log directory as a `.reg` first, then removes a stale WSUS pointer, restores the Windows Time
+  service, and re-enables any update service left Disabled. `-Action ResetCache` additionally
+  renames `SoftwareDistribution` and `catroot2`. `-WhatIf` previews all of it.
+
+  The WSUS pointer is the part worth being careful about, so removal is blocked by three
+  independent conditions — the WSUS server is reachable, the device is domain-joined, or local
+  Group Policy sets it (read out of `Registry.pol`, not just the registry) — because in each
+  case removal is either destructive or futile. `-Force` overrides, and says what it overrode.
+  Two policy values CONDUIT reports but deliberately never edits:
+  `DoNotConnectToWindowsUpdateInternetLocations` and `DisableWindowsUpdateAccess` are
+  administrative decisions usually pushed by GPO, and silently clearing them would fight
+  Group Policy while hiding the real configuration.
+
+  Findings live in one `$ConduitFindings` table keyed by a stable code, each carrying a
+  severity, summary and remedy; the Pester suite extracts it by AST lookup and asserts that
+  every code the tool raises exists in the catalog and vice versa, so the two cannot drift.
+
+### Changed
+- **The suite version moves to 5.1 across all 43 scripts and the GRIMOIRE registry.**
+  The `'every registered tool reports one single version across the suite'` gate means the
+  version is one fact with 85 copies, so a new tool at its own number is not an option —
+  adding CONDUIT bumps everything. Packaging is untouched: the winget manifests and the
+  three `.csproj` files still read `5.0.0`, because those are tied to released binaries and
+  their published hashes, and they move at release time per `RELEASING.md`.
+- **`-WhatIf` is now declared by eleven tools, not ten.** CONDUIT joins REVENANT, ARCHIVE,
+  COVENANT, SIGIL, CLEANSE, CIPHER, FORGE, RESTORATION, RUNEPRESS and CONJURE in the
+  destructive set that the Pester suite enforces.
+
+---
+
 ## [5.0.0] - 2026-08-31
 
 **The release where the toolkit stops being a folder of scripts and becomes a program.**

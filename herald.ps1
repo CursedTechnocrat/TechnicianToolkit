@@ -55,7 +55,7 @@
     PS C:\> .\herald.ps1 -Server dc01.contoso.com -StaleDays 60
 
 .NOTES
-    Version : 5.0
+    Version : 5.1
 
 #>
 

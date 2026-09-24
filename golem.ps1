@@ -35,7 +35,7 @@
     PS C:\> .\golem.ps1 -Unattended      # Auto-connect and export full audit report
 
 .NOTES
-    Version : 5.0
+    Version : 5.1
 
 #>
 

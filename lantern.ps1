@@ -35,7 +35,7 @@
     PS C:\> .\lantern.ps1 -Unattended -Action Sweep # Run sweep and export HTML silently
 
 .NOTES
-    Version : 5.0
+    Version : 5.1
 
 #>
 

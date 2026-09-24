@@ -35,7 +35,7 @@
     PS C:\> .\cleanse.ps1 -WhatIf            # Preview what would be cleaned, without deleting anything
 
 .NOTES
-    Version : 5.0
+    Version : 5.1
 
 #>
 

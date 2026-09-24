@@ -114,6 +114,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | 5 | **restoration.ps1** | **R.E.S.T.O.R.A.T.I.O.N.** — Renews Every System Through Orderly Rite — Automating The Installation Of New updates | Automated Windows Update management and maintenance |
 | 6 | **hearth.ps1** | **H.E.A.R.T.H.** — Hub for Environment, Admin Runtime & Toolkit Hardening | Toolkit setup wizard — configure org name, log paths, and default values |
 | 7 | **ritual.ps1** | **R.I.T.U.A.L.** — Runs Integrated Tool Usage in Automation Loops | Workflow orchestrator — runs named recipes (Onboard, Retire, HealthCheck, SecuritySweep, NetworkSweep, TenantSweep) or custom PSD1 files, with rollup HTML report |
+| 8 | **conduit.ps1** | **C.O.N.D.U.I.T.** — Checks Or Normalises Device Update Infrastructure Targeting | Windows Update connectivity diagnosis & repair — WSUS pointer, WinHTTP proxy, policy source, update services |
 
 ### Diagnostics & Reporting
 
@@ -861,6 +862,7 @@ first four rows is needed.
 | Internet connectivity | All scripts |
 | Windows Package Manager (winget) | `conjure.ps1` (Chocolatey supported as alternative) |
 | PSWindowsUpdate module | `restoration.ps1`, `forge.ps1` (auto-installed if missing) |
+| *(none — built-in cmdlets only)* | `conduit.ps1` |
 | Entra ID account with device join permissions | `covenant.ps1` |
 | Robocopy (built into Windows) | `revenant.ps1`, `archive.ps1` |
 | BitLocker-capable Windows edition (Pro/Enterprise) | `cipher.ps1` |
@@ -955,6 +957,9 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\hearth.ps1
 
 # R.I.T.U.A.L. — Workflow orchestrator (runs recipes of other tools)
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\ritual.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/ritual.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
+# C.O.N.D.U.I.T. — Windows Update connectivity diagnosis & repair
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\conduit.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/conduit.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # ── Diagnostics & Reporting ──────────────────────────────────────────────────
 
@@ -1094,6 +1099,7 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\restoration.ps1   # Windows Update management
 .\hearth.ps1        # Toolkit setup wizard
 .\ritual.ps1        # Workflow orchestrator — runs sequences of other tools
+.\conduit.ps1       # Windows Update connectivity diagnosis and repair
 
 # Diagnostics & Reporting
 .\auspex.ps1        # System diagnostics and HTML health report
@@ -1168,6 +1174,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **restoration.ps1** | None — power settings are detected and restored automatically; `-WhatIf` lists available updates without installing |
 | **hearth.ps1** | None — all settings entered via the interactive wizard; `config.json` is the output (see config key table above) |
 | **ritual.ps1** | `-Recipe {Onboard\|Retire\|HealthCheck\|SecuritySweep\|NetworkSweep\|TenantSweep}` — named recipe to run; `-RecipeFile <path.psd1>` — custom recipe file; `-ContinueOnError` — tolerate per-step failures |
+| **conduit.ps1** | `-Action {Audit\|Repair\|ResetCache}` — Audit is read-only (default), Repair applies the safe fixes, ResetCache also rebuilds SoftwareDistribution / catroot2; `-Force` — remove the WSUS pointer even when the server is reachable, the device is domain-joined, or local Group Policy sets it; `-WhatIf` — preview every change without applying it |
 | **auspex.ps1** | `$ReportOutputPath` — folder where the HTML report is saved (defaults to script directory; accepts any local or UNC path) |
 | **ward.ps1** | None — audit runs automatically; stale threshold is 90 days (editable in script) |
 | **threshold.ps1** | None — thresholds are Warning < 15% free, Critical < 5% free (editable in script); old profile threshold is 90 days |
@@ -1219,6 +1226,7 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **restoration.ps1** | `RESTORATION_<timestamp>.log` — PowerShell transcript of the full session. Default path is `%TEMP%`; with `-Transcript` it is written to the configured log directory instead. |
 | **hearth.ps1** | Console only — settings persisted to `config.json` |
 | **ritual.ps1** | Log directory — `RITUAL_<timestamp>.html` (rollup report with per-step status, duration, and links to each child report) |
+| **conduit.ps1** | Log directory — `CONDUIT_<timestamp>.html` (findings, policy values, endpoint reachability, service state, and every action taken). `Repair` also writes `CONDUIT_WUPolicy_<timestamp>.reg`, a backup of the WindowsUpdate policy key, to the same directory. |
 | **auspex.ps1** | Log directory — `AUSPEX_<timestamp>.html` (dark-themed HTML report) |
 | **ward.ps1** | Log directory — `WARD_<timestamp>.html` (dark-themed HTML report) |
 | **threshold.ps1** | Log directory — `THRESHOLD_<timestamp>.html` (dark-themed HTML report) |

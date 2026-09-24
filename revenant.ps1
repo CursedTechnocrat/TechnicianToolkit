@@ -36,7 +36,7 @@
     PS C:\> .\revenant.ps1 -Unattended -ArchiveZip "D:\Backup\John_20260101.zip" -DestPath "C:\Users\John"
 
 .NOTES
-    Version : 5.0
+    Version : 5.1
 
 #>
 
