@@ -5,6 +5,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+- **CIPHER** — Enable on a drive that reads *FullyEncrypted* but holds only an unsecured
+  clear key (no TPM, recovery password or other usable protector — typically OEM Device
+  Encryption left "waiting for activation") now decrypts the drive, waits for decryption to
+  finish, and re-encrypts it through the normal enable path with a fresh recovery password.
+  It previously tried to add a recovery password to the volume in place and then strip the
+  clear key, which failed in the field: the protector did not persist, or manage-bde rejected
+  the enable with `0x8031001D`. Decrypting loses no protection, since the clear key already
+  leaves the data readable. The technician confirms before decryption starts, and `-WhatIf`
+  previews the decrypt and the re-encryption. Suspended drives that do carry a protector are
+  still simply resumed.
+
 ## [5.0.0] - 2026-08-31
 
 **The release where the toolkit stops being a folder of scripts and becomes a program.**
