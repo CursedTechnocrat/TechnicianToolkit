@@ -659,6 +659,33 @@ Describe 'No duplicated helper functions' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Generic collections built with New-Object — under PowerShell 7.4, @() over a
+# List[object] created by New-Object throws "Argument types do not match"; the
+# same list from ::new() does not. Windows PowerShell 5.1 is unaffected, so the
+# primary path never showed it, but the desktop app hosts PowerShell 7 -- and
+# HERALD lost its report to it twice before the cause was known. ::new() works
+# on 5.1 too, so the gate bans the New-Object form for every generic collection
+# rather than tracking which variables later meet an @(). This test file is
+# exempt: the ConvertTo-HeraldArray tests build the New-Object form on purpose.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'No generic collections built with New-Object' {
+    $collectionCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Include '*.ps1', '*.psm1' -File -Recurse |
+        Where-Object { $_.FullName -notmatch $NonSourceDir -and $_.Name -ne 'TechnicianToolkit.Tests.ps1' } |
+        ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
+
+    It '<Name> builds generic collections with ::new(), not New-Object' -ForEach $collectionCases {
+        $ast = [System.Management.Automation.Language.Parser]::ParseFile($FullName, [ref]$null, [ref]$null)
+        $hits = $ast.FindAll({
+            param($n)
+            $n -is [System.Management.Automation.Language.CommandAst] -and
+            $n.GetCommandName() -eq 'New-Object' -and
+            $n.Extent.Text -match 'System\.Collections\.Generic\.'
+        }, $true) | ForEach-Object { "line $($_.Extent.StartLineNumber): $($_.Extent.Text)" }
+        $hits -join '; ' | Should -BeNullOrEmpty -Because 'use [System.Collections.Generic.List[object]]::new() -- @() over the New-Object form throws on PowerShell 7.4'
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Tier-mapper data tables — the verdict logic in PALADIN / BEACON / PORTAL
 # leans on small reference hashtables (and one tiny helper for ASR action
 # codes). This block extracts those tables via AST lookup and asserts on
@@ -1692,7 +1719,8 @@ Describe 'ConvertTo-HeraldArray' {
     }
 
     It 'converts a List[object] built with New-Object' {
-        # The exact construction the group summary uses.
+        # The construction the group summary used before 5.1. HERALD now builds
+        # its lists with ::new(), but the helper must still accept this form.
         $list = New-Object System.Collections.Generic.List[object]
         $list.Add([PSCustomObject]@{ Name = 'G1' })
         $list.Add([PSCustomObject]@{ Name = 'G2' })

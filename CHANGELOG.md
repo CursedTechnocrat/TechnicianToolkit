@@ -89,6 +89,27 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the AV verdict**. Folding it in would have turned every machine without HVCI yellow and changed
   what the existing verdict means.
 
+### Fixed
+- **BEACON, PORTAL and HERALD failed under PowerShell 7.4 — generic collections are now built
+  with `::new()`.** Under PowerShell 7.4 (confirmed on 7.4.6), `@($x)` throws *"Argument types
+  do not match"* when `$x` is a `List[object]` created with `New-Object`. The same list created
+  with `[System.Collections.Generic.List[object]]::new()` is fine, and so is a pipeline such as
+  `@($x | Where-Object {...})`. Windows PowerShell 5.1 is unaffected, which is why the primary
+  path never showed it — but the desktop app hosts PowerShell 7.
+  - BEACON's Wi-Fi profile collector and PORTAL's three VPN collectors return `@($rows)` over
+    exactly such a list, so each threw inside the app.
+  - It is also the root cause behind HERALD's report being "lost twice to a
+    System.ArgumentException" with no useful stack frame (3.8.1). That was worked around by
+    dropping an `@($groupSummary)` without ever being explained; the comment there now names
+    the cause.
+
+  All 17 generic collections created with `New-Object` across BEACON, PORTAL, HERALD, CONDUIT
+  and RUNEPRESS now use `::new()`. `::new()` works on 5.1 too. Only `List[object]` triggers the
+  fault, but converting the `List[string]` ones as well keeps the rule simple enough to gate: the
+  new Pester test `'No generic collections built with New-Object'` fails on any `New-Object`
+  command naming a `System.Collections.Generic` type. It inspects the AST rather than the text,
+  so comments that mention the form don't trip it.
+
 ### Changed
 - **CIPHER** — Enable on a drive that reads *FullyEncrypted* but holds only an unsecured
   clear key (no TPM, recovery password or other usable protector — typically OEM Device

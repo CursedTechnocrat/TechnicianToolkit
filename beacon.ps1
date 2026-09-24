@@ -176,7 +176,7 @@ function Get-WlanProfileList {
     $raw = & netsh wlan show profiles 2>$null
     if (-not $raw) { return @() }
 
-    $names = New-Object 'System.Collections.Generic.List[string]'
+    $names = [System.Collections.Generic.List[string]]::new()
     foreach ($line in $raw) {
         if ($line -match '^\s+[^:]+:\s+(.+?)\s*$') {
             $candidate = $matches[1].Trim()
@@ -293,7 +293,7 @@ function Get-WlanProfiles {
     $rootTemp = Join-Path ([System.IO.Path]::GetTempPath()) ("TK-BEACON-" + [guid]::NewGuid().ToString('N'))
     $null = New-Item -ItemType Directory -Path $rootTemp -Force -ErrorAction SilentlyContinue
 
-    $rows = New-Object 'System.Collections.Generic.List[object]'
+    $rows = [System.Collections.Generic.List[object]]::new()
     try {
         foreach ($n in $names) {
             $sub = Join-Path $rootTemp ([guid]::NewGuid().ToString('N'))
@@ -355,8 +355,8 @@ function Test-IsWeakProfile {
 function Get-BeaconVerdict {
     param([array]$Adapters, [array]$Profiles)
 
-    $issues = New-Object 'System.Collections.Generic.List[string]'
-    $warns  = New-Object 'System.Collections.Generic.List[string]'
+    $issues = [System.Collections.Generic.List[string]]::new()
+    $warns  = [System.Collections.Generic.List[string]]::new()
 
     if ($Adapters.Count -eq 0) {
         # Desktops without Wi-Fi are a normal state, not a finding.
