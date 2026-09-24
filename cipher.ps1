@@ -40,7 +40,7 @@
     PS C:\> .\cipher.ps1 -Unattended -Action Export -OutputPath D:\Reports
 
 .NOTES
-    Version : 5.0
+    Version : 5.1
 
     Credits : Thanks to Steve the Killer for help and letting me use his
               script BERET: https://tools.thekiller.net/killer-scripts
@@ -286,6 +286,35 @@ function Test-ProtectionOn {
     return $false
 }
 
+# Blocks until a volume that has just been handed to Disable-BitLocker reports
+# FullyDecrypted, showing progress along the way. Returns the refreshed volume, or
+# $null if decryption never got going (still FullyEncrypted after ~30 s) or the
+# volume could not be read. There is deliberately no overall timeout: decryption
+# time scales with the drive, and Ctrl+C is safe — decryption carries on in the
+# background and Enable can be re-run once the drive is FullyDecrypted.
+function Wait-DriveDecryption {
+    param([Parameter(Mandatory)][string]$MountPoint)
+
+    $started = Get-Date
+    try {
+        while ($true) {
+            $v = Get-BitLockerVolume -MountPoint $MountPoint -ErrorAction SilentlyContinue
+            if (-not $v) { return $null }
+            if ($v.VolumeStatus -eq 'FullyDecrypted') { return $v }
+
+            if ($v.VolumeStatus -ne 'DecryptionInProgress' -and ((Get-Date) - $started).TotalSeconds -gt 30) {
+                return $null
+            }
+
+            $done = [math]::Max(0, [math]::Min(100, 100 - [int]$v.EncryptionPercentage))
+            Write-Progress -Activity "Decrypting $MountPoint" -Status "$done% decrypted  (Ctrl+C to stop waiting; decryption continues)" -PercentComplete $done
+            Start-Sleep -Seconds 5
+        }
+    } finally {
+        Write-Progress -Activity "Decrypting $MountPoint" -Completed
+    }
+}
+
 # Starts encryption on a not-yet-encrypted volume, working around two snags seen
 # in the field:
 #   - Virtual machines, where the pre-encryption hardware test and used-space-only
@@ -396,75 +425,83 @@ function Enable-DriveEncryption {
         #   (a) the volume is suspended / already carries a usable protector (TPM,
         #       recovery password, etc.) — it just needs RESUMING, and adding another
         #       recovery password would only pile up duplicates;
-        #   (b) the only thing holding the volume key is an unsecured clear key — a
-        #       usable protector must be added before protection can be enabled.
+        #   (b) the only thing holding the volume key is an unsecured clear key —
+        #       typically an OEM Device Encryption volume left "waiting for
+        #       activation". Bolting a protector onto that state and then removing the
+        #       clear key is unreliable (the recovery password fails to persist, or
+        #       manage-bde rejects the enable with 0x8031001D), so instead decrypt the
+        #       volume and fall through to a clean re-encryption below. The data is
+        #       already readable by anyone holding the drive while the clear key is
+        #       present, so decrypting costs time but no protection.
         $usableTypes  = @('Tpm','TpmPin','TpmStartupKey','TpmPinStartupKey','RecoveryPassword','Password')
         $hasProtector = [bool]($vol.KeyProtector | Where-Object { $_.KeyProtectorType -in $usableTypes })
 
-        if ($WhatIf) {
-            Write-Host ""
-            if ($hasProtector) {
+        if ($hasProtector) {
+            if ($WhatIf) {
+                Write-Host ""
                 Write-Host "  [~] Would resume BitLocker protection on $($vol.MountPoint) (suspended; protectors already present)." -ForegroundColor Cyan
-            } else {
-                Write-Host "  [~] Would add a recovery password to $($vol.MountPoint), then enable protection." -ForegroundColor Cyan
+                Write-Host ""
+                return
             }
+
+            Write-Host ""
+            Write-Host "  [!!] BitLocker is suspended (protection off) but usable key protectors exist." -ForegroundColor $ColorSchema.Warning
+            Write-Host "  [*] Resuming BitLocker protection..." -ForegroundColor $ColorSchema.Progress
+
+            if (Enable-DriveProtection -MountPoint $vol.MountPoint) {
+                Write-Host "  [+] BitLocker protection is now ON." -ForegroundColor $ColorSchema.Success
+            } else {
+                Write-Host "  [-] Failed to activate protection on $($vol.MountPoint)." -ForegroundColor $ColorSchema.Error
+                if ($script:LastEnableOutput) {
+                    Write-Host "      manage-bde (exit $($script:LastEnableExit)): $($script:LastEnableOutput)" -ForegroundColor $ColorSchema.Warning
+                }
+                Write-Host "      Run manually to inspect: manage-bde -protectors -enable $($vol.MountPoint)" -ForegroundColor $ColorSchema.Warning
+                Write-TKError -ScriptName 'cipher' -Message "Activate protection failed on '$($vol.MountPoint)' (manage-bde exit $($script:LastEnableExit)): $($script:LastEnableOutput)" -Category 'BitLocker Enable'
+            }
+
             Write-Host ""
             return
         }
 
-        if ($hasProtector) {
+        Write-Host ""
+        Write-Host "  [!!] No usable key protector found — only an unsecured (clear) key is present." -ForegroundColor $ColorSchema.Warning
+        Write-Host "       The drive will be decrypted, then re-encrypted with a fresh recovery password." -ForegroundColor $ColorSchema.Warning
+
+        if ($WhatIf) {
             Write-Host ""
-            Write-Host "  [!!] BitLocker is suspended (protection off) but usable key protectors exist." -ForegroundColor $ColorSchema.Warning
-            Write-Host "  [*] Resuming BitLocker protection..." -ForegroundColor $ColorSchema.Progress
+            Write-Host "  [~] Would decrypt $($vol.MountPoint) and wait for decryption to finish." -ForegroundColor Cyan
         } else {
+            Write-Host "       Decryption can take a while; the drive stays usable meanwhile." -ForegroundColor $ColorSchema.Warning
             Write-Host ""
-            Write-Host "  [!!] No usable key protector found — only an unsecured (clear) key is present." -ForegroundColor $ColorSchema.Warning
-            Write-Host "  [*] Adding a recovery password before enabling protection..." -ForegroundColor $ColorSchema.Progress
-            try {
-                $null = Add-BitLockerKeyProtector -MountPoint $vol.MountPoint -RecoveryPasswordProtector -ErrorAction Stop
-                # Re-query to confirm the protector actually persisted to the volume —
-                # the returned object can report success even when a policy blocks the commit.
-                $vol    = Get-BitLockerVolume -MountPoint $vol.MountPoint -ErrorAction Stop
-                $newKey = $vol.KeyProtector | Where-Object { $_.KeyProtectorType -eq 'RecoveryPassword' } | Select-Object -Last 1
-                if ($newKey) {
-                    Write-Host ""
-                    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Warning
-                    Write-Host "  RECOVERY KEY — SAVE THIS BEFORE CONTINUING" -ForegroundColor $ColorSchema.Warning
-                    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Warning
-                    Write-Host ""
-                    Write-Host "  ID  : $($newKey.KeyProtectorId)" -ForegroundColor $ColorSchema.Warning
-                    Write-Host "  Key : $($newKey.RecoveryPassword)" -ForegroundColor $ColorSchema.Warning
-                    Write-Host ""
-                    Read-Host "  Press Enter once you have saved the recovery key"
-                    Write-Host "  [+] Recovery key added successfully." -ForegroundColor $ColorSchema.Success
-                } else {
-                    Write-Host "  [-] The recovery password did not persist to the volume — cannot enable protection." -ForegroundColor $ColorSchema.Error
-                    Write-Host "      This usually means a policy requires the key be escrowed first, or the drive is" -ForegroundColor $ColorSchema.Warning
-                    Write-Host "      in Windows Device Encryption 'waiting' state. Resolve that, then retry." -ForegroundColor $ColorSchema.Warning
-                    Write-TKError -ScriptName 'cipher' -Message "Recovery password did not persist on '$($vol.MountPoint)' after Add-BitLockerKeyProtector." -Category 'BitLocker Enable'
-                    Write-Host ""
-                    return
-                }
-            } catch {
-                Write-Host "  [-] Failed to add recovery key: $_" -ForegroundColor $ColorSchema.Error
+            Write-Host -NoNewline "  Decrypt and re-encrypt $($vol.MountPoint)? (Y/N): " -ForegroundColor $ColorSchema.Warning
+            if ((Read-Host).Trim().ToUpper() -ne 'Y') {
+                Write-Host "  [*] Operation cancelled." -ForegroundColor $ColorSchema.Info
                 Write-Host ""
                 return
             }
-        }
 
-        if (Enable-DriveProtection -MountPoint $vol.MountPoint) {
-            Write-Host "  [+] BitLocker protection is now ON." -ForegroundColor $ColorSchema.Success
-        } else {
-            Write-Host "  [-] Failed to activate protection on $($vol.MountPoint)." -ForegroundColor $ColorSchema.Error
-            if ($script:LastEnableOutput) {
-                Write-Host "      manage-bde (exit $($script:LastEnableExit)): $($script:LastEnableOutput)" -ForegroundColor $ColorSchema.Warning
+            try {
+                Write-Host ""
+                Write-Host "  [*] Starting decryption on $($vol.MountPoint)..." -ForegroundColor $ColorSchema.Progress
+                Disable-BitLocker -MountPoint $vol.MountPoint -ErrorAction Stop | Out-Null
+            } catch {
+                Write-Host "  [-] Failed to start decryption: $_" -ForegroundColor $ColorSchema.Error
+                Write-TKError -ScriptName 'cipher' -Message "Disable-BitLocker (clear-key re-encrypt) failed on '$($vol.MountPoint)': $($_.Exception.Message)" -Category 'BitLocker Enable'
+                Write-Host ""
+                return
             }
-            Write-Host "      Run manually to inspect: manage-bde -protectors -enable $($vol.MountPoint)" -ForegroundColor $ColorSchema.Warning
-            Write-TKError -ScriptName 'cipher' -Message "Activate protection failed on '$($vol.MountPoint)' (manage-bde exit $($script:LastEnableExit)): $($script:LastEnableOutput)" -Category 'BitLocker Enable'
-        }
 
-        Write-Host ""
-        return
+            $vol = Wait-DriveDecryption -MountPoint $vol.MountPoint
+            if (-not $vol) {
+                Write-Host "  [-] Decryption did not complete — cannot re-encrypt yet." -ForegroundColor $ColorSchema.Error
+                Write-Host "      Once the drive shows FullyDecrypted, run Enable again." -ForegroundColor $ColorSchema.Warning
+                Write-TKError -ScriptName 'cipher' -Message "Decryption did not complete on drive before clear-key re-encrypt." -Category 'BitLocker Enable'
+                Write-Host ""
+                return
+            }
+            Write-Host "  [+] Decryption complete. Re-encrypting..." -ForegroundColor $ColorSchema.Success
+        }
+        # Fall through to the fresh-encryption path below.
     }
 
     Write-Host ""
