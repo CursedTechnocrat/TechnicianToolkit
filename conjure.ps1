@@ -264,41 +264,107 @@ function Test-ChocolateyAvailable {
 # WINGET CHECK
 # ===========================
 
+# winget ships inside the App Installer package (Microsoft.DesktopAppInstaller).
+# Its `winget` command is an app-execution alias in the per-user WindowsApps
+# folder, so a session without that alias on PATH — SYSTEM under an RMM agent,
+# or any session right after the package was registered — cannot find it by
+# name even when it is installed. Fall back to the package's own winget.exe and
+# put its folder on PATH, which keeps every `& winget` call below working.
+function Resolve-WingetCommand {
+    if (Get-Command winget -ErrorAction SilentlyContinue) { return $true }
+
+    $appsRoot = Join-Path $env:ProgramFiles 'WindowsApps'
+    $exe = Get-ChildItem -Path $appsRoot -Filter 'Microsoft.DesktopAppInstaller_*_8wekyb3d8bbwe' -Directory -ErrorAction SilentlyContinue |
+        Sort-Object Name -Descending |
+        ForEach-Object { Join-Path $_.FullName 'winget.exe' } |
+        Where-Object { Test-Path $_ } |
+        Select-Object -First 1
+    if ($exe) {
+        $env:Path = (Split-Path $exe -Parent) + ';' + $env:Path
+        return $true
+    }
+    return $false
+}
+
+function Get-WingetVersion {
+    if (-not (Resolve-WingetCommand)) { return $null }
+    try {
+        $version = & winget --version 2>$null
+        if ($LASTEXITCODE -eq 0) { return "$version".Trim() }
+    }
+    catch {
+        # winget present but not runnable
+    }
+    return $null
+}
+
+# Installing winget means installing App Installer. https://aka.ms/getwinget is
+# the .msixbundle package, not a script — the previous code saved it as
+# GetWinget.ps1 and executed it, which could never work. Microsoft's documented
+# bootstrap is Repair-WinGetPackageManager from the Microsoft.WinGet.Client
+# module, which also pulls in the VCLibs and UI.Xaml dependencies the bundle
+# needs. Where PSGallery is unreachable, registering the bundle directly still
+# succeeds on machines that already carry those dependencies.
+function Install-Winget {
+    $progressPreference = 'SilentlyContinue'
+    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+
+    try {
+        Write-Host "[*] Bootstrapping winget with Repair-WinGetPackageManager..." -ForegroundColor $Colors.Info
+        $nuget = Get-PackageProvider -Name NuGet -ListAvailable -ErrorAction SilentlyContinue
+        if ($null -eq $nuget -or ($nuget | Measure-Object -Property Version -Maximum).Maximum -lt [Version]'2.8.5.201') {
+            Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Confirm:$false | Out-Null
+        }
+        Install-Module -Name Microsoft.WinGet.Client -Repository PSGallery -Force -Confirm:$false -ErrorAction Stop
+        Import-Module Microsoft.WinGet.Client -ErrorAction Stop
+        Repair-WinGetPackageManager -AllUsers -Force -Latest -ErrorAction Stop | Out-Null
+        if (Get-WingetVersion) { return $true }
+    }
+    catch {
+        Write-Host "[!!] Repair-WinGetPackageManager failed: $($_.Exception.Message)" -ForegroundColor $Colors.Warning
+    }
+
+    $bundle = Join-Path $env:TEMP 'Microsoft.DesktopAppInstaller.msixbundle'
+    try {
+        Write-Host "[*] Falling back to the App Installer package from aka.ms/getwinget..." -ForegroundColor $Colors.Info
+        Invoke-WebRequest -Uri 'https://aka.ms/getwinget' -OutFile $bundle -UseBasicParsing -ErrorAction Stop
+        # Provisioning stages the package machine-wide, which is the only route
+        # that works under SYSTEM; Add-AppxPackage registers it for this user.
+        if (Test-IsAdmin) {
+            try { Add-AppxProvisionedPackage -Online -PackagePath $bundle -SkipLicense -ErrorAction Stop | Out-Null }
+            catch { Write-Host "[!!] Provisioning App Installer failed: $($_.Exception.Message)" -ForegroundColor $Colors.Warning }
+        }
+        if (-not (Get-WingetVersion)) { Add-AppxPackage -Path $bundle -ErrorAction Stop }
+    }
+    catch {
+        Write-Host "[!!] App Installer package install failed: $($_.Exception.Message)" -ForegroundColor $Colors.Warning
+    }
+    finally {
+        Remove-Item $bundle -Force -ErrorAction SilentlyContinue
+    }
+
+    return [bool](Get-WingetVersion)
+}
+
 function Test-WingetAvailable {
-    try {
-        $wingetVersion = & winget --version 2>$null
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "[OK] Winget is available. Version: $wingetVersion" -ForegroundColor $Colors.Success
-            return $true
-        }
+    $wingetVersion = Get-WingetVersion
+    if ($wingetVersion) {
+        Write-Host "[OK] Winget is available. Version: $wingetVersion" -ForegroundColor $Colors.Success
+        return $true
     }
-    catch {
-        # Winget not found
+
+    if ($WhatIf) {
+        Write-Host "[~] WhatIf: winget is not installed — would install App Installer. Nothing was changed." -ForegroundColor $Colors.Accent
+        return $true
     }
-    
+
     Write-Host "[!!] Winget is not installed. Installing now..." -ForegroundColor $Colors.Warning
-    
-    try {
-        $progressPreference = 'SilentlyContinue'
-        
-        # Download and execute Winget installer
-        $wingetUrl = "https://aka.ms/getwinget"
-        $tempFile = Join-Path $env:TEMP "GetWinget.ps1"
-        
-        (New-Object System.Net.WebClient).DownloadFile($wingetUrl, $tempFile)
-        
-        if (Test-Path $tempFile) {
-            & $tempFile
-            Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
-            
-            Write-Host "[OK] Winget installed successfully" -ForegroundColor $Colors.Success
-            return $true
-        }
+    if (Install-Winget) {
+        Write-Host "[OK] Winget installed successfully. Version: $(Get-WingetVersion)" -ForegroundColor $Colors.Success
+        return $true
     }
-    catch {
-        Write-Host "[ERROR] Failed to install Winget: $($_.Exception.Message)" -ForegroundColor $Colors.Error
-    }
-    
+
+    Write-Host "[ERROR] Failed to install Winget. Install App Installer from the Microsoft Store, then re-run." -ForegroundColor $Colors.Error
     return $false
 }
 
