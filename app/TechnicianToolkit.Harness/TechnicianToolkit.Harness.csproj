@@ -20,7 +20,7 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <AssemblyName>TechnicianToolkit.Harness</AssemblyName>
     <RootNamespace>TechnicianToolkit.Harness</RootNamespace>
-    <Version>5.0.0</Version>
+    <Version>5.1.0</Version>
     <Product>TechnicianToolkit</Product>
     <Description>Headless console harness for the Technician Toolkit engine</Description>
     <Authors>John Joseph Bejarana (CursedTechnocrat)</Authors>

@@ -5,7 +5,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [5.1.0] - Unreleased
+## [5.1.0] - 2026-09-24
 
 ### Added
 - **C.O.N.D.U.I.T. (`conduit.ps1`) — Windows Update connectivity diagnosis and repair.**
@@ -122,12 +122,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   previews the decrypt and the re-encryption. Suspended drives that do carry a protector are
   still simply resumed.
 
-- **The suite version moves to 5.1 across all 43 scripts and the GRIMOIRE registry.**
+- **The suite version moves to 5.1 across all 45 scripts and the GRIMOIRE registry.**
   The `'every registered tool reports one single version across the suite'` gate means the
-  version is one fact with 85 copies, so a new tool at its own number is not an option —
-  adding CONDUIT bumps everything. Packaging is untouched: the winget manifests and the
-  three `.csproj` files still read `5.0.0`, because those are tied to released binaries and
-  their published hashes, and they move at release time per `RELEASING.md`.
+  version is one fact with 89 copies, so a new tool at its own number is not an option —
+  adding CONDUIT bumped everything, and NECROPSY and RAVEN arrived at 5.1 with it. The three
+  `.csproj` files move to `5.1.0` with this release, so the application reports the same
+  version as the scripts it drives. The winget manifests stay at `5.0.0` until the 5.1.0
+  binaries are published: they carry the release files' hashes, so they are regenerated
+  last, per `RELEASING.md`.
 - **`-WhatIf` is now declared by eleven tools, not ten.** CONDUIT joins REVENANT, ARCHIVE,
   COVENANT, SIGIL, CLEANSE, CIPHER, FORGE, RESTORATION, RUNEPRESS and CONJURE in the
   destructive set that the Pester suite enforces.
