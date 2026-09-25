@@ -24,19 +24,28 @@
     BitLocker Drive Encryption Tool for PowerShell 5.1+
 
 .DESCRIPTION
-    Manages BitLocker drive encryption across all volumes on the local machine.
-    Check encryption status, enable or disable encryption, back up recovery keys
-    to Active Directory or Entra ID, view recovery key IDs, suspend or resume
-    BitLocker protection, and export a status + recovery-key report to PDF.
+    Manages BitLocker on the local machine: show drive status, enable or
+    disable encryption, suspend or resume protection, show recovery keys, back
+    them up to Active Directory or Entra ID, and export a status + recovery-key
+    report.
+
+    Every change goes through manage-bde.exe and every read through the
+    Win32_EncryptableVolume CIM class. Neither depends on the BitLocker
+    PowerShell module, so the tool behaves the same under Windows PowerShell
+    5.1 and PowerShell 7.
+
+    Enable uses one protector set: TPM + recovery password on the operating
+    system drive, recovery password + auto-unlock on any other drive.
 
 .USAGE
     PS C:\> .\cipher.ps1                                           # Must be run as Administrator
     PS C:\> .\cipher.ps1 -WhatIf                                   # Preview actions without making changes
     PS C:\> .\cipher.ps1 -Unattended -Action Status                # Show drive status and exit
-    PS C:\> .\cipher.ps1 -Unattended -Action Disable -Drive C      # Disable BitLocker on C:
-    PS C:\> .\cipher.ps1 -Unattended -Action Suspend -Drive C      # Suspend BitLocker on C:
+    PS C:\> .\cipher.ps1 -Unattended -Action Enable -Drive C       # Encrypt C: (TPM + recovery password)
+    PS C:\> .\cipher.ps1 -Unattended -Action Disable -Drive C      # Decrypt C:
+    PS C:\> .\cipher.ps1 -Unattended -Action Suspend -Drive C      # Suspend BitLocker on C: for one reboot
     PS C:\> .\cipher.ps1 -Unattended -Action BackupAD -Drive C     # Backup recovery key to AD
-    PS C:\> .\cipher.ps1 -Unattended -Action Export                # Export status + recovery keys to PDF
+    PS C:\> .\cipher.ps1 -Unattended -Action Export                # Export status + recovery keys to HTML
     PS C:\> .\cipher.ps1 -Unattended -Action Export -OutputPath D:\Reports
 
 .NOTES
@@ -57,10 +66,6 @@ param(
     [string]$OutputPath,
     [switch]$Transcript
 )
-
-# ─────────────────────────────────────────────────────────────────────────────
-# ADMIN CHECK
-# ─────────────────────────────────────────────────────────────────────────────
 
 # ===========================
 # SHARED MODULE BOOTSTRAP
@@ -109,692 +114,315 @@ $ColorSchema = @{
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# BANNER
+# BITLOCKER PLUMBING
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Show-CipherBanner {
-    if (-not $Unattended) { Clear-Host }
-    Write-Host @"
+# Sysnative reaches the real System32 from a 32-bit host, where manage-bde
+# would otherwise not be found at all.
+$ManageBde = Join-Path $env:windir 'Sysnative\manage-bde.exe'
+if (-not (Test-Path $ManageBde)) { $ManageBde = Join-Path $env:windir 'System32\manage-bde.exe' }
 
-   ██████╗██╗██████╗ ██╗  ██╗███████╗██████╗
-  ██╔════╝██║██╔══██╗██║  ██║██╔════╝██╔══██╗
-  ██║     ██║██████╔╝███████║█████╗  ██████╔╝
-  ██║     ██║██╔═══╝ ██╔══██║██╔══╝  ██╔══██╗
-  ╚██████╗██║██║     ██║  ██║███████╗██║  ██║
-   ╚═════╝╚═╝╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
+$BdeNamespace = 'root/CIMV2/Security/MicrosoftVolumeEncryption'
 
-"@ -ForegroundColor Cyan
-    Write-Host "    C.I.P.H.E.R. — Configures & Implements Policy-based Hardware Encryption & Recovery" -ForegroundColor Cyan
-    Write-Host "    BitLocker Drive Encryption Management Tool" -ForegroundColor Cyan
-    Write-Host ""
+$ConversionStatusNames = @{
+    0 = 'FullyDecrypted'; 1 = 'FullyEncrypted'; 2 = 'EncryptionInProgress'
+    3 = 'DecryptionInProgress'; 4 = 'EncryptionPaused'; 5 = 'DecryptionPaused'
+}
+$ProtectorTypeNames = @{
+    0 = 'Unknown'; 1 = 'Tpm'; 2 = 'ExternalKey'; 3 = 'RecoveryPassword'; 4 = 'TpmPin'
+    5 = 'TpmStartupKey'; 6 = 'TpmPinStartupKey'; 7 = 'PublicKey'; 8 = 'Password'
+    9 = 'TpmNetworkKey'; 10 = 'AdAccountOrGroup'
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# DRIVE STATUS DISPLAY
-# ─────────────────────────────────────────────────────────────────────────────
+# Runs manage-bde, echoes its output, and returns $true on exit code 0. Under
+# -WhatIf it only prints the command. Every change the tool makes goes through
+# here.
+function Invoke-ManageBde {
+    param([Parameter(Mandatory)][string[]]$Arguments)
 
-function Show-DriveStatus {
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
-    Write-Host "  DRIVE ENCRYPTION STATUS" -ForegroundColor $ColorSchema.Header
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
-    Write-Host ""
-
-    try {
-        $volumes = Get-BitLockerVolume -ErrorAction Stop
-
-        foreach ($vol in $volumes) {
-            $statusColor = switch ($vol.VolumeStatus) {
-                "FullyEncrypted"       { $ColorSchema.Success  }
-                "FullyDecrypted"       { $ColorSchema.Warning  }
-                "EncryptionInProgress" { $ColorSchema.Progress }
-                "DecryptionInProgress" { $ColorSchema.Progress }
-                default                { $ColorSchema.Info     }
-            }
-            $protColor = if ($vol.ProtectionStatus -eq "On") { $ColorSchema.Success } else { $ColorSchema.Warning }
-            $keyTypes  = if ($vol.KeyProtector.Count -gt 0) {
-                ($vol.KeyProtector | ForEach-Object { $_.KeyProtectorType }) -join ', '
-            } else { "None" }
-
-            Write-Host "  Drive $($vol.MountPoint)" -ForegroundColor $ColorSchema.Header
-            Write-Host ("    Status      : {0}" -f $vol.VolumeStatus) -ForegroundColor $statusColor
-            Write-Host ("    Protection  : {0}" -f $vol.ProtectionStatus) -ForegroundColor $protColor
-            Write-Host ("    Encryption  : {0}%" -f $vol.EncryptionPercentage) -ForegroundColor $ColorSchema.Info
-            Write-Host ("    Key Types   : {0}" -f $keyTypes) -ForegroundColor $ColorSchema.Info
-            Write-Host ""
-        }
-    }
-    catch {
-        Write-Host "  [-] Unable to retrieve BitLocker information: $_" -ForegroundColor $ColorSchema.Error
-        Write-Host "  [!!] BitLocker may not be available on this edition of Windows." -ForegroundColor $ColorSchema.Warning
-        Write-Host ""
-    }
-}
-
-# ─────────────────────────────────────────────────────────────────────────────
-# HELPER: SELECT A DRIVE
-# ─────────────────────────────────────────────────────────────────────────────
-
-function Select-Drive {
-    param([string]$Prompt = "Enter drive letter (e.g. C)")
-    Write-Host ""
-    Write-Host -NoNewline "  $Prompt`: " -ForegroundColor $ColorSchema.Header
-    $userInput = (Read-Host).Trim().ToUpper().TrimEnd(':')
-    $mountPoint = "$userInput`:"
-
-    try {
-        return Get-BitLockerVolume -MountPoint $mountPoint -ErrorAction Stop
-    }
-    catch {
-        Write-Host ""
-        Write-Host "  [-] Drive $mountPoint not found or BitLocker unavailable." -ForegroundColor $ColorSchema.Error
-        return $null
-    }
-}
-
-# Turns BitLocker protection ON for a volume that is already encrypted but has
-# ProtectionStatus = Off — typically an OEM "device encryption waiting" state
-# where the volume carries a TPM / recovery-password protector plus an unsecured
-# clear key, so the volume key is exposed. Resume-BitLocker only handles volumes
-# suspended via Suspend-BitLocker; on these it throws FVE_E_KEY_REQUIRED
-# (0x8031001D, "you cannot delete the last key"), so we fall back to
-# manage-bde -protectors -enable, which removes the unsecured key and enforces the
-# remaining protectors. Two distinct conditions make -enable trip on 0x8031001D,
-# and this function works through both (see the inline comments):
-#   1. a protector added moments earlier via WMI hasn't committed to disk yet —
-#      handled by a short poll-and-retry;
-#   2. the volume is half-suspended (real protectors present but DISABLED, only
-#      the clear key enabled) — handled by a clean -disable/-enable cycle.
-#
-# Verification is deliberate: Get-BitLockerVolume can briefly report a stale
-# ProtectionStatus right after an external manage-bde process flips it, so we
-# treat manage-bde's exit code as authoritative and also poll the status. Returns
-# $true if protection ends up On. On genuine failure the manage-bde output and
-# exit code are left in $script:LastEnableOutput / $script:LastEnableExit so the
-# caller can surface them.
-function Enable-DriveProtection {
-    param([Parameter(Mandatory)][string]$MountPoint)
-
-    $script:LastEnableOutput = ''
-    $script:LastEnableExit   = $null
-
-    # Resume-BitLocker cleanly resumes a volume suspended via Suspend-BitLocker.
-    try {
-        Resume-BitLocker -MountPoint $MountPoint -ErrorAction Stop | Out-Null
-        if (Test-ProtectionOn -MountPoint $MountPoint) { return $true }
-    } catch { }
-
-    # Otherwise enforce protectors / remove the unsecured clear key via manage-bde.
-    #
-    # Caveat: a key protector added moments earlier through the WMI-based BitLocker
-    # cmdlets (Add-BitLockerKeyProtector) lands in the WMI view — and therefore in
-    # Get-BitLockerVolume — before it finishes committing to the on-disk volume
-    # metadata that manage-bde reads. If -enable runs inside that window manage-bde
-    # still sees only the unsecured clear key and aborts with 0x8031001D ("you
-    # cannot delete the last key on this drive"), because from its stale view the
-    # clear key IS the last key. Poll-and-retry so the commit has time to land —
-    # the same WMI/manage-bde lag Test-ProtectionOn already guards against, applied
-    # to the protector list rather than the protection status.
-    for ($attempt = 0; $attempt -lt 6; $attempt++) {
-        $script:LastEnableOutput = (& manage-bde.exe -protectors -enable $MountPoint 2>&1 | Out-String).Trim()
-        $script:LastEnableExit   = $LASTEXITCODE
-        if ($script:LastEnableExit -eq 0) { return $true }
-
-        # Only the not-yet-committed-protector race is worth retrying. Any other
-        # failure (a genuine policy block, a missing protector that will never
-        # appear) will not clear on its own, so stop and let the caller report it.
-        if ($script:LastEnableOutput -notmatch '0x8031001[dD]') { break }
-        Start-Sleep -Milliseconds 1000
+    if ($WhatIf) {
+        Write-Host "  [~] Would run: manage-bde $($Arguments -join ' ')" -ForegroundColor Cyan
+        return $true
     }
 
-    # A late metadata commit can flip protection On even when the final -enable
-    # returned non-zero — confirm before going further.
-    if (Test-ProtectionOn -MountPoint $MountPoint) { return $true }
-
-    # Still failing on FVE_E_KEY_REQUIRED (0x8031001D) after the retries: this is
-    # the half-suspended state, not a commit race. The real protectors exist but
-    # sit DISABLED while the unsecured clear key is the only ENABLED one, so
-    # -enable's removal of the clear key is rejected as "deleting the last key"
-    # (and Resume-BitLocker fails the same way). Re-suspend cleanly with -disable
-    # to put the existing protectors back into a consistent suspended state, then
-    # -enable can drop the clear key and turn protection On. -disable only
-    # (re)issues a clear key and marks protectors disabled — it never decrypts data
-    # and leaves the volume no less protected than the OFF state it is already in,
-    # so it is safe as a last resort. If the follow-up -enable still fails the
-    # volume is left exactly as we found it.
-    if ($script:LastEnableOutput -match '0x8031001[dD]') {
-        $null = & manage-bde.exe -protectors -disable $MountPoint 2>&1
-        if ($LASTEXITCODE -eq 0) {
-            $script:LastEnableOutput = (& manage-bde.exe -protectors -enable $MountPoint 2>&1 | Out-String).Trim()
-            $script:LastEnableExit   = $LASTEXITCODE
-            if ($script:LastEnableExit -eq 0) { return $true }
-        }
+    $output = & $ManageBde @Arguments 2>&1
+    $exit   = $LASTEXITCODE
+    foreach ($line in $output) {
+        if ("$line".Trim()) { Write-Host "      $line" -ForegroundColor $ColorSchema.Info }
     }
-
-    return (Test-ProtectionOn -MountPoint $MountPoint)
-}
-
-# Returns $true if the volume's ProtectionStatus is On. ProtectionStatus can lag
-# the actual FVE change by a moment (especially after a separate manage-bde
-# process), so poll briefly rather than reading it once.
-function Test-ProtectionOn {
-    param([Parameter(Mandatory)][string]$MountPoint)
-    for ($i = 0; $i -lt 6; $i++) {
-        $v = Get-BitLockerVolume -MountPoint $MountPoint -ErrorAction SilentlyContinue
-        if ($v -and $v.ProtectionStatus -eq 'On') { return $true }
-        Start-Sleep -Milliseconds 500
+    if ($exit -ne 0) {
+        Write-TKError -ScriptName 'cipher' -Message "manage-bde $($Arguments -join ' ') exited $exit" -Category 'BitLocker'
     }
-    return $false
-}
-
-# Blocks until a volume that has just been handed to Disable-BitLocker reports
-# FullyDecrypted, showing progress along the way. Returns the refreshed volume, or
-# $null if decryption never got going (still FullyEncrypted after ~30 s) or the
-# volume could not be read. There is deliberately no overall timeout: decryption
-# time scales with the drive, and Ctrl+C is safe — decryption carries on in the
-# background and Enable can be re-run once the drive is FullyDecrypted.
-function Wait-DriveDecryption {
-    param([Parameter(Mandatory)][string]$MountPoint)
-
-    $started = Get-Date
-    try {
-        while ($true) {
-            $v = Get-BitLockerVolume -MountPoint $MountPoint -ErrorAction SilentlyContinue
-            if (-not $v) { return $null }
-            if ($v.VolumeStatus -eq 'FullyDecrypted') { return $v }
-
-            if ($v.VolumeStatus -ne 'DecryptionInProgress' -and ((Get-Date) - $started).TotalSeconds -gt 30) {
-                return $null
-            }
-
-            $done = [math]::Max(0, [math]::Min(100, 100 - [int]$v.EncryptionPercentage))
-            Write-Progress -Activity "Decrypting $MountPoint" -Status "$done% decrypted  (Ctrl+C to stop waiting; decryption continues)" -PercentComplete $done
-            Start-Sleep -Seconds 5
-        }
-    } finally {
-        Write-Progress -Activity "Decrypting $MountPoint" -Completed
-    }
-}
-
-# Starts encryption on a not-yet-encrypted volume, working around two snags seen
-# in the field:
-#   - Virtual machines, where the pre-encryption hardware test and used-space-only
-#     conversion are unreliable — encryption is started full-volume with the
-#     hardware test skipped.
-#   - Physical disks that reject used-space-only conversion with 0x803100a5 — we
-#     retry full-volume.
-# manage-bde is used so the volume's existing protectors are honoured and
-# -SkipHardwareTest is available (it begins encrypting immediately instead of
-# waiting for a reboot-time hardware test). Returns $true on success; the command
-# output / exit code are left in $script:LastEncryptOutput / $script:LastEncryptExit.
-function Start-DriveEncryption {
-    param(
-        [Parameter(Mandatory)][string]$MountPoint,
-        [string]$EncryptionMethod = 'XtsAes256'
-    )
-
-    $model = (Get-CimInstance Win32_ComputerSystem -ErrorAction SilentlyContinue).Model
-    $isVM  = $model -match 'Virtual|VMware|QEMU|KVM|Hyper-V|Xen'
-
-    if ($isVM) {
-        $out  = & manage-bde.exe -on $MountPoint -EncryptionMethod $EncryptionMethod -SkipHardwareTest 2>&1 | Out-String
-        $exit = $LASTEXITCODE
-    } else {
-        $out  = & manage-bde.exe -on $MountPoint -EncryptionMethod $EncryptionMethod -UsedSpaceOnly -SkipHardwareTest 2>&1 | Out-String
-        $exit = $LASTEXITCODE
-        if ($exit -ne 0 -and $out -match '0x803100a5') {
-            # Used-space-only not accepted on this volume — retry full-volume.
-            $out  = & manage-bde.exe -on $MountPoint -EncryptionMethod $EncryptionMethod -SkipHardwareTest 2>&1 | Out-String
-            $exit = $LASTEXITCODE
-        }
-    }
-
-    $script:LastEncryptOutput = $out.Trim()
-    $script:LastEncryptExit   = $exit
     return ($exit -eq 0)
 }
 
-# Renders an HTML file to PDF using headless Microsoft Edge (or Chrome as a
-# fallback) — both ship Chromium's --print-to-pdf, so no third-party tooling is
-# required. Returns $true if the PDF was produced, $false if no browser is
-# available (the caller keeps the HTML in that case).
-function Convert-HtmlToPdf {
-    param(
-        [Parameter(Mandatory)][string]$HtmlPath,
-        [Parameter(Mandatory)][string]$PdfPath
-    )
+# Returns one object per lettered volume: MountPoint, Status, Protection,
+# Percent and Protectors (Id / Type / RecoveryPassword).
+function Get-CipherVolume {
+    param([string]$MountPoint)
 
-    $bases = @($env:ProgramFiles, ${env:ProgramFiles(x86)}) | Where-Object { $_ }
-    $candidates = foreach ($b in $bases) {
-        Join-Path $b 'Microsoft\Edge\Application\msedge.exe'
-        Join-Path $b 'Google\Chrome\Application\chrome.exe'
-    }
-    $browser = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-    if (-not $browser) { return $false }
+    $volumes = Get-CimInstance -Namespace $BdeNamespace -ClassName Win32_EncryptableVolume -ErrorAction Stop |
+        Where-Object { $_.DriveLetter -and (-not $MountPoint -or $_.DriveLetter -eq $MountPoint) }
 
-    $uri = 'file:///' + ($HtmlPath -replace '\\', '/')
-    $browserArgs = @(
-        '--headless'
-        '--disable-gpu'
-        '--no-pdf-header-footer'
-        "--print-to-pdf=`"$PdfPath`""
-        "`"$uri`""
-    )
-    try {
-        Start-Process -FilePath $browser -ArgumentList $browserArgs -WindowStyle Hidden -Wait -PassThru -ErrorAction Stop | Out-Null
-    } catch {
-        return $false
+    foreach ($v in $volumes) {
+        $conv = Invoke-CimMethod -InputObject $v -MethodName GetConversionStatus
+        $ids  = (Invoke-CimMethod -InputObject $v -MethodName GetKeyProtectors).VolumeKeyProtectorID
+
+        $protectors = foreach ($id in $ids) {
+            $idArg    = @{ VolumeKeyProtectorID = $id }
+            $typeCode = [int](Invoke-CimMethod -InputObject $v -MethodName GetKeyProtectorType -Arguments $idArg).KeyProtectorType
+            $password = $null
+            if ($typeCode -eq 3) {
+                $password = (Invoke-CimMethod -InputObject $v -MethodName GetKeyProtectorNumericalPassword -Arguments $idArg).NumericalPassword
+            }
+            [PSCustomObject]@{ Id = $id; Type = $ProtectorTypeNames[$typeCode]; RecoveryPassword = $password }
+        }
+
+        # A locked volume fails GetConversionStatus; its zeroed output must not
+        # read as FullyDecrypted.
+        $status = if ($conv.ReturnValue -eq 0) { $ConversionStatusNames[[int]$conv.ConversionStatus] }
+        [PSCustomObject]@{
+            MountPoint = $v.DriveLetter
+            Status     = if ($status) { $status } else { 'Unknown' }
+            Protection = switch ([int]$v.ProtectionStatus) { 0 { 'Off' } 1 { 'On' } default { 'Unknown' } }
+            Percent    = [int]$conv.EncryptionPercentage
+            Protectors = @($protectors)
+        }
     }
-    # The PDF is flushed to disk a moment after the process exits — give it time.
-    for ($i = 0; $i -lt 10 -and -not (Test-Path $PdfPath); $i++) { Start-Sleep -Milliseconds 300 }
-    return (Test-Path $PdfPath)
+}
+
+# Returns the volume for one drive, or $null after saying why.
+function Get-TargetVolume {
+    param([Parameter(Mandatory)][string]$MountPoint)
+    $vol = Get-CipherVolume -MountPoint $MountPoint | Select-Object -First 1
+    if (-not $vol) { Write-Fail "Drive $MountPoint was not found, or BitLocker cannot manage it." }
+    return $vol
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ACTION FUNCTIONS
+# ACTIONS
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Enable-DriveEncryption {
-    Write-Host ""
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
-    Write-Host "  ENABLE BITLOCKER" -ForegroundColor $ColorSchema.Header
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
-    Write-Host ""
-    Write-Host "  [!!] Enabling BitLocker will begin encrypting the selected drive." -ForegroundColor $ColorSchema.Warning
-    Write-Host "       A recovery password will always be generated — save it." -ForegroundColor $ColorSchema.Warning
+function Show-DriveStatus {
+    Write-Section 'DRIVE ENCRYPTION STATUS'
+    foreach ($vol in Get-CipherVolume) {
+        $statusColor = switch ($vol.Status) {
+            'FullyEncrypted' { $ColorSchema.Success }
+            'FullyDecrypted' { $ColorSchema.Warning }
+            default          { $ColorSchema.Progress }
+        }
+        $protColor = if ($vol.Protection -eq 'On') { $ColorSchema.Success } else { $ColorSchema.Warning }
+        $types     = if ($vol.Protectors.Count) { ($vol.Protectors.Type) -join ', ' } else { 'None' }
 
-    $vol = Select-Drive -Prompt "Drive letter to encrypt"
-    if (-not $vol) { return }
-
-    if ($vol.VolumeStatus -eq "FullyEncrypted") {
+        Write-Host "  Drive $($vol.MountPoint)" -ForegroundColor $ColorSchema.Header
+        Write-Host ("    Status      : {0}" -f $vol.Status) -ForegroundColor $statusColor
+        Write-Host ("    Protection  : {0}" -f $vol.Protection) -ForegroundColor $protColor
+        Write-Host ("    Encrypted   : {0}%" -f $vol.Percent) -ForegroundColor $ColorSchema.Info
+        Write-Host ("    Protectors  : {0}" -f $types) -ForegroundColor $ColorSchema.Info
         Write-Host ""
-        Write-Host "  [!!] Drive $($vol.MountPoint) is already fully encrypted." -ForegroundColor $ColorSchema.Warning
-
-        if ($vol.ProtectionStatus -eq "On") {
-            $existingKey = $vol.KeyProtector | Where-Object { $_.KeyProtectorType -eq 'RecoveryPassword' } | Select-Object -Last 1
-            Write-Host ""
-            Write-Host "  [+] BitLocker protection is already ON — nothing to do." -ForegroundColor $ColorSchema.Success
-            if ($existingKey) {
-                Write-Host "  ID  : $($existingKey.KeyProtectorId)" -ForegroundColor $ColorSchema.Warning
-                Write-Host "  Key : $($existingKey.RecoveryPassword)" -ForegroundColor $ColorSchema.Warning
-            }
-            Write-Host ""
-            return
-        }
-
-        # Protection is OFF on an already-encrypted volume. Two very different cases:
-        #   (a) the volume is suspended / already carries a usable protector (TPM,
-        #       recovery password, etc.) — it just needs RESUMING, and adding another
-        #       recovery password would only pile up duplicates;
-        #   (b) the only thing holding the volume key is an unsecured clear key —
-        #       typically an OEM Device Encryption volume left "waiting for
-        #       activation". Bolting a protector onto that state and then removing the
-        #       clear key is unreliable (the recovery password fails to persist, or
-        #       manage-bde rejects the enable with 0x8031001D), so instead decrypt the
-        #       volume and fall through to a clean re-encryption below. The data is
-        #       already readable by anyone holding the drive while the clear key is
-        #       present, so decrypting costs time but no protection.
-        $usableTypes  = @('Tpm','TpmPin','TpmStartupKey','TpmPinStartupKey','RecoveryPassword','Password')
-        $hasProtector = [bool]($vol.KeyProtector | Where-Object { $_.KeyProtectorType -in $usableTypes })
-
-        if ($hasProtector) {
-            if ($WhatIf) {
-                Write-Host ""
-                Write-Host "  [~] Would resume BitLocker protection on $($vol.MountPoint) (suspended; protectors already present)." -ForegroundColor Cyan
-                Write-Host ""
-                return
-            }
-
-            Write-Host ""
-            Write-Host "  [!!] BitLocker is suspended (protection off) but usable key protectors exist." -ForegroundColor $ColorSchema.Warning
-            Write-Host "  [*] Resuming BitLocker protection..." -ForegroundColor $ColorSchema.Progress
-
-            if (Enable-DriveProtection -MountPoint $vol.MountPoint) {
-                Write-Host "  [+] BitLocker protection is now ON." -ForegroundColor $ColorSchema.Success
-            } else {
-                Write-Host "  [-] Failed to activate protection on $($vol.MountPoint)." -ForegroundColor $ColorSchema.Error
-                if ($script:LastEnableOutput) {
-                    Write-Host "      manage-bde (exit $($script:LastEnableExit)): $($script:LastEnableOutput)" -ForegroundColor $ColorSchema.Warning
-                }
-                Write-Host "      Run manually to inspect: manage-bde -protectors -enable $($vol.MountPoint)" -ForegroundColor $ColorSchema.Warning
-                Write-TKError -ScriptName 'cipher' -Message "Activate protection failed on '$($vol.MountPoint)' (manage-bde exit $($script:LastEnableExit)): $($script:LastEnableOutput)" -Category 'BitLocker Enable'
-            }
-
-            Write-Host ""
-            return
-        }
-
-        Write-Host ""
-        Write-Host "  [!!] No usable key protector found — only an unsecured (clear) key is present." -ForegroundColor $ColorSchema.Warning
-        Write-Host "       The drive will be decrypted, then re-encrypted with a fresh recovery password." -ForegroundColor $ColorSchema.Warning
-
-        if ($WhatIf) {
-            Write-Host ""
-            Write-Host "  [~] Would decrypt $($vol.MountPoint) and wait for decryption to finish." -ForegroundColor Cyan
-        } else {
-            Write-Host "       Decryption can take a while; the drive stays usable meanwhile." -ForegroundColor $ColorSchema.Warning
-            Write-Host ""
-            Write-Host -NoNewline "  Decrypt and re-encrypt $($vol.MountPoint)? (Y/N): " -ForegroundColor $ColorSchema.Warning
-            if ((Read-Host).Trim().ToUpper() -ne 'Y') {
-                Write-Host "  [*] Operation cancelled." -ForegroundColor $ColorSchema.Info
-                Write-Host ""
-                return
-            }
-
-            try {
-                Write-Host ""
-                Write-Host "  [*] Starting decryption on $($vol.MountPoint)..." -ForegroundColor $ColorSchema.Progress
-                Disable-BitLocker -MountPoint $vol.MountPoint -ErrorAction Stop | Out-Null
-            } catch {
-                Write-Host "  [-] Failed to start decryption: $_" -ForegroundColor $ColorSchema.Error
-                Write-TKError -ScriptName 'cipher' -Message "Disable-BitLocker (clear-key re-encrypt) failed on '$($vol.MountPoint)': $($_.Exception.Message)" -Category 'BitLocker Enable'
-                Write-Host ""
-                return
-            }
-
-            $vol = Wait-DriveDecryption -MountPoint $vol.MountPoint
-            if (-not $vol) {
-                Write-Host "  [-] Decryption did not complete — cannot re-encrypt yet." -ForegroundColor $ColorSchema.Error
-                Write-Host "      Once the drive shows FullyDecrypted, run Enable again." -ForegroundColor $ColorSchema.Warning
-                Write-TKError -ScriptName 'cipher' -Message "Decryption did not complete on drive before clear-key re-encrypt." -Category 'BitLocker Enable'
-                Write-Host ""
-                return
-            }
-            Write-Host "  [+] Decryption complete. Re-encrypting..." -ForegroundColor $ColorSchema.Success
-        }
-        # Fall through to the fresh-encryption path below.
     }
-
-    Write-Host ""
-    Write-Host "  Additional key protector:" -ForegroundColor $ColorSchema.Info
-    Write-Host "  [1] TPM only  (no PIN, transparent to user)" -ForegroundColor $ColorSchema.Info
-    Write-Host "  [2] TPM + PIN (recommended for high security)" -ForegroundColor $ColorSchema.Info
-    Write-Host "  [3] Recovery password only  (no TPM required)" -ForegroundColor $ColorSchema.Info
-    Write-Host ""
-    Write-Host -NoNewline "  Enter selection: " -ForegroundColor $ColorSchema.Header
-    $protChoice = (Read-Host).Trim()
-
-    if ($WhatIf) {
-        $protName = switch ($protChoice) {
-            '1' { 'TPM' }; '2' { 'TPM + PIN' }; '3' { 'Recovery password only' }
-            default { 'Recovery password only' }
-        }
-        Write-Host ""
-        Write-Host "  [~] Would add recovery password protector to $($vol.MountPoint)" -ForegroundColor Cyan
-        Write-Host "  [~] Would add $protName protector to $($vol.MountPoint)" -ForegroundColor Cyan
-        Write-Host "  [~] Would start XtsAes256 encryption on $($vol.MountPoint) (used space only; full-volume on VMs or if the disk rejects it)" -ForegroundColor Cyan
-        Write-Host ""
-        return
-    }
-
-    try {
-        Write-Host ""
-        Write-Host "  [*] Adding recovery password protector..." -ForegroundColor $ColorSchema.Progress
-        $vol = Add-BitLockerKeyProtector -MountPoint $vol.MountPoint -RecoveryPasswordProtector -ErrorAction Stop
-
-        $recoveryKey = $vol.KeyProtector |
-            Where-Object { $_.KeyProtectorType -eq 'RecoveryPassword' } |
-            Select-Object -Last 1
-
-        if ($recoveryKey) {
-            Write-Host ""
-            Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Warning
-            Write-Host "  RECOVERY KEY — SAVE THIS BEFORE CONTINUING" -ForegroundColor $ColorSchema.Warning
-            Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Warning
-            Write-Host ""
-            Write-Host "  Key ID : $($recoveryKey.KeyProtectorId)" -ForegroundColor $ColorSchema.Warning
-            Write-Host "  Key    : $($recoveryKey.RecoveryPassword)" -ForegroundColor $ColorSchema.Warning
-            Write-Host ""
-            Read-Host "  Press Enter once you have saved the recovery key"
-        }
-
-        switch ($protChoice) {
-            "1" {
-                Write-Host "  [*] Adding TPM protector..." -ForegroundColor $ColorSchema.Progress
-                Add-BitLockerKeyProtector -MountPoint $vol.MountPoint -TpmProtector -ErrorAction Stop | Out-Null
-            }
-            "2" {
-                Write-Host ""
-                Write-Host -NoNewline "  Enter PIN (6-20 digits): " -ForegroundColor $ColorSchema.Header
-                $pin = Read-Host -AsSecureString
-                Write-Host "  [*] Adding TPM + PIN protector..." -ForegroundColor $ColorSchema.Progress
-                Add-BitLockerKeyProtector -MountPoint $vol.MountPoint -TpmAndPinProtector -Pin $pin -ErrorAction Stop | Out-Null
-            }
-            "3" {
-                Write-Host "  [*] Using recovery password only — no TPM protector added." -ForegroundColor $ColorSchema.Info
-            }
-            default {
-                Write-Host "  [!!] Invalid selection — recovery password protector added only." -ForegroundColor $ColorSchema.Warning
-            }
-        }
-
-        Write-Host "  [*] Starting encryption on $($vol.MountPoint)..." -ForegroundColor $ColorSchema.Progress
-        if (-not (Start-DriveEncryption -MountPoint $vol.MountPoint -EncryptionMethod 'XtsAes256')) {
-            Write-Host "  [-] Failed to start encryption on $($vol.MountPoint)." -ForegroundColor $ColorSchema.Error
-            if ($script:LastEncryptOutput) {
-                Write-Host "      manage-bde (exit $($script:LastEncryptExit)): $($script:LastEncryptOutput)" -ForegroundColor $ColorSchema.Warning
-            }
-            Write-TKError -ScriptName 'cipher' -Message "Start encryption failed on '$($vol.MountPoint)' (manage-bde exit $($script:LastEncryptExit)): $($script:LastEncryptOutput)" -Category 'BitLocker Enable'
-            Write-Host ""
-            return
-        }
-
-        $volCheck = Get-BitLockerVolume -MountPoint $vol.MountPoint -ErrorAction SilentlyContinue
-        if ($volCheck -and $volCheck.ProtectionStatus -ne "On") {
-            Write-Host "  [*] Activating BitLocker protection..." -ForegroundColor $ColorSchema.Progress
-            [void](Enable-DriveProtection -MountPoint $vol.MountPoint)
-        }
-
-        Write-Host "  [+] Encryption started on $($vol.MountPoint). BitLocker protection is ON." -ForegroundColor $ColorSchema.Success
-    }
-    catch {
-        Write-Host "  [-] Failed to enable BitLocker: $_" -ForegroundColor $ColorSchema.Error
-        Write-TKError -ScriptName 'cipher' -Message "Enable-BitLocker failed on '$($vol.MountPoint)': $($_.Exception.Message)" -Category 'BitLocker Enable'
-    }
-
-    Write-Host ""
-}
-
-function Disable-DriveEncryption {
-    Write-Host ""
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
-    Write-Host "  DISABLE BITLOCKER" -ForegroundColor $ColorSchema.Header
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
-    Write-Host ""
-    Write-Host "  [!!] This will fully decrypt the drive. Decryption cannot be undone quickly." -ForegroundColor $ColorSchema.Warning
-    Write-Host ""
-    Write-Host -NoNewline "  Are you sure? (Y/N): " -ForegroundColor $ColorSchema.Warning
-    $confirm = (Read-Host).Trim().ToUpper()
-
-    if ($confirm -ne "Y") {
-        Write-Host "  [*] Operation cancelled." -ForegroundColor $ColorSchema.Info
-        return
-    }
-
-    $vol = Select-Drive -Prompt "Drive letter to decrypt"
-    if (-not $vol) { return }
-
-    if ($WhatIf) {
-        Write-Host ""
-        Write-Host "  [~] Would start decryption (disable BitLocker) on $($vol.MountPoint)" -ForegroundColor Cyan
-        Write-Host ""
-        return
-    }
-
-    try {
-        Write-Host ""
-        Write-Host "  [*] Starting decryption on $($vol.MountPoint)..." -ForegroundColor $ColorSchema.Progress
-        Disable-BitLocker -MountPoint $vol.MountPoint -ErrorAction Stop | Out-Null
-        Write-Host "  [+] Decryption started on $($vol.MountPoint). This runs in the background." -ForegroundColor $ColorSchema.Success
-    }
-    catch {
-        Write-Host "  [-] Failed to disable BitLocker: $_" -ForegroundColor $ColorSchema.Error
-        Write-TKError -ScriptName 'cipher' -Message "Disable-BitLocker failed on '$($vol.MountPoint)': $($_.Exception.Message)" -Category 'BitLocker Disable'
-    }
-
-    Write-Host ""
-}
-
-function Backup-RecoveryKey {
-    Write-Host ""
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
-    Write-Host "  BACKUP RECOVERY KEY" -ForegroundColor $ColorSchema.Header
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
-    Write-Host ""
-    Write-Host "  [1] Active Directory" -ForegroundColor $ColorSchema.Info
-    Write-Host "  [2] Entra ID (Azure AD)" -ForegroundColor $ColorSchema.Info
-    Write-Host ""
-    Write-Host -NoNewline "  Enter selection: " -ForegroundColor $ColorSchema.Header
-    $backupChoice = (Read-Host).Trim()
-
-    $vol = Select-Drive -Prompt "Drive letter"
-    if (-not $vol) { return }
-
-    $keyProtector = $vol.KeyProtector |
-        Where-Object { $_.KeyProtectorType -eq 'RecoveryPassword' } |
-        Select-Object -First 1
-
-    if (-not $keyProtector) {
-        Write-Host ""
-        Write-Host "  [-] No recovery password protector found on $($vol.MountPoint)." -ForegroundColor $ColorSchema.Error
-        Write-Host "  [!!] Enable BitLocker with a recovery password first." -ForegroundColor $ColorSchema.Warning
-        return
-    }
-
-    try {
-        if ($backupChoice -eq "1") {
-            Write-Host ""
-            Write-Host "  [*] Backing up to Active Directory..." -ForegroundColor $ColorSchema.Progress
-            Backup-BitLockerKeyProtector -MountPoint $vol.MountPoint -KeyProtectorId $keyProtector.KeyProtectorId -ErrorAction Stop | Out-Null
-            Write-Host "  [+] Recovery key backed up to Active Directory." -ForegroundColor $ColorSchema.Success
-        }
-        elseif ($backupChoice -eq "2") {
-            Write-Host ""
-            Write-Host "  [*] Backing up to Entra ID (Azure AD)..." -ForegroundColor $ColorSchema.Progress
-            BackupToAAD-BitLockerKeyProtector -MountPoint $vol.MountPoint -KeyProtectorId $keyProtector.KeyProtectorId -ErrorAction Stop | Out-Null
-            Write-Host "  [+] Recovery key backed up to Entra ID." -ForegroundColor $ColorSchema.Success
-        }
-        else {
-            Write-Host ""
-            Write-Host "  [-] Invalid selection." -ForegroundColor $ColorSchema.Error
-        }
-    }
-    catch {
-        Write-Host "  [-] Backup failed: $_" -ForegroundColor $ColorSchema.Error
-        Write-Host "  [!!] Ensure this machine is domain-joined or Entra ID-joined and connected." -ForegroundColor $ColorSchema.Warning
-        Write-TKError -ScriptName 'cipher' -Message "Recovery key backup failed on '$($vol.MountPoint)': $($_.Exception.Message)" -Category 'BitLocker KeyBackup'
-    }
-
-    Write-Host ""
 }
 
 function Show-RecoveryKey {
-    Write-Host ""
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
-    Write-Host "  SHOW RECOVERY KEY" -ForegroundColor $ColorSchema.Header
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
+    param([Parameter(Mandatory)][string]$MountPoint)
 
-    $vol = Select-Drive -Prompt "Drive letter"
+    $vol = Get-TargetVolume -MountPoint $MountPoint
     if (-not $vol) { return }
 
-    $recoveryKeys = $vol.KeyProtector | Where-Object { $_.KeyProtectorType -eq 'RecoveryPassword' }
+    $keys = @($vol.Protectors | Where-Object { $_.Type -eq 'RecoveryPassword' })
+    if (-not $keys) {
+        Write-Warn "No recovery password on $MountPoint."
+        return
+    }
+    Write-Host ""
+    Write-Host "  RECOVERY KEY(S) FOR $MountPoint" -ForegroundColor $ColorSchema.Warning
+    foreach ($key in $keys) {
+        Write-Host "    ID  : $($key.Id)" -ForegroundColor $ColorSchema.Warning
+        Write-Host "    Key : $($key.RecoveryPassword)" -ForegroundColor $ColorSchema.Warning
+    }
+    Write-Host ""
+}
 
-    if (-not $recoveryKeys) {
-        Write-Host ""
-        Write-Host "  [-] No recovery password found on $($vol.MountPoint)." -ForegroundColor $ColorSchema.Error
-        Write-Host ""
+# Encrypts a decrypted drive, or turns protection back on for an encrypted one.
+# Either way the drive ends up with a recovery password plus TPM (OS drive) or
+# auto-unlock (any other drive).
+function Enable-DriveEncryption {
+    param([Parameter(Mandatory)][string]$MountPoint)
+
+    Write-Section "ENABLE BITLOCKER ON $MountPoint"
+    $vol = Get-TargetVolume -MountPoint $MountPoint
+    if (-not $vol) { return }
+
+    if ($vol.Status -eq 'Unknown') {
+        Write-Fail "$MountPoint is locked or unreadable. Unlock it first (manage-bde -unlock)."
+        return
+    }
+    if ($vol.Status -in 'DecryptionInProgress', 'DecryptionPaused') {
+        Write-Warn "$MountPoint is still decrypting ($($vol.Percent)% encrypted). Run Enable again once it reads FullyDecrypted."
+        return
+    }
+    if ($vol.Status -ne 'FullyDecrypted' -and $vol.Protection -eq 'On') {
+        Write-Ok "BitLocker is already on for $MountPoint - nothing to do."
+        Show-RecoveryKey -MountPoint $MountPoint
         return
     }
 
-    Write-Host ""
-    Write-Host "  Recovery key(s) for $($vol.MountPoint):" -ForegroundColor $ColorSchema.Warning
-    Write-Host ""
+    $isOsDrive = $MountPoint -eq $env:SystemDrive
+    $types     = @($vol.Protectors.Type)
 
-    foreach ($key in $recoveryKeys) {
-        Write-Host "  ID  : $($key.KeyProtectorId)" -ForegroundColor $ColorSchema.Warning
-        Write-Host "  Key : $($key.RecoveryPassword)" -ForegroundColor $ColorSchema.Warning
-        Write-Host ""
+    if ($types -notcontains 'RecoveryPassword') {
+        Write-Step 'Adding a recovery password...'
+        if (-not (Invoke-ManageBde '-protectors', '-add', $MountPoint, '-RecoveryPassword')) {
+            Write-Fail 'Could not add a recovery password. Nothing else was changed.'
+            return
+        }
+    }
+    if ($isOsDrive -and -not ($types | Where-Object { $_ -like 'Tpm*' })) {
+        Write-Step 'Adding a TPM protector...'
+        if (-not (Invoke-ManageBde '-protectors', '-add', $MountPoint, '-TPM')) {
+            Write-Fail 'Could not add a TPM protector. Check that the TPM is present and ready (tpm.msc).'
+            return
+        }
+    }
+
+    if ($vol.Status -eq 'FullyDecrypted') {
+        Write-Step "Starting XTS-AES 256 encryption on $MountPoint..."
+        $started = Invoke-ManageBde '-on', $MountPoint, '-EncryptionMethod', 'XtsAes256', '-UsedSpaceOnly', '-SkipHardwareTest'
+        if (-not $started) {
+            Write-Step 'Retrying as full-volume encryption...'
+            $started = Invoke-ManageBde '-on', $MountPoint, '-EncryptionMethod', 'XtsAes256', '-SkipHardwareTest'
+        }
+        if (-not $started) {
+            Write-Fail "Encryption did not start on $MountPoint."
+            return
+        }
+    } else {
+        # Encrypted but protection is off: suspended, or an OEM device-encryption
+        # volume still holding a clear key. -enable removes the clear key. If it
+        # refuses, the protectors are half-suspended; a clean -disable first puts
+        # them back into a state -enable accepts. -disable never decrypts.
+        Write-Step "Turning protection on for $MountPoint..."
+        $on = Invoke-ManageBde '-protectors', '-enable', $MountPoint
+        if (-not $on) {
+            Write-Step 'Re-suspending cleanly and retrying...'
+            $on = (Invoke-ManageBde '-protectors', '-disable', $MountPoint) -and
+                  (Invoke-ManageBde '-protectors', '-enable', $MountPoint)
+        }
+        if (-not $on) {
+            Write-Fail "Protection is still off on $MountPoint."
+            return
+        }
+    }
+
+    if (-not $isOsDrive) {
+        Write-Step "Enabling auto-unlock so $MountPoint opens at sign-in..."
+        if (-not (Invoke-ManageBde '-autounlock', '-enable', $MountPoint)) {
+            Write-Warn 'Auto-unlock was not enabled (the OS drive must be encrypted first). The drive will ask for its recovery password after a reboot.'
+        }
+    }
+
+    Write-Ok "BitLocker is enabled on $MountPoint."
+    if (-not $WhatIf) {
+        Write-Warn 'Save the recovery key below before closing this window.'
+        Show-RecoveryKey -MountPoint $MountPoint
+    }
+}
+
+function Disable-DriveEncryption {
+    param([Parameter(Mandatory)][string]$MountPoint)
+    Write-Section "DISABLE BITLOCKER ON $MountPoint"
+    if (Invoke-ManageBde '-off', $MountPoint) {
+        Write-Ok "Decryption started on $MountPoint. It runs in the background."
+    }
+}
+
+function Suspend-DriveProtection {
+    param([Parameter(Mandatory)][string]$MountPoint)
+    Write-Section "SUSPEND BITLOCKER ON $MountPoint"
+    Write-Info 'Use before BIOS / firmware updates. Protection resumes after one reboot.'
+    if (Invoke-ManageBde '-protectors', '-disable', $MountPoint, '-RebootCount', '1') {
+        Write-Ok "BitLocker suspended on $MountPoint until the next reboot."
+    }
+}
+
+function Resume-DriveProtection {
+    param([Parameter(Mandatory)][string]$MountPoint)
+    Write-Section "RESUME BITLOCKER ON $MountPoint"
+    if (Invoke-ManageBde '-protectors', '-enable', $MountPoint) {
+        Write-Ok "BitLocker protection resumed on $MountPoint."
+    }
+}
+
+function Backup-RecoveryKey {
+    param(
+        [Parameter(Mandatory)][string]$MountPoint,
+        [Parameter(Mandatory)][ValidateSet('AD','EntraID')][string]$Target
+    )
+    Write-Section "BACK UP RECOVERY KEY FOR $MountPoint TO $Target"
+    $vol = Get-TargetVolume -MountPoint $MountPoint
+    if (-not $vol) { return }
+
+    $keys = @($vol.Protectors | Where-Object { $_.Type -eq 'RecoveryPassword' })
+    if (-not $keys) {
+        Write-Fail "No recovery password on $MountPoint. Enable BitLocker first."
+        return
+    }
+    $verb = if ($Target -eq 'AD') { '-adbackup' } else { '-aadbackup' }
+    foreach ($key in $keys) {
+        if (Invoke-ManageBde '-protectors', $verb, $MountPoint, '-id', $key.Id) {
+            Write-Ok "Recovery key $($key.Id) backed up to $Target."
+        } else {
+            Write-Warn "Backup failed. Check the machine is joined to $Target and can reach it."
+        }
     }
 }
 
 function Export-EncryptionReport {
-    param([switch]$SkipConfirm)
-
-    Write-Host ""
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
-    Write-Host "  EXPORT ENCRYPTION REPORT (PDF)" -ForegroundColor $ColorSchema.Header
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
-    Write-Host ""
-    Write-Host "  [!!] This report includes the 48-digit RECOVERY PASSWORDS for every" -ForegroundColor $ColorSchema.Warning
-    Write-Host "       drive that has one. Anyone who opens the PDF can unlock those" -ForegroundColor $ColorSchema.Warning
-    Write-Host "       drives — store it somewhere secure (not on the encrypted drive)." -ForegroundColor $ColorSchema.Warning
+    Write-Section 'EXPORT ENCRYPTION REPORT'
+    Write-Warn 'The report contains the recovery passwords. Store it somewhere secure, not on the encrypted drive.'
 
     if ($WhatIf) {
-        Write-Host ""
-        Write-Host "  [~] Would build an HTML + PDF encryption report (including recovery keys)." -ForegroundColor Cyan
-        Write-Host ""
+        Write-Host "  [~] Would write an HTML report with drive status and recovery keys." -ForegroundColor Cyan
         return
     }
 
-    if (-not $SkipConfirm) {
-        Write-Host ""
-        Write-Host -NoNewline "  Generate report with recovery keys? (Y/N): " -ForegroundColor $ColorSchema.Warning
-        if ((Read-Host).Trim().ToUpper() -ne "Y") {
-            Write-Host "  [*] Export cancelled." -ForegroundColor $ColorSchema.Info
-            Write-Host ""
-            return
+    $volumes = @(Get-CipherVolume)
+
+    $reportDir = if ($OutputPath) { $OutputPath } else { Resolve-LogDirectory -FallbackPath $PSScriptRoot }
+    if (-not (Test-Path $reportDir)) { New-Item -ItemType Directory -Path $reportDir -Force | Out-Null }
+    $reportPath = Join-Path $reportDir "CIPHER_Report_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
+
+    $cfg      = Get-TKConfig
+    $subtitle = if ($cfg.OrgName) { "$($cfg.OrgName) — $env:COMPUTERNAME" } else { $env:COMPUTERNAME }
+
+    $statusRows = foreach ($vol in $volumes) {
+        $badge = if ($vol.Protection -eq 'On') { "<span class='tk-badge-ok'>On</span>" } else { "<span class='tk-badge-warn'>$(EscHtml $vol.Protection)</span>" }
+        $types = if ($vol.Protectors.Count) { ($vol.Protectors.Type) -join ', ' } else { 'None' }
+        "<tr><td class='tk-mono'>$(EscHtml $vol.MountPoint)</td><td>$(EscHtml $vol.Status)</td><td>$badge</td><td>$($vol.Percent)%</td><td>$(EscHtml $types)</td></tr>"
+    }
+    $keyRows = foreach ($vol in $volumes) {
+        foreach ($key in ($vol.Protectors | Where-Object { $_.Type -eq 'RecoveryPassword' })) {
+            "<tr><td class='tk-mono'>$(EscHtml $vol.MountPoint)</td><td class='tk-mono'>$(EscHtml $key.Id)</td><td class='tk-mono'>$(EscHtml $key.RecoveryPassword)</td></tr>"
         }
     }
+    if (-not $keyRows) { $keyRows = "<tr><td colspan='3'>No recovery passwords on any drive.</td></tr>" }
 
-    try {
-        $volumes = @(Get-BitLockerVolume -ErrorAction Stop)
-    } catch {
-        Write-Host ""
-        Write-Host "  [-] Unable to retrieve BitLocker information: $_" -ForegroundColor $ColorSchema.Error
-        Write-TKError -ScriptName 'cipher' -Message "Export report: Get-BitLockerVolume failed: $($_.Exception.Message)" -Category 'BitLocker Export'
-        Write-Host ""
-        return
-    }
-
-    $reportDir = if (-not [string]::IsNullOrWhiteSpace($OutputPath)) { $OutputPath }
-                 else { Resolve-LogDirectory -FallbackPath $PSScriptRoot }
-    if (-not (Test-Path $reportDir)) { New-Item -ItemType Directory -Path $reportDir -Force | Out-Null }
-
-    $stamp    = Get-Date -Format 'yyyyMMdd_HHmmss'
-    $htmlPath = Join-Path $reportDir "CIPHER_Report_$stamp.html"
-    $pdfPath  = Join-Path $reportDir "CIPHER_Report_$stamp.pdf"
-
-    Write-Host ""
-    Write-Host "  [*] Building report..." -ForegroundColor $ColorSchema.Progress
-
-    $cfg       = Get-TKConfig
-    $orgPrefix = if (-not [string]::IsNullOrWhiteSpace($cfg.OrgName)) { "$(EscHtml $cfg.OrgName) — " } else { '' }
-
-    $html = Get-TKHtmlHead -Title 'BitLocker Encryption Report' `
-        -ScriptName 'C.I.P.H.E.R.' `
-        -Subtitle "$orgPrefix$env:COMPUTERNAME" `
-        -MetaItems ([ordered]@{
-            'Generated' = (Get-Date -Format 'yyyy-MM-dd HH:mm')
-            'Run As'    = "$env:USERDOMAIN\$env:USERNAME"
-            'Volumes'   = $volumes.Count
-        }) `
-        -NavItems @('Drive Status', 'Recovery Keys')
-
+    $html  = Get-TKHtmlHead -Title 'BitLocker Encryption Report' -ScriptName 'C.I.P.H.E.R.' `
+                 -Subtitle $subtitle `
+                 -MetaItems ([ordered]@{
+                     'Generated' = (Get-Date -Format 'yyyy-MM-dd HH:mm')
+                     'Run As'    = "$env:USERDOMAIN\$env:USERNAME"
+                     'Volumes'   = $volumes.Count
+                 }) `
+                 -NavItems @('Drive Status', 'Recovery Keys')
     $html += @"
 <div class="tk-section" id="s01">
   <div class="tk-section-title"><span class="tk-section-num">01</span> Drive Status</div>
-  <div class="tk-info-box"><span class="tk-info-label">SENSITIVE</span> This document contains BitLocker recovery passwords. Anyone who reads it can unlock the listed drives — handle it as a secret.</div>
+  <div class="tk-info-box"><span class="tk-info-label">SENSITIVE</span> This document contains BitLocker recovery passwords. Anyone who reads it can unlock the listed drives.</div>
   <div class="tk-card">
     <table class="tk-table">
-      <thead><tr><th>Drive</th><th>Volume Status</th><th>Protection</th><th>Encryption</th><th>Key Protectors</th></tr></thead>
-      <tbody>
-"@
-    foreach ($vol in $volumes) {
-        $protBadge = if ($vol.ProtectionStatus -eq 'On') { "<span class='tk-badge-ok'>On</span>" } else { "<span class='tk-badge-warn'>Off</span>" }
-        $keyTypes  = if ($vol.KeyProtector.Count -gt 0) { ($vol.KeyProtector | ForEach-Object { $_.KeyProtectorType }) -join ', ' } else { 'None' }
-        $html += "<tr><td class='tk-mono'>$(EscHtml $vol.MountPoint)</td><td>$(EscHtml $vol.VolumeStatus)</td><td>$protBadge</td><td>$(EscHtml ([string]$vol.EncryptionPercentage))%</td><td>$(EscHtml $keyTypes)</td></tr>"
-    }
-    $html += @"
-      </tbody>
+      <thead><tr><th>Drive</th><th>Volume Status</th><th>Protection</th><th>Encrypted</th><th>Key Protectors</th></tr></thead>
+      <tbody>$($statusRows -join "`n")</tbody>
     </table>
   </div>
 </div>
@@ -803,229 +431,89 @@ function Export-EncryptionReport {
   <div class="tk-card">
     <table class="tk-table">
       <thead><tr><th>Drive</th><th>Key Protector ID</th><th>Recovery Password</th></tr></thead>
-      <tbody>
-"@
-    $anyKeys = $false
-    foreach ($vol in $volumes) {
-        foreach ($key in ($vol.KeyProtector | Where-Object { $_.KeyProtectorType -eq 'RecoveryPassword' })) {
-            $anyKeys = $true
-            $html += "<tr><td class='tk-mono'>$(EscHtml $vol.MountPoint)</td><td class='tk-mono'>$(EscHtml $key.KeyProtectorId)</td><td class='tk-mono'>$(EscHtml $key.RecoveryPassword)</td></tr>"
-        }
-    }
-    if (-not $anyKeys) {
-        $html += "<tr><td colspan='3'>No recovery password protectors found on any volume.</td></tr>"
-    }
-    $html += @"
-      </tbody>
+      <tbody>$($keyRows -join "`n")</tbody>
     </table>
   </div>
 </div>
 "@
-    $html += Get-TKHtmlFoot -ScriptName 'C.I.P.H.E.R. v4.0'
+    $html += Get-TKHtmlFoot -ScriptName 'C.I.P.H.E.R. v5.1'
 
-    try {
-        $html | Out-File -FilePath $htmlPath -Encoding UTF8 -ErrorAction Stop
-    } catch {
-        Write-Host "  [-] Failed to write report: $_" -ForegroundColor $ColorSchema.Error
-        Write-TKError -ScriptName 'cipher' -Message "Export report: writing HTML failed: $($_.Exception.Message)" -Category 'BitLocker Export'
-        Write-Host ""
-        return
+    $html | Out-File -FilePath $reportPath -Encoding UTF8
+    Show-TKReportResult -Path $reportPath -Unattended:$Unattended
+}
+
+# Runs one action against one drive. Shared by the unattended path and the menu.
+function Invoke-CipherAction {
+    param([Parameter(Mandatory)][string]$Name, [string]$MountPoint)
+    switch ($Name) {
+        'Status'        { Show-DriveStatus }
+        'Enable'        { Enable-DriveEncryption  -MountPoint $MountPoint }
+        'Disable'       { Disable-DriveEncryption -MountPoint $MountPoint }
+        'Suspend'       { Suspend-DriveProtection -MountPoint $MountPoint }
+        'Resume'        { Resume-DriveProtection  -MountPoint $MountPoint }
+        'ShowKeys'      { Show-RecoveryKey        -MountPoint $MountPoint }
+        'BackupAD'      { Backup-RecoveryKey      -MountPoint $MountPoint -Target AD }
+        'BackupEntraID' { Backup-RecoveryKey      -MountPoint $MountPoint -Target EntraID }
+        'Export'        { Export-EncryptionReport }
     }
+}
 
-    Write-Host "  [*] Converting to PDF..." -ForegroundColor $ColorSchema.Progress
-    if (Convert-HtmlToPdf -HtmlPath $htmlPath -PdfPath $pdfPath) {
-        Remove-Item -Path $htmlPath -Force -ErrorAction SilentlyContinue
-        Write-Host "  [+] PDF report saved: $pdfPath" -ForegroundColor $ColorSchema.Success
+# ─────────────────────────────────────────────────────────────────────────────
+# MAIN
+# ─────────────────────────────────────────────────────────────────────────────
+
+$DefaultMount = "$($Drive.ToUpper().TrimEnd(':')):"
+
+try {
+    if ($Unattended) {
+        if ($WhatIf) { Write-Host "  [~] DRY RUN - no changes will be made." -ForegroundColor Cyan }
+        Invoke-CipherAction -Name $Action -MountPoint $DefaultMount
     } else {
-        Write-Host "  [!!] Microsoft Edge / Chrome not found — could not render PDF." -ForegroundColor $ColorSchema.Warning
-        Write-Host "  [+] HTML report saved: $htmlPath" -ForegroundColor $ColorSchema.Success
-        Write-Host "      Open it and choose Print -> Save as PDF to produce a PDF." -ForegroundColor $ColorSchema.Info
-    }
-
-    Write-Host ""
-}
-
-function Suspend-DriveProtection {
-    Write-Host ""
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
-    Write-Host "  SUSPEND BITLOCKER" -ForegroundColor $ColorSchema.Header
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
-    Write-Host ""
-    Write-Host "  Suspends protection without decrypting. Use before BIOS or" -ForegroundColor $ColorSchema.Info
-    Write-Host "  firmware updates to avoid unexpected recovery key prompts." -ForegroundColor $ColorSchema.Info
-    Write-Host "  Protection automatically resumes after 1 reboot." -ForegroundColor $ColorSchema.Info
-
-    $vol = Select-Drive -Prompt "Drive letter to suspend"
-    if (-not $vol) { return }
-
-    if ($WhatIf) {
-        Write-Host ""
-        Write-Host "  [~] Would suspend BitLocker protection on $($vol.MountPoint) (resumes after 1 reboot)" -ForegroundColor Cyan
-        Write-Host ""
-        return
-    }
-
-    try {
-        Suspend-BitLocker -MountPoint $vol.MountPoint -RebootCount 1 -ErrorAction Stop | Out-Null
-        Write-Host ""
-        Write-Host "  [+] BitLocker suspended on $($vol.MountPoint) — resumes after next reboot." -ForegroundColor $ColorSchema.Success
-    }
-    catch {
-        Write-Host "  [-] Suspend failed: $_" -ForegroundColor $ColorSchema.Error
-    }
-
-    Write-Host ""
-}
-
-function Resume-DriveProtection {
-    Write-Host ""
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
-    Write-Host "  RESUME BITLOCKER" -ForegroundColor $ColorSchema.Header
-    Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
-
-    $vol = Select-Drive -Prompt "Drive letter to resume"
-    if (-not $vol) { return }
-
-    if ($WhatIf) {
-        Write-Host ""
-        Write-Host "  [~] Would resume BitLocker protection on $($vol.MountPoint)" -ForegroundColor Cyan
-        Write-Host ""
-        return
-    }
-
-    try {
-        Resume-BitLocker -MountPoint $vol.MountPoint -ErrorAction Stop | Out-Null
-        Write-Host ""
-        Write-Host "  [+] BitLocker protection resumed on $($vol.MountPoint)." -ForegroundColor $ColorSchema.Success
-    }
-    catch {
-        Write-Host "  [-] Resume failed: $_" -ForegroundColor $ColorSchema.Error
-        Write-TKError -ScriptName 'cipher' -Message "Resume-BitLocker failed on '$($vol.MountPoint)': $($_.Exception.Message)" -Category 'BitLocker Resume'
-    }
-
-    Write-Host ""
-}
-
-# ─────────────────────────────────────────────────────────────────────────────
-# MAIN — UNATTENDED OR INTERACTIVE
-# ─────────────────────────────────────────────────────────────────────────────
-
-if ($Unattended) {
-    Show-DriveStatus
-
-    $mountPoint = "$($Drive.ToUpper().TrimEnd(':')):"
-
-    switch ($Action) {
-        "Status"      { Write-Host "[OK] Status displayed above." -ForegroundColor $ColorSchema.Success }
-        "Enable"      {
-            Write-Host "  [*] Unattended enable not supported — requires key protector selection and key confirmation." -ForegroundColor $ColorSchema.Warning
-            Write-Host "  [!!] Run cipher.ps1 interactively to enable BitLocker." -ForegroundColor $ColorSchema.Warning
+        $menu = [ordered]@{
+            '1' = @('Enable',        'Enable BitLocker')
+            '2' = @('Disable',       'Disable BitLocker (decrypt)')
+            '3' = @('Suspend',       'Suspend protection for one reboot')
+            '4' = @('Resume',        'Resume protection')
+            '5' = @('ShowKeys',      'Show recovery keys')
+            '6' = @('BackupAD',      'Back up recovery key to Active Directory')
+            '7' = @('BackupEntraID', 'Back up recovery key to Entra ID')
+            '8' = @('Export',        'Export report (status + recovery keys)')
         }
-        "Disable"     {
-            try {
-                Disable-BitLocker -MountPoint $mountPoint -ErrorAction Stop | Out-Null
-                Write-Host "  [+] Decryption started on $mountPoint." -ForegroundColor $ColorSchema.Success
-            } catch {
-                Write-Host "  [-] Failed: $_" -ForegroundColor $ColorSchema.Error
-            }
-        }
-        "Suspend"     {
-            try {
-                Suspend-BitLocker -MountPoint $mountPoint -RebootCount 1 -ErrorAction Stop | Out-Null
-                Write-Host "  [+] BitLocker suspended on $mountPoint — resumes after next reboot." -ForegroundColor $ColorSchema.Success
-            } catch {
-                Write-Host "  [-] Failed: $_" -ForegroundColor $ColorSchema.Error
-            }
-        }
-        "Resume"      {
-            try {
-                Resume-BitLocker -MountPoint $mountPoint -ErrorAction Stop | Out-Null
-                Write-Host "  [+] BitLocker resumed on $mountPoint." -ForegroundColor $ColorSchema.Success
-            } catch {
-                Write-Host "  [-] Failed: $_" -ForegroundColor $ColorSchema.Error
-            }
-        }
-        "Export"      { Export-EncryptionReport -SkipConfirm }
-        "BackupAD"    {
-            try {
-                $vol = Get-BitLockerVolume -MountPoint $mountPoint -ErrorAction Stop
-                $kp  = $vol.KeyProtector | Where-Object { $_.KeyProtectorType -eq 'RecoveryPassword' } | Select-Object -First 1
-                if (-not $kp) { Write-Host "  [-] No recovery password found." -ForegroundColor $ColorSchema.Error; break }
-                Backup-BitLockerKeyProtector -MountPoint $mountPoint -KeyProtectorId $kp.KeyProtectorId -ErrorAction Stop | Out-Null
-                Write-Host "  [+] Recovery key backed up to Active Directory." -ForegroundColor $ColorSchema.Success
-            } catch {
-                Write-Host "  [-] Backup failed: $_" -ForegroundColor $ColorSchema.Error
-            }
-        }
-        "BackupEntraID" {
-            try {
-                $vol = Get-BitLockerVolume -MountPoint $mountPoint -ErrorAction Stop
-                $kp  = $vol.KeyProtector | Where-Object { $_.KeyProtectorType -eq 'RecoveryPassword' } | Select-Object -First 1
-                if (-not $kp) { Write-Host "  [-] No recovery password found." -ForegroundColor $ColorSchema.Error; break }
-                BackupToAAD-BitLockerKeyProtector -MountPoint $mountPoint -KeyProtectorId $kp.KeyProtectorId -ErrorAction Stop | Out-Null
-                Write-Host "  [+] Recovery key backed up to Entra ID." -ForegroundColor $ColorSchema.Success
-            } catch {
-                Write-Host "  [-] Backup failed: $_" -ForegroundColor $ColorSchema.Error
-            }
-        }
-    }
-} else {
-    $choice = ""
+        $destructive = @('Disable', 'Suspend')
 
-    do {
-        Show-CipherBanner
-        if ($WhatIf) {
-            Write-Host "  ─────────────────────────────────────────────────────────────" -ForegroundColor Cyan
-            Write-Host "  [~] DRY RUN MODE — No changes will be made to this system." -ForegroundColor Cyan
-            Write-Host "  ─────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+        while ($true) {
+            Clear-Host
             Write-Host ""
-        }
-        Show-DriveStatus
+            Write-Host "  C.I.P.H.E.R. — Configures & Implements Policy-based Hardware Encryption & Recovery" -ForegroundColor $ColorSchema.Header
+            if ($WhatIf) { Write-Host "  [~] DRY RUN - no changes will be made." -ForegroundColor Cyan }
+            Show-DriveStatus
 
-        Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
-        Write-Host "  ACTIONS" -ForegroundColor $ColorSchema.Header
-        Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
-        Write-Host ""
-        Write-Host "  [1] Enable BitLocker on a drive" -ForegroundColor $ColorSchema.Info
-        Write-Host "  [2] Disable BitLocker on a drive" -ForegroundColor $ColorSchema.Info
-        Write-Host "  [3] Backup recovery key  (AD / Entra ID)" -ForegroundColor $ColorSchema.Info
-        Write-Host "  [4] Show recovery key" -ForegroundColor $ColorSchema.Info
-        Write-Host "  [5] Suspend BitLocker protection" -ForegroundColor $ColorSchema.Info
-        Write-Host "  [6] Resume BitLocker protection" -ForegroundColor $ColorSchema.Info
-        Write-Host "  [7] Export encryption report  (PDF)" -ForegroundColor $ColorSchema.Info
-        Write-Host "  [R] Refresh drive status" -ForegroundColor $ColorSchema.Info
-        Write-Host "  [Q] Quit" -ForegroundColor $ColorSchema.Info
-        Write-Host ""
-        Write-Host -NoNewline "  Enter selection: " -ForegroundColor $ColorSchema.Header
-        $choice = (Read-Host).Trim().ToUpper()
+            foreach ($key in $menu.Keys) { Write-Host "  [$key] $($menu[$key][1])" -ForegroundColor $ColorSchema.Info }
+            Write-Host "  [Q] Quit" -ForegroundColor $ColorSchema.Info
+            Write-Host ""
+            $choice = (Read-Host '  Selection').Trim().ToUpper()
+            if ($choice -eq 'Q') { break }
+            if (-not $menu.Contains($choice)) { continue }
 
-        switch ($choice) {
-            "1" { Enable-DriveEncryption }
-            "2" { Disable-DriveEncryption }
-            "3" { Backup-RecoveryKey }
-            "4" { Show-RecoveryKey }
-            "5" { Suspend-DriveProtection }
-            "6" { Resume-DriveProtection }
-            "7" { Export-EncryptionReport }
-            "R" { }
-            "Q" {
-                Write-Host ""
-                Write-Host "  Closing C.I.P.H.E.R." -ForegroundColor $ColorSchema.Header
-                Write-Host ""
+            $name  = $menu[$choice][0]
+            $mount = $DefaultMount
+            if ($name -ne 'Export') {
+                $letter = (Read-Host "  Drive letter [$($DefaultMount.TrimEnd(':'))]").Trim().TrimEnd(':').ToUpper()
+                if ($letter -match '^[A-Z]$') { $mount = "${letter}:" }
             }
-            default {
-                Write-Host ""
-                Write-Host "  [!!] Invalid selection. Enter 1-7, R, or Q." -ForegroundColor $ColorSchema.Warning
-                Start-Sleep -Seconds 1
-            }
-        }
+            $confirmed = $WhatIf -or ($name -notin $destructive) -or
+                         ((Read-Host "  $name BitLocker on $mount? (Y/N)").Trim().ToUpper() -eq 'Y')
+            if ($confirmed) { Invoke-CipherAction -Name $name -MountPoint $mount }
 
-        if ($choice -notin @("Q", "R")) {
-            Write-Host -NoNewline "  Press Enter to return to menu..." -ForegroundColor $ColorSchema.Info
-            Read-Host | Out-Null
+            Write-Host ""
+            Read-Host '  Press Enter to return to the menu' | Out-Null
         }
-
-    } while ($choice -ne "Q")
+    }
+} catch {
+    Write-Fail "BitLocker could not be read: $($_.Exception.Message)"
+    Write-Info 'BitLocker needs a Pro, Enterprise or Education edition of Windows.'
+    Write-TKError -ScriptName 'cipher' -Message $_.Exception.Message -Category 'BitLocker'
 }
+
 if ($Transcript) { Stop-TKTranscript }
 if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }
