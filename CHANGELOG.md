@@ -5,6 +5,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Fixed
+- **`C.O.N.J.U.R.E.` could never install a missing winget.** `Test-WingetAvailable` downloaded
+  `https://aka.ms/getwinget` to `GetWinget.ps1` and executed it, but that link serves the App
+  Installer `.msixbundle`, not a script — so on a machine without winget the fallback always
+  failed. It now bootstraps winget the way Microsoft documents, with
+  `Repair-WinGetPackageManager -AllUsers` from the `Microsoft.WinGet.Client` module (which also
+  installs the VCLibs and UI.Xaml dependencies), and falls back to provisioning the bundle with
+  `Add-AppxProvisionedPackage` / `Add-AppxPackage` when PSGallery is unreachable. Success is only
+  reported once `winget --version` actually runs.
+- **`C.O.N.J.U.R.E.` now finds an installed winget that is not on PATH.** The `winget` command is a
+  per-user app-execution alias, so under SYSTEM (an RMM agent) or straight after App Installer is
+  registered it cannot be resolved by name. CONJURE now falls back to `winget.exe` inside the
+  `Microsoft.DesktopAppInstaller` package folder and adds it to the session PATH.
+- **`C.O.N.J.U.R.E. -WhatIf` no longer installs a missing package manager.** A missing winget or
+  Chocolatey is now reported as a preview instead of being installed — previously
+  `-PackageManager chocolatey -WhatIf` ran the Chocolatey installer for real.
+
 ## [5.1.0] - 2026-09-24
 
 ### Added
