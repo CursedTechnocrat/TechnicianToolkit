@@ -236,6 +236,11 @@ function Test-ChocolateyAvailable {
         # Chocolatey not found
     }
 
+    if ($WhatIf) {
+        Write-Host "[~] WhatIf: Chocolatey is not installed — would install it. Nothing was changed." -ForegroundColor $Colors.Accent
+        return $true
+    }
+
     Write-Host "[!!] Chocolatey is not installed. Installing now..." -ForegroundColor $Colors.Warning
 
     try {

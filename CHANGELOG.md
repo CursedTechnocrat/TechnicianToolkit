@@ -20,8 +20,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   per-user app-execution alias, so under SYSTEM (an RMM agent) or straight after App Installer is
   registered it cannot be resolved by name. CONJURE now falls back to `winget.exe` inside the
   `Microsoft.DesktopAppInstaller` package folder and adds it to the session PATH.
-- **`C.O.N.J.U.R.E. -WhatIf` no longer installs winget.** A missing winget is now reported as a
-  preview instead of being installed.
+- **`C.O.N.J.U.R.E. -WhatIf` no longer installs a missing package manager.** A missing winget or
+  Chocolatey is now reported as a preview instead of being installed — previously
+  `-PackageManager chocolatey -WhatIf` ran the Chocolatey installer for real.
 
 ## [5.1.0] - 2026-09-24
 
