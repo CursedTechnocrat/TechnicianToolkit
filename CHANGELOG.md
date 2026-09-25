@@ -54,6 +54,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Writes an HTML report plus a CSV of every access-control entry scanned. `-Path` reviews a folder
   tree instead of the shares. Read-only.
 
+### Changed
+- **C.I.P.H.E.R. rebuilt from scratch, at half the size.** The old script mixed the BitLocker
+  PowerShell module with `manage-bde`, and most of its recovery logic existed to work around the
+  two disagreeing: a protector added through the module's WMI view had not yet reached the
+  on-disk metadata `manage-bde` reads. The rebuild uses one tool for each job, so the two views
+  cannot disagree:
+  - every change runs through `manage-bde`, resolved through `Sysnative` so a 32-bit host
+    still finds it;
+  - every read comes from the `Win32_EncryptableVolume` CIM class.
+
+  Neither needs the BitLocker module. The tool no longer depends on how PowerShell 7 loads that
+  module, so it runs the same way in the desktop app as in Windows PowerShell 5.1. Other changes:
+  - **Enable** no longer asks which protector to use, and TPM + PIN is no longer offered. It adds
+    TPM + recovery password on the OS drive, and recovery password + auto-unlock on any other
+    drive.
+  - **Enable** now works with `-Unattended`.
+  - **Enable** no longer decrypts and re-encrypts a drive that holds only a clear key. It adds
+    the missing protectors and turns protection on.
+  - **Export** writes an HTML report. It no longer renders a PDF through headless Edge or Chrome,
+    which needed a browser installed and exiting cleanly. Print the report to PDF if needed.
+  - **`-WhatIf` now covers every action.** Before, `-Unattended -WhatIf -Action Disable` really
+    started decrypting.
+
 ### Fixed
 - **`C.O.N.J.U.R.E.` could never install a missing winget.** `Test-WingetAvailable` downloaded
   `https://aka.ms/getwinget` to `GetWinget.ps1` and executed it, but that link serves the App

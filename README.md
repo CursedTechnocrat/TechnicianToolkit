@@ -138,7 +138,7 @@ Diagnostics outgrew keys 10–19, so it continues at 60 rather than renumbering 
 
 | # | Script | Acronym | Purpose |
 |---|--------|---------|---------|
-| 20 | **cipher.ps1** | **C.I.P.H.E.R.** — Configures & Implements Policy-based Hardware Encryption & Recovery | BitLocker drive encryption management — enable, disable, key backup, PDF export |
+| 20 | **cipher.ps1** | **C.I.P.H.E.R.** — Configures & Implements Policy-based Hardware Encryption & Recovery | BitLocker drive encryption management — enable, disable, key backup, report export |
 | 21 | **sigil.ps1** | **S.I.G.I.L.** — Secures Infrastructure: Governs via Integrated Lockdown | Security baseline enforcement — telemetry, UAC, firewall, audit policy, password policy |
 | 22 | **citadel.ps1** | **C.I.T.A.D.E.L.** — Centralizes Identity, Tasks, Accounts, Directories, Entitlements & Logons | Active Directory user & group management — unlock, reset, lockout forensics, stale & expiry reports |
 | 23 | **artifact.ps1** | **A.R.T.I.F.A.C.T.** — Audits, Reports Trust, Identity, Fingerprints, Authority, Certificates & TLS | Certificate health monitor — local cert stores, SSL/TLS expiry, HTML report |
@@ -481,18 +481,20 @@ NECROPSY reads the bugcheck code and parameters, not the stack. Naming the fault
 
 ### C.I.P.H.E.R.
 
-Manages BitLocker drive encryption across all volumes with an interactive menu-driven interface.
+Manages BitLocker drive encryption across all volumes, from a menu or unattended with `-Action`.
+All changes go through `manage-bde` and all reads through the `Win32_EncryptableVolume` CIM class,
+so it does not depend on the BitLocker PowerShell module and runs the same under PowerShell 5.1 and 7.
 
 - Displays current encryption status for all drives on launch
-- Enable BitLocker with TPM, TPM + PIN, or recovery password only (detects VMs and falls back to full-volume encryption when a disk rejects used-space-only)
-- On an already-encrypted drive, recognizes a *suspended* volume and resumes it rather than re-adding protectors; only adds a recovery key when none is present
-- Recovery key displayed and confirmed before encryption begins
+- Enable BitLocker: TPM + recovery password on the OS drive; recovery password + auto-unlock on other drives. Starts used-space-only XTS-AES 256 and retries full-volume if the disk rejects it
+- On an already-encrypted drive with protection off (suspended, or an OEM clear-key volume), adds any missing protector and turns protection on rather than re-encrypting
+- Recovery key displayed once encryption starts
 - Disable BitLocker (full decryption) with confirmation prompt
-- Back up recovery key to Active Directory or Entra ID (Azure AD)
+- Back up recovery keys to Active Directory or Entra ID
 - View recovery key ID and password for any encrypted drive
-- Suspend BitLocker for BIOS/firmware updates (auto-resumes after reboot)
+- Suspend BitLocker for BIOS/firmware updates (auto-resumes after one reboot)
 - Resume suspended BitLocker protection
-- Export a drive-status + recovery-key report to PDF (rendered via headless Edge/Chrome; falls back to HTML if neither is installed). Unattended: `-Action Export [-OutputPath <dir>]`
+- Export a drive-status + recovery-key HTML report. Unattended: `-Action Export [-OutputPath <dir>]`
 
 ---
 
@@ -1301,7 +1303,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **pyre.ps1** | None — ROOT\WMI battery classes and Win32_Battery are queried unconditionally; thresholds (80/60 pct, 300/500 cycles) are editable constants in the script |
 | **codex.ps1** | `LogDirectory` (read) — defines which directory CODEX scans for existing HTML reports; CLI overrides via `-LogDir`. Optional `-DaysBack <int>` filter and pattern-strict file matching are constants in the script |
 | **necropsy.ps1** | `-Days <int>` — look-back window (default 30, range 1-365); read-only otherwise |
-| **cipher.ps1** | `LogDirectory` (read) — Export action writes the PDF report there unless `-OutputPath` overrides it. `OrgName` is shown in the report header. Drive and action are selected interactively at runtime |
+| **cipher.ps1** | `LogDirectory` (read) — Export action writes the HTML report there unless `-OutputPath` overrides it. `OrgName` is shown in the report header. Drive and action are selected interactively, or with `-Drive` / `-Action` |
 | **sigil.ps1** | None — categories selected interactively; screensaver timeout editable in script (default 600 s) |
 | **citadel.ps1** | None — user search and action selected interactively; stale threshold is 90 days (editable in script) |
 | **herald.ps1** | `LogDirectory` (read) — HTML and CSV are written there unless `-OutputPath` overrides it; `OrgName` is shown in the report header. `-StaleDays <int>` inactivity threshold (default 90), `-SearchBase <dn>` to scope to one OU, `-Server <dc>` to target a domain controller, `-IncludeDisabled`, `-AdminGroupPattern <regex>` for customer-created admin groups (default `(?i)(admin\|operator\|helpdesk\|privileg)`), `-SkipCustomGroupScan`, `-NoCsv` |
@@ -1358,7 +1360,7 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **pyre.ps1** | Log directory — `PYRE_<timestamp>.html` (laptop battery health audit), `PYRE_battery_report_<timestamp>.xml` (parsed `powercfg` data), `PYRE_battery_report_<timestamp>.html` (full Microsoft `powercfg /batteryreport` HTML) |
 | **necropsy.ps1** | Log directory — `NECROPSY_<timestamp>.html` (crash & unexpected-reboot analysis) |
 | **codex.ps1** | Log directory — `CODEX_<timestamp>.html` (rollup index of every other report in the log directory; CODEX excludes its own outputs from the index) |
-| **cipher.ps1** | Console only by default; the Export action writes `CIPHER_Report_<timestamp>.pdf` (status + recovery keys) to `-OutputPath` or the log directory, keeping `.html` if no Edge/Chrome is available to render it |
+| **cipher.ps1** | Console only by default; the Export action writes `CIPHER_Report_<timestamp>.html` (status + recovery keys) to `-OutputPath` or the log directory |
 | **sigil.ps1** | Log directory — `SIGIL_BaselineLog_<timestamp>.csv` |
 | **citadel.ps1** | Log directory — `CITADEL_Stale_<timestamp>.html`; `CITADEL_PwdExpiry_<timestamp>.html` |
 | **herald.ps1** | Log directory (or `-OutputPath`) — `HERALD_<timestamp>.html` (authentication policy + account roster & access levels), `HERALD_Roster_<timestamp>.csv` (same roster with blank Action / Notes columns for customer review) |
