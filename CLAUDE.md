@@ -168,9 +168,11 @@ prefixes, removed deprecation stubs, no locally redefined shared helpers, and th
 BEACON / PORTAL / CONJURE tier-mapper data tables (extracted by AST lookup rather than
 dot-sourcing, since the tools launch their main flow on import). The same AST extraction covers
 the pure helpers of NECROPSY (bugcheck and dump-header parsing), RAVEN (inbox-rule, SPF and
-DMARC scoring), WARD (LAPS policy precedence) and PALADIN (platform-protection verdict); the
+DMARC scoring), WARD (LAPS policy precedence), PALADIN (platform-protection verdict), RAMPART
+(Conditional Access predicates and emergency-access exclusion), OATH (`nltest` / `w32tm`
+parsers, Netlogon status table) and CATACOMB (rights-mask and SID classification); the
 root `BeforeAll` provides `Get-ToolAst` / `Get-ToolAssignmentValue` / `Get-ToolFunctionText` for
-that. A finding catalog (CONDUIT, NECROPSY, RAVEN) is tested against the codes its script
+that. A finding catalog (CONDUIT, NECROPSY, RAVEN, RAMPART, OATH, CATACOMB) is tested against the codes its script
 actually raises, so a new `Add-*Finding -Code` without a catalog entry fails CI.
 
 ### Verifying on Linux / in an agent sandbox
@@ -235,7 +237,7 @@ $ColorSchema = @{
 - All interactive tools expose `[switch]$Unattended` — skips prompts, runs defaults.
 - Destructive or state-changing tools also expose `[switch]$WhatIf` — previews actions without
   executing them. The current set is REVENANT, ARCHIVE, COVENANT, SIGIL, CLEANSE, CIPHER, FORGE,
-  RESTORATION, RUNEPRESS, CONJURE, and CONDUIT. GRIMOIRE auto-detects and passes `-WhatIf` to any tool that
+  RESTORATION, RUNEPRESS, CONJURE, CONDUIT, and OATH. GRIMOIRE auto-detects and passes `-WhatIf` to any tool that
   declares it, and the Pester suite (`'-WhatIf declared on destructive tools'`) enforces the list.
 - Tools that write logs expose `[switch]$Transcript`.
 
@@ -388,6 +390,36 @@ All three touch Exchange Online or Microsoft 365, at different layers.
 | "Is anyone's mailbox forwarding out, hiding mail, or otherwise showing signs of compromise? Is SPF / DKIM / DMARC right?" | **RAVEN** (Exchange Online, read-only) |
 | "Who is licensed, who is unlicensed, who has MFA registered?" | **RELIQUARY** (Microsoft Graph) |
 | "What breaks if I delete this group?" — including its Exchange transport rules and delegations | **TENDRIL** |
+
+### OATH vs LEYLINE vs CITADEL
+
+| Question | Reach for |
+|----------|-----------|
+| "This machine can't reach `<host>`." | **LEYLINE** (general network diagnostics and stack resets) |
+| "The trust relationship with the domain failed" / domain logons fail on one machine | **OATH** (DC discovery, domain DNS, Kerberos time, secure channel; repairs the trust from the client side) |
+| "Reset this user's password / unlock this account." | **CITADEL** (changes the directory) |
+
+OATH repairs from the member machine and never edits Active Directory, never changes DNS
+settings, and never unjoins or rejoins — a deleted computer account is reported with the
+rejoin steps. The machine-password reset is interactive only, because it needs domain
+credentials typed by the technician.
+
+### CATACOMB vs HERALD vs WARD
+
+All three are access reviews; they differ in what is being accessed.
+
+| Question | Reach for |
+|----------|-----------|
+| "Who can get into this file share, and can everyone write to it?" | **CATACOMB** (SMB share + NTFS permissions, HTML + CSV) |
+| "Who holds privilege in the domain?" | **HERALD** |
+| "Who can administer this machine?" | **WARD** |
+
+### RAMPART vs WRAITH
+
+| Question | Reach for |
+|----------|-----------|
+| "Which identities are risky — guests, stale admins, password-never-expires?" | **WRAITH** |
+| "Do the Conditional Access policies actually enforce MFA and block legacy auth, and is there a break-glass path?" | **RAMPART** |
 
 ### THRESHOLD vs AUGUR
 
