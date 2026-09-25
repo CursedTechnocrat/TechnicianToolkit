@@ -42,10 +42,10 @@
       SecuritySweep -- Endpoint security posture (read-only):
                        SIGIL -> TALON -> TOTEM -> PALADIN -> ARTIFACT
       NetworkSweep  -- Endpoint network posture (read-only):
-                       LEYLINE -> LANTERN -> BEACON -> PORTAL
-      TenantSweep   -- Cloud tenant posture (seven reports):
+                       LEYLINE -> LANTERN -> BEACON -> PORTAL -> OATH
+      TenantSweep   -- Cloud tenant posture (eight reports):
                        TALISMAN -> RELIQUARY -> GOLEM -> WRAITH -> CONCLAVE -> GROVE
-                       -> RAVEN
+                       -> RAVEN -> RAMPART
 
 .USAGE
     PS C:\> .\ritual.ps1                                    # Interactive menu
@@ -187,17 +187,18 @@ $script:BuiltInRecipes = @{
     }
     'NetworkSweep' = @{
         Name        = 'Endpoint Network Posture'
-        Description = 'Read-only network posture sweep: live diagnostics, LAN discovery, Wi-Fi profiles, VPN tunnels.'
+        Description = 'Read-only network posture sweep: live diagnostics, LAN discovery, Wi-Fi profiles, VPN tunnels, domain trust.'
         Steps       = @(
             @{ Label = 'Network diagnostics';       Tool = 'leyline.ps1';   Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'LAN discovery';             Tool = 'lantern.ps1';   Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Wi-Fi profile audit';       Tool = 'beacon.ps1';    Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'VPN / Always-On audit';     Tool = 'portal.ps1';    Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Domain trust';              Tool = 'oath.ps1';      Args = @('-Unattended'); StopOnError = $false }
         )
     }
     'TenantSweep' = @{
         Name        = 'Cloud Tenant Posture'
-        Description = 'Full tenant posture in one sign-in sequence: Azure, M365 licensing, Intune, Entra ID hygiene, Teams, SharePoint, Exchange Online.'
+        Description = 'Full tenant posture in one sign-in sequence: Azure, M365 licensing, Intune, Entra ID hygiene, Teams, SharePoint, Exchange Online, Conditional Access.'
         Steps       = @(
             @{ Label = 'Azure assessment';          Tool = 'talisman.ps1';  Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'M365 license audit';        Tool = 'reliquary.ps1'; Args = @('-Unattended'); StopOnError = $false }
@@ -206,6 +207,7 @@ $script:BuiltInRecipes = @{
             @{ Label = 'Microsoft Teams audit';     Tool = 'conclave.ps1';  Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'SharePoint Online audit';   Tool = 'grove.ps1';     Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Exchange Online security';  Tool = 'raven.ps1';     Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Conditional Access posture'; Tool = 'rampart.ps1';  Args = @('-Unattended'); StopOnError = $false }
         )
     }
 }

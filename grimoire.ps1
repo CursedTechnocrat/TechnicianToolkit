@@ -367,6 +367,15 @@ $Tools = @(
         Color       = 'Cyan'
         Category    = 'Security'
     },
+    [PSCustomObject]@{
+        Key         = '28'
+        Name        = 'C.A.T.A.C.O.M.B.'
+        File        = 'catacomb.ps1'
+        Version     = '5.1'
+        Description = 'File share & NTFS permissions review  -  share and NTFS access, everyone-type write, direct user grants, orphaned SIDs, broken inheritance, HTML + CSV'
+        Color       = 'Yellow'
+        Category    = 'Security'
+    },
     # ── Network & Remote (30–39) ─────────────────────────────────────
     [PSCustomObject]@{
         Key         = '30'
@@ -410,6 +419,15 @@ $Tools = @(
         File        = 'portal.ps1'
         Version     = '5.1'
         Description = 'VPN / Always-On VPN audit  -  built-in connections, app triggers, NRPT, tunnel interfaces, third-party clients'
+        Color       = 'Green'
+        Category    = 'Network & Remote'
+    },
+    [PSCustomObject]@{
+        Key         = '35'
+        Name        = 'O.A.T.H.'
+        File        = 'oath.ps1'
+        Version     = '5.1'
+        Description = 'Domain trust & secure channel diagnosis and repair  -  DC discovery, DNS, DC ports, clock skew, nltest secure channel, machine password reset'
         Color       = 'Green'
         Category    = 'Network & Remote'
     },
@@ -484,6 +502,15 @@ $Tools = @(
         Version     = '5.1'
         Description = 'Exchange Online mailbox security audit  -  external forwarding, suspicious inbox rules, SMTP AUTH, auditing, delegation, SPF / DKIM / DMARC'
         Color       = 'Magenta'
+        Category    = 'Cloud & Identity'
+    },
+    [PSCustomObject]@{
+        Key         = '48'
+        Name        = 'R.A.M.P.A.R.T.'
+        File        = 'rampart.ps1'
+        Version     = '5.1'
+        Description = 'Entra ID Conditional Access posture  -  MFA and legacy-auth baseline, admin coverage, report-only and disabled policies, exclusions, break-glass, named locations'
+        Color       = 'Cyan'
         Category    = 'Cloud & Identity'
     },
     # ── Data & Migration (50–59) ─────────────────────────────────────

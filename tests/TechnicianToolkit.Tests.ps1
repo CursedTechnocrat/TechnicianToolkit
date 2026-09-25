@@ -603,7 +603,8 @@ Describe '-WhatIf declared on destructive tools' {
     # and Windows Update installs, printer driver / network printer additions.
     $destructiveCases = @(
         'revenant.ps1','archive.ps1','covenant.ps1','sigil.ps1','cleanse.ps1','cipher.ps1',
-        'forge.ps1','restoration.ps1','runepress.ps1','conjure.ps1','conduit.ps1'
+        'forge.ps1','restoration.ps1','runepress.ps1','conjure.ps1','conduit.ps1',
+        'oath.ps1'
     ) | ForEach-Object {
         @{ Name = $_; FullName = (Join-Path $PSScriptRoot "..\$_") }
     }
@@ -1399,6 +1400,296 @@ Describe 'PALADIN platform protection' {
         $v = Get-TestPlatformVerdict @{ DriverBlocklist = 0 }
         $v.Verdict | Should -Be 'Partial'
         @($v.Findings | Where-Object { $_.Text -match 'blocklist' }).Count | Should -Be 1
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RAMPART — the finding catalog and the Conditional Access policy predicates.
+# Policies are built as nested hashtables, the shape Invoke-MgGraphRequest
+# returns, so the predicates are tested against what they will really read.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'RAMPART Conditional Access helpers' {
+    BeforeAll {
+        $ast = Get-ToolAst -FileName 'rampart.ps1'
+        $RampartFindings         = Get-ToolAssignmentValue -Ast $ast -VarName 'RampartFindings'
+        $PrivilegedRoleTemplates = Get-ToolAssignmentValue -Ast $ast -VarName 'PrivilegedRoleTemplates'
+        $GlobalAdminTemplateId   = Get-ToolAssignmentValue -Ast $ast -VarName 'GlobalAdminTemplateId'
+        foreach ($name in 'Get-CaList', 'Test-CaPolicyEnforced', 'Test-CaTargetsAllUsers', 'Test-CaTargetsAllApps',
+                          'Test-CaRequiresMfa', 'Test-CaBlocks', 'Test-CaBlocksLegacyAuth', 'Test-CaCoversRole',
+                          'Get-CaEmergencyExclusion', 'Test-BroadCidr', 'Get-RampartVerdict') {
+            . ([scriptblock]::Create((Get-ToolFunctionText -Ast $ast -FuncName $name)))
+        }
+        $rampartSource = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'rampart.ps1') -Raw
+
+        function New-CaPolicy {
+            param([string]$State = 'enabled', [string[]]$Users = @('All'), [string[]]$Exclude = @(), [string[]]$Roles = @(),
+                  [string[]]$Apps = @('All'), [string[]]$ClientApps = @('all'), [string[]]$Controls = @('mfa'),
+                  [string]$Operator = 'OR', [switch]$Strength)
+            $grant = @{ operator = $Operator; builtInControls = $Controls }
+            if ($Strength) { $grant['authenticationStrength'] = @{ displayName = 'Phishing-resistant MFA' } }
+            return @{
+                displayName   = 'Test policy'
+                state         = $State
+                conditions    = @{
+                    users          = @{ includeUsers = $Users; excludeUsers = $Exclude; includeRoles = $Roles }
+                    applications   = @{ includeApplications = $Apps }
+                    clientAppTypes = $ClientApps
+                }
+                grantControls = $grant
+            }
+        }
+    }
+
+    Context 'finding catalog' {
+        It 'contains every code the tool raises' {
+            $raised = @([regex]::Matches($rampartSource, "Add-RampartFinding\s+-Code\s+'([^']+)'") | ForEach-Object { $_.Groups[1].Value }) +
+                      @([regex]::Matches($rampartSource, "_cover\s+'[^']+'\s+\`$\w+\s+'([^']+)'") | ForEach-Object { $_.Groups[1].Value })
+            $raised = @($raised | Select-Object -Unique)
+            $raised.Count | Should -BeGreaterThan 10
+            foreach ($code in $raised) { $RampartFindings.ContainsKey($code) | Should -BeTrue -Because "rampart.ps1 raises '$code'" }
+        }
+        It 'gives every finding a renderable Severity, Title, Summary and Remedy' {
+            foreach ($code in $RampartFindings.Keys) {
+                $RampartFindings[$code].Severity | Should -BeIn @('Error', 'Warning', 'Info')
+                $RampartFindings[$code].Title    | Should -Not -BeNullOrEmpty
+                $RampartFindings[$code].Summary  | Should -Not -BeNullOrEmpty
+                $RampartFindings[$code].Remedy   | Should -Not -BeNullOrEmpty
+            }
+        }
+        It 'ranks the three baseline gaps as Errors' {
+            $RampartFindings['NoMfaAllUsers'].Severity        | Should -Be 'Error'
+            $RampartFindings['NoMfaAdmins'].Severity          | Should -Be 'Error'
+            $RampartFindings['LegacyAuthNotBlocked'].Severity | Should -Be 'Error'
+        }
+        It 'keys the privileged roles by the Global Administrator template ID' {
+            $PrivilegedRoleTemplates[$GlobalAdminTemplateId] | Should -Be 'Global Administrator'
+        }
+    }
+
+    Context 'policy predicates' {
+        It 'counts MFA and authentication strengths as MFA' {
+            Test-CaRequiresMfa (New-CaPolicy) | Should -BeTrue
+            Test-CaRequiresMfa (New-CaPolicy -Controls @() -Strength) | Should -BeTrue
+        }
+        It 'does not count "MFA OR compliant device" as MFA' {
+            Test-CaRequiresMfa (New-CaPolicy -Controls @('mfa', 'compliantDevice') -Operator 'OR') | Should -BeFalse
+            Test-CaRequiresMfa (New-CaPolicy -Controls @('mfa', 'compliantDevice') -Operator 'AND') | Should -BeTrue
+        }
+        It 'recognises a legacy-authentication block and nothing broader' {
+            Test-CaBlocksLegacyAuth (New-CaPolicy -ClientApps @('exchangeActiveSync', 'other') -Controls @('block')) | Should -BeTrue
+            Test-CaBlocksLegacyAuth (New-CaPolicy -ClientApps @('all') -Controls @('block')) | Should -BeFalse
+            Test-CaBlocksLegacyAuth (New-CaPolicy -ClientApps @('exchangeActiveSync', 'other') -Controls @('mfa')) | Should -BeFalse
+        }
+        It 'treats report-only as not enforced' {
+            Test-CaPolicyEnforced (New-CaPolicy -State 'enabledForReportingButNotEnforced') | Should -BeFalse
+            Test-CaPolicyEnforced (New-CaPolicy) | Should -BeTrue
+        }
+        It 'covers Global Administrator through All users or the role, unless the role is excluded' {
+            Test-CaCoversRole -Policy (New-CaPolicy) -RoleTemplateId $GlobalAdminTemplateId | Should -BeTrue
+            Test-CaCoversRole -Policy (New-CaPolicy -Users @() -Roles @($GlobalAdminTemplateId)) -RoleTemplateId $GlobalAdminTemplateId | Should -BeTrue
+            $p = New-CaPolicy; $p.conditions.users['excludeRoles'] = @($GlobalAdminTemplateId)
+            Test-CaCoversRole -Policy $p -RoleTemplateId $GlobalAdminTemplateId | Should -BeFalse
+            Test-CaCoversRole -Policy (New-CaPolicy -Apps @('00000002-0000-0ff1-ce00-000000000000')) -RoleTemplateId $GlobalAdminTemplateId | Should -BeFalse
+        }
+    }
+
+    Context 'emergency access' {
+        It 'returns the accounts excluded from every enforcing all-users gate' {
+            $gates = @(
+                (New-CaPolicy -Exclude @('bg1', 'bg2', 'svc')),
+                (New-CaPolicy -ClientApps @('exchangeActiveSync', 'other') -Controls @('block') -Exclude @('bg1', 'bg2'))
+            )
+            $e = Get-CaEmergencyExclusion -Policies $gates
+            $e.GateCount | Should -Be 2
+            @($e.Users | Sort-Object) | Should -Be @('bg1', 'bg2')
+        }
+        It 'ignores report-only policies and non-gating grants' {
+            $policies = @(
+                (New-CaPolicy -Exclude @('bg1')),
+                (New-CaPolicy -State 'enabledForReportingButNotEnforced' -Exclude @()),
+                (New-CaPolicy -Controls @('mfa', 'compliantDevice') -Exclude @())
+            )
+            @((Get-CaEmergencyExclusion -Policies $policies).Users) | Should -Be @('bg1')
+        }
+        It 'reports an empty exclusion when a gate excludes no one' {
+            $e = Get-CaEmergencyExclusion -Policies @((New-CaPolicy -Exclude @('bg1')), (New-CaPolicy -Exclude @()))
+            $e.Users.Count | Should -Be 0
+        }
+        It 'returns nothing when there is no enforcing all-users gate' {
+            Get-CaEmergencyExclusion -Policies @((New-CaPolicy -State 'disabled')) | Should -BeNullOrEmpty
+        }
+    }
+
+    Context 'named locations and verdict' {
+        It 'flags IPv4 ranges wider than /16 and IPv6 wider than /32' {
+            Test-BroadCidr '10.0.0.0/8'     | Should -BeTrue
+            Test-BroadCidr '0.0.0.0/0'      | Should -BeTrue
+            Test-BroadCidr '203.0.113.0/24' | Should -BeFalse
+            Test-BroadCidr '2001::/16'      | Should -BeTrue
+            Test-BroadCidr '2001:db8::/48'  | Should -BeFalse
+            Test-BroadCidr 'not-a-range'    | Should -BeFalse
+        }
+        It 'maps the worst severity to Exposed / Gaps / Enforced' {
+            (Get-RampartVerdict -FindingList @([PSCustomObject]@{ Severity = 'Error' })).Verdict   | Should -Be 'Exposed'
+            (Get-RampartVerdict -FindingList @([PSCustomObject]@{ Severity = 'Warning' })).Verdict | Should -Be 'Gaps'
+            (Get-RampartVerdict -FindingList @([PSCustomObject]@{ Severity = 'Info' })).Verdict    | Should -Be 'Enforced'
+        }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OATH — parsers for nltest and w32tm output, captured from real runs, and the
+# Netlogon status table that decides connectivity versus a broken trust.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'OATH domain trust helpers' {
+    BeforeAll {
+        $ast = Get-ToolAst -FileName 'oath.ps1'
+        $OathFindings        = Get-ToolAssignmentValue -Ast $ast -VarName 'OathFindings'
+        $NetlogonStatusCodes = Get-ToolAssignmentValue -Ast $ast -VarName 'NetlogonStatusCodes'
+        foreach ($name in 'ConvertFrom-NltestDsGetDc', 'ConvertFrom-NltestSecureChannel', 'Get-NetlogonStatusInfo',
+                          'ConvertFrom-W32tmStripchart', 'Test-PublicIpAddress', 'Get-OathVerdict') {
+            . ([scriptblock]::Create((Get-ToolFunctionText -Ast $ast -FuncName $name)))
+        }
+        $oathSource = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'oath.ps1') -Raw
+    }
+
+    Context 'finding catalog and status table' {
+        It 'contains every code the tool raises' {
+            $raised = @([regex]::Matches($oathSource, "Add-OathFinding\s+-Code\s+'([^']+)'") | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
+            $raised.Count | Should -BeGreaterThan 8
+            foreach ($code in $raised) { $OathFindings.ContainsKey($code) | Should -BeTrue -Because "oath.ps1 raises '$code'" }
+        }
+        It 'gives every finding a renderable Severity, Title, Summary and Remedy' {
+            foreach ($code in $OathFindings.Keys) {
+                $OathFindings[$code].Severity | Should -BeIn @('Error', 'Warning', 'Info')
+                $OathFindings[$code].Remedy   | Should -Not -BeNullOrEmpty
+            }
+        }
+        It 'classifies every Netlogon status as Ok, Connectivity or Trust' {
+            foreach ($k in $NetlogonStatusCodes.Keys) {
+                $NetlogonStatusCodes[$k].Kind | Should -BeIn @('Ok', 'Connectivity', 'Trust')
+            }
+            $NetlogonStatusCodes[1789].Kind | Should -Be 'Trust'
+            $NetlogonStatusCodes[1311].Kind | Should -Be 'Connectivity'
+        }
+        It 'falls back to Unknown for a status it does not know' {
+            (Get-NetlogonStatusInfo -Code 9999).Kind | Should -Be 'Unknown'
+            (Get-NetlogonStatusInfo -Code $null).Kind | Should -Be 'Unknown'
+        }
+    }
+
+    Context 'nltest parsing' {
+        It 'reads the DC, address and site from /dsgetdc' {
+            $r = ConvertFrom-NltestDsGetDc -Lines @('           DC: \\DC01.contoso.com', '      Address: \\10.0.0.10',
+                ' Dc Site Name: HQ', 'Our Site Name: Branch', 'The command completed successfully')
+            $r.Success | Should -BeTrue
+            $r.Dc      | Should -Be 'DC01.contoso.com'
+            $r.Address | Should -Be '10.0.0.10'
+            $r.OurSite | Should -Be 'Branch'
+        }
+        It 'reads the failure status from /dsgetdc' {
+            $r = ConvertFrom-NltestDsGetDc -Lines @('Getting DC name failed: Status = 1355 0x54b ERROR_NO_SUCH_DOMAIN')
+            $r.Success    | Should -BeFalse
+            $r.StatusCode | Should -Be 1355
+        }
+        It 'reports a healthy verified channel' {
+            $r = ConvertFrom-NltestSecureChannel -Lines @('Trusted DC Name \\DC01.contoso.com',
+                'Trusted DC Connection Status Status = 0 0x0 NERR_Success', 'Trust Verification Status = 0 0x0 NERR_Success')
+            $r.StatusCode | Should -Be 0
+            $r.Verified   | Should -BeTrue
+            $r.TrustedDc  | Should -Be 'DC01.contoso.com'
+        }
+        It 'prefers the verification failure over a healthy connection' {
+            $r = ConvertFrom-NltestSecureChannel -Lines @('Trusted DC Name \\DC01.contoso.com',
+                'Trusted DC Connection Status Status = 0 0x0 NERR_Success',
+                'Trust Verification Status = 1789 0x6fd ERROR_TRUSTED_RELATIONSHIP_FAILURE')
+            $r.StatusCode | Should -Be 1789
+        }
+        It 'reads a connection failure and a bare failed line' {
+            (ConvertFrom-NltestSecureChannel -Lines @('Trusted DC Connection Status Status = 1311 0x51f ERROR_NO_LOGON_SERVERS')).StatusCode | Should -Be 1311
+            (ConvertFrom-NltestSecureChannel -Lines @('I_NetLogonControl failed: Status = 5 0x5 ERROR_ACCESS_DENIED')).StatusCode | Should -Be 5
+        }
+        It 'returns no status for output it cannot read' {
+            (ConvertFrom-NltestSecureChannel -Lines @('something else entirely')).StatusCode | Should -BeNullOrEmpty
+        }
+    }
+
+    Context 'time and DNS' {
+        It 'reads the offset from w32tm /stripchart /dataonly' {
+            ConvertFrom-W32tmStripchart -Lines @('Tracking dc01 [10.0.0.10:123].', '10:00:00, +00.0123456s') | Should -Be 0.0123456
+            ConvertFrom-W32tmStripchart -Lines @('10:00:00, -412.5s') | Should -Be -412.5
+            ConvertFrom-W32tmStripchart -Lines @('10:00:00, error: 0x800705B4') | Should -BeNullOrEmpty
+        }
+        It 'recognises public resolvers and leaves private ranges alone' {
+            foreach ($a in '8.8.8.8', '1.1.1.1', '2606:4700:4700::1111') { Test-PublicIpAddress $a | Should -BeTrue -Because "$a is public" }
+            foreach ($a in '10.0.0.1', '172.20.1.1', '192.168.1.1', '169.254.1.1', '100.64.0.1', '127.0.0.1', 'fd00::1', 'fe80::1', 'junk') {
+                Test-PublicIpAddress $a | Should -BeFalse -Because "$a is not a public resolver"
+            }
+        }
+    }
+
+    Context 'verdict' {
+        It 'reports Not joined, Broken, Degraded and Healthy' {
+            (Get-OathVerdict -FindingList @([PSCustomObject]@{ Code = 'NotDomainJoined'; Severity = 'Info' })).Verdict | Should -Be 'Not joined'
+            (Get-OathVerdict -FindingList @([PSCustomObject]@{ Code = 'TrustBroken'; Severity = 'Error' })).Verdict     | Should -Be 'Broken'
+            (Get-OathVerdict -FindingList @([PSCustomObject]@{ Code = 'ClockDrift'; Severity = 'Warning' })).Verdict    | Should -Be 'Degraded'
+            (Get-OathVerdict -FindingList @()).Verdict | Should -Be 'Healthy'
+        }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CATACOMB — the rights-mask collapse and SID categories that decide what
+# counts as broad write access, and the finding catalog.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'CATACOMB permission helpers' {
+    BeforeAll {
+        $ast = Get-ToolAst -FileName 'catacomb.ps1'
+        $CatacombFindings = Get-ToolAssignmentValue -Ast $ast -VarName 'CatacombFindings'
+        $BroadSids        = Get-ToolAssignmentValue -Ast $ast -VarName 'BroadSids'
+        $BroadDomainRids  = Get-ToolAssignmentValue -Ast $ast -VarName 'BroadDomainRids'
+        foreach ($name in 'Get-NtfsRightsLevel', 'Test-WriteLevel', 'Get-SidCategory', 'Get-CatacombVerdict') {
+            . ([scriptblock]::Create((Get-ToolFunctionText -Ast $ast -FuncName $name)))
+        }
+        $catacombSource = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'catacomb.ps1') -Raw
+    }
+
+    It 'contains every code the tool raises' {
+        $raised = @([regex]::Matches($catacombSource, "Add-CatacombFinding\s+-Code\s+'([^']+)'") | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
+        $raised.Count | Should -BeGreaterThan 7
+        foreach ($code in $raised) { $CatacombFindings.ContainsKey($code) | Should -BeTrue -Because "catacomb.ps1 raises '$code'" }
+    }
+    It 'ranks broad write as an Error and broad read as a Warning' {
+        $CatacombFindings['BroadWriteAccess'].Severity | Should -Be 'Error'
+        $CatacombFindings['BroadReadAccess'].Severity  | Should -Be 'Warning'
+    }
+    It 'collapses the standard FileSystemRights masks' {
+        Get-NtfsRightsLevel -Value 2032127 | Should -Be 'Full'
+        Get-NtfsRightsLevel -Value 197055  | Should -Be 'Modify'
+        Get-NtfsRightsLevel -Value 278     | Should -Be 'Write'
+        Get-NtfsRightsLevel -Value 131241  | Should -Be 'Read'
+        Get-NtfsRightsLevel -Value 65536   | Should -Be 'Special'
+    }
+    It 'maps the generic rights inheritable entries carry' {
+        Get-NtfsRightsLevel -Value 268435456   | Should -Be 'Full'
+        Get-NtfsRightsLevel -Value 1073741824  | Should -Be 'Write'
+        Get-NtfsRightsLevel -Value -2147483648 | Should -Be 'Read'
+    }
+    It 'treats Full, Modify, Write and the share right Change as write' {
+        foreach ($l in 'Full', 'Modify', 'Write', 'Change') { Test-WriteLevel $l | Should -BeTrue }
+        foreach ($l in 'Read', 'Special') { Test-WriteLevel $l | Should -BeFalse }
+    }
+    It 'recognises everyone-type principals, including Domain Users by RID' {
+        foreach ($s in 'S-1-1-0', 'S-1-5-11', 'S-1-5-32-545', 'S-1-5-21-1-2-3-513') { Get-SidCategory $s | Should -Be 'Broad' -Because "$s means everyone" }
+        Get-SidCategory 'S-1-5-21-1-2-3-512'  | Should -Be 'Account'
+        Get-SidCategory 'S-1-5-21-1-2-3-1105' | Should -Be 'Account'
+        Get-SidCategory 'S-1-5-18'            | Should -Be 'WellKnown'
+        Get-SidCategory 'S-1-5-32-544'        | Should -Be 'WellKnown'
+    }
+    It 'maps the worst severity to Exposed / Review / Tidy' {
+        (Get-CatacombVerdict -FindingList @([PSCustomObject]@{ Severity = 'Error' })).Verdict   | Should -Be 'Exposed'
+        (Get-CatacombVerdict -FindingList @([PSCustomObject]@{ Severity = 'Warning' })).Verdict | Should -Be 'Review'
+        (Get-CatacombVerdict -FindingList @([PSCustomObject]@{ Severity = 'Info' })).Verdict    | Should -Be 'Tidy'
     }
 }
 

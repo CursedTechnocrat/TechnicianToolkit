@@ -7,6 +7,53 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **R.A.M.P.A.R.T. (`rampart.ps1`) — Entra ID Conditional Access posture audit.** Registered at key
+  48 under Cloud & Identity. WRAITH audits identities and TENDRIL reads Conditional Access only to
+  see what depends on a group, so until now nothing scored the policies themselves. RAMPART checks:
+  - **Baseline:** MFA for all users, MFA for Global Administrator and 13 other privileged roles,
+    and a legacy-authentication block. Only enabled policies count, and "MFA **or** compliant
+    device" is deliberately not counted as MFA. Security defaults are recognised when no
+    Conditional Access policy exists.
+  - **Where licensed:** sign-in and user risk policies, and a device-compliance requirement.
+  - **Hygiene:** report-only and disabled policies, long exclusion lists on enforcing policies,
+    policies that reference deleted users or groups, and trusted named locations wider than /16.
+  - **Emergency access:** the users and groups excluded from every enforcing all-users policy. It
+    flags the tenant when there are none, because one bad policy can then lock every admin out.
+
+  All reads go through `Invoke-MgGraphRequest`, so the only module it needs is
+  `Microsoft.Graph.Authentication`. Read-only. Added to RITUAL's `TenantSweep`.
+- **O.A.T.H. (`oath.ps1`) — domain trust and secure-channel diagnosis and repair.** Registered at
+  key 35 under Network & Remote, and added to the `-WhatIf` destructive set. It answers "the trust
+  relationship between this workstation and the primary domain failed" and the faults that come
+  before it:
+  - DC discovery and the DC-locator SRV record
+  - public DNS resolvers on a domain member
+  - DC ports (DNS, Kerberos, RPC, LDAP, SMB)
+  - clock offset from the DC against the five-minute Kerberos limit
+  - the secure channel via `nltest /sc_verify`, with the Netlogon status decoded into
+    *connectivity* versus *trust*
+  - policy that disables machine-password rotation
+
+  It reads `nltest` rather than `Test-ComputerSecureChannel`, which PowerShell 7 does not have.
+  Repair resyncs time from the domain hierarchy and resets the secure channel. Only if the DC
+  still rejects the machine password, and only interactively, it resets the computer account
+  password with credentials the technician enters. `Reset-ComputerMachinePassword` runs through
+  `powershell.exe` when hosted in PowerShell 7. It never changes DNS and never unjoins or rejoins
+  the domain. The audit runs as part of RITUAL's `NetworkSweep`.
+- **C.A.T.A.C.O.M.B. (`catacomb.ps1`) — file share and NTFS permissions review.** Registered at
+  key 28 under Security. HERALD reviews access to the domain and WARD to the local machine; this
+  reviews access to the file shares. It covers:
+  - every non-administrative share's share and root NTFS permissions
+  - a walk to `-Depth` (default 2) recording each folder with explicit entries or broken
+    inheritance
+  - Everyone / Authenticated Users / Users / Domain Users write that the share permissions also
+    let through
+  - direct grants to user accounts, orphaned SIDs, and Deny entries
+
+  Writes an HTML report plus a CSV of every access-control entry scanned. `-Path` reviews a folder
+  tree instead of the shares. Read-only.
+
 ### Fixed
 - **`C.O.N.J.U.R.E.` could never install a missing winget.** `Test-WingetAvailable` downloaded
   `https://aka.ms/getwinget` to `GetWinget.ps1` and executed it, but that link serves the App

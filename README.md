@@ -75,7 +75,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | Running through Kaseya VSA LiveConnect | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
 | Need a guided, menu-driven workflow | **This repo** — full prompts and confirmations at every step |
 | Need fire-and-forget with parameter-only input | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
-| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, CONCLAVE, GROVE, TENDRIL, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL, ANVIL, TALON, TOTEM, PYRE, PALADIN, BEACON, PORTAL, NECROPSY, RAVEN) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
+| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, CONCLAVE, GROVE, TENDRIL, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL, ANVIL, TALON, TOTEM, PYRE, PALADIN, BEACON, PORTAL, NECROPSY, RAVEN, RAMPART, OATH, CATACOMB) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
 
 ---
 
@@ -146,6 +146,7 @@ Diagnostics outgrew keys 10–19, so it continues at 60 rather than renumbering 
 | 25 | **totem.ps1** | **T.O.T.E.M.** — Trusted Observer of Transparent Execution Modules | TPM health audit — presence, spec version, ownership, readiness, BitLocker dependency, endorsement key, HTML report |
 | 26 | **paladin.ps1** | **P.A.L.A.D.I.N.** — Protection Auditor: Logs Antivirus, Defender, Intrusions & Notifications | AV / Microsoft Defender health audit — core state, real-time / cloud / sample, signature freshness, scan history, threats, exclusions, ASR rules, third-party AV, service health, recent events, HTML report |
 | 27 | **herald.ps1** | **H.E.R.A.L.D.** — Hierarchy, Entitlements, Roles & Access-Level Directory | Active Directory authentication & access review — domain password/lockout policy with verdicts, full name / alias / access level per account, nested group expansion, privileged group membership, review CSV, HTML report |
+| 28 | **catacomb.ps1** | **C.A.T.A.C.O.M.B.** — Catalogs Access To All Content: Owners, Members & Breadth | File share & NTFS permissions review — share and NTFS access, everyone-type write, direct user grants, orphaned SIDs, broken inheritance, HTML report + CSV of every entry |
 
 ### Network & Remote
 
@@ -156,6 +157,7 @@ Diagnostics outgrew keys 10–19, so it continues at 60 rather than renumbering 
 | 32 | **lantern.ps1** | **L.A.N.T.E.R.N.** — Locates & Audits Network Topology, Enumerating Resources & Nodes | Network discovery — subnet ping sweep, DNS lookup, MAC addresses, port scan, HTML report |
 | 33 | **beacon.ps1** | **B.E.A.C.O.N.** — Broadcasts, Encryption, Authentication & Connections Of Networks | Wi-Fi profile audit — saved profiles via XML export, authentication/cipher tier, auto-connect risk, hidden SSID, MAC randomisation, optional key cleartext, HTML report |
 | 34 | **portal.ps1** | **P.O.R.T.A.L.** — Profiles, Observes & Reports Tunnels, Authentication & Links | VPN / Always-On VPN audit — built-in user and all-user connections, auth/encryption tier, app triggers, NRPT, tunnel interfaces, third-party clients (Cisco / Palo Alto / Pulse / OpenVPN / WireGuard / Tailscale / WARP / etc.), HTML report |
+| 35 | **oath.ps1** | **O.A.T.H.** — Observes And Tends the Host's domain trust | Domain trust & secure channel diagnosis and repair — DC discovery, DNS, DC ports, clock skew, `nltest` secure channel, machine password reset |
 
 ### Cloud & Identity
 
@@ -169,6 +171,7 @@ Diagnostics outgrew keys 10–19, so it continues at 60 rather than renumbering 
 | 45 | **grove.ps1** | **G.R.O.V.E.** — Gathers, Reports On, & Verifies Estates | SharePoint Online audit — site inventory, storage, external sharing, ownerless sites, stale sites, HTML report |
 | 46 | **tendril.ps1** | **T.E.N.D.R.I.L.** — Traces Entitlements, Nested Dependencies, Roles, Integrations & Licenses | Entra ID group dependency audit — "what breaks if we delete this group?" — group-based licensing, Conditional Access, enterprise apps, directory roles, nested membership, AUs, Intune, SharePoint, Exchange, Azure RBAC, HTML report |
 | 47 | **raven.ps1** | **R.A.V.E.N.** — Reviews Auto-forwarding, Vulnerable Exchange settings & Nefarious rules | Exchange Online mailbox security audit — external forwarding, suspicious inbox rules, auto-forward policy, SMTP AUTH, auditing, delegation, SPF / DKIM / DMARC, HTML report |
+| 48 | **rampart.ps1** | **R.A.M.P.A.R.T.** — Reviews Access Management Policies And Rule Targeting | Entra ID Conditional Access posture — MFA and legacy-auth baseline, admin role coverage, report-only and disabled policies, exclusions, emergency access, named locations, HTML report |
 
 ### Data & Migration
 
@@ -296,8 +299,8 @@ Workflow orchestrator. Runs an ordered sequence of toolkit scripts as a single n
   - `Retire` — pre-reimage workflow: TETHER → EXHUME → ARCHIVE → CLEANSE
   - `HealthCheck` — quarterly machine review: AUSPEX → WARD → THRESHOLD → AUGUR → GARGOYLE → ARTIFACT → PALADIN → NECROPSY
   - `SecuritySweep` — endpoint security posture (read-only): SIGIL → TALON → TOTEM → PALADIN → ARTIFACT
-  - `NetworkSweep` — endpoint network posture (read-only): LEYLINE → LANTERN → BEACON → PORTAL
-  - `TenantSweep` — cloud tenant posture: TALISMAN → RELIQUARY → GOLEM → WRAITH → CONCLAVE → GROVE → RAVEN (RAVEN signs in to Exchange Online separately from the Graph tools)
+  - `NetworkSweep` — endpoint network posture (read-only): LEYLINE → LANTERN → BEACON → PORTAL → OATH (audit only)
+  - `TenantSweep` — cloud tenant posture: TALISMAN → RELIQUARY → GOLEM → WRAITH → CONCLAVE → GROVE → RAVEN → RAMPART (RAVEN signs in to Exchange Online separately from the Graph tools)
 - **Custom recipes** via `-RecipeFile path\to\recipe.psd1` — a hashtable with `Name`, `Description`, and an ordered `Steps` array (each step specifies `Tool`, `Args`, `StopOnError`, `Label`)
 - Per-step log-directory snapshot — any new files produced during a step are attributed to that step and linked from the rollup report
 - Default behaviour: abort on first failure. Pass `-ContinueOnError` to run every step regardless, unless the step's own `StopOnError = $true` overrides
@@ -556,6 +559,22 @@ Answers the two questions a customer security review asks: *what authentication 
 
 ---
 
+### C.A.T.A.C.O.M.B.
+
+File share and NTFS permissions review — answers "who has access to this share?" the way HERALD answers it for the domain and WARD for the local machine. Read-only.
+
+- Every non-administrative SMB share with its **share permissions** and the **NTFS permissions** at its root
+- A walk down each share (`-Depth`, default 2 folder levels; capped at 5,000 folders) recording every folder with **explicit permissions or broken inheritance** — folders that only inherit are not repeated
+- **Broad write**: Everyone, Authenticated Users, Users or Domain Users granted write in NTFS *and* let through by the share permissions — the combination that lets any account, or ransomware running as one, change the data. Broad read is reported separately, and expected on `NETLOGON` / `SYSVOL`
+- **Direct user grants** (access given to a person instead of a group), **orphaned SIDs** left by deleted accounts, **Deny** entries, and folders the elevated session still could not read
+- `-Path <folder>` reviews one folder tree instead of the shares
+- HTML report plus `CATACOMB_<timestamp>.csv` holding every access-control entry scanned (share, folder, identity, kind, level, allow/deny, inherited) — ready for a customer access review
+- Auto-elevates
+
+> **CATACOMB vs HERALD vs WARD:** all three are access reviews, at different scopes — CATACOMB for file shares, HERALD for Active Directory, WARD for one machine's local accounts.
+
+---
+
 ### A.R.T.I.F.A.C.T.
 
 Monitors certificate health across the local machine and remote hosts — surfaces expiring and expired certificates before they cause outages.
@@ -705,6 +724,23 @@ VPN and Always-On VPN audit. Answers "what tunnels can leave this machine, are t
 
 ---
 
+### O.A.T.H.
+
+Diagnoses and repairs "The trust relationship between this workstation and the primary domain failed" — and the quieter faults that come before it.
+
+- **Domain controller discovery** (`nltest /dsgetdc`) and the DC locator SRV record in DNS
+- **DNS servers** on each active adapter, flagging public resolvers on a domain member — the most common reason a machine intermittently cannot find its domain
+- **DC reachability** on DNS, Kerberos, RPC, LDAP and SMB
+- **Clock offset** from the DC (`w32tm /stripchart`): past five minutes Kerberos refuses tickets; past one minute it is flagged as drift
+- **Secure channel** via `nltest /sc_verify`, with the Netlogon status decoded into *connectivity* (fix the network) versus *trust* (the machine password or computer account is wrong). Uses `nltest` rather than `Test-ComputerSecureChannel`, which does not exist in PowerShell 7
+- Netlogon policy that disables machine password rotation
+- `-Action Audit` (default) is read-only. `-Action Repair` resyncs time from the domain hierarchy, resets the secure channel (`nltest /sc_reset`), and — only when the DC still rejects the machine password, and only interactively — resets the computer account password with domain credentials the technician enters (`Reset-ComputerMachinePassword`, run through Windows PowerShell when hosted in PowerShell 7). It never changes DNS and never unjoins or rejoins; a deleted computer account is reported with the rejoin steps
+- `-WhatIf` previews every repair
+
+> **OATH vs LEYLINE:** LEYLINE diagnoses general network reachability. OATH diagnoses the machine's membership of its domain — the DC, the secure channel, Kerberos time — and repairs the trust.
+
+---
+
 ## Cloud & Identity
 
 ### T.A.L.I.S.M.A.N.
@@ -820,6 +856,22 @@ Exchange Online mailbox security audit — looks for the signs and preconditions
 
 ---
 
+### R.A.M.P.A.R.T.
+
+Entra ID Conditional Access posture audit. Scores the tenant's policies against the baseline every tenant should have, then reviews the policies themselves. Read-only.
+
+- **Baseline coverage**: MFA for all users on all apps, MFA for Global Administrator, legacy authentication blocked — plus, where licensed, sign-in / user risk policies and a device-compliance requirement. Only *enabled* policies count, and "MFA **or** compliant device" does not count as MFA, because a compliant device gets in without it. Security defaults are recognised when no Conditional Access policy exists
+- **Privileged roles**: each of 14 admin roles (Global, Privileged Role, Security, Conditional Access, Exchange, SharePoint, User, Intune…) checked for an enforcing MFA policy that does not exclude it
+- **Hygiene**: policies left in report-only or disabled, enforcing all-users policies with long exclusion lists, and policies that reference deleted users or groups
+- **Emergency access**: the users and groups excluded from *every* enforcing all-users policy. None at all is flagged, because one bad policy or an MFA outage can then lock every administrator out
+- **Named locations**: trusted IP ranges wider than /16 (IPv4) or /32 (IPv6)
+- Needs only `Microsoft.Graph.Authentication` (offered for install if missing) and the `Policy.Read.All` + `Directory.Read.All` delegated scopes — all reads go through `Invoke-MgGraphRequest`
+- Verdict: Exposed / Gaps / Enforced
+
+> **RAMPART vs WRAITH:** WRAITH audits the *identities* — guests, privileged role holders, stale admins. RAMPART audits the *policies* that decide how those identities may sign in.
+
+---
+
 ## Data & Migration
 
 ### R.E.V.E.N.A.N.T.
@@ -904,7 +956,7 @@ first four rows is needed.
 | Internet connectivity | All scripts |
 | Windows Package Manager (winget) | `conjure.ps1` (Chocolatey supported as alternative) |
 | PSWindowsUpdate module | `restoration.ps1`, `forge.ps1` (auto-installed if missing) |
-| *(none — built-in cmdlets only)* | `conduit.ps1`, `necropsy.ps1` |
+| *(none — built-in cmdlets only)* | `conduit.ps1`, `necropsy.ps1`, `oath.ps1`, `catacomb.ps1` |
 | Entra ID account with device join permissions | `covenant.ps1` |
 | Robocopy (built into Windows) | `revenant.ps1`, `archive.ps1` |
 | BitLocker-capable Windows edition (Pro/Enterprise) | `cipher.ps1` |
@@ -916,9 +968,10 @@ first four rows is needed.
 | PnP.PowerShell module | `tendril.ps1` (optional, auto-installed if -IncludeSharePoint) |
 | Azure subscription + appropriate RBAC | `talisman.ps1` |
 | Microsoft 365 tenant + Global Reader or equivalent | `reliquary.ps1`, `golem.ps1`, `wraith.ps1`, `conclave.ps1`, `grove.ps1`, `tendril.ps1`, `raven.ps1` |
+| Microsoft.Graph.Authentication module + Policy.Read.All / Directory.Read.All scopes | `rampart.ps1` (offered for install if missing) |
 | Microsoft Intune licence + DeviceManagement Graph permissions | `golem.ps1`, `tendril.ps1` |
 | RoleManagement.Read.Directory + AuditLog.Read.All Graph scopes | `wraith.ps1`, `tendril.ps1` |
-| On-premises Active Directory domain membership | `citadel.ps1`, `herald.ps1` |
+| On-premises Active Directory domain membership | `citadel.ps1`, `herald.ps1`, `oath.ps1` |
 
 ---
 
@@ -1052,6 +1105,9 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\citadel.ps
 # H.E.R.A.L.D. — AD account roster & access levels
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\herald.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/herald.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
+# C.A.T.A.C.O.M.B. — File share & NTFS permissions review
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\catacomb.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/catacomb.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
 # A.R.T.I.F.A.C.T. — Certificate health monitor
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\artifact.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/artifact.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
@@ -1081,6 +1137,9 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\beacon.ps1
 # P.O.R.T.A.L. — VPN / Always-On VPN audit
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\portal.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/portal.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
+# O.A.T.H. — Domain trust & secure channel diagnosis and repair
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\oath.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/oath.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
 # ── Cloud & Identity ─────────────────────────────────────────────────────────
 
 # T.A.L.I.S.M.A.N. — Azure environment assessment
@@ -1106,6 +1165,9 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\tendril.ps
 
 # R.A.V.E.N. — Exchange Online mailbox security audit
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\raven.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/raven.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
+# R.A.M.P.A.R.T. — Entra ID Conditional Access posture
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\rampart.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/rampart.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # ── Data & Migration ─────────────────────────────────────────────────────────
 
@@ -1167,6 +1229,7 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\sigil.ps1         # Security baseline enforcement
 .\citadel.ps1       # Active Directory user and group management
 .\herald.ps1        # Active Directory account roster and access-level report
+.\catacomb.ps1      # File share & NTFS permissions review, HTML + CSV
 .\artifact.ps1         # Certificate health and SSL expiry monitor
 .\talon.ps1          # Persistence / autoruns audit
 .\totem.ps1          # TPM health audit
@@ -1178,6 +1241,7 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\lantern.ps1       # Network discovery and asset inventory
 .\beacon.ps1        # Wi-Fi profile audit
 .\portal.ps1        # VPN / Always-On VPN audit
+.\oath.ps1          # Domain trust & secure channel diagnosis and repair
 
 # Cloud & Identity
 .\talisman.ps1      # Azure environment assessment and HTML report
@@ -1188,6 +1252,7 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\grove.ps1         # SharePoint Online audit and HTML report
 .\tendril.ps1       # Entra ID group dependency audit and HTML report
 .\raven.ps1         # Exchange Online mailbox security audit and HTML report
+.\rampart.ps1       # Entra ID Conditional Access posture audit
 
 # Data & Migration
 .\revenant.ps1       # Profile migration and data transfer
@@ -1240,6 +1305,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **sigil.ps1** | None — categories selected interactively; screensaver timeout editable in script (default 600 s) |
 | **citadel.ps1** | None — user search and action selected interactively; stale threshold is 90 days (editable in script) |
 | **herald.ps1** | `LogDirectory` (read) — HTML and CSV are written there unless `-OutputPath` overrides it; `OrgName` is shown in the report header. `-StaleDays <int>` inactivity threshold (default 90), `-SearchBase <dn>` to scope to one OU, `-Server <dc>` to target a domain controller, `-IncludeDisabled`, `-AdminGroupPattern <regex>` for customer-created admin groups (default `(?i)(admin\|operator\|helpdesk\|privileg)`), `-SkipCustomGroupScan`, `-NoCsv` |
+| **catacomb.ps1** | `-Path <folder>` — review one folder tree instead of the shares; `-Depth <0-10>` — folder levels to walk into each share (default 2); the 5,000-folder cap and the expected-broad-read shares (`NETLOGON`, `SYSVOL`) are constants in the script |
 | **artifact.ps1** | None — stores and targets selected interactively or via `-Targets` parameter |
 | **talon.ps1** | None — every persistence surface is enumerated unconditionally |
 | **totem.ps1** | None — reads TPM state, BitLocker protectors, and endorsement key info unconditionally |
@@ -1249,6 +1315,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **lantern.ps1** | `$script:ScanPorts` — list of TCP ports checked during scan (editable in script) |
 | **beacon.ps1** | `-IncludeKey` — opt-in switch to render WLAN profile pre-shared keys in cleartext (default: masked); read-only otherwise |
 | **portal.ps1** | None — enumerates VPN connections, NRPT, tunnel interfaces, and third-party VPN client services unconditionally; the third-party client catalog is an editable `$ThirdPartyClients` array in the script |
+| **oath.ps1** | `-Action {Audit\|Repair}` — Audit is read-only (default); Repair resyncs time, resets the secure channel, and (interactive only) resets the machine password when the DC rejects it; `-WhatIf` — preview every repair |
 | **talisman.ps1** | `-SubscriptionId` — target a specific Azure subscription; `-OutputPath` — HTML report destination; `-NoOpen` — suppress auto-open after export |
 | **reliquary.ps1** | None — tenant and report scope selected interactively at runtime |
 | **golem.ps1** | None — tenant, device scope, and report scope selected interactively at runtime |
@@ -1257,6 +1324,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **grove.ps1** | None — tenant selected interactively; large-site and stale thresholds (100 GB, 180 days) are editable constants in the script |
 | **tendril.ps1** | `-GroupName` / `-GroupId` — target group (one required, prompted otherwise); `-IncludeSharePoint` + `-SharePointAdminUrl` — scan tenant SP sites via PnP (capped by `-SharePointSiteLimit`, default 200); `-IncludeExchange` — scan EXO transport rules, delegations, role groups, DL nesting; `-IncludeAzureRbac` — scan every visible subscription via Az; `-OutputPath` — HTML report destination; `-NoOpen` — suppress auto-open |
 | **raven.ps1** | `-DnsOnly` + `-Domain <name[,name]>` — SPF / DKIM / DMARC only, no sign-in; `-Domain` in a full audit limits the DNS checks to those domains (default: every accepted domain except `*.onmicrosoft.com`); `-SkipDelegation` — skip the per-mailbox Full Access / Send As sweep |
+| **rampart.ps1** | None — tenant chosen at sign-in; the exclusion threshold (5) and the privileged-role table are constants in the script |
 | **revenant.ps1** | `config.json` — `Revenant.DefaultDestination`; source, items, and destination also selectable interactively |
 | **archive.ps1** | `config.json` — `Archive.DefaultDestination`; profile, items, and destination also selectable interactively |
 | **tether.ps1** | None — reads HKCU OneDrive and User Shell Folders registry and enumerates Desktop / Documents / Pictures for the currently logged-on user |
@@ -1294,6 +1362,7 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **sigil.ps1** | Log directory — `SIGIL_BaselineLog_<timestamp>.csv` |
 | **citadel.ps1** | Log directory — `CITADEL_Stale_<timestamp>.html`; `CITADEL_PwdExpiry_<timestamp>.html` |
 | **herald.ps1** | Log directory (or `-OutputPath`) — `HERALD_<timestamp>.html` (authentication policy + account roster & access levels), `HERALD_Roster_<timestamp>.csv` (same roster with blank Action / Notes columns for customer review) |
+| **catacomb.ps1** | Log directory — `CATACOMB_<timestamp>.html` (share permissions review) and `CATACOMB_<timestamp>.csv` (every access-control entry scanned) |
 | **artifact.ps1** | Log directory — `ARTIFACT_<timestamp>.html` (cert inventory & SSL results) |
 | **talon.ps1** | Log directory — `TALON_<timestamp>.html` (persistence / autoruns audit) |
 | **totem.ps1** | Log directory — `TOTEM_<timestamp>.html` (TPM health audit) |
@@ -1303,6 +1372,7 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **lantern.ps1** | Log directory — `LANTERN_<timestamp>.html` and `LANTERN_<timestamp>.csv` |
 | **beacon.ps1** | Log directory — `BEACON_<timestamp>.html` (Wi-Fi profile audit). Per-profile XMLs are exported to a temp folder and deleted after parsing |
 | **portal.ps1** | Log directory — `PORTAL_<timestamp>.html` (VPN / Always-On VPN audit) |
+| **oath.ps1** | Log directory — `OATH_<timestamp>.html` (findings, secure channel, DNS, DC ports, clock offset, and every repair action) |
 | **talisman.ps1** | `-OutputPath` (default `%TEMP%`) — `azure-assessment-<timestamp>.html`; auto-opens in browser |
 | **reliquary.ps1** | Log directory — `RELIQUARY_<timestamp>.html` (combined license & mailbox report) |
 | **golem.ps1** | Log directory — `GOLEM_<timestamp>.html` (Intune / MDM compliance report) |
@@ -1311,6 +1381,7 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **grove.ps1** | Log directory — `GROVE_<timestamp>.html` (SharePoint Online estate audit) |
 | **tendril.ps1** | Log directory — `TENDRIL_<GroupName>_<timestamp>.html` (Entra ID group dependency audit) |
 | **raven.ps1** | Log directory — `RAVEN_<timestamp>.html` (Exchange Online mailbox security audit) |
+| **rampart.ps1** | Log directory — `RAMPART_<timestamp>.html` (Conditional Access posture) |
 | **revenant.ps1** | Log directory — `REVENANT_MigrationLog_<timestamp>.csv` |
 | **archive.ps1** | Script directory — `ARCHIVE_Log_<timestamp>.csv`; manifest inside ZIP |
 | **tether.ps1** | Log directory — `TETHER_<timestamp>.html` (OneDrive KFM readiness report) |
