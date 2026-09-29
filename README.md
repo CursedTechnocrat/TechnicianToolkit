@@ -75,7 +75,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | Running through Kaseya VSA LiveConnect | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
 | Need a guided, menu-driven workflow | **This repo** — full prompts and confirmations at every step |
 | Need fire-and-forget with parameter-only input | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
-| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, CONCLAVE, GROVE, TENDRIL, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL, ANVIL, TALON, TOTEM, PYRE, PALADIN, BEACON, PORTAL, NECROPSY, RAVEN, RAMPART, OATH, CATACOMB) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
+| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, CONCLAVE, GROVE, TENDRIL, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL, ANVIL, TALON, TOTEM, PYRE, PALADIN, BEACON, PORTAL, NECROPSY, RAVEN, RAMPART, CARILLON, OATH, CATACOMB) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
 
 ---
 
@@ -172,6 +172,7 @@ Diagnostics outgrew keys 10–19, so it continues at 60 rather than renumbering 
 | 46 | **tendril.ps1** | **T.E.N.D.R.I.L.** — Traces Entitlements, Nested Dependencies, Roles, Integrations & Licenses | Entra ID group dependency audit — "what breaks if we delete this group?" — group-based licensing, Conditional Access, enterprise apps, directory roles, nested membership, AUs, Intune, SharePoint, Exchange, Azure RBAC, HTML report |
 | 47 | **raven.ps1** | **R.A.V.E.N.** — Reviews Auto-forwarding, Vulnerable Exchange settings & Nefarious rules | Exchange Online mailbox security audit — external forwarding, suspicious inbox rules, auto-forward policy, SMTP AUTH, auditing, delegation, SPF / DKIM / DMARC, HTML report |
 | 48 | **rampart.ps1** | **R.A.M.P.A.R.T.** — Reviews Access Management Policies And Rule Targeting | Entra ID Conditional Access posture — MFA and legacy-auth baseline, admin role coverage, report-only and disabled policies, exclusions, emergency access, named locations, HTML report |
+| 49 | **carillon.ps1** | **C.A.R.I.L.L.O.N.** — Catalogs Attendants, Routing, Inbound Lines, Listeners, Overflow & Numbers | Teams Phone call queue & auto attendant audit — every queue's agents by display name with opt-in, voice and account state, overflow / timeout / no-agent routing, attendant menus and after-hours flows, resource accounts, unreachable queues, HTML report + agent CSV |
 
 ### Data & Migration
 
@@ -300,7 +301,7 @@ Workflow orchestrator. Runs an ordered sequence of toolkit scripts as a single n
   - `HealthCheck` — quarterly machine review: AUSPEX → WARD → THRESHOLD → AUGUR → GARGOYLE → ARTIFACT → PALADIN → NECROPSY
   - `SecuritySweep` — endpoint security posture (read-only): SIGIL → TALON → TOTEM → PALADIN → ARTIFACT
   - `NetworkSweep` — endpoint network posture (read-only): LEYLINE → LANTERN → BEACON → PORTAL → OATH (audit only)
-  - `TenantSweep` — cloud tenant posture: TALISMAN → RELIQUARY → GOLEM → WRAITH → CONCLAVE → GROVE → RAVEN → RAMPART (RAVEN signs in to Exchange Online separately from the Graph tools)
+  - `TenantSweep` — cloud tenant posture: TALISMAN → RELIQUARY → GOLEM → WRAITH → CONCLAVE → GROVE → RAVEN → RAMPART → CARILLON (RAVEN signs in to Exchange Online, and CARILLON to Microsoft Teams, separately from the Graph tools)
 - **Custom recipes** via `-RecipeFile path\to\recipe.psd1` — a hashtable with `Name`, `Description`, and an ordered `Steps` array (each step specifies `Tool`, `Args`, `StopOnError`, `Label`)
 - Per-step log-directory snapshot — any new files produced during a step are attributed to that step and linked from the rollup report
 - Default behaviour: abort on first failure. Pass `-ContinueOnError` to run every step regardless, unless the step's own `StopOnError = $true` overrides
@@ -872,6 +873,21 @@ Entra ID Conditional Access posture audit. Scores the tenant's policies against 
 
 > **RAMPART vs WRAITH:** WRAITH audits the *identities* — guests, privileged role holders, stale admins. RAMPART audits the *policies* that decide how those identities may sign in.
 
+### C.A.R.I.L.L.O.N.
+
+Teams Phone call queue and auto attendant audit. Answers "who is in this queue?" by name — never by object ID — and where every call can end up. Read-only.
+
+- **Call queues**: number, routing method, presence-based routing, conference mode, alert time, and the overflow / timeout / no-agent actions with their targets resolved to names ("Forward -> User Jane Doe", "Auto attendant Main Line")
+- **Agents**: every agent on every queue with display name, sign-in name, opt-in state, whether they are voice-enabled, whether the account is enabled, and how they got there — directly, through a named group, or through a Teams channel
+- **Auto attendants**: number, language, time zone, operator, the business-hours menu key by key, and each after-hours / holiday call flow with its schedule
+- **Resource accounts**: number, type, and the queue or attendant each one fronts
+- **Routing map**: which attendants and queues send calls to each queue or attendant, so an unreachable one stands out
+- **Flags**: queues with no agents, every agent opted out, or a single agent opted in; agents not voice-enabled or disabled; targets pointing at deleted users or groups; an overflow threshold of 0; queues that hang up on overflow / timeout; attendants with no after-hours flow; unreachable queues and attendants; resource accounts assigned to nothing
+- Needs `MicrosoftTeams` (offered for install if missing). Group names and "which group added this agent" come from Microsoft Graph (`Microsoft.Graph.Authentication`, `Directory.Read.All`); `-SkipGraph` avoids that second sign-in and still names users through the Teams module
+- `-Name 'Sales*'` limits the output to matching queues and attendants
+- Writes `CARILLON_<timestamp>.html` and `CARILLON_Agents_<timestamp>.csv` (one row per queue / agent pairing)
+- Verdict: Broken / Attention / Healthy
+
 ---
 
 ## Data & Migration
@@ -971,6 +987,7 @@ first four rows is needed.
 | Azure subscription + appropriate RBAC | `talisman.ps1` |
 | Microsoft 365 tenant + Global Reader or equivalent | `reliquary.ps1`, `golem.ps1`, `wraith.ps1`, `conclave.ps1`, `grove.ps1`, `tendril.ps1`, `raven.ps1` |
 | Microsoft.Graph.Authentication module + Policy.Read.All / Directory.Read.All scopes | `rampart.ps1` (offered for install if missing) |
+| MicrosoftTeams module + Teams Administrator (or Global Reader) | `carillon.ps1` (offered for install if missing; Microsoft.Graph.Authentication + Directory.Read.All also used to name groups unless `-SkipGraph`) |
 | Microsoft Intune licence + DeviceManagement Graph permissions | `golem.ps1`, `tendril.ps1` |
 | RoleManagement.Read.Directory + AuditLog.Read.All Graph scopes | `wraith.ps1`, `tendril.ps1` |
 | On-premises Active Directory domain membership | `citadel.ps1`, `herald.ps1`, `oath.ps1` |
@@ -1171,6 +1188,9 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\raven.ps1"
 # R.A.M.P.A.R.T. — Entra ID Conditional Access posture
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\rampart.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/rampart.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
+# C.A.R.I.L.L.O.N. — Teams Phone call queue & auto attendant audit
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\carillon.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/carillon.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
 # ── Data & Migration ─────────────────────────────────────────────────────────
 
 # R.E.V.E.N.A.N.T. — Profile migration
@@ -1255,6 +1275,7 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\tendril.ps1       # Entra ID group dependency audit and HTML report
 .\raven.ps1         # Exchange Online mailbox security audit and HTML report
 .\rampart.ps1       # Entra ID Conditional Access posture audit
+.\carillon.ps1      # Teams Phone call queues & auto attendants — agents by name
 
 # Data & Migration
 .\revenant.ps1       # Profile migration and data transfer
@@ -1327,6 +1348,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **tendril.ps1** | `-GroupName` / `-GroupId` — target group (one required, prompted otherwise); `-IncludeSharePoint` + `-SharePointAdminUrl` — scan tenant SP sites via PnP (capped by `-SharePointSiteLimit`, default 200); `-IncludeExchange` — scan EXO transport rules, delegations, role groups, DL nesting; `-IncludeAzureRbac` — scan every visible subscription via Az; `-OutputPath` — HTML report destination; `-NoOpen` — suppress auto-open |
 | **raven.ps1** | `-DnsOnly` + `-Domain <name[,name]>` — SPF / DKIM / DMARC only, no sign-in; `-Domain` in a full audit limits the DNS checks to those domains (default: every accepted domain except `*.onmicrosoft.com`); `-SkipDelegation` — skip the per-mailbox Full Access / Send As sweep |
 | **rampart.ps1** | None — tenant chosen at sign-in; the exclusion threshold (5) and the privileged-role table are constants in the script |
+| **carillon.ps1** | `-Name <wildcard>` — only queues / attendants whose name matches; `-SkipGraph` — Teams sign-in only (group names left unresolved) |
 | **revenant.ps1** | `config.json` — `Revenant.DefaultDestination`; source, items, and destination also selectable interactively |
 | **archive.ps1** | `config.json` — `Archive.DefaultDestination`; profile, items, and destination also selectable interactively |
 | **tether.ps1** | None — reads HKCU OneDrive and User Shell Folders registry and enumerates Desktop / Documents / Pictures for the currently logged-on user |
@@ -1384,6 +1406,7 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **tendril.ps1** | Log directory — `TENDRIL_<GroupName>_<timestamp>.html` (Entra ID group dependency audit) |
 | **raven.ps1** | Log directory — `RAVEN_<timestamp>.html` (Exchange Online mailbox security audit) |
 | **rampart.ps1** | Log directory — `RAMPART_<timestamp>.html` (Conditional Access posture) |
+| **carillon.ps1** | Log directory — `CARILLON_<timestamp>.html` (call queues & auto attendants) and `CARILLON_Agents_<timestamp>.csv` (queue / agent roster) |
 | **revenant.ps1** | Log directory — `REVENANT_MigrationLog_<timestamp>.csv` |
 | **archive.ps1** | Script directory — `ARCHIVE_Log_<timestamp>.csv`; manifest inside ZIP |
 | **tether.ps1** | Log directory — `TETHER_<timestamp>.html` (OneDrive KFM readiness report) |

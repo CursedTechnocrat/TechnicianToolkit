@@ -43,9 +43,9 @@
                        SIGIL -> TALON -> TOTEM -> PALADIN -> ARTIFACT
       NetworkSweep  -- Endpoint network posture (read-only):
                        LEYLINE -> LANTERN -> BEACON -> PORTAL -> OATH
-      TenantSweep   -- Cloud tenant posture (eight reports):
+      TenantSweep   -- Cloud tenant posture (nine reports):
                        TALISMAN -> RELIQUARY -> GOLEM -> WRAITH -> CONCLAVE -> GROVE
-                       -> RAVEN -> RAMPART
+                       -> RAVEN -> RAMPART -> CARILLON
 
 .USAGE
     PS C:\> .\ritual.ps1                                    # Interactive menu
@@ -198,7 +198,7 @@ $script:BuiltInRecipes = @{
     }
     'TenantSweep' = @{
         Name        = 'Cloud Tenant Posture'
-        Description = 'Full tenant posture in one sign-in sequence: Azure, M365 licensing, Intune, Entra ID hygiene, Teams, SharePoint, Exchange Online, Conditional Access.'
+        Description = 'Full tenant posture in one sign-in sequence: Azure, M365 licensing, Intune, Entra ID hygiene, Teams, SharePoint, Exchange Online, Conditional Access, Teams Phone call queues and auto attendants.'
         Steps       = @(
             @{ Label = 'Azure assessment';          Tool = 'talisman.ps1';  Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'M365 license audit';        Tool = 'reliquary.ps1'; Args = @('-Unattended'); StopOnError = $false }
@@ -208,6 +208,7 @@ $script:BuiltInRecipes = @{
             @{ Label = 'SharePoint Online audit';   Tool = 'grove.ps1';     Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Exchange Online security';  Tool = 'raven.ps1';     Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Conditional Access posture'; Tool = 'rampart.ps1';  Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Teams Phone queues & attendants'; Tool = 'carillon.ps1'; Args = @('-Unattended'); StopOnError = $false }
         )
     }
 }

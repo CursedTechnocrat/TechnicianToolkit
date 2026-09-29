@@ -1538,6 +1538,142 @@ Describe 'RAMPART Conditional Access helpers' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# CARILLON — the finding catalog and the queue / routing helpers. The whole
+# point of the tool is names instead of object IDs, so the name and target
+# renderers are pinned here.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'CARILLON call queue helpers' {
+    BeforeAll {
+        $ast = Get-ToolAst -FileName 'carillon.ps1'
+        $CarillonFindings  = Get-ToolAssignmentValue -Ast $ast -VarName 'CarillonFindings'
+        $DisconnectActions = Get-ToolAssignmentValue -Ast $ast -VarName 'DisconnectActions'
+        foreach ($name in 'Get-CarillonList', 'Get-CarillonName', 'Format-CarillonNumber', 'Format-CarillonTarget',
+                          'Format-CarillonAction', 'Get-CarillonQueueIssue', 'Get-CarillonAgentSource',
+                          'Test-CarillonReachable', 'Get-CarillonVerdict') {
+            . ([scriptblock]::Create((Get-ToolFunctionText -Ast $ast -FuncName $name)))
+        }
+        $carillonSource = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'carillon.ps1') -Raw
+
+        $jane  = 'bbbbbbbb-0000-0000-0000-000000000001'
+        $group = 'cccccccc-0000-0000-0000-000000000001'
+        $ra    = 'dddddddd-0000-0000-0000-000000000001'
+        $Names = @{
+            $jane  = [PSCustomObject]@{ DisplayName = 'Jane Doe';   Upn = 'jane@contoso.com' }
+            $group = [PSCustomObject]@{ DisplayName = 'Sales Team'; Upn = '' }
+            $ra    = [PSCustomObject]@{ DisplayName = 'RA Sales';   Upn = 'ra-sales@contoso.com' }
+        }
+    }
+
+    Context 'finding catalog' {
+        It 'contains every code the tool raises' {
+            $raised = @([regex]::Matches($carillonSource, "Add-CarillonFinding\s+-Code\s+'([^']+)'") | ForEach-Object { $_.Groups[1].Value }) +
+                      @([regex]::Matches($carillonSource, "\[void\]\`$codes\.Add\('([^']+)'\)") | ForEach-Object { $_.Groups[1].Value })
+            $raised = @($raised | Select-Object -Unique)
+            $raised.Count | Should -BeGreaterThan 5
+            foreach ($code in $raised) { $CarillonFindings.ContainsKey($code) | Should -BeTrue -Because "carillon.ps1 raises '$code'" }
+        }
+        It 'gives every entry a valid severity and full text' {
+            foreach ($code in $CarillonFindings.Keys) {
+                $CarillonFindings[$code].Severity | Should -BeIn @('Error', 'Warning', 'Info')
+                $CarillonFindings[$code].Title    | Should -Not -BeNullOrEmpty
+                $CarillonFindings[$code].Summary  | Should -Not -BeNullOrEmpty
+                $CarillonFindings[$code].Remedy   | Should -Not -BeNullOrEmpty
+            }
+        }
+        It 'treats an unanswerable queue as an error' {
+            $CarillonFindings['QueueNoAgents'].Severity    | Should -Be 'Error'
+            $CarillonFindings['QueueAllOptedOut'].Severity | Should -Be 'Error'
+            $CarillonFindings['StaleReference'].Severity   | Should -Be 'Error'
+        }
+    }
+
+    Context 'names, never object IDs' {
+        It 'labels a resolved user with display name and UPN, case-insensitively' {
+            Get-CarillonName -Id $jane.ToUpperInvariant() -Names $Names | Should -Be 'Jane Doe <jane@contoso.com>'
+        }
+        It 'labels a group by display name alone' {
+            Get-CarillonName -Id $group -Names $Names | Should -Be 'Sales Team'
+        }
+        It 'marks an unresolved ID rather than passing it off as a name' {
+            Get-CarillonName -Id 'ffffffff-0000-0000-0000-000000000000' -Names $Names | Should -Match '^\[unresolved '
+        }
+        It 'flattens null, single and [guid] values' {
+            @(Get-CarillonList $null).Count | Should -Be 0
+            Get-CarillonList ([guid]$jane) | Should -Be $jane
+            @(Get-CarillonList @($jane, '', $group)).Count | Should -Be 2
+        }
+    }
+
+    Context 'routing targets' {
+        It 'strips tel: from external numbers' {
+            Format-CarillonTarget -Target @{ Id = 'tel:+15551234567'; Type = 'ExternalPstn' } -Names $Names | Should -Be 'External number +15551234567'
+        }
+        It 'names the queue behind a resource account' {
+            $text = Format-CarillonTarget -Target @{ Id = $ra; Type = 'ApplicationEndpoint' } -Names $Names -Endpoints @{ $ra = 'Call queue Sales' }
+            $text | Should -Be 'Call queue Sales (via RA Sales <ra-sales@contoso.com>)'
+        }
+        It 'names a queue or attendant targeted by identity' {
+            Format-CarillonTarget -Target @{ Id = 'AA-1'; Type = 'ConfigurationEndpoint' } -Names $Names -Configs @{ 'aa-1' = 'Auto attendant Main' } | Should -Be 'Auto attendant Main'
+        }
+        It 'returns nothing for an empty target' {
+            Format-CarillonTarget -Target $null -Names $Names | Should -Be ''
+        }
+        It 'omits the target when the action ends the call' {
+            Format-CarillonAction -Action 'DisconnectWithBusy' -TargetText 'User Jane Doe' | Should -Be 'DisconnectWithBusy'
+            Format-CarillonAction -Action 'Forward' -TargetText 'User Jane Doe' | Should -Be 'Forward -> User Jane Doe'
+        }
+    }
+
+    Context 'queue issues' {
+        It 'flags a queue with no agents' {
+            Get-CarillonQueueIssue ([PSCustomObject]@{ AgentCount = 0; OptedInCount = 0; OverflowThreshold = 50; OverflowAction = 'Voicemail'; TimeoutAction = 'Voicemail' }) |
+                Should -Be @('QueueNoAgents')
+        }
+        It 'flags every agent opted out, and a single opted-in agent' {
+            Get-CarillonQueueIssue ([PSCustomObject]@{ AgentCount = 3; OptedInCount = 0; OverflowThreshold = 50 }) | Should -Contain 'QueueAllOptedOut'
+            Get-CarillonQueueIssue ([PSCustomObject]@{ AgentCount = 3; OptedInCount = 1; OverflowThreshold = 50 }) | Should -Contain 'QueueFewAgentsOptedIn'
+        }
+        It 'flags a zero overflow threshold unless the action keeps the call queued' {
+            Get-CarillonQueueIssue ([PSCustomObject]@{ AgentCount = 2; OptedInCount = 2; OverflowThreshold = 0; OverflowAction = 'Voicemail' }) | Should -Contain 'OverflowImmediate'
+            Get-CarillonQueueIssue ([PSCustomObject]@{ AgentCount = 2; OptedInCount = 2; OverflowThreshold = 0; OverflowAction = 'Queue' }) | Should -Not -Contain 'OverflowImmediate'
+        }
+        It 'flags queues that hang up' {
+            Get-CarillonQueueIssue ([PSCustomObject]@{ AgentCount = 2; OptedInCount = 2; OverflowThreshold = 50; OverflowAction = 'Forward'; TimeoutAction = 'Disconnect' }) | Should -Contain 'CallsDisconnected'
+        }
+        It 'raises nothing for a healthy queue' {
+            @(Get-CarillonQueueIssue ([PSCustomObject]@{ AgentCount = 4; OptedInCount = 3; OverflowThreshold = 50; OverflowAction = 'Voicemail'; TimeoutAction = 'Forward' })).Count | Should -Be 0
+        }
+    }
+
+    Context 'agent source and reachability' {
+        It 'names the group that brought an agent in' {
+            $members = @{ $group = [System.Collections.Generic.HashSet[string]]::new([string[]]@($jane), [StringComparer]::OrdinalIgnoreCase) }
+            Get-CarillonAgentSource -AgentId $jane -DirectUsers @() -Groups @($group) -GroupMembers $members -Names $Names -Channel $false | Should -Be 'Group: Sales Team'
+        }
+        It 'reports both a direct add and a group' {
+            $members = @{ $group = [System.Collections.Generic.HashSet[string]]::new([string[]]@($jane), [StringComparer]::OrdinalIgnoreCase) }
+            Get-CarillonAgentSource -AgentId $jane -DirectUsers @($jane) -Groups @($group) -GroupMembers $members -Names $Names -Channel $false | Should -Be 'Direct; Group: Sales Team'
+        }
+        It 'falls back to the channel when groups cannot be expanded' {
+            Get-CarillonAgentSource -AgentId $jane -DirectUsers @() -Groups @($group) -GroupMembers @{} -Names $Names -Channel $true | Should -Be 'Teams channel'
+        }
+        It 'is reachable through a numbered resource account or an inbound route' {
+            Test-CarillonReachable -ResourceAccountIds @($ra.ToUpperInvariant()) -NumberedAccounts @{ $ra = '+15551234567' } -ReachedFrom @() | Should -BeTrue
+            Test-CarillonReachable -ResourceAccountIds @() -NumberedAccounts @{} -ReachedFrom @('Auto attendant Main') | Should -BeTrue
+            Test-CarillonReachable -ResourceAccountIds @($ra) -NumberedAccounts @{} -ReachedFrom @() | Should -BeFalse
+        }
+    }
+
+    Context 'verdict' {
+        It 'ranks by the worst finding' {
+            (Get-CarillonVerdict -FindingList @([PSCustomObject]@{ Severity = 'Error' })).Verdict   | Should -Be 'Broken'
+            (Get-CarillonVerdict -FindingList @([PSCustomObject]@{ Severity = 'Warning' })).Verdict | Should -Be 'Attention'
+            (Get-CarillonVerdict -FindingList @([PSCustomObject]@{ Severity = 'Info' })).Verdict    | Should -Be 'Healthy'
+        }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # OATH — parsers for nltest and w32tm output, captured from real runs, and the
 # Netlogon status table that decides connectivity versus a broken trust.
 # ─────────────────────────────────────────────────────────────────────────────
