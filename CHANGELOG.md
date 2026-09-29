@@ -8,6 +8,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **C.A.R.I.L.L.O.N. (`carillon.ps1`) — Teams Phone call queue and auto attendant audit.** Registered
+  at key 49 under Cloud & Identity. Answers "who is in this queue?" by display name rather than
+  object ID, and where every call can end up:
+  - **Call queues:** number, routing method, presence-based routing, conference mode, and the
+    overflow / timeout / no-agent actions with their targets resolved to names.
+  - **Agents:** every agent on every queue with sign-in name, opt-in state, Enterprise Voice and
+    account state, and how they were added — directly, through a named group (via Graph
+    `transitiveMembers`), or through a Teams channel.
+  - **Auto attendants:** operator, the business-hours menu key by key, and the after-hours and
+    holiday call flows with their schedules.
+  - **Resource accounts** and a **routing map** of which attendants and queues hand calls to each
+    queue or attendant.
+  - **Flags:** no agents, all agents opted out, a single agent opted in, agents not voice-enabled
+    or disabled, targets pointing at deleted users or groups, overflow threshold 0, queues that hang
+    up, attendants with no after-hours flow, unreachable queues and attendants, and unassigned
+    resource accounts.
+
+  Needs `MicrosoftTeams`; group names come from Microsoft Graph (`Directory.Read.All`), which
+  `-SkipGraph` skips. `-Name` filters by wildcard. Writes an HTML report and a queue / agent CSV.
+  Read-only.
 - **R.A.M.P.A.R.T. (`rampart.ps1`) — Entra ID Conditional Access posture audit.** Registered at key
   48 under Cloud & Identity. WRAITH audits identities and TENDRIL reads Conditional Access only to
   see what depends on a group, so until now nothing scored the policies themselves. RAMPART checks:

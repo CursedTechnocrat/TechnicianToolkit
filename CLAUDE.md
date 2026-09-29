@@ -172,7 +172,8 @@ DMARC scoring), WARD (LAPS policy precedence), PALADIN (platform-protection verd
 (Conditional Access predicates and emergency-access exclusion), OATH (`nltest` / `w32tm`
 parsers, Netlogon status table) and CATACOMB (rights-mask and SID classification); the
 root `BeforeAll` provides `Get-ToolAst` / `Get-ToolAssignmentValue` / `Get-ToolFunctionText` for
-that. A finding catalog (CONDUIT, NECROPSY, RAVEN, RAMPART, OATH, CATACOMB) is tested against the codes its script
+that. CARILLON's queue-issue, name and routing-target helpers are covered the same way.
+A finding catalog (CONDUIT, NECROPSY, RAVEN, RAMPART, CARILLON, OATH, CATACOMB) is tested against the codes its script
 actually raises, so a new `Add-*Finding -Code` without a catalog entry fails CI.
 
 ### Verifying on Linux / in an agent sandbox
@@ -413,6 +414,16 @@ All three are access reviews; they differ in what is being accessed.
 | "Who can get into this file share, and can everyone write to it?" | **CATACOMB** (SMB share + NTFS permissions, HTML + CSV) |
 | "Who holds privilege in the domain?" | **HERALD** |
 | "Who can administer this machine?" | **WARD** |
+
+### CARILLON vs CONCLAVE
+
+| Question | Reach for |
+|----------|-----------|
+| "Who answers the Sales line? Why does the main number ring nobody after hours?" | **CARILLON** (Teams Phone call queues, agents by name, auto attendant menus, resource accounts) |
+| "Which teams are orphaned, public, or full of guests?" | **CONCLAVE** (the Teams / M365 group estate) |
+
+CARILLON is read-only. It reports agent membership and routing but never adds or removes agents
+or edits a queue — changing who takes calls is a Teams admin center task.
 
 ### RAMPART vs WRAITH
 

@@ -513,6 +513,15 @@ $Tools = @(
         Color       = 'Cyan'
         Category    = 'Cloud & Identity'
     },
+    [PSCustomObject]@{
+        Key         = '49'
+        Name        = 'C.A.R.I.L.L.O.N.'
+        File        = 'carillon.ps1'
+        Version     = '5.1'
+        Description = 'Teams Phone call queues & auto attendants  -  agents by display name, opt-in and voice state, overflow / timeout routing, menus, resource accounts'
+        Color       = 'Magenta'
+        Category    = 'Cloud & Identity'
+    },
     # ── Data & Migration (50–59) ─────────────────────────────────────
     [PSCustomObject]@{
         Key         = '50'
