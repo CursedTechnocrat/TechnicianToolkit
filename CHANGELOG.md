@@ -27,7 +27,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
   Needs `MicrosoftTeams`; group names come from Microsoft Graph (`Directory.Read.All`), which
   `-SkipGraph` skips. `-Name` filters by wildcard. Writes an HTML report and a queue / agent CSV.
-  Read-only.
+  Read-only. Added to RITUAL's `TenantSweep` as its last step (a tenant without Teams Phone just
+  reports no queues or attendants).
 - **R.A.M.P.A.R.T. (`rampart.ps1`) — Entra ID Conditional Access posture audit.** Registered at key
   48 under Cloud & Identity. WRAITH audits identities and TENDRIL reads Conditional Access only to
   see what depends on a group, so until now nothing scored the policies themselves. RAMPART checks:
