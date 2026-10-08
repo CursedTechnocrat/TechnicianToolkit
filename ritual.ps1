@@ -38,7 +38,7 @@
                        TETHER -> EXHUME -> ARCHIVE -> CLEANSE
       HealthCheck   -- Quarterly machine review:
                        AUSPEX -> WARD -> THRESHOLD -> AUGUR -> GARGOYLE -> ARTIFACT -> PALADIN
-                       -> NECROPSY
+                       -> NECROPSY -> TORPOR -> SUTURE (audit only)
       SecuritySweep -- Endpoint security posture (read-only):
                        SIGIL -> TALON -> TOTEM -> PALADIN -> ARTIFACT
       NetworkSweep  -- Endpoint network posture (read-only):
@@ -162,7 +162,7 @@ $script:BuiltInRecipes = @{
     }
     'HealthCheck' = @{
         Name        = 'Quarterly Machine Review'
-        Description = 'Read-only sweep for a point-in-time machine health snapshot.'
+        Description = 'Read-only sweep for a point-in-time machine health snapshot, including performance and Windows servicing health.'
         Steps       = @(
             @{ Label = 'System diagnostics';        Tool = 'auspex.ps1';    Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Account audit';             Tool = 'ward.ps1';      Args = @('-Unattended'); StopOnError = $false }
@@ -172,6 +172,8 @@ $script:BuiltInRecipes = @{
             @{ Label = 'Certificate health';        Tool = 'artifact.ps1';  Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'AV / Defender health';      Tool = 'paladin.ps1';   Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Crash & reboot history';    Tool = 'necropsy.ps1';  Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Performance triage';        Tool = 'torpor.ps1';    Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Windows servicing health';  Tool = 'suture.ps1';    Args = @('-Unattended'); StopOnError = $false }
         )
     }
     'SecuritySweep' = @{
