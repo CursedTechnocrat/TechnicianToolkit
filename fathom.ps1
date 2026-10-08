@@ -37,7 +37,7 @@
     PS C:\> .\fathom.ps1 -Unattended             # Run health check and export HTML report silently
 
 .NOTES
-    Version : 5.1
+    Version : 6.0
 
 #>
 
@@ -111,7 +111,7 @@ function Show-Banner {
 "@
     Write-Host $banner -ForegroundColor $C.Cyan
     Write-Host "  Free-space Analysis: Tallies Hogs, Old profiles & Mess" -ForegroundColor $C.Gray
-    Write-Host "  Disk & Storage Health Monitor  |  v3.6" -ForegroundColor $C.Gray
+    Write-Host "  Disk & Storage Health Monitor  |  v6.0" -ForegroundColor $C.Gray
     Write-Host ""
 }
 
@@ -705,7 +705,7 @@ $recommendations
 
 "@
 
-    $html += Get-TKHtmlFoot -ScriptName 'F.A.T.H.O.M. v3.6'
+    $html += Get-TKHtmlFoot -ScriptName 'F.A.T.H.O.M. v6.0'
 
     $html | Out-File -FilePath $outputPath -Encoding UTF8 -Force
     return $outputPath

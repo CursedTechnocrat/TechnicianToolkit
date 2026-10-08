@@ -35,7 +35,7 @@
         Enable-PSRemoting -Force
 
 .NOTES
-    Version : 5.1
+    Version : 6.0
 
     Remote-Compatible Tools
     ─────────────────────────────────────────────────────────────────

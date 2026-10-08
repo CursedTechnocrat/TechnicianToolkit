@@ -32,7 +32,7 @@
     PS C:\> .\citadel.ps1 [arguments]          # Same as .\sphinx.ps1 [arguments]
 
 .NOTES
-    Version : 5.1
+    Version : 6.0
 
 #>
 

@@ -35,7 +35,7 @@
     PS C:\> .\orbit.ps1 -Unattended      # Auto-connect and export full audit report
 
 .NOTES
-    Version : 5.1
+    Version : 6.0
 
 #>
 
@@ -127,7 +127,7 @@ function Show-OrbitBanner {
 
 "@ -ForegroundColor Cyan
     Write-Host "  O.R.B.I.T. — Observes Registered devices, Baselines, Inventory & Timeliness" -ForegroundColor Cyan
-    Write-Host "  Microsoft Intune / MDM Compliance Audit Tool  v3.6" -ForegroundColor Cyan
+    Write-Host "  Microsoft Intune / MDM Compliance Audit Tool  v6.0" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -501,7 +501,7 @@ function Build-HtmlReport {
         }) `
         -NavItems   @('Devices', 'Stale Devices', 'Configuration Profiles')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'O.R.B.I.T. v3.6'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'O.R.B.I.T. v6.0'
 
     $html = $htmlHead + @"
 

@@ -5,7 +5,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [Unreleased]
+## [6.0.0] - 2026-10-08
+
+The first published release since 5.0.0. The `[5.1.0]` section below was dated but never tagged
+or released as binaries, so anyone upgrading from 5.0.0 gets both sections.
 
 ### Added
 - **G.A.R.M. (`garm.ps1`) — Active Directory account lockout source tracer.** Registered at
@@ -144,7 +147,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   tree instead of the shares. Read-only.
 
 ### Changed
-- **BREAKING (release as 6.0): categories regrouped and themed, and 25 tools renamed.** Each
+- **The suite version moves to 6.0.** Every script header (the tools, GRIMOIRE, HEARTH and the
+  25 forwarding stubs) and every GRIMOIRE registry row now reads `6.0`, and the three `.csproj`
+  files read `6.0.0`, so the application reports the version of the scripts it drives. The
+  report footers and banner tags, which had been left behind at `v3.6` on 26 tools (and at
+  `v3.8.3` / `v1.0` on ARGUS and ORRERY), now read `v6.0` with the rest; the 5.1 bump had only
+  moved the tools added for it. The winget manifests stay at `5.0.0` until the 6.0.0 binaries
+  are published, since they carry the release files' hashes (`RELEASING.md`, step 8).
+- **BREAKING: categories regrouped and themed, and 25 tools renamed.** Each
   category now has a theme its tool names follow, and its registry name carries both:
   **The Workshop — Deployment & Onboarding** (the artificer), **The Observatory — Diagnostics &
   Reporting** (scrying & sight), **The Bestiary — Security** (guardian beasts), **The Crossroads —

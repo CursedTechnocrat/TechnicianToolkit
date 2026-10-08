@@ -49,7 +49,7 @@
     PS C:\> .\wyrm.ps1 -Unattended -Action Export -OutputPath D:\Reports
 
 .NOTES
-    Version : 5.1
+    Version : 6.0
 
     Credits : Thanks to Steve the Killer for help and letting me use his
               script BERET: https://tools.thekiller.net/killer-scripts
@@ -436,7 +436,7 @@ function Export-EncryptionReport {
   </div>
 </div>
 "@
-    $html += Get-TKHtmlFoot -ScriptName 'W.Y.R.M. v5.1'
+    $html += Get-TKHtmlFoot -ScriptName 'W.Y.R.M. v6.0'
 
     $html | Out-File -FilePath $reportPath -Encoding UTF8
     Show-TKReportResult -Path $reportPath -Unattended:$Unattended

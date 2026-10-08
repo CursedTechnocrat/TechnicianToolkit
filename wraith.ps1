@@ -32,7 +32,7 @@
     PS C:\> .\wraith.ps1 [arguments]          # Same as .\eclipse.ps1 [arguments]
 
 .NOTES
-    Version : 5.1
+    Version : 6.0
 
 #>
 

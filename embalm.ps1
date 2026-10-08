@@ -35,7 +35,7 @@
     PS C:\> .\embalm.ps1 -WhatIf                                                   # Preview actions without staging or compressing
 
 .NOTES
-    Version : 5.1
+    Version : 6.0
 
 #>
 

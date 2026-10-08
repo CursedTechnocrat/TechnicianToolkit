@@ -62,7 +62,7 @@
     PS C:\> .\garm.ps1 -Identity jdoe -SkipSourceScan   # Don't connect to the source machines
 
 .NOTES
-    Version : 5.1
+    Version : 6.0
 
 #>
 
@@ -1116,7 +1116,7 @@ function Build-GarmReport {
         }) `
         -NavItems   $nav
 
-    return $htmlHead + $cards + $body + (Get-TKHtmlFoot -ScriptName 'G.A.R.M. v5.1')
+    return $htmlHead + $cards + $body + (Get-TKHtmlFoot -ScriptName 'G.A.R.M. v6.0')
 }
 
 # ─────────────────────────────────────────────────────────────────────────────

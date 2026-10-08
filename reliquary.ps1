@@ -32,7 +32,7 @@
     PS C:\> .\reliquary.ps1 [arguments]          # Same as .\almanac.ps1 [arguments]
 
 .NOTES
-    Version : 5.1
+    Version : 6.0
 
 #>
 

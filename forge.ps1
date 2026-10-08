@@ -36,7 +36,7 @@
     PS C:\> .\forge.ps1 -Unattended -Action LocalInstall           # Install drivers from script folder
 
 .NOTES
-    Version : 5.1
+    Version : 6.0
 
 #>
 

@@ -51,7 +51,7 @@
     PS C:\> .\conduit.ps1 -Unattended -Action ResetCache          # Repair + rebuild the update cache
 
 .NOTES
-    Version : 5.1
+    Version : 6.0
 
 #>
 
@@ -915,7 +915,7 @@ function Build-ConduitReport {
         }) `
         -NavItems   @('Findings', 'Device & Policy', 'Connectivity', 'Update Services', 'Actions Taken')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'C.O.N.D.U.I.T. v5.1'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'C.O.N.D.U.I.T. v6.0'
 
     $html = $htmlHead + @"
 

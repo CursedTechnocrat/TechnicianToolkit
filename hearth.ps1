@@ -35,7 +35,7 @@
     PS C:\> .\hearth.ps1 -Unattended        # Display current config and run environment checks silently
 
 .NOTES
-    Version : 5.1
+    Version : 6.0
 
 #>
 
@@ -179,7 +179,7 @@ function Show-HearthBanner {
     Write-Host "  Toolkit Setup & Configuration Wizard" -ForegroundColor $C.Info
     Write-Host ""
     Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
-    Write-Host "  TechnicianToolkit  |  HEARTH v3.6  |  Run as Administrator" -ForegroundColor $C.Info
+    Write-Host "  TechnicianToolkit  |  HEARTH v6.0  |  Run as Administrator" -ForegroundColor $C.Info
     Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host ""
 }

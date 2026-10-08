@@ -32,7 +32,7 @@
     PS C:\> .\pyre.ps1 [arguments]          # Same as .\hourglass.ps1 [arguments]
 
 .NOTES
-    Version : 5.1
+    Version : 6.0
 
 #>
 
