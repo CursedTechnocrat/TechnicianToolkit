@@ -103,7 +103,9 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 |--------|---------|---------|
 | **grimoire.ps1** | **G.R.I.M.O.I.R.E.** — General Repository for Integrated Management and Orchestration of IT Resources & Executables | Central hub launcher — run all tools from one interactive menu |
 
-### Deployment & Onboarding
+### The Workshop — Deployment & Onboarding
+
+*Keys 1–19 · the artificer: crafting & enchanting*
 
 | # | Script | Acronym | Purpose |
 |---|--------|---------|---------|
@@ -116,77 +118,103 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | 7 | **ritual.ps1** | **R.I.T.U.A.L.** — Runs Integrated Tool Usage in Automation Loops | Workflow orchestrator — runs named recipes (Onboard, Retire, HealthCheck, SecuritySweep, NetworkSweep, TenantSweep) or custom PSD1 files, with rollup HTML report |
 | 8 | **conduit.ps1** | **C.O.N.D.U.I.T.** — Checks Or Normalises Device Update Infrastructure Targeting | Windows Update connectivity diagnosis & repair — WSUS pointer, WinHTTP proxy, policy source, update services |
 | 9 | **solder.ps1** | **S.O.L.D.E.R.** — Servicing-stack Overhaul: Locates Damage, Enacts Repair | Windows servicing diagnosis & repair — component store health and size, pending restarts, last SFC result from CBS.log, Windows Update failure codes decoded, DISM RestoreHealth + SFC |
+| 10 | **cleanse.ps1** | **C.L.E.A.N.S.E.** — Cleans Leftover, Ephemeral And Neglected System Entries | Disk cleanup — user & system temp, Windows Update cache, browser caches, Recycle Bin |
+| 11 | **anvil.ps1** | **A.N.V.I.L.** — Audits & Notates Vendor Inventory & Lifecycle | BIOS / UEFI / firmware audit — system identity, Secure Boot posture, vendor update channels, pending Windows Update firmware, HTML report |
+| 12 | **chalice.ps1** | **C.H.A.L.I.C.E.** — Checks Health, Activation, Logins & Identity of Click-to-run Editions | Microsoft 365 Apps client diagnosis & repair — version, channel and support dates, license tokens, cached Office accounts, modern auth / WAM settings, AAD token broker, device PRT, Teams cache; resets sign-in and activation, clears the Teams cache, Quick Repair, update now, HTML report |
 
-### Diagnostics & Reporting
+### The Observatory — Diagnostics & Reporting
 
-| # | Script | Acronym | Purpose |
-|---|--------|---------|---------|
-| 10 | **auspex.ps1** | **A.U.S.P.E.X.** — Audits, Uncovers, Surveys Performance, Events & eXceptions | System diagnostics, health assessment, and HTML report generation |
-| 11 | **ward.ps1** | **W.A.R.D.** — Watches Accounts, Reviews Roles & Detects anomalies | Local user account audit with role, last logon, flags, and HTML report |
-| 12 | **fathom.ps1** | **F.A.T.H.O.M.** — Free-space Analysis: Tallies Hogs, Old profiles & Mess | Disk space monitor — volume usage, low-space alerts, temp cleanup, old profile detection, HTML report |
-| 13 | **vigil.ps1** | **V.I.G.I.L.** — Verifies Integrity of services, Guards & Inspects Logs | Service, task & event log monitor — health check local or remote machine, HTML report |
-| 14 | **augur.ps1** | **A.U.G.U.R.** — Analyzes, Uncovers & Gauges Unit Reliability | Physical disk health — SMART status, wear prediction, failure forecast, hardware reliability, HTML report |
-| 15 | **cleanse.ps1** | **C.L.E.A.N.S.E.** — Cleans Leftover, Ephemeral And Neglected System Entries | Disk cleanup — user & system temp, Windows Update cache, browser caches, Recycle Bin |
-| 16 | **scryer.ps1** | **S.C.R.Y.E.R.** — System Consolidated Report Yielding Exhaustive Results | Unified diagnostic report — system info, users, disks, SMART, services in one HTML |
-| 17 | **anvil.ps1** | **A.N.V.I.L.** — Audits & Notates Vendor Inventory & Lifecycle | BIOS / UEFI / firmware audit — system identity, Secure Boot posture, vendor update channels, pending Windows Update firmware, HTML report |
-| 18 | **hourglass.ps1** | **H.O.U.R.G.L.A.S.S.** — Health Of Unit's Rechargeable Gauge: Life, Ageing, State & Service | Laptop battery health audit — design vs current capacity, cycle count, red/yellow/green replacement verdict, `powercfg /batteryreport` enrichment, HTML report |
-| 19 | **codex.ps1** | **C.O.D.E.X.** — Compiles Output Documents into an EXhibit | Toolkit report index — scans the log directory for existing HTML reports, groups by tool, emits one rollup with relative links |
-| 60 | **necropsy.ps1** | **N.E.C.R.O.P.S.Y.** — Names Each Crash, Reboot & Outage — Post-mortem Summary Yield | Crash & unexpected-reboot analysis — bugchecks, Kernel-Power 41, WHEA hardware errors, display resets, dump files, change timeline, HTML report |
-| 61 | **torpor.ps1** | **T.O.R.P.O.R.** — Traces Overload, Resource Pressure & Offending Routines | Slow-machine triage — CPU, memory and disk load over a sample window, top processes grouped by name with hints, CPU power / thermal limits, boot delays Windows blamed, startup programs, app hangs, HTML report |
-
-Diagnostics outgrew keys 10–19, so it continues at 60 rather than renumbering the keys technicians already know.
-
-### Security
+*Keys 20–39 · scrying & magical sight*
 
 | # | Script | Acronym | Purpose |
 |---|--------|---------|---------|
-| 20 | **wyrm.ps1** | **W.Y.R.M.** — Whole-drive encrYption & Recovery Manager | BitLocker drive encryption management — enable, disable, key backup, report export |
-| 21 | **basilisk.ps1** | **B.A.S.I.L.I.S.K.** — Baseline Applier: Sets Integrity, Locks In Security Knobs | Security baseline enforcement — telemetry, UAC, firewall, audit policy, password policy |
-| 22 | **sphinx.ps1** | **S.P.H.I.N.X.** — Service Portal for Help-desk Identity Needs & eXpiry | Active Directory user & group management — unlock, reset, lockout forensics, stale & expiry reports |
-| 23 | **phoenix.ps1** | **P.H.O.E.N.I.X.** — Pinpoints Hosts' Outdated & Expiring Notarised Identity X.509s | Certificate health monitor — local cert stores, SSL/TLS expiry, HTML report |
-| 24 | **talon.ps1** | **T.A.L.O.N.** — Tracks Anomalies & Locates Otherwise-silent Nastiness | Persistence / autoruns audit — Run keys, startup folders, services, tasks, WMI subscriptions, IFEO hijacks, Winlogon, HTML report |
-| 25 | **totem.ps1** | **T.O.T.E.M.** — Trusted Observer of Transparent Execution Modules | TPM health audit — presence, spec version, ownership, readiness, BitLocker dependency, endorsement key, HTML report |
-| 26 | **griffin.ps1** | **G.R.I.F.F.I.N.** — Gauges Real-time protection, Inspects Findings, Freshness, Intrusions & Notifications | AV / Microsoft Defender health audit — core state, real-time / cloud / sample, signature freshness, scan history, threats, exclusions, ASR rules, third-party AV, service health, recent events, HTML report |
-| 27 | **argus.ps1** | **A.R.G.U.S.** — Access Roster: Groups, Users & Scopes | Active Directory authentication & access review — domain password/lockout policy with verdicts, full name / alias / access level per account, nested group expansion, privileged group membership, review CSV, HTML report |
-| 28 | **minotaur.ps1** | **M.I.N.O.T.A.U.R.** — Maps Inheritance, NTFS Owners, Trustees & Access on UNC Roots | File share & NTFS permissions review — share and NTFS access, everyone-type write, direct user grants, orphaned SIDs, broken inheritance, HTML report + CSV of every entry |
+| 20 | **auspex.ps1** | **A.U.S.P.E.X.** — Audits, Uncovers, Surveys Performance, Events & eXceptions | System diagnostics, health assessment, and HTML report generation |
+| 21 | **scryer.ps1** | **S.C.R.Y.E.R.** — System Consolidated Report Yielding Exhaustive Results | Unified diagnostic report — system info, users, disks, SMART, services in one HTML |
+| 22 | **augur.ps1** | **A.U.G.U.R.** — Analyzes, Uncovers & Gauges Unit Reliability | Physical disk health — SMART status, wear prediction, failure forecast, hardware reliability, HTML report |
+| 23 | **fathom.ps1** | **F.A.T.H.O.M.** — Free-space Analysis: Tallies Hogs, Old profiles & Mess | Disk space monitor — volume usage, low-space alerts, temp cleanup, old profile detection, HTML report |
+| 24 | **vigil.ps1** | **V.I.G.I.L.** — Verifies Integrity of services, Guards & Inspects Logs | Service, task & event log monitor — health check local or remote machine, HTML report |
+| 25 | **hourglass.ps1** | **H.O.U.R.G.L.A.S.S.** — Health Of Unit's Rechargeable Gauge: Life, Ageing, State & Service | Laptop battery health audit — design vs current capacity, cycle count, red/yellow/green replacement verdict, `powercfg /batteryreport` enrichment, HTML report |
+| 26 | **necropsy.ps1** | **N.E.C.R.O.P.S.Y.** — Names Each Crash, Reboot & Outage — Post-mortem Summary Yield | Crash & unexpected-reboot analysis — bugchecks, Kernel-Power 41, WHEA hardware errors, display resets, dump files, change timeline, HTML report |
+| 27 | **torpor.ps1** | **T.O.R.P.O.R.** — Traces Overload, Resource Pressure & Offending Routines | Slow-machine triage — CPU, memory and disk load over a sample window, top processes grouped by name with hints, CPU power / thermal limits, boot delays Windows blamed, startup programs, app hangs, HTML report |
+| 28 | **codex.ps1** | **C.O.D.E.X.** — Compiles Output Documents into an EXhibit | Toolkit report index — scans the log directory for existing HTML reports, groups by tool, emits one rollup with relative links |
 
-### Network & Remote
+### The Bestiary — Security
 
-| # | Script | Acronym | Purpose |
-|---|--------|---------|---------|
-| 30 | **leyline.ps1** | **L.E.Y.L.I.N.E.** — Locates, Examines & Yields Latency, Infrastructure, Network & Endpoints | Network diagnostics & remediation — adapters, ping, DNS, port tests, IP renew, stack reset |
-| 31 | **emissary.ps1** | **E.M.I.S.S.A.R.Y.** — Executes Modules In Sessions Sent Across Remote sYstems | Remote machine execution via WinRM — run toolkit tools without physical access |
-| 32 | **lantern.ps1** | **L.A.N.T.E.R.N.** — Locates & Audits Network Topology, Enumerating Resources & Nodes | Network discovery — subnet ping sweep, DNS lookup, MAC addresses, port scan, HTML report |
-| 33 | **wisp.ps1** | **W.I.S.P.** — Wireless Inventory & Security Profiler | Wi-Fi profile audit — saved profiles via XML export, authentication/cipher tier, auto-connect risk, hidden SSID, MAC randomisation, optional key cleartext, HTML report |
-| 34 | **portal.ps1** | **P.O.R.T.A.L.** — Profiles, Observes & Reports Tunnels, Authentication & Links | VPN / Always-On VPN audit — built-in user and all-user connections, auth/encryption tier, app triggers, NRPT, tunnel interfaces, third-party clients (Cisco / Palo Alto / Pulse / OpenVPN / WireGuard / Tailscale / WARP / etc.), HTML report |
-| 35 | **lodestar.ps1** | **L.O.D.E.S.T.A.R.** — Locates Our Domain controller, Establishes Secure Trust And Repairs | Domain trust & secure channel diagnosis and repair — DC discovery, DNS, DC ports, clock skew, `nltest` secure channel, machine password reset |
-
-### Cloud & Identity
+*Keys 40–59 · guardian beasts*
 
 | # | Script | Acronym | Purpose |
 |---|--------|---------|---------|
-| 40 | **zenith.ps1** | **Z.E.N.I.T.H.** — Zone-wide Evaluation of Networks, Identity, Tenancy & Hardening | Azure subscription assessment — security posture, RBAC, backup coverage, Advisor alerts, HTML report |
-| 41 | **almanac.ps1** | **A.L.M.A.N.A.C.** — Assigned Licenses, Mailboxes, Authentication & Notable Account Counts | Microsoft 365 license & mailbox audit — license assignments, MFA status, shared mailboxes, HTML report |
-| 42 | **orbit.ps1** | **O.R.B.I.T.** — Observes Registered devices, Baselines, Inventory & Timeliness | Intune / MDM compliance audit — managed devices, compliance state, stale devices, configuration profiles, HTML report |
-| 43 | **eclipse.ps1** | **E.C.L.I.P.S.E.** — Entra Credentials: Lapsed, Idle, Privileged, Stale & External | Entra ID identity hygiene audit — guests, privileged roles, password-never-expires, stale admins, disabled-but-licensed, HTML report |
-| 44 | **asterism.ps1** | **A.S.T.E.R.I.S.M.** — Audits Settings of Teams: Exposure, Roles, Inactivity, Sprawl & Membership | Microsoft Teams audit — orphan teams, public teams, guest membership, large teams, stale teams, HTML report |
-| 45 | **cumulus.ps1** | **C.U.M.U.L.U.S.** — Catalogs Usage, Members, Unowned, Links, Untouched & Shared sites | SharePoint Online audit — site inventory, storage, external sharing, ownerless sites, stale sites, HTML report |
-| 46 | **orrery.ps1** | **O.R.R.E.R.Y.** — Outlines Reliances: Roles, Entitlements, Rules & whY things break | Entra ID group dependency audit — "what breaks if we delete this group?" — group-based licensing, Conditional Access, enterprise apps, directory roles, nested membership, AUs, Intune, SharePoint, Exchange, Azure RBAC, HTML report |
-| 47 | **raven.ps1** | **R.A.V.E.N.** — Reviews Auto-forwarding, Vulnerable Exchange settings & Nefarious rules | Exchange Online mailbox security audit — external forwarding, suspicious inbox rules, auto-forward policy, SMTP AUTH, auditing, delegation, SPF / DKIM / DMARC, HTML report |
-| 48 | **halo.ps1** | **H.A.L.O.** — Holistic Access-policy Logic Overview | Entra ID Conditional Access posture — MFA and legacy-auth baseline, admin role coverage, report-only and disabled policies, exclusions, emergency access, named locations, HTML report |
-| 49 | **carillon.ps1** | **C.A.R.I.L.L.O.N.** — Catalogs Attendants, Routing, Inbound Lines, Listeners, Overflow & Numbers | Teams Phone call queue & auto attendant audit — every queue's agents by display name with opt-in, voice and account state, overflow / timeout / no-agent routing, attendant menus and after-hours flows, resource accounts, unreachable queues, HTML report + agent CSV |
-| 70 | **chalice.ps1** | **C.H.A.L.I.C.E.** — Checks Health, Activation, Logins & Identity of Click-to-run Editions | Microsoft 365 Apps client diagnosis & repair — version, channel and support dates, license tokens, cached Office accounts, modern auth / WAM settings, AAD token broker, device PRT, Teams cache; resets sign-in and activation, clears the Teams cache, Quick Repair, update now, HTML report |
+| 40 | **wyrm.ps1** | **W.Y.R.M.** — Whole-drive encrYption & Recovery Manager | BitLocker drive encryption management — enable, disable, key backup, report export |
+| 41 | **basilisk.ps1** | **B.A.S.I.L.I.S.K.** — Baseline Applier: Sets Integrity, Locks In Security Knobs | Security baseline enforcement — telemetry, UAC, firewall, audit policy, password policy |
+| 42 | **sphinx.ps1** | **S.P.H.I.N.X.** — Service Portal for Help-desk Identity Needs & eXpiry | Active Directory user & group management — unlock, reset, lockout forensics, stale & expiry reports |
+| 43 | **phoenix.ps1** | **P.H.O.E.N.I.X.** — Pinpoints Hosts' Outdated & Expiring Notarised Identity X.509s | Certificate health monitor — local cert stores, SSL/TLS expiry, HTML report |
+| 44 | **talon.ps1** | **T.A.L.O.N.** — Tracks Anomalies & Locates Otherwise-silent Nastiness | Persistence / autoruns audit — Run keys, startup folders, services, tasks, WMI subscriptions, IFEO hijacks, Winlogon, HTML report |
+| 45 | **totem.ps1** | **T.O.T.E.M.** — Trusted Observer of Transparent Execution Modules | TPM health audit — presence, spec version, ownership, readiness, BitLocker dependency, endorsement key, HTML report |
+| 46 | **griffin.ps1** | **G.R.I.F.F.I.N.** — Gauges Real-time protection, Inspects Findings, Freshness, Intrusions & Notifications | AV / Microsoft Defender health audit — core state, real-time / cloud / sample, signature freshness, scan history, threats, exclusions, ASR rules, third-party AV, service health, recent events, HTML report |
+| 47 | **argus.ps1** | **A.R.G.U.S.** — Access Roster: Groups, Users & Scopes | Active Directory authentication & access review — domain password/lockout policy with verdicts, full name / alias / access level per account, nested group expansion, privileged group membership, review CSV, HTML report |
+| 48 | **minotaur.ps1** | **M.I.N.O.T.A.U.R.** — Maps Inheritance, NTFS Owners, Trustees & Access on UNC Roots | File share & NTFS permissions review — share and NTFS access, everyone-type write, direct user grants, orphaned SIDs, broken inheritance, HTML report + CSV of every entry |
+| 49 | **ward.ps1** | **W.A.R.D.** — Watches Accounts, Reviews Roles & Detects anomalies | Local user account audit with role, last logon, flags, and HTML report |
 
-Cloud & Identity outgrew keys 40–49, so it continues at 70.
+### The Crossroads — Network & Remote
 
-### Data & Migration
+*Keys 60–69 · arcane paths & lights*
 
 | # | Script | Acronym | Purpose |
 |---|--------|---------|---------|
-| 50 | **revenant.ps1** | **R.E.V.E.N.A.N.T.** — Relocates, Extracts, Validates Environments, Networks, Accounts 'N Transfers | Profile migration and data transfer between machines or profiles |
-| 51 | **embalm.ps1** | **E.M.B.A.L.M.** — Encapsulates My Belongings As Lasting Mementos | Pre-reimaging profile backup — ZIP to local path or network share |
-| 52 | **phylactery.ps1** | **P.H.Y.L.A.C.T.E.R.Y.** — Pre-migration Health of Your Libraries: Accounts, Client, Tethering, Errors, Readiness & Yield | OneDrive Known-Folder-Move pre-migration validator — client, accounts, KFM status, content volume, recent sync errors, HTML report |
-| 53 | **exhume.ps1** | **E.X.H.U.M.E.** — Enumerates, eXposes & Hunts Unmigrated Mail Entries | Outlook PST / OST discovery — profile walk, drive-wide file scan, orphan / oversize / stale detection, HTML report |
+| 60 | **leyline.ps1** | **L.E.Y.L.I.N.E.** — Locates, Examines & Yields Latency, Infrastructure, Network & Endpoints | Network diagnostics & remediation — adapters, ping, DNS, port tests, IP renew, stack reset |
+| 61 | **emissary.ps1** | **E.M.I.S.S.A.R.Y.** — Executes Modules In Sessions Sent Across Remote sYstems | Remote machine execution via WinRM — run toolkit tools without physical access |
+| 62 | **lantern.ps1** | **L.A.N.T.E.R.N.** — Locates & Audits Network Topology, Enumerating Resources & Nodes | Network discovery — subnet ping sweep, DNS lookup, MAC addresses, port scan, HTML report |
+| 63 | **wisp.ps1** | **W.I.S.P.** — Wireless Inventory & Security Profiler | Wi-Fi profile audit — saved profiles via XML export, authentication/cipher tier, auto-connect risk, hidden SSID, MAC randomisation, optional key cleartext, HTML report |
+| 64 | **portal.ps1** | **P.O.R.T.A.L.** — Profiles, Observes & Reports Tunnels, Authentication & Links | VPN / Always-On VPN audit — built-in user and all-user connections, auth/encryption tier, app triggers, NRPT, tunnel interfaces, third-party clients (Cisco / Palo Alto / Pulse / OpenVPN / WireGuard / Tailscale / WARP / etc.), HTML report |
+| 65 | **lodestar.ps1** | **L.O.D.E.S.T.A.R.** — Locates Our Domain controller, Establishes Secure Trust And Repairs | Domain trust & secure channel diagnosis and repair — DC discovery, DNS, DC ports, clock skew, `nltest` secure channel, machine password reset |
+
+### The Firmament — Cloud & Identity
+
+*Keys 70–89 · the sky & the celestial*
+
+| # | Script | Acronym | Purpose |
+|---|--------|---------|---------|
+| 70 | **zenith.ps1** | **Z.E.N.I.T.H.** — Zone-wide Evaluation of Networks, Identity, Tenancy & Hardening | Azure subscription assessment — security posture, RBAC, backup coverage, Advisor alerts, HTML report |
+| 71 | **almanac.ps1** | **A.L.M.A.N.A.C.** — Assigned Licenses, Mailboxes, Authentication & Notable Account Counts | Microsoft 365 license & mailbox audit — license assignments, MFA status, shared mailboxes, HTML report |
+| 72 | **orbit.ps1** | **O.R.B.I.T.** — Observes Registered devices, Baselines, Inventory & Timeliness | Intune / MDM compliance audit — managed devices, compliance state, stale devices, configuration profiles, HTML report |
+| 73 | **eclipse.ps1** | **E.C.L.I.P.S.E.** — Entra Credentials: Lapsed, Idle, Privileged, Stale & External | Entra ID identity hygiene audit — guests, privileged roles, password-never-expires, stale admins, disabled-but-licensed, HTML report |
+| 74 | **asterism.ps1** | **A.S.T.E.R.I.S.M.** — Audits Settings of Teams: Exposure, Roles, Inactivity, Sprawl & Membership | Microsoft Teams audit — orphan teams, public teams, guest membership, large teams, stale teams, HTML report |
+| 75 | **cumulus.ps1** | **C.U.M.U.L.U.S.** — Catalogs Usage, Members, Unowned, Links, Untouched & Shared sites | SharePoint Online audit — site inventory, storage, external sharing, ownerless sites, stale sites, HTML report |
+| 76 | **orrery.ps1** | **O.R.R.E.R.Y.** — Outlines Reliances: Roles, Entitlements, Rules & whY things break | Entra ID group dependency audit — "what breaks if we delete this group?" — group-based licensing, Conditional Access, enterprise apps, directory roles, nested membership, AUs, Intune, SharePoint, Exchange, Azure RBAC, HTML report |
+| 77 | **raven.ps1** | **R.A.V.E.N.** — Reviews Auto-forwarding, Vulnerable Exchange settings & Nefarious rules | Exchange Online mailbox security audit — external forwarding, suspicious inbox rules, auto-forward policy, SMTP AUTH, auditing, delegation, SPF / DKIM / DMARC, HTML report |
+| 78 | **halo.ps1** | **H.A.L.O.** — Holistic Access-policy Logic Overview | Entra ID Conditional Access posture — MFA and legacy-auth baseline, admin role coverage, report-only and disabled policies, exclusions, emergency access, named locations, HTML report |
+| 79 | **carillon.ps1** | **C.A.R.I.L.L.O.N.** — Catalogs Attendants, Routing, Inbound Lines, Listeners, Overflow & Numbers | Teams Phone call queue & auto attendant audit — every queue's agents by display name with opt-in, voice and account state, overflow / timeout / no-agent routing, attendant menus and after-hours flows, resource accounts, unreachable queues, HTML report + agent CSV |
+
+### The Necropolis — Data & Migration
+
+*Keys 90–99 · the undead & ghosts*
+
+| # | Script | Acronym | Purpose |
+|---|--------|---------|---------|
+| 90 | **revenant.ps1** | **R.E.V.E.N.A.N.T.** — Relocates, Extracts, Validates Environments, Networks, Accounts 'N Transfers | Profile migration and data transfer between machines or profiles |
+| 91 | **embalm.ps1** | **E.M.B.A.L.M.** — Encapsulates My Belongings As Lasting Mementos | Pre-reimaging profile backup — ZIP to local path or network share |
+| 92 | **phylactery.ps1** | **P.H.Y.L.A.C.T.E.R.Y.** — Pre-migration Health of Your Libraries: Accounts, Client, Tethering, Errors, Readiness & Yield | OneDrive Known-Folder-Move pre-migration validator — client, accounts, KFM status, content volume, recent sync errors, HTML report |
+| 93 | **exhume.ps1** | **E.X.H.U.M.E.** — Enumerates, eXposes & Hunts Unmigrated Mail Entries | Outlook PST / OST discovery — profile walk, drive-wide file scan, orphan / oversize / stale detection, HTML report |
+
+### Renamed in 6.0
+
+Twenty-five tools were renamed so each category's names follow its theme, and so no tool shares a name with a well-known attacker tool, malware family or built-in Windows command. The old filenames still work for now: each is a small forwarding stub that prints a warning and runs the renamed tool with the same arguments. The stubs will be removed in a future release, so update bookmarks, runbooks and custom RITUAL recipes.
+
+| Old | New | | Old | New |
+|-----|-----|-|-----|-----|
+| RESTORATION | **WHETSTONE** | | SHADE | **EMISSARY** |
+| SUTURE | **SOLDER** | | OATH | **LODESTAR** |
+| THRESHOLD | **FATHOM** | | TALISMAN | **ZENITH** |
+| GARGOYLE | **VIGIL** | | RELIQUARY | **ALMANAC** |
+| PYRE | **HOURGLASS** | | GOLEM | **ORBIT** |
+| CIPHER | **WYRM** | | WRAITH | **ECLIPSE** |
+| SIGIL | **BASILISK** | | CONCLAVE | **ASTERISM** |
+| CITADEL | **SPHINX** | | GROVE | **CUMULUS** |
+| ARTIFACT | **PHOENIX** | | TENDRIL | **ORRERY** |
+| PALADIN | **GRIFFIN** | | RAMPART | **HALO** |
+| HERALD | **ARGUS** | | ARCHIVE | **EMBALM** |
+| CATACOMB | **MINOTAUR** | | TETHER | **PHYLACTERY** |
+| BEACON | **WISP** | |  |  |
 
 ---
 
@@ -202,7 +230,9 @@ The central hub for the Technician Toolkit. Presents a categorized, interactive 
 
 ---
 
-## Deployment & Onboarding
+## The Workshop — Deployment & Onboarding
+
+Setting machines up and keeping them in repair — named for the artificer's craft.
 
 ### C.O.V.E.N.A.N.T.
 
@@ -335,7 +365,56 @@ Diagnoses and repairs the Windows servicing stack — the component store (WinSx
 
 ---
 
-## Diagnostics & Reporting
+### C.L.E.A.N.S.E.
+
+Frees disk space by cleaning common junk accumulation points across the system.
+
+- User temp folders (`%TEMP%`, `%LOCALAPPDATA%\Temp`)
+- System temp folder (`C:\Windows\Temp`)
+- Windows Update download cache (`SoftwareDistribution\Download`) — stops and restarts the service safely
+- Recycle Bin — all users
+- Browser caches — Chrome, Edge, and Firefox across all user profiles
+- Shows estimated space for each category before cleaning; reports total freed space at the end
+- `-Unattended` cleans all categories silently
+- `-WhatIf` previews what would be cleaned without deleting anything
+
+---
+
+### A.N.V.I.L.
+
+BIOS / UEFI / firmware audit that answers the technician's question "is this machine's firmware in a supportable state?" before a deployment, reimage, or OS upgrade.
+
+- System identity: manufacturer, model, system SKU / service tag, UUID, serial number, BIOS vendor and version, BIOS release date, BIOS age in years
+- UEFI / Secure Boot posture: firmware type (UEFI vs legacy BIOS), system-disk partition style as a cross-check, Secure Boot state (Enabled / Disabled / Unsupported)
+- Vendor firmware-update channel detection — checks known install paths for Dell Command | Update, HP Image Assistant, HP Support Assistant, Lenovo System Update / Vantage, and Microsoft Surface UEFI Configurator. Vendor is auto-detected from `Win32_ComputerSystem.Manufacturer`.
+- Windows Update driver / firmware scan via PSWindowsUpdate (installed on demand); lists every pending update with KB ID, size, and severity
+- Readiness verdict: red / yellow / green based on firmware type, Secure Boot state, BIOS age (≥ 2 years flagged), vendor tooling presence, and WU backlog
+- Dark-themed HTML report with OrgName prefix and six summary cards
+- Auto-elevates and telemeters WU failures via `Write-TKError`
+
+---
+
+### C.H.A.L.I.C.E.
+
+Microsoft 365 Apps client diagnosis and repair, on the machine, for the signed-in user — "Outlook keeps asking for my password", "Word says Unlicensed Product", "Teams won't sign in". The tenant-side tools (ALMANAC, RAVEN, HALO) look at the service; CHALICE looks at the client.
+
+- **Install**: Click-to-Run version and platform, products with their **support dates** (Office 2016 / 2019 ended 2025-10-14, Office 2021 ends 2026-10-13), update channel with any policy override, whether updates are enabled and their source reachable, and when the Office files last changed (90+ days = updates are not landing). MSI-based Office is flagged
+- **Activation**: shared computer activation, and whether this user holds a Microsoft 365 license token
+- **Sign-in**: the accounts Office has cached (work vs personal, how many tenants), `EnableADAL = 0` and `DisableAADWAM` / `DisableADALatopWAMOverride` (classic password-loop causes, local or by policy), the AAD token broker package, cached Office credentials, and the device's Entra join state and Primary Refresh Token from `dsregcmd /status`
+- **Teams**: new vs classic (retired) client, and the cache size
+- **Actions** (`-Action`), each previewed by `-WhatIf`:
+  - `ResetSignIn` — Microsoft's documented activation reset: backs up and clears Office's cached identities and licensing key, deletes the license tokens and cached Office credentials, and re-registers a missing token broker. The user signs in to Office again
+  - `ResetTeams` — closes Teams and clears the new (and classic) Teams cache
+  - `QuickRepair` — Office's offline Quick Repair (requests elevation)
+  - `Update` — starts a Click-to-Run update now
+- **Runs as the signed-in user, not elevated**: Office's accounts, licenses and caches are per user, and an elevated run under another account would read and reset the wrong profile. A run whose account differs from the console user is flagged
+- Verdict: Broken / Attention / Healthy
+
+---
+
+## The Observatory — Diagnostics & Reporting
+
+Finding out what is wrong — named for scrying and magical sight.
 
 ### A.U.S.P.E.X.
 
@@ -353,17 +432,36 @@ Audits the current state of a Windows machine and exports a formatted HTML repor
 
 ---
 
-### W.A.R.D.
+### S.C.R.Y.E.R.
 
-Audits all local user accounts and exports a dark-themed HTML report to the script directory.
+Produces a single consolidated HTML report covering the most commonly requested diagnostic checks — designed for machine handoffs, ticket attachments, and audit records.
 
-- Lists all local accounts: enabled/disabled status, last logon, password info
-- Identifies group memberships — flags all Administrator accounts
-- Flags potentially risky accounts: no password required, password never set, stale (no logon in 90+ days)
-- **LAPS status**: which implementation governs the local administrator password (Windows LAPS, Windows LAPS in legacy emulation, or legacy Microsoft LAPS) and from which policy source (Intune / CSP, Group Policy, local configuration — highest precedence wins); where the password is backed up (Entra ID / Active Directory) and whether the device is actually joined there; which account is managed and whether it exists; whether its password has been rotated within the policy's age; recent errors from the Windows LAPS operational log. A machine with enabled local admins and no LAPS policy is flagged
-- Console summary with highlighted flagged accounts
-- HTML report with color-coded badges and summary cards
-- Report saved to script directory as `WARD_<timestamp>.html`
+- Section 1 — **System overview**: OS caption, build, install date, CPU, memory, uptime
+- Section 2 — **User accounts**: local user inventory with enabled/disabled status and admin flagging
+- Section 3 — **Disk space**: volume usage with warning/critical thresholds on free space
+- Section 4 — **Disk health**: SMART status and physical disk reliability via `Get-PhysicalDisk`
+- Section 5 — **Services & scheduled tasks**: critical service state and non-Microsoft tasks
+- Single dark-themed HTML report with summary cards and nav anchors for each section
+- `-Unattended` for silent run; `-OutputPath <dir>` to redirect the report destination
+
+> **SCRYER vs individual diagnostic tools:** SCRYER is a one-shot snapshot that rolls five checks into one file. Reach for AUSPEX, WARD, FATHOM, AUGUR, or VIGIL when you want a deeper single-domain report.
+
+---
+
+### A.U.G.U.R.
+
+Inspects every physical disk in the system for hardware-level reliability issues and SMART failure prediction.
+
+- Physical disk health status — Healthy, Warning, Unhealthy — sourced from SMART and WMI
+- Disk operational status and media type (SSD / HDD / Unspecified) via `Get-PhysicalDisk`
+- SMART failure prediction flag — surfaces any disk with a predicted imminent failure
+- Bus type and model details for every physical disk
+- Volume integrity status across all lettered volumes
+- Dark-themed HTML report with color-coded disk status badges
+- `-Unattended` for silent scan and HTML export
+
+> **AUGUR vs FATHOM:** AUGUR answers "is this drive about to fail?" (SMART/hardware).
+> FATHOM answers "is this drive running out of space?" (volume usage/cleanup).
 
 ---
 
@@ -396,37 +494,6 @@ Audits Windows services, scheduled tasks, and recent event log errors — locall
 
 ---
 
-### A.U.G.U.R.
-
-Inspects every physical disk in the system for hardware-level reliability issues and SMART failure prediction.
-
-- Physical disk health status — Healthy, Warning, Unhealthy — sourced from SMART and WMI
-- Disk operational status and media type (SSD / HDD / Unspecified) via `Get-PhysicalDisk`
-- SMART failure prediction flag — surfaces any disk with a predicted imminent failure
-- Bus type and model details for every physical disk
-- Volume integrity status across all lettered volumes
-- Dark-themed HTML report with color-coded disk status badges
-- `-Unattended` for silent scan and HTML export
-
-> **AUGUR vs FATHOM:** AUGUR answers "is this drive about to fail?" (SMART/hardware).
-> FATHOM answers "is this drive running out of space?" (volume usage/cleanup).
-
----
-
-### A.N.V.I.L.
-
-BIOS / UEFI / firmware audit that answers the technician's question "is this machine's firmware in a supportable state?" before a deployment, reimage, or OS upgrade.
-
-- System identity: manufacturer, model, system SKU / service tag, UUID, serial number, BIOS vendor and version, BIOS release date, BIOS age in years
-- UEFI / Secure Boot posture: firmware type (UEFI vs legacy BIOS), system-disk partition style as a cross-check, Secure Boot state (Enabled / Disabled / Unsupported)
-- Vendor firmware-update channel detection — checks known install paths for Dell Command | Update, HP Image Assistant, HP Support Assistant, Lenovo System Update / Vantage, and Microsoft Surface UEFI Configurator. Vendor is auto-detected from `Win32_ComputerSystem.Manufacturer`.
-- Windows Update driver / firmware scan via PSWindowsUpdate (installed on demand); lists every pending update with KB ID, size, and severity
-- Readiness verdict: red / yellow / green based on firmware type, Secure Boot state, BIOS age (≥ 2 years flagged), vendor tooling presence, and WU backlog
-- Dark-themed HTML report with OrgName prefix and six summary cards
-- Auto-elevates and telemeters WU failures via `Write-TKError`
-
----
-
 ### H.O.U.R.G.L.A.S.S.
 
 Laptop battery health audit. Surfaces the three numbers that matter for a retirement decision (design capacity, current full-charge capacity, cycle count) and applies industry-consensus thresholds so a technician can answer "is this battery still worth it, or are we buying a replacement?"
@@ -437,49 +504,6 @@ Laptop battery health audit. Surfaces the three numbers that matter for a retire
 - **Dark HTML report** with six summary cards (verdict, battery count, best/worst health, max cycles, thresholds reference) and a full per-battery detail table with Wh values and colour-coded badges.
 - **`powercfg /batteryreport` enrichment**: also runs `powercfg /batteryreport /xml` and parses the result to surface data the live `ROOT\WMI` classes do not expose — per-battery serial number and manufacture date, full-charge capacity history (degradation trend over the lifetime of the machine), Windows runtime estimates at both current full charge and original design capacity (so the technician can quote the runtime lost to wear), and aggregated AC vs DC time totals across the runtime history. The full Microsoft-formatted HTML is saved alongside `HOURGLASS_*.html` and linked from the new section.
 - Auto-elevates; read-only.
-
----
-
-### C.O.D.E.X.
-
-Toolkit report index builder. Walks the configured log directory, finds every TechnicianToolkit-generated HTML report (filename ending in `_YYYYMMDD_HHMMSS.html`), groups them by tool prefix, and emits a single dark-themed HTML rollup with relative links to each child report.
-
-- **Data source**: filesystem only — `Get-ChildItem` over the configured log directory (or a `-LogDir` override), filtered to files matching `<TOOL>_YYYYMMDD_HHMMSS.html`. Files outside that pattern are skipped on purpose so browser-saved pages or hand-renamed copies don't pollute the index. CODEX excludes its own outputs from the scan.
-- **Grouping**: by tool prefix (first underscore-delimited segment) so HOURGLASS, AUSPEX, AUGUR, etc. each get their own section. Variants like `HOURGLASS_battery_report_*` and `SPHINX_StaleAccounts_*` are surfaced as a separate badge inside the parent tool's section.
-- **Filtering**: optional `-DaysBack <int>` limits the index to reports younger than N days.
-- **Dark HTML report** with six summary cards (total reports, distinct tools, last-7-days count, total disk size, newest, oldest) and one section per tool with a per-report table (timestamp, variant, file link, size). Links are relative to the log directory so the rollup stays clickable when the folder is zipped or moved to a ticket attachment.
-- Distinct from `R.I.T.U.A.L.` — RITUAL composes a fresh recipe run and produces a rollup of *what it just ran*; CODEX answers "what reports already exist on disk?" for ad-hoc work that didn't go through a recipe.
-
----
-
-### C.L.E.A.N.S.E.
-
-Frees disk space by cleaning common junk accumulation points across the system.
-
-- User temp folders (`%TEMP%`, `%LOCALAPPDATA%\Temp`)
-- System temp folder (`C:\Windows\Temp`)
-- Windows Update download cache (`SoftwareDistribution\Download`) — stops and restarts the service safely
-- Recycle Bin — all users
-- Browser caches — Chrome, Edge, and Firefox across all user profiles
-- Shows estimated space for each category before cleaning; reports total freed space at the end
-- `-Unattended` cleans all categories silently
-- `-WhatIf` previews what would be cleaned without deleting anything
-
----
-
-### S.C.R.Y.E.R.
-
-Produces a single consolidated HTML report covering the most commonly requested diagnostic checks — designed for machine handoffs, ticket attachments, and audit records.
-
-- Section 1 — **System overview**: OS caption, build, install date, CPU, memory, uptime
-- Section 2 — **User accounts**: local user inventory with enabled/disabled status and admin flagging
-- Section 3 — **Disk space**: volume usage with warning/critical thresholds on free space
-- Section 4 — **Disk health**: SMART status and physical disk reliability via `Get-PhysicalDisk`
-- Section 5 — **Services & scheduled tasks**: critical service state and non-Microsoft tasks
-- Single dark-themed HTML report with summary cards and nav anchors for each section
-- `-Unattended` for silent run; `-OutputPath <dir>` to redirect the report destination
-
-> **SCRYER vs individual diagnostic tools:** SCRYER is a one-shot snapshot that rolls five checks into one file. Reach for AUSPEX, WARD, FATHOM, AUGUR, or VIGIL when you want a deeper single-domain report.
 
 ---
 
@@ -519,7 +543,21 @@ Answers "why is this PC slow?" by watching the machine for a sample window (30 s
 
 ---
 
-## Security
+### C.O.D.E.X.
+
+Toolkit report index builder. Walks the configured log directory, finds every TechnicianToolkit-generated HTML report (filename ending in `_YYYYMMDD_HHMMSS.html`), groups them by tool prefix, and emits a single dark-themed HTML rollup with relative links to each child report.
+
+- **Data source**: filesystem only — `Get-ChildItem` over the configured log directory (or a `-LogDir` override), filtered to files matching `<TOOL>_YYYYMMDD_HHMMSS.html`. Files outside that pattern are skipped on purpose so browser-saved pages or hand-renamed copies don't pollute the index. CODEX excludes its own outputs from the scan.
+- **Grouping**: by tool prefix (first underscore-delimited segment) so HOURGLASS, AUSPEX, AUGUR, etc. each get their own section. Variants like `HOURGLASS_battery_report_*` and `SPHINX_StaleAccounts_*` are surfaced as a separate badge inside the parent tool's section.
+- **Filtering**: optional `-DaysBack <int>` limits the index to reports younger than N days.
+- **Dark HTML report** with six summary cards (total reports, distinct tools, last-7-days count, total disk size, newest, oldest) and one section per tool with a per-report table (timestamp, variant, file link, size). Links are relative to the log directory so the rollup stays clickable when the folder is zipped or moved to a ticket attachment.
+- Distinct from `R.I.T.U.A.L.` — RITUAL composes a fresh recipe run and produces a rollup of *what it just ran*; CODEX answers "what reports already exist on disk?" for ad-hoc work that didn't go through a recipe.
+
+---
+
+## The Bestiary — Security
+
+Protecting the machine, the domain and its data — named for the guardian beasts.
 
 ### W.Y.R.M.
 
@@ -576,46 +614,6 @@ Interactive Active Directory user and group management tool. Requires RSAT (auto
 - **Stale account report** — identifies accounts inactive for 90+ days, exports dark-themed HTML report
 - `-Unattended -Action StaleReport` for silent stale account HTML export
 - `-Unattended -Action PasswordExpiryReport` for silent password expiry HTML export
-
----
-
-### A.R.G.U.S.
-
-Answers the two questions a customer security review asks: *what authentication controls are in place*, and *who has an account here and what can each of them do?* Produces the roster an MSP hands to a client for sign-off and cleanup — every account as **Full Name / alias / Role** — plus the evidence behind each role. Read-only; ARGUS never modifies the directory.
-
-- **Authentication policy, answered in prose** — reads the default domain password and lockout policy and scores each setting **Strong / Acceptable / Weak** against a stated baseline, then writes the four items an access questionnaire asks for (password length and complexity, password history, password expiration, lockout for failed attempts) as finished sentences the technician can paste into the response
-- **Fine-grained password policies (PSOs) enumerated** — a PSO overrides the domain default for the principals it targets, so answering from the default alone can be flatly wrong; any that exist are listed with their precedence and targets
-- The meaningful zeros are interpreted rather than printed: lockout threshold `0` means lockout is **off** (Weak), max password age `0` means passwords **never expire** (reported, not failed — NIST SP 800-63B advises against routine expiry), and lockout duration `0` means **locked until an administrator unlocks**, the strictest setting rather than the weakest
-- **Effective, not direct, membership** — group membership is expanded server-side with the LDAP in-chain matching rule (`1.2.840.113556.1.4.1941`), so an account that reaches Domain Admins three nested groups deep is still reported as a Domain Administrator
-- **Primary-group membership resolved separately** — an account whose *primary* group has been switched to Domain Admins does not appear in that group's member list at all, and is folded in explicitly
-- **Groups resolved by well-known RID, not by name** — a renamed or localised `Domain Admins` is still found
-- **Four role tiers**:
-  - **Domain Administrator** — Enterprise / Schema / Domain Admins, `BUILTIN\Administrators`, Group Policy Creator Owners
-  - **Delegated Administrator** — Account / Server / Backup / Print Operators, DnsAdmins, Key Admins, Enterprise Key Admins, Cert Publishers, Remote Management Users
-  - **Elevated (Custom Group)** — member of a customer-created group whose name matches `-AdminGroupPattern` (the "IT Admins" / "Helpdesk Operators" groups a built-ins-only audit misses)
-  - **Standard User** — no privileged membership found
-- **Account type** is reported separately from role — `User`, `Service Account` (SPN present or `svc_`-style naming), `Built-in (KDC)`, `Built-in (Guest)`
-- **Review flags for the cleanup conversation** — never signed in, inactive beyond `-StaleDays`, locked out, password expired / never expires / never set, trusted for unconstrained delegation, unused administrator, and *former privileged account* (an `adminCount` stamp with no current privileged membership — an ex-administrator whose ACL is still detached from its OU)
-- **Review CSV** alongside the HTML — the same roster with two deliberately empty columns (`Action (Keep/Disable/Delete)`, `Customer Notes`) so the customer can mark it up and hand it straight back
-- Report sections: access levels at a glance, privileged accounts, full roster, privileged group membership (with effective members per group), and accounts flagged for review
-- `-IncludeDisabled` widens the roster past enabled accounts; `-SearchBase` scopes to one OU; `-Server` targets a specific domain controller; `-StaleDays` sets the inactivity threshold (default 90); `-SkipCustomGroupScan` limits the audit to built-in groups; `-NoCsv` suppresses the CSV
-- Requires the RSAT ActiveDirectory module (offered for install if missing)
-
----
-
-### M.I.N.O.T.A.U.R.
-
-File share and NTFS permissions review — answers "who has access to this share?" the way ARGUS answers it for the domain and WARD for the local machine. Read-only.
-
-- Every non-administrative SMB share with its **share permissions** and the **NTFS permissions** at its root
-- A walk down each share (`-Depth`, default 2 folder levels; capped at 5,000 folders) recording every folder with **explicit permissions or broken inheritance** — folders that only inherit are not repeated
-- **Broad write**: Everyone, Authenticated Users, Users or Domain Users granted write in NTFS *and* let through by the share permissions — the combination that lets any account, or ransomware running as one, change the data. Broad read is reported separately, and expected on `NETLOGON` / `SYSVOL`
-- **Direct user grants** (access given to a person instead of a group), **orphaned SIDs** left by deleted accounts, **Deny** entries, and folders the elevated session still could not read
-- `-Path <folder>` reviews one folder tree instead of the shares
-- HTML report plus `MINOTAUR_<timestamp>.csv` holding every access-control entry scanned (share, folder, identity, kind, level, allow/deny, inherited) — ready for a customer access review
-- Auto-elevates
-
-> **MINOTAUR vs ARGUS vs WARD:** all three are access reviews, at different scopes — MINOTAUR for file shares, ARGUS for Active Directory, WARD for one machine's local accounts.
 
 ---
 
@@ -688,7 +686,63 @@ Antivirus and Microsoft Defender health audit. Answers the four questions that d
 
 ---
 
-## Network & Remote
+### A.R.G.U.S.
+
+Answers the two questions a customer security review asks: *what authentication controls are in place*, and *who has an account here and what can each of them do?* Produces the roster an MSP hands to a client for sign-off and cleanup — every account as **Full Name / alias / Role** — plus the evidence behind each role. Read-only; ARGUS never modifies the directory.
+
+- **Authentication policy, answered in prose** — reads the default domain password and lockout policy and scores each setting **Strong / Acceptable / Weak** against a stated baseline, then writes the four items an access questionnaire asks for (password length and complexity, password history, password expiration, lockout for failed attempts) as finished sentences the technician can paste into the response
+- **Fine-grained password policies (PSOs) enumerated** — a PSO overrides the domain default for the principals it targets, so answering from the default alone can be flatly wrong; any that exist are listed with their precedence and targets
+- The meaningful zeros are interpreted rather than printed: lockout threshold `0` means lockout is **off** (Weak), max password age `0` means passwords **never expire** (reported, not failed — NIST SP 800-63B advises against routine expiry), and lockout duration `0` means **locked until an administrator unlocks**, the strictest setting rather than the weakest
+- **Effective, not direct, membership** — group membership is expanded server-side with the LDAP in-chain matching rule (`1.2.840.113556.1.4.1941`), so an account that reaches Domain Admins three nested groups deep is still reported as a Domain Administrator
+- **Primary-group membership resolved separately** — an account whose *primary* group has been switched to Domain Admins does not appear in that group's member list at all, and is folded in explicitly
+- **Groups resolved by well-known RID, not by name** — a renamed or localised `Domain Admins` is still found
+- **Four role tiers**:
+  - **Domain Administrator** — Enterprise / Schema / Domain Admins, `BUILTIN\Administrators`, Group Policy Creator Owners
+  - **Delegated Administrator** — Account / Server / Backup / Print Operators, DnsAdmins, Key Admins, Enterprise Key Admins, Cert Publishers, Remote Management Users
+  - **Elevated (Custom Group)** — member of a customer-created group whose name matches `-AdminGroupPattern` (the "IT Admins" / "Helpdesk Operators" groups a built-ins-only audit misses)
+  - **Standard User** — no privileged membership found
+- **Account type** is reported separately from role — `User`, `Service Account` (SPN present or `svc_`-style naming), `Built-in (KDC)`, `Built-in (Guest)`
+- **Review flags for the cleanup conversation** — never signed in, inactive beyond `-StaleDays`, locked out, password expired / never expires / never set, trusted for unconstrained delegation, unused administrator, and *former privileged account* (an `adminCount` stamp with no current privileged membership — an ex-administrator whose ACL is still detached from its OU)
+- **Review CSV** alongside the HTML — the same roster with two deliberately empty columns (`Action (Keep/Disable/Delete)`, `Customer Notes`) so the customer can mark it up and hand it straight back
+- Report sections: access levels at a glance, privileged accounts, full roster, privileged group membership (with effective members per group), and accounts flagged for review
+- `-IncludeDisabled` widens the roster past enabled accounts; `-SearchBase` scopes to one OU; `-Server` targets a specific domain controller; `-StaleDays` sets the inactivity threshold (default 90); `-SkipCustomGroupScan` limits the audit to built-in groups; `-NoCsv` suppresses the CSV
+- Requires the RSAT ActiveDirectory module (offered for install if missing)
+
+---
+
+### M.I.N.O.T.A.U.R.
+
+File share and NTFS permissions review — answers "who has access to this share?" the way ARGUS answers it for the domain and WARD for the local machine. Read-only.
+
+- Every non-administrative SMB share with its **share permissions** and the **NTFS permissions** at its root
+- A walk down each share (`-Depth`, default 2 folder levels; capped at 5,000 folders) recording every folder with **explicit permissions or broken inheritance** — folders that only inherit are not repeated
+- **Broad write**: Everyone, Authenticated Users, Users or Domain Users granted write in NTFS *and* let through by the share permissions — the combination that lets any account, or ransomware running as one, change the data. Broad read is reported separately, and expected on `NETLOGON` / `SYSVOL`
+- **Direct user grants** (access given to a person instead of a group), **orphaned SIDs** left by deleted accounts, **Deny** entries, and folders the elevated session still could not read
+- `-Path <folder>` reviews one folder tree instead of the shares
+- HTML report plus `MINOTAUR_<timestamp>.csv` holding every access-control entry scanned (share, folder, identity, kind, level, allow/deny, inherited) — ready for a customer access review
+- Auto-elevates
+
+> **MINOTAUR vs ARGUS vs WARD:** all three are access reviews, at different scopes — MINOTAUR for file shares, ARGUS for Active Directory, WARD for one machine's local accounts.
+
+---
+
+### W.A.R.D.
+
+Audits all local user accounts and exports a dark-themed HTML report to the script directory.
+
+- Lists all local accounts: enabled/disabled status, last logon, password info
+- Identifies group memberships — flags all Administrator accounts
+- Flags potentially risky accounts: no password required, password never set, stale (no logon in 90+ days)
+- **LAPS status**: which implementation governs the local administrator password (Windows LAPS, Windows LAPS in legacy emulation, or legacy Microsoft LAPS) and from which policy source (Intune / CSP, Group Policy, local configuration — highest precedence wins); where the password is backed up (Entra ID / Active Directory) and whether the device is actually joined there; which account is managed and whether it exists; whether its password has been rotated within the policy's age; recent errors from the Windows LAPS operational log. A machine with enabled local admins and no LAPS policy is flagged
+- Console summary with highlighted flagged accounts
+- HTML report with color-coded badges and summary cards
+- Report saved to script directory as `WARD_<timestamp>.html`
+
+---
+
+## The Crossroads — Network & Remote
+
+How traffic travels and how machines are found and reached — named for arcane paths and lights.
 
 ### L.E.Y.L.I.N.E.
 
@@ -785,7 +839,9 @@ Diagnoses and repairs "The trust relationship between this workstation and the p
 
 ---
 
-## Cloud & Identity
+## The Firmament — Cloud & Identity
+
+Microsoft 365, Entra ID and Azure — named for the sky and the celestial.
 
 ### Z.E.N.I.T.H.
 
@@ -914,6 +970,8 @@ Entra ID Conditional Access posture audit. Scores the tenant's policies against 
 
 > **HALO vs ECLIPSE:** ECLIPSE audits the *identities* — guests, privileged role holders, stale admins. HALO audits the *policies* that decide how those identities may sign in.
 
+---
+
 ### C.A.R.I.L.L.O.N.
 
 Teams Phone call queue and auto attendant audit. Answers "who is in this queue?" by name — never by object ID — and where every call can end up. Read-only.
@@ -929,25 +987,11 @@ Teams Phone call queue and auto attendant audit. Answers "who is in this queue?"
 - Writes `CARILLON_<timestamp>.html` and `CARILLON_Agents_<timestamp>.csv` (one row per queue / agent pairing)
 - Verdict: Broken / Attention / Healthy
 
-### C.H.A.L.I.C.E.
-
-Microsoft 365 Apps client diagnosis and repair, on the machine, for the signed-in user — "Outlook keeps asking for my password", "Word says Unlicensed Product", "Teams won't sign in". The tenant-side tools (ALMANAC, RAVEN, HALO) look at the service; CHALICE looks at the client.
-
-- **Install**: Click-to-Run version and platform, products with their **support dates** (Office 2016 / 2019 ended 2025-10-14, Office 2021 ends 2026-10-13), update channel with any policy override, whether updates are enabled and their source reachable, and when the Office files last changed (90+ days = updates are not landing). MSI-based Office is flagged
-- **Activation**: shared computer activation, and whether this user holds a Microsoft 365 license token
-- **Sign-in**: the accounts Office has cached (work vs personal, how many tenants), `EnableADAL = 0` and `DisableAADWAM` / `DisableADALatopWAMOverride` (classic password-loop causes, local or by policy), the AAD token broker package, cached Office credentials, and the device's Entra join state and Primary Refresh Token from `dsregcmd /status`
-- **Teams**: new vs classic (retired) client, and the cache size
-- **Actions** (`-Action`), each previewed by `-WhatIf`:
-  - `ResetSignIn` — Microsoft's documented activation reset: backs up and clears Office's cached identities and licensing key, deletes the license tokens and cached Office credentials, and re-registers a missing token broker. The user signs in to Office again
-  - `ResetTeams` — closes Teams and clears the new (and classic) Teams cache
-  - `QuickRepair` — Office's offline Quick Repair (requests elevation)
-  - `Update` — starts a Click-to-Run update now
-- **Runs as the signed-in user, not elevated**: Office's accounts, licenses and caches are per user, and an elevated run under another account would read and reset the wrong profile. A run whose account differs from the console user is flagged
-- Verdict: Broken / Attention / Healthy
-
 ---
 
-## Data & Migration
+## The Necropolis — Data & Migration
+
+Moving a user's data from one machine to the next — named for the undead and ghosts.
 
 ### R.E.V.E.N.A.N.T.
 
@@ -1106,7 +1150,7 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; irm https://raw.githubusercont
 # G.R.I.M.O.I.R.E. — Hub launcher (recommended starting point; downloads module automatically)
 Set-ExecutionPolicy Bypass -Scope Process -Force; $d="$(Get-Location)"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/TechnicianToolkit.psm1 -OutFile "$d\TechnicianToolkit.psm1"; $f="$d\grimoire.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/grimoire.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
-# ── Deployment & Onboarding ──────────────────────────────────────────────────
+# ── The Workshop — Deployment & Onboarding ───────────────────────────────────
 
 # C.O.V.E.N.A.N.T. — Machine onboarding & Entra ID domain join
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\covenant.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/covenant.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
@@ -1135,13 +1179,25 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\conduit.ps
 # S.O.L.D.E.R. — Windows servicing (component store & SFC) repair
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\solder.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/solder.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
-# ── Diagnostics & Reporting ──────────────────────────────────────────────────
+# C.L.E.A.N.S.E. — Disk cleanup (temp, update cache, browser caches, Recycle Bin)
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\cleanse.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/cleanse.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
+# A.N.V.I.L. — BIOS / UEFI / firmware audit
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\anvil.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/anvil.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
+# C.H.A.L.I.C.E. — Microsoft 365 Apps client diagnosis & repair (run as the affected user)
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\chalice.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/chalice.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
+# ── The Observatory — Diagnostics & Reporting ────────────────────────────────
 
 # A.U.S.P.E.X. — System diagnostics and HTML report
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\auspex.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/auspex.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
-# W.A.R.D. — Local user account audit
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\ward.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/ward.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+# S.C.R.Y.E.R. — Unified diagnostic HTML report
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\scryer.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/scryer.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
+# A.U.G.U.R. — Physical disk health & SMART status
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\augur.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/augur.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # F.A.T.H.O.M. — Disk & storage health monitor
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\fathom.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/fathom.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
@@ -1149,23 +1205,8 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\fathom.ps1
 # V.I.G.I.L. — Service, task & event log monitor
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\vigil.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/vigil.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
-# A.U.G.U.R. — Physical disk health & SMART status
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\augur.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/augur.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
-
-# C.L.E.A.N.S.E. — Disk cleanup (temp, update cache, browser caches, Recycle Bin)
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\cleanse.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/cleanse.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
-
-# S.C.R.Y.E.R. — Unified diagnostic HTML report
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\scryer.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/scryer.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
-
-# A.N.V.I.L. — BIOS / UEFI / firmware audit
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\anvil.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/anvil.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
-
 # H.O.U.R.G.L.A.S.S. — Laptop battery health audit
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\hourglass.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/hourglass.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
-
-# C.O.D.E.X. — Toolkit report index (rolls up existing HTML reports)
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\codex.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/codex.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # N.E.C.R.O.P.S.Y. — Crash & unexpected-reboot analysis
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\necropsy.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/necropsy.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
@@ -1173,7 +1214,10 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\necropsy.p
 # T.O.R.P.O.R. — Slow-machine triage
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\torpor.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/torpor.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
-# ── Security ─────────────────────────────────────────────────────────────────
+# C.O.D.E.X. — Toolkit report index (rolls up existing HTML reports)
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\codex.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/codex.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
+# ── The Bestiary — Security ──────────────────────────────────────────────────
 
 # W.Y.R.M. — BitLocker encryption management
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\wyrm.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/wyrm.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
@@ -1183,12 +1227,6 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\basilisk.p
 
 # S.P.H.I.N.X. — Active Directory management
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\sphinx.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/sphinx.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
-
-# A.R.G.U.S. — AD account roster & access levels
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\argus.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/argus.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
-
-# M.I.N.O.T.A.U.R. — File share & NTFS permissions review
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\minotaur.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/minotaur.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # P.H.O.E.N.I.X. — Certificate health monitor
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\phoenix.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/phoenix.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
@@ -1202,7 +1240,16 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\totem.ps1"
 # G.R.I.F.F.I.N. — AV / Defender health audit
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\griffin.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/griffin.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
-# ── Network & Remote ─────────────────────────────────────────────────────────
+# A.R.G.U.S. — AD account roster & access levels
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\argus.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/argus.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
+# M.I.N.O.T.A.U.R. — File share & NTFS permissions review
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\minotaur.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/minotaur.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
+# W.A.R.D. — Local user account audit
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\ward.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/ward.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
+# ── The Crossroads — Network & Remote ────────────────────────────────────────
 
 # L.E.Y.L.I.N.E. — Network diagnostics & remediation
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\leyline.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/leyline.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
@@ -1222,7 +1269,7 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\portal.ps1
 # L.O.D.E.S.T.A.R. — Domain trust & secure channel diagnosis and repair
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\lodestar.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/lodestar.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
-# ── Cloud & Identity ─────────────────────────────────────────────────────────
+# ── The Firmament — Cloud & Identity ─────────────────────────────────────────
 
 # Z.E.N.I.T.H. — Azure environment assessment
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\zenith.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/zenith.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
@@ -1254,10 +1301,7 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\halo.ps1";
 # C.A.R.I.L.L.O.N. — Teams Phone call queue & auto attendant audit
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\carillon.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/carillon.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
-# C.H.A.L.I.C.E. — Microsoft 365 Apps client diagnosis & repair (run as the affected user)
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\chalice.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/chalice.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
-
-# ── Data & Migration ─────────────────────────────────────────────────────────
+# ── The Necropolis — Data & Migration ────────────────────────────────────────
 
 # R.E.V.E.N.A.N.T. — Profile migration
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\revenant.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/revenant.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
@@ -1289,7 +1333,7 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 ### Or run tools directly
 
 ```powershell
-# Deployment & Onboarding
+# The Workshop — Deployment & Onboarding
 .\covenant.ps1      # New machine onboarding and Entra ID domain join
 .\conjure.ps1       # Software deployment via winget or Chocolatey
 .\runepress.ps1     # Printer driver installation and configuration
@@ -1299,33 +1343,34 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\ritual.ps1        # Workflow orchestrator — runs sequences of other tools
 .\conduit.ps1       # Windows Update connectivity diagnosis and repair
 .\solder.ps1        # Windows servicing repair — component store, SFC, update failure codes
+.\cleanse.ps1       # Disk cleanup — temp files, update cache, browser caches, Recycle Bin
+.\anvil.ps1         # BIOS / UEFI / firmware audit and HTML report
+.\chalice.ps1       # Microsoft 365 Apps client — activation, sign-in loops, Teams cache, Quick Repair
 
-# Diagnostics & Reporting
+# The Observatory — Diagnostics & Reporting
 .\auspex.ps1        # System diagnostics and HTML health report
-.\ward.ps1          # User account audit and HTML report
+.\scryer.ps1        # Unified diagnostic report — system, users, disks, SMART, services in one HTML
+.\augur.ps1         # Physical disk health — SMART status, wear prediction, failure forecast
 .\fathom.ps1     # Disk space monitor — volume usage, low-space alerts, cleanup
 .\vigil.ps1      # Service, task, and event log monitor
-.\augur.ps1         # Physical disk health — SMART status, wear prediction, failure forecast
-.\cleanse.ps1       # Disk cleanup — temp files, update cache, browser caches, Recycle Bin
-.\scryer.ps1        # Unified diagnostic report — system, users, disks, SMART, services in one HTML
-.\anvil.ps1         # BIOS / UEFI / firmware audit and HTML report
 .\hourglass.ps1          # Laptop battery health audit
-.\codex.ps1         # Toolkit report index — rolls up existing HTML reports into one bound exhibit
 .\necropsy.ps1      # Crash & unexpected-reboot analysis and HTML report
 .\torpor.ps1        # Slow-machine triage — what is using the CPU, memory and disk right now
+.\codex.ps1         # Toolkit report index — rolls up existing HTML reports into one bound exhibit
 
-# Security
+# The Bestiary — Security
 .\wyrm.ps1        # BitLocker drive encryption management
 .\basilisk.ps1         # Security baseline enforcement
 .\sphinx.ps1       # Active Directory user and group management
-.\argus.ps1        # Active Directory account roster and access-level report
-.\minotaur.ps1      # File share & NTFS permissions review, HTML + CSV
 .\phoenix.ps1         # Certificate health and SSL expiry monitor
 .\talon.ps1          # Persistence / autoruns audit
 .\totem.ps1          # TPM health audit
 .\griffin.ps1        # AV / Microsoft Defender health audit
+.\argus.ps1        # Active Directory account roster and access-level report
+.\minotaur.ps1      # File share & NTFS permissions review, HTML + CSV
+.\ward.ps1          # User account audit and HTML report
 
-# Network & Remote
+# The Crossroads — Network & Remote
 .\leyline.ps1       # Network diagnostics and remediation
 .\emissary.ps1       # Remote execution via WinRM
 .\lantern.ps1       # Network discovery and asset inventory
@@ -1333,7 +1378,7 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\portal.ps1        # VPN / Always-On VPN audit
 .\lodestar.ps1          # Domain trust & secure channel diagnosis and repair
 
-# Cloud & Identity
+# The Firmament — Cloud & Identity
 .\zenith.ps1      # Azure environment assessment and HTML report
 .\almanac.ps1     # Microsoft 365 license and mailbox audit
 .\orbit.ps1         # Intune / MDM compliance audit and HTML report
@@ -1344,9 +1389,8 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\raven.ps1         # Exchange Online mailbox security audit and HTML report
 .\halo.ps1       # Entra ID Conditional Access posture audit
 .\carillon.ps1      # Teams Phone call queues & auto attendants — agents by name
-.\chalice.ps1       # Microsoft 365 Apps client — activation, sign-in loops, Teams cache, Quick Repair
 
-# Data & Migration
+# The Necropolis — Data & Migration
 .\revenant.ps1       # Profile migration and data transfer
 .\embalm.ps1        # Pre-reimaging profile backup to ZIP
 .\phylactery.ps1         # OneDrive Known-Folder-Move pre-migration validator

@@ -71,6 +71,40 @@ BeforeAll {
 # during Pester's discovery phase, before any BeforeAll body executes.
 $NonSourceDir = '{0}(\.git|\.claude){0}' -f [regex]::Escape([string][IO.Path]::DirectorySeparatorChar)
 
+# Forwarding stubs left at the old filenames of the tools renamed in 6.0
+# (old -> new). They carry no tool logic -- no param() block, so `@args` passes
+# every argument through untouched -- so they are exempt from the tool-shape
+# gates below; the 'Renamed-tool forwarding stubs' block checks them instead.
+# Defined at file scope because the -ForEach case lists are built during
+# discovery.
+$RenamedToolStubs = [ordered]@{
+    'restoration.ps1' = 'whetstone.ps1'
+    'suture.ps1'      = 'solder.ps1'
+    'threshold.ps1'   = 'fathom.ps1'
+    'gargoyle.ps1'    = 'vigil.ps1'
+    'pyre.ps1'        = 'hourglass.ps1'
+    'cipher.ps1'      = 'wyrm.ps1'
+    'sigil.ps1'       = 'basilisk.ps1'
+    'citadel.ps1'     = 'sphinx.ps1'
+    'artifact.ps1'    = 'phoenix.ps1'
+    'paladin.ps1'     = 'griffin.ps1'
+    'herald.ps1'      = 'argus.ps1'
+    'catacomb.ps1'    = 'minotaur.ps1'
+    'beacon.ps1'      = 'wisp.ps1'
+    'shade.ps1'       = 'emissary.ps1'
+    'oath.ps1'        = 'lodestar.ps1'
+    'talisman.ps1'    = 'zenith.ps1'
+    'reliquary.ps1'   = 'almanac.ps1'
+    'golem.ps1'       = 'orbit.ps1'
+    'wraith.ps1'      = 'eclipse.ps1'
+    'conclave.ps1'    = 'asterism.ps1'
+    'grove.ps1'       = 'cumulus.ps1'
+    'tendril.ps1'     = 'orrery.ps1'
+    'rampart.ps1'     = 'halo.ps1'
+    'archive.ps1'     = 'embalm.ps1'
+    'tether.ps1'      = 'phylactery.ps1'
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # EscHtml
 # ─────────────────────────────────────────────────────────────────────────────
@@ -423,6 +457,7 @@ Describe 'UTF-8 BOM — all scripts' {
 # ─────────────────────────────────────────────────────────────────────────────
 Describe 'Module bootstrap compliance — all tool scripts' {
     $scriptCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Filter '*.ps1' -File |
+        Where-Object { -not $RenamedToolStubs.Contains($_.Name) } |
         ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
 
     It '<Name> defines $TKModulePath next to $PSScriptRoot' -ForEach $scriptCases {
@@ -450,7 +485,7 @@ Describe 'Module bootstrap compliance — all tool scripts' {
 # ─────────────────────────────────────────────────────────────────────────────
 Describe 'Param block compliance — -Unattended switch' {
     $scriptCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Filter '*.ps1' -File |
-        Where-Object { $_.Name -notin @('grimoire.ps1', 'emissary.ps1') } |
+        Where-Object { $_.Name -notin @('grimoire.ps1', 'emissary.ps1') -and -not $RenamedToolStubs.Contains($_.Name) } |
         ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
 
     It '<Name> declares -Unattended' -ForEach $scriptCases {
@@ -559,7 +594,15 @@ Describe 'Legacy tool names must not reappear' {
         $script:LegacyAcronyms = @(
             'O.R.A.C.L.E.', 'S.E.N.T.I.N.E.L.', 'B.A.S.T.I.O.N.',
             'V.A.U.L.T.',   'P.H.A.N.T.O.M.',   'S.P.E.C.T.E.R.',
-            'A.E.G.I.S.',   'R.E.L.I.C.'
+            'A.E.G.I.S.',   'R.E.L.I.C.',
+            # Renamed in 6.0 (per-category naming themes)
+            'R.E.S.T.O.R.A.T.I.O.N.', 'S.U.T.U.R.E.', 'T.H.R.E.S.H.O.L.D.', 'G.A.R.G.O.Y.L.E.',
+            'P.Y.R.E.', 'C.I.P.H.E.R.', 'S.I.G.I.L.', 'C.I.T.A.D.E.L.',
+            'A.R.T.I.F.A.C.T.', 'P.A.L.A.D.I.N.', 'H.E.R.A.L.D.', 'C.A.T.A.C.O.M.B.',
+            'B.E.A.C.O.N.', 'S.H.A.D.E.', 'O.A.T.H.', 'T.A.L.I.S.M.A.N.',
+            'R.E.L.I.Q.U.A.R.Y.', 'G.O.L.E.M.', 'W.R.A.I.T.H.', 'C.O.N.C.L.A.V.E.',
+            'G.R.O.V.E.', 'T.E.N.D.R.I.L.', 'R.A.M.P.A.R.T.', 'A.R.C.H.I.V.E.',
+            'T.E.T.H.E.R.'
         )
     }
 
@@ -586,7 +629,12 @@ Describe 'Legacy tool names must not reappear' {
     It '<Name> contains no retired filename prefixes' -ForEach $files {
         $prefixPatterns = @(
             'ORACLE_', 'SENTINEL_', 'BASTION_', 'VAULT_',
-            'PHANTOM_', 'SPECTER_', 'AEGIS_', 'RELIC_'
+            'PHANTOM_', 'SPECTER_', 'AEGIS_', 'RELIC_',
+            'RESTORATION_', 'SUTURE_', 'THRESHOLD_', 'GARGOYLE_', 'PYRE_', 'CIPHER_',
+            'SIGIL_', 'CITADEL_', 'ARTIFACT_', 'PALADIN_', 'HERALD_', 'CATACOMB_',
+            'BEACON_', 'SHADE_', 'OATH_', 'TALISMAN_', 'RELIQUARY_', 'GOLEM_',
+            'WRAITH_', 'CONCLAVE_', 'GROVE_', 'TENDRIL_', 'RAMPART_', 'ARCHIVE_',
+            'TETHER_'
         )
         $hits = Select-String -Path $FullName -SimpleMatch -Pattern $prefixPatterns -ErrorAction SilentlyContinue
         $hits | Should -BeNullOrEmpty -Because "retired filename prefix found in $Name"
@@ -637,6 +685,43 @@ Describe 'Deprecation stubs removed' {
 
     It '<Name> no longer exists' -ForEach $retiredStubs {
         $FullPath | Should -Not -Exist
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Renamed-tool forwarding stubs — 6.0 renamed 25 tools and left a stub at each
+# old filename so pinned runbooks, custom RITUAL recipes and bookmarked
+# quick-launch URLs keep working for a release or two. A stub must forward to
+# the right file, the file it names must be a registered tool, and the old name
+# must not be registered itself -- otherwise the stub shadows or points at
+# nothing.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'Renamed-tool forwarding stubs' {
+    BeforeAll {
+        $script:StubRegistry = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'grimoire.ps1') -Raw
+    }
+
+    $stubCases = foreach ($old in $RenamedToolStubs.Keys) {
+        @{ Old = $old; New = $RenamedToolStubs[$old]; FullName = (Join-Path (Join-Path $PSScriptRoot '..') $old) }
+    }
+
+    It '<Old> forwards every argument to <New>' -ForEach $stubCases {
+        $FullName | Should -Exist
+        $content = Get-Content $FullName -Raw
+        $content | Should -Match ([regex]::Escape("Join-Path `$PSScriptRoot '$New'"))
+        $content | Should -Match '&\s+\$NewScript\s+@args'
+        $content | Should -Match 'Write-Warning'
+    }
+
+    It '<Old> declares no param() block, so @args carries named parameters through' -ForEach $stubCases {
+        $ast = [System.Management.Automation.Language.Parser]::ParseFile($FullName, [ref]$null, [ref]$null)
+        $ast.ParamBlock | Should -BeNullOrEmpty
+    }
+
+    It '<New> exists and is registered, and <Old> is not' -ForEach $stubCases {
+        Join-Path (Join-Path $PSScriptRoot '..') $New | Should -Exist
+        $script:StubRegistry | Should -Match ("File\s*=\s*'" + [regex]::Escape($New) + "'")
+        $script:StubRegistry | Should -Not -Match ("File\s*=\s*'" + [regex]::Escape($Old) + "'")
     }
 }
 

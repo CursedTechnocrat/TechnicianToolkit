@@ -119,6 +119,37 @@ function Show-CodexBanner {
 # REPORT DISCOVERY
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Reports written before the 6.0 renames carry the old tool name as their
+# prefix. Group them under the new name so a machine's history stays in one
+# section instead of splitting across two.
+$RenamedToolPrefixes = @{
+    'RESTORATION'   = 'WHETSTONE'
+    'SUTURE'        = 'SOLDER'
+    'THRESHOLD'     = 'FATHOM'
+    'GARGOYLE'      = 'VIGIL'
+    'PYRE'          = 'HOURGLASS'
+    'CIPHER'        = 'WYRM'
+    'SIGIL'         = 'BASILISK'
+    'CITADEL'       = 'SPHINX'
+    'ARTIFACT'      = 'PHOENIX'
+    'PALADIN'       = 'GRIFFIN'
+    'HERALD'        = 'ARGUS'
+    'CATACOMB'      = 'MINOTAUR'
+    'BEACON'        = 'WISP'
+    'SHADE'         = 'EMISSARY'
+    'OATH'          = 'LODESTAR'
+    'TALISMAN'      = 'ZENITH'
+    'RELIQUARY'     = 'ALMANAC'
+    'GOLEM'         = 'ORBIT'
+    'WRAITH'        = 'ECLIPSE'
+    'CONCLAVE'      = 'ASTERISM'
+    'GROVE'         = 'CUMULUS'
+    'TENDRIL'       = 'ORRERY'
+    'RAMPART'       = 'HALO'
+    'ARCHIVE'       = 'EMBALM'
+    'TETHER'        = 'PHYLACTERY'
+}
+
 # Walks the log directory for HTML files whose names end in the toolkit's
 # canonical _YYYYMMDD_HHMMSS timestamp. Files outside that pattern are
 # skipped on purpose so that browser-saved pages or hand-renamed copies
@@ -152,6 +183,7 @@ function Get-ToolkitReportFiles {
         $timeStr = $matches['time']
 
         $tool    = ($label -split '_', 2)[0].ToUpper()
+        if ($RenamedToolPrefixes.ContainsKey($tool)) { $tool = $RenamedToolPrefixes[$tool] }
         $variant = if ($label -match '^[^_]+_(?<v>.+)$') { $matches['v'] } else { '' }
 
         $ts = $null

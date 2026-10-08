@@ -8,11 +8,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
-- **RITUAL's `HealthCheck` recipe now ends with TORPOR and SUTURE.** TORPOR adds a 30-second
-  load sample and SUTURE its read-only servicing audit (`-Action` stays at the default `Audit`, so
+- **RITUAL's `HealthCheck` recipe now ends with TORPOR and SOLDER.** TORPOR adds a 30-second
+  load sample and SOLDER its read-only servicing audit (`-Action` stays at the default `Audit`, so
   the recipe still changes nothing on the machine).
 - **C.H.A.L.I.C.E. (`chalice.ps1`) — Microsoft 365 Apps client diagnosis and repair.** Registered
-  at key 70 under Cloud & Identity (40–49 is full). The suite audited the tenant but had nothing for
+  at key 12 in The Workshop. The suite audited the tenant but had nothing for
   the client-side tickets: "Outlook keeps asking for my password", "Unlicensed Product", "Teams
   won't sign in". CHALICE checks:
   - **Install:** Click-to-Run version, products and their support dates, channel (with policy
@@ -28,9 +28,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   if missing); `ResetTeams` clears the Teams cache; `QuickRepair` runs Office's offline repair;
   `Update` starts a Click-to-Run update. Supports `-WhatIf`. Runs as the signed-in user rather than
   elevating, since everything it reads and resets is per user.
-- **S.U.T.U.R.E. (`suture.ps1`) — Windows servicing diagnosis and repair.** Registered at key 9
-  under Deployment & Onboarding, beside CONDUIT and RESTORATION. NECROPSY recommended
-  `DISM /RestoreHealth` + `sfc /scannow` but nothing ran them. SUTURE:
+- **S.O.L.D.E.R. (`solder.ps1`) — Windows servicing diagnosis and repair.** Registered at key 9
+  in The Workshop, beside CONDUIT and WHETSTONE. NECROPSY recommended
+  `DISM /RestoreHealth` + `sfc /scannow` but nothing ran them. SOLDER:
   - **Audits** pending restarts (servicing-blocking vs not), component store health
     (`/CheckHealth`, or `/ScanHealth` with `-Deep`) and size (`/AnalyzeComponentStore`), the last
     SFC result from `CBS.log`, Windows Update install failures from the last 30 days with each code
@@ -41,8 +41,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     `sfc /scannow`, then re-checks the store; `-Cleanup` adds `/StartComponentCleanup`. Stops for a
     pending servicing restart, skips SFC when RestoreHealth fails, never runs `/ResetBase`, never
     edits Windows Update policy or the update cache (CONDUIT's job). Supports `-WhatIf`.
-- **T.O.R.P.O.R. (`torpor.ps1`) — slow-machine triage.** Registered at key 61 under Diagnostics &
-  Reporting. Answers "why is this PC slow?", which nothing in the suite measured: it samples the
+- **T.O.R.P.O.R. (`torpor.ps1`) — slow-machine triage.** Registered at key 27 in The
+  Observatory. Answers "why is this PC slow?", which nothing in the suite measured: it samples the
   machine for 30 seconds (`-SampleSeconds 5-300`) while the slowness is happening and reports:
   - **Load:** CPU average and peak, processor queue length, the `% Performance Limit` counter
     (power plan, battery saver or thermal throttling), available RAM, commit charge, hard faults,
@@ -58,7 +58,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `Get-Counter` paths are translated; disk response time is computed from raw counters. Verdict
   Struggling / Strained / Healthy. Read-only.
 - **C.A.R.I.L.L.O.N. (`carillon.ps1`) — Teams Phone call queue and auto attendant audit.** Registered
-  at key 49 under Cloud & Identity. Answers "who is in this queue?" by display name rather than
+  at key 79 in The Firmament. Answers "who is in this queue?" by display name rather than
   object ID, and where every call can end up:
   - **Call queues:** number, routing method, presence-based routing, conference mode, and the
     overflow / timeout / no-agent actions with their targets resolved to names.
@@ -78,9 +78,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `-SkipGraph` skips. `-Name` filters by wildcard. Writes an HTML report and a queue / agent CSV.
   Read-only. Added to RITUAL's `TenantSweep` as its last step (a tenant without Teams Phone just
   reports no queues or attendants).
-- **R.A.M.P.A.R.T. (`rampart.ps1`) — Entra ID Conditional Access posture audit.** Registered at key
-  48 under Cloud & Identity. WRAITH audits identities and TENDRIL reads Conditional Access only to
-  see what depends on a group, so until now nothing scored the policies themselves. RAMPART checks:
+- **H.A.L.O. (`halo.ps1`) — Entra ID Conditional Access posture audit.** Registered at key
+  78 in The Firmament. ECLIPSE audits identities and ORRERY reads Conditional Access only to
+  see what depends on a group, so until now nothing scored the policies themselves. HALO checks:
   - **Baseline:** MFA for all users, MFA for Global Administrator and 13 other privileged roles,
     and a legacy-authentication block. Only enabled policies count, and "MFA **or** compliant
     device" is deliberately not counted as MFA. Security defaults are recognised when no
@@ -93,8 +93,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
   All reads go through `Invoke-MgGraphRequest`, so the only module it needs is
   `Microsoft.Graph.Authentication`. Read-only. Added to RITUAL's `TenantSweep`.
-- **O.A.T.H. (`oath.ps1`) — domain trust and secure-channel diagnosis and repair.** Registered at
-  key 35 under Network & Remote, and added to the `-WhatIf` destructive set. It answers "the trust
+- **L.O.D.E.S.T.A.R. (`lodestar.ps1`) — domain trust and secure-channel diagnosis and repair.** Registered at
+  key 65 in The Crossroads, and added to the `-WhatIf` destructive set. It answers "the trust
   relationship between this workstation and the primary domain failed" and the faults that come
   before it:
   - DC discovery and the DC-locator SRV record
@@ -111,8 +111,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   password with credentials the technician enters. `Reset-ComputerMachinePassword` runs through
   `powershell.exe` when hosted in PowerShell 7. It never changes DNS and never unjoins or rejoins
   the domain. The audit runs as part of RITUAL's `NetworkSweep`.
-- **C.A.T.A.C.O.M.B. (`catacomb.ps1`) — file share and NTFS permissions review.** Registered at
-  key 28 under Security. HERALD reviews access to the domain and WARD to the local machine; this
+- **M.I.N.O.T.A.U.R. (`minotaur.ps1`) — file share and NTFS permissions review.** Registered at
+  key 48 in The Bestiary. ARGUS reviews access to the domain and WARD to the local machine; this
   reviews access to the file shares. It covers:
   - every non-administrative share's share and root NTFS permissions
   - a walk to `-Depth` (default 2) recording each folder with explicit entries or broken
@@ -125,7 +125,64 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   tree instead of the shares. Read-only.
 
 ### Changed
-- **C.I.P.H.E.R. rebuilt from scratch, at half the size.** The old script mixed the BitLocker
+- **BREAKING (release as 6.0): categories regrouped and themed, and 25 tools renamed.** Each
+  category now has a theme its tool names follow, and its registry name carries both:
+  **The Workshop — Deployment & Onboarding** (the artificer), **The Observatory — Diagnostics &
+  Reporting** (scrying & sight), **The Bestiary — Security** (guardian beasts), **The Crossroads —
+  Network & Remote** (arcane paths & lights), **The Firmament — Cloud & Identity** (the sky) and
+  **The Necropolis — Data & Migration** (the undead). GRIMOIRE's menu letters are unchanged.
+  - **Moves:** CLEANSE, ANVIL and CHALICE to The Workshop; WARD to The Bestiary.
+  - **Keys** are renumbered in one block per category — Workshop 1–19, Observatory 20–39,
+    Bestiary 40–59, Crossroads 60–69, Firmament 70–89, Necropolis 90–99 — ending the 60s / 70s
+    overflow.
+  - **Renames.** Four also remove a collision: CIPHER with Windows' built-in `cipher.exe`; BEACON,
+    CITADEL and SHADE with a well-known attacker implant, banking trojan and ransomware family.
+
+  | Old | New | File | Category |
+  |-----|-----|------|----------|
+  | RESTORATION | WHETSTONE | `restoration.ps1` → `whetstone.ps1` | The Workshop |
+  | SUTURE | SOLDER | `suture.ps1` → `solder.ps1` | The Workshop |
+  | THRESHOLD | FATHOM | `threshold.ps1` → `fathom.ps1` | The Observatory |
+  | GARGOYLE | VIGIL | `gargoyle.ps1` → `vigil.ps1` | The Observatory |
+  | PYRE | HOURGLASS | `pyre.ps1` → `hourglass.ps1` | The Observatory |
+  | CIPHER | WYRM | `cipher.ps1` → `wyrm.ps1` | The Bestiary |
+  | SIGIL | BASILISK | `sigil.ps1` → `basilisk.ps1` | The Bestiary |
+  | CITADEL | SPHINX | `citadel.ps1` → `sphinx.ps1` | The Bestiary |
+  | ARTIFACT | PHOENIX | `artifact.ps1` → `phoenix.ps1` | The Bestiary |
+  | PALADIN | GRIFFIN | `paladin.ps1` → `griffin.ps1` | The Bestiary |
+  | HERALD | ARGUS | `herald.ps1` → `argus.ps1` | The Bestiary |
+  | CATACOMB | MINOTAUR | `catacomb.ps1` → `minotaur.ps1` | The Bestiary |
+  | BEACON | WISP | `beacon.ps1` → `wisp.ps1` | The Crossroads |
+  | SHADE | EMISSARY | `shade.ps1` → `emissary.ps1` | The Crossroads |
+  | OATH | LODESTAR | `oath.ps1` → `lodestar.ps1` | The Crossroads |
+  | TALISMAN | ZENITH | `talisman.ps1` → `zenith.ps1` | The Firmament |
+  | RELIQUARY | ALMANAC | `reliquary.ps1` → `almanac.ps1` | The Firmament |
+  | GOLEM | ORBIT | `golem.ps1` → `orbit.ps1` | The Firmament |
+  | WRAITH | ECLIPSE | `wraith.ps1` → `eclipse.ps1` | The Firmament |
+  | CONCLAVE | ASTERISM | `conclave.ps1` → `asterism.ps1` | The Firmament |
+  | GROVE | CUMULUS | `grove.ps1` → `cumulus.ps1` | The Firmament |
+  | TENDRIL | ORRERY | `tendril.ps1` → `orrery.ps1` | The Firmament |
+  | RAMPART | HALO | `rampart.ps1` → `halo.ps1` | The Firmament |
+  | ARCHIVE | EMBALM | `archive.ps1` → `embalm.ps1` | The Necropolis |
+  | TETHER | PHYLACTERY | `tether.ps1` → `phylactery.ps1` | The Necropolis |
+
+  Each renamed script carries its new banner, acronym, report filename prefix and internal
+  identifiers, and every reference follows (GRIMOIRE, RITUAL recipes, EMISSARY's remote tool list,
+  README, CLAUDE.md, tests, desktop-app text).
+  - **Forwarding stubs** remain at all 25 old filenames: each warns, downloads the new script if
+    it is missing, and runs it with the same arguments, so pinned runbooks, custom RITUAL recipes
+    and bookmarked quick-launch URLs keep working. They will be removed in a future release.
+  - **CODEX** groups reports saved under an old prefix with the new name, so a machine's history
+    does not split in two.
+  - **Unchanged on purpose:** the `config.json` section `Archive` (EMBALM's settings) and
+    REVENANT's `-ArchiveZip` parameter, so existing configs and calling scripts need no change.
+  - The retired names join the v3.0 ones in the Pester `Legacy tool names must not reappear` gate,
+    and a new `Renamed-tool forwarding stubs` block checks each stub forwards to a registered tool.
+  The other entries in this section already use the new names. SUTURE, OATH, RAMPART and
+  CATACOMB were added after 5.1 and never shipped under those names.
+  - The companion LiveConnect repository is not changed by this release and still uses the old
+    names.
+- **W.Y.R.M. rebuilt from scratch, at half the size.** The old script mixed the BitLocker
   PowerShell module with `manage-bde`, and most of its recovery logic existed to work around the
   two disagreeing: a protector added through the module's WMI view had not yet reached the
   on-disk metadata `manage-bde` reads. The rebuild uses one tool for each job, so the two views

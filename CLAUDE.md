@@ -164,7 +164,7 @@ repo-wide gates — PowerShell syntax validation and UTF-8 BOM on every script, 
 compliance, param block compliance (`-Unattended`, and `-WhatIf` on the destructive set),
 GRIMOIRE registry integrity, license-header compliance (GPL notice and SPDX tag present and
 correctly positioned in every source file), LICENSE integrity, retired tool names and filename
-prefixes, removed deprecation stubs, no locally redefined shared helpers, and the GRIFFIN /
+prefixes, removed deprecation stubs, the 6.0 renamed-tool forwarding stubs, no locally redefined shared helpers, and the GRIFFIN /
 WISP / PORTAL / CONJURE tier-mapper data tables (extracted by AST lookup rather than
 dot-sourcing, since the tools launch their main flow on import). The same AST extraction covers
 the pure helpers of NECROPSY (bugcheck and dump-header parsing), RAVEN (inbox-rule, SPF and
@@ -309,16 +309,51 @@ than `''` — a caller iterating it would otherwise get a single empty string.
 `Get-TKConfig` returns these defaults if `config.json` is absent; `Set-TKConfig` creates or
 updates the file.
 
+### Naming
+
+Each category has a theme, and since 6.0 its tools take their names from it. The category's
+registry name carries the theme and the plain label together, and GRIMOIRE's menu letter follows
+the plain label:
+
+| Menu | Category | Theme | Keys |
+|------|----------|-------|------|
+| D | The Workshop — Deployment & Onboarding | the artificer: crafting & enchanting (FORGE, SOLDER, WHETSTONE) | 1–19 |
+| R | The Observatory — Diagnostics & Reporting | scrying & magical sight (AUSPEX, AUGUR, SCRYER) | 20–39 |
+| S | The Bestiary — Security | guardian beasts (WYRM, GRIFFIN, SPHINX) | 40–59 |
+| N | The Crossroads — Network & Remote | arcane paths & lights (LEYLINE, LANTERN, PORTAL) | 60–69 |
+| C | The Firmament — Cloud & Identity | the sky & the celestial (ZENITH, ORBIT, HALO) | 70–89 |
+| M | The Necropolis — Data & Migration | the undead & ghosts (REVENANT, EXHUME, EMBALM) | 90–99 |
+
+Rules for a new name, in order:
+
+1. **Say what the tool does if it can.** A name that hints at the job beats perfect theme fit —
+   NECROPSY and TORPOR keep off-theme names because they describe crash analysis and slowness
+   exactly.
+2. **Fit the category's theme** otherwise.
+3. **Collide with nothing a technician or a SOC would misread** — no built-in Windows command
+   (CIPHER clashed with `cipher.exe`) and no well-known attacker tool or malware family (BEACON,
+   CITADEL, SHADE; Hydra and Cerberus were rejected for the same reason).
+4. **Never reuse a retired name.** The v3.0 names (ORACLE, SENTINEL, BASTION, VAULT, PHANTOM,
+   SPECTER, AEGIS, RELIC) and the 25 renamed in 6.0 are listed in the
+   `'Legacy tool names must not reappear'` test, in dotted and report-prefix form.
+
+The tools renamed in 6.0 each left a forwarding stub at the old filename (`$RenamedToolStubs` in
+the test file lists them; `'Renamed-tool forwarding stubs'` checks them), and CODEX folds reports
+saved under an old prefix into the new name (`$RenamedToolPrefixes` in `codex.ps1`). A future
+rename follows the same pattern. Two names were deliberately left alone: the `config.json`
+section `Archive` (EMBALM's settings — an ordinary noun, and renaming it would break existing
+configs and the app's settings screen) and REVENANT's `-ArchiveZip` parameter.
+
 ### Adding a New Tool
 
-1. Copy the GPL notice block and the header block from an existing tool; update the filename,
-   acronym, and synopsis. Keep the version at the current suite version. The notice must stay
+1. Name it from its category's theme (see **Naming**), then copy the GPL notice block and the
+   header block from an existing tool; update the filename, acronym, and synopsis. Keep the version at the current suite version. The notice must stay
    above the `<# .SYNOPSIS #>` block.
 2. Add the shared-module bootstrap block (see the initialization pattern above) and the
    appropriate admin check (`Invoke-AdminElevation` or `Assert-AdminPrivilege`). Copy the
    block verbatim from an existing tool — the Pester suite enforces the exact shape.
-3. Register the tool in `grimoire.ps1`'s `$Tools` array with a unique numeric `Key` and the
-   suite `Version`.
+3. Register the tool in `grimoire.ps1`'s `$Tools` array with the category's full name, the next
+   free `Key` in the category's block, and the suite `Version`.
 4. Add the script's filename to the Quick Launch and Usage sections in `README.md`.
 5. The syntax-validation, module-bootstrap, and license-header compliance Pester tests will
    cover it automatically.
@@ -552,7 +587,7 @@ and a Domain Admin does not appear in WARD unless they also hold a local account
 
 ### WISP vs LANTERN
 
-Both tools live in Network & Remote, but cover different layers of the network stack.
+Both tools live in The Crossroads (Network & Remote), but cover different layers of the network stack.
 
 | Question | Reach for |
 |----------|-----------|
