@@ -540,6 +540,16 @@ $Tools = @(
         Color       = 'Magenta'
         Category    = 'Cloud & Identity'
     },
+    # 40–49 is full; Cloud & Identity continues at 70, as Diagnostics did at 60.
+    [PSCustomObject]@{
+        Key         = '70'
+        Name        = 'C.H.A.L.I.C.E.'
+        File        = 'chalice.ps1'
+        Version     = '5.1'
+        Description = 'Microsoft 365 Apps client repair  -  version, channel, support dates, license tokens, cached accounts, WAM / token broker, PRT, Teams cache; reset sign-in, Teams, Quick Repair'
+        Color       = 'Yellow'
+        Category    = 'Cloud & Identity'
+    },
     # ── Data & Migration (50–59) ─────────────────────────────────────
     [PSCustomObject]@{
         Key         = '50'

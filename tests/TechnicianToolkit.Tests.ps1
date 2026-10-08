@@ -604,7 +604,7 @@ Describe '-WhatIf declared on destructive tools' {
     $destructiveCases = @(
         'revenant.ps1','archive.ps1','covenant.ps1','sigil.ps1','cleanse.ps1','cipher.ps1',
         'forge.ps1','restoration.ps1','runepress.ps1','conjure.ps1','conduit.ps1',
-        'oath.ps1','suture.ps1'
+        'oath.ps1','suture.ps1','chalice.ps1'
     ) | ForEach-Object {
         @{ Name = $_; FullName = (Join-Path $PSScriptRoot "..\$_") }
     }
@@ -2053,6 +2053,148 @@ Describe 'SUTURE servicing helpers' {
             (Get-SutureVerdict -FindingList @([PSCustomObject]@{ Severity = 'Error' })).Verdict | Should -Be 'Broken'
             (Get-SutureVerdict -FindingList @([PSCustomObject]@{ Severity = 'Warning' })).Verdict | Should -Be 'Attention'
             (Get-SutureVerdict -FindingList @([PSCustomObject]@{ Severity = 'Info' })).Verdict | Should -Be 'Healthy'
+        }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CHALICE — product-family and support-date mapping, channel resolution, the
+# dsregcmd / cmdkey parsers, identity classification, the finding catalog,
+# and the per-user contract (no admin gate).
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'CHALICE Microsoft 365 Apps helpers' {
+    BeforeAll {
+        $ast = Get-ToolAst -FileName 'chalice.ps1'
+        $ChaliceFindings    = Get-ToolAssignmentValue -Ast $ast -VarName 'ChaliceFindings'
+        $ChannelGuids       = Get-ToolAssignmentValue -Ast $ast -VarName 'ChannelGuids'
+        $UpdateBranchNames  = Get-ToolAssignmentValue -Ast $ast -VarName 'UpdateBranchNames'
+        $OfficeEndOfSupport = Get-ToolAssignmentValue -Ast $ast -VarName 'OfficeEndOfSupport'
+        foreach ($name in 'Get-OfficeProductFamily', 'Get-OfficeSupportState', 'Get-ChannelName', 'Test-UpdatesDisabled',
+                          'ConvertFrom-DsregcmdStatus', 'ConvertFrom-DsregTime', 'Get-DeviceJoinState', 'ConvertFrom-CmdkeyList',
+                          'ConvertTo-IdentityProvider', 'Get-IdentitySummary', 'Get-ChaliceVerdict') {
+            . ([scriptblock]::Create((Get-ToolFunctionText -Ast $ast -FuncName $name)))
+        }
+        $chaliceSource = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'chalice.ps1') -Raw
+    }
+
+    Context 'finding catalog and per-user contract' {
+        It 'contains every code the tool raises' {
+            $raised = @([regex]::Matches($chaliceSource, "Add-ChaliceFinding\s+-Code\s+'([^']+)'") | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
+            $raised.Count | Should -BeGreaterThan 15
+            foreach ($code in $raised) { $ChaliceFindings.ContainsKey($code) | Should -BeTrue -Because "chalice.ps1 raises '$code'" }
+        }
+        It 'gives every finding a renderable Severity, Title, Summary and Remedy' {
+            foreach ($code in $ChaliceFindings.Keys) {
+                $ChaliceFindings[$code].Severity | Should -BeIn @('Error', 'Warning', 'Info')
+                $ChaliceFindings[$code].Title    | Should -Not -BeNullOrEmpty
+                $ChaliceFindings[$code].Remedy   | Should -Not -BeNullOrEmpty
+            }
+        }
+        It 'never names an admin gate, so it runs as the signed-in user' {
+            # ToolTraits in the desktop app detects the gate by substring, so
+            # even a comment naming it would make the app elevate CHALICE.
+            $chaliceSource | Should -Not -Match 'Invoke-AdminElevation|Assert-AdminPrivilege'
+        }
+    }
+
+    Context 'products, support and channel' {
+        It 'maps Click-to-Run release IDs to product families' {
+            Get-OfficeProductFamily -ReleaseId 'O365ProPlusRetail'  | Should -Be 'Microsoft 365 Apps'
+            Get-OfficeProductFamily -ReleaseId 'O365BusinessRetail' | Should -Be 'Microsoft 365 Apps'
+            Get-OfficeProductFamily -ReleaseId 'ProPlus2024Volume'  | Should -Be 'Office 2024'
+            Get-OfficeProductFamily -ReleaseId 'ProPlus2021Volume'  | Should -Be 'Office 2021'
+            Get-OfficeProductFamily -ReleaseId 'VisioPro2019Retail' | Should -Be 'Office 2019'
+            Get-OfficeProductFamily -ReleaseId 'ProjectProXVolume'  | Should -Be 'Office 2016'
+            Get-OfficeProductFamily -ReleaseId 'ProPlusRetail'      | Should -Be 'Office 2016'
+            Get-OfficeProductFamily -ReleaseId 'SomethingElse'      | Should -Be 'Other'
+            Get-OfficeProductFamily -ReleaseId ''                   | Should -BeNullOrEmpty
+        }
+        It 'dates support from the table, with no end for the subscription' {
+            (Get-OfficeSupportState -Family 'Office 2019' -Today ([datetime]'2026-01-01')).State | Should -Be 'Ended'
+            (Get-OfficeSupportState -Family 'Office 2021' -Today ([datetime]'2026-10-08')).State | Should -Be 'EndingSoon'
+            (Get-OfficeSupportState -Family 'Office 2021' -Today ([datetime]'2026-10-13')).State | Should -Be 'EndingSoon'
+            (Get-OfficeSupportState -Family 'Office 2021' -Today ([datetime]'2026-10-14')).State | Should -Be 'Ended'
+            (Get-OfficeSupportState -Family 'Office 2024' -Today ([datetime]'2026-10-08')).State | Should -Be 'Supported'
+            (Get-OfficeSupportState -Family 'Microsoft 365 Apps' -Today ([datetime]'2040-01-01')).State | Should -Be 'Supported'
+            foreach ($k in $OfficeEndOfSupport.Keys) { $OfficeEndOfSupport[$k] | Should -Match '^\d{4}-\d{2}-\d{2}$' }
+        }
+        It 'resolves the channel from the CDN URL, and policy wins' {
+            Get-ChannelName -Url 'http://officecdn.microsoft.com/pr/492350F6-3A01-4F97-B9C0-C7C6DDF67D60' | Should -Be 'Current Channel'
+            Get-ChannelName -Url 'http://officecdn.microsoft.com/pr/55336b82-a18d-4dd6-b5f6-9e5095c314a6' -PolicyBranch 'Deferred' | Should -Be 'Semi-Annual Enterprise Channel (policy)'
+            Get-ChannelName -Url 'http://officecdn.microsoft.com/pr/00000000-0000-0000-0000-000000000000' | Should -Match 'Unrecognised'
+            Get-ChannelName -Url '\\server\office' | Should -Be 'Custom source'
+            Get-ChannelName -Url '' | Should -Be 'Unknown'
+            foreach ($k in $ChannelGuids.Keys) { $k | Should -BeExactly $k.ToLowerInvariant() }
+            foreach ($k in $UpdateBranchNames.Keys) { $k | Should -BeExactly $k.ToLowerInvariant() }
+        }
+        It 'detects updates turned off locally or by policy' {
+            Test-UpdatesDisabled -UpdatesEnabled 'False' -PolicyEnable $null | Should -BeTrue
+            Test-UpdatesDisabled -UpdatesEnabled 'True'  -PolicyEnable 0     | Should -BeTrue
+            Test-UpdatesDisabled -UpdatesEnabled 'True'  -PolicyEnable 1     | Should -BeFalse
+            Test-UpdatesDisabled -UpdatesEnabled $null   -PolicyEnable $null | Should -BeFalse
+        }
+    }
+
+    Context 'device, credentials and identities' {
+        It 'reads join state and the PRT from dsregcmd /status' {
+            $s = ConvertFrom-DsregcmdStatus -Lines @(
+                '+----------------------------------------------------------------------+'
+                '| Device State                                                         |'
+                '             AzureAdJoined : YES'
+                '              DomainJoined : NO'
+                '                TenantName : Contoso'
+                '                AzureAdPrt : NO'
+                '      AzureAdPrtUpdateTime : 2026-10-08 13:10:12.000 UTC'
+            )
+            $j = Get-DeviceJoinState -Status $s
+            $j.Label       | Should -Be 'Entra joined'
+            $j.EntraJoined | Should -BeTrue
+            $j.HasPrt      | Should -BeFalse
+            $j.Tenant      | Should -Be 'Contoso'
+            $j.PrtUpdated.ToUniversalTime().Hour | Should -Be 13
+        }
+        It 'labels hybrid, registered and unjoined devices' {
+            (Get-DeviceJoinState -Status @{ AzureAdJoined = 'YES'; DomainJoined = 'YES' }).Label | Should -Be 'Hybrid Entra joined'
+            (Get-DeviceJoinState -Status @{ WorkplaceJoined = 'YES' }).Label | Should -Be 'Entra registered'
+            (Get-DeviceJoinState -Status @{ DomainJoined = 'YES' }).Label | Should -Be 'Domain joined only'
+            (Get-DeviceJoinState -Status @{}).Label | Should -Be 'Not joined'
+            ConvertFrom-DsregTime -Text 'garbage' | Should -BeNullOrEmpty
+        }
+        It 'finds Office credentials whatever the Target label is translated to' {
+            $c = @(ConvertFrom-CmdkeyList -Lines @(
+                '    Target: LegacyGeneric:target=MicrosoftOffice16_Data:SSPI:jane@contoso.com'
+                '    Target: LegacyGeneric:target=OneDrive Cached Credential'
+                '    Ziel: LegacyGeneric:target=MicrosoftOffice15_Data:ADAL:abc'
+                '    Target: LegacyGeneric:target=MicrosoftOffice16_Data:SSPI:jane@contoso.com'
+            ))
+            $c | Should -Be @('LegacyGeneric:target=MicrosoftOffice16_Data:SSPI:jane@contoso.com', 'LegacyGeneric:target=MicrosoftOffice15_Data:ADAL:abc')
+        }
+        It 'classifies identities by ProviderId or key suffix' {
+            ConvertTo-IdentityProvider -ProviderId 'AD' -KeyName 'x' | Should -Be 'AD'
+            ConvertTo-IdentityProvider -ProviderId '' -KeyName 'abc_ADAL' | Should -Be 'AD'
+            ConvertTo-IdentityProvider -ProviderId 'LiveId' -KeyName 'x' | Should -Be 'MSA'
+            ConvertTo-IdentityProvider -ProviderId '' -KeyName '123_LiveId' | Should -Be 'MSA'
+            ConvertTo-IdentityProvider -ProviderId 'Other' -KeyName 'x' | Should -Be 'Other'
+        }
+        It 'summarises personal-only, mixed and multi-tenant caches' {
+            $work1 = [PSCustomObject]@{ Provider = 'AD'; TenantId = 'T1' }
+            $work2 = [PSCustomObject]@{ Provider = 'AD'; TenantId = 'T2' }
+            $msa   = [PSCustomObject]@{ Provider = 'MSA'; TenantId = '' }
+            (Get-IdentitySummary -Identities @($msa)).PersonalOnly | Should -BeTrue
+            (Get-IdentitySummary -Identities @($work1)).Mixed | Should -BeFalse
+            (Get-IdentitySummary -Identities @($work1, $msa)).Mixed | Should -BeTrue
+            $multi = Get-IdentitySummary -Identities @($work1, $work2)
+            $multi.Tenants | Should -Be 2
+            $multi.Mixed   | Should -BeTrue
+            (Get-IdentitySummary -Identities @()).Total | Should -Be 0
+        }
+    }
+
+    Context 'verdict' {
+        It 'reports Broken, Attention and Healthy' {
+            (Get-ChaliceVerdict -FindingList @([PSCustomObject]@{ Severity = 'Error' })).Verdict | Should -Be 'Broken'
+            (Get-ChaliceVerdict -FindingList @([PSCustomObject]@{ Severity = 'Warning' })).Verdict | Should -Be 'Attention'
+            (Get-ChaliceVerdict -FindingList @()).Verdict | Should -Be 'Healthy'
         }
     }
 }

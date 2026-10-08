@@ -75,7 +75,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | Running through Kaseya VSA LiveConnect | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
 | Need a guided, menu-driven workflow | **This repo** — full prompts and confirmations at every step |
 | Need fire-and-forget with parameter-only input | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
-| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, CONCLAVE, GROVE, TENDRIL, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL, ANVIL, TALON, TOTEM, PYRE, PALADIN, BEACON, PORTAL, NECROPSY, TORPOR, SUTURE, RAVEN, RAMPART, CARILLON, OATH, CATACOMB) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
+| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, CONCLAVE, GROVE, TENDRIL, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL, ANVIL, TALON, TOTEM, PYRE, PALADIN, BEACON, PORTAL, NECROPSY, TORPOR, SUTURE, RAVEN, RAMPART, CARILLON, CHALICE, OATH, CATACOMB) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
 
 ---
 
@@ -175,6 +175,9 @@ Diagnostics outgrew keys 10–19, so it continues at 60 rather than renumbering 
 | 47 | **raven.ps1** | **R.A.V.E.N.** — Reviews Auto-forwarding, Vulnerable Exchange settings & Nefarious rules | Exchange Online mailbox security audit — external forwarding, suspicious inbox rules, auto-forward policy, SMTP AUTH, auditing, delegation, SPF / DKIM / DMARC, HTML report |
 | 48 | **rampart.ps1** | **R.A.M.P.A.R.T.** — Reviews Access Management Policies And Rule Targeting | Entra ID Conditional Access posture — MFA and legacy-auth baseline, admin role coverage, report-only and disabled policies, exclusions, emergency access, named locations, HTML report |
 | 49 | **carillon.ps1** | **C.A.R.I.L.L.O.N.** — Catalogs Attendants, Routing, Inbound Lines, Listeners, Overflow & Numbers | Teams Phone call queue & auto attendant audit — every queue's agents by display name with opt-in, voice and account state, overflow / timeout / no-agent routing, attendant menus and after-hours flows, resource accounts, unreachable queues, HTML report + agent CSV |
+| 70 | **chalice.ps1** | **C.H.A.L.I.C.E.** — Checks Health, Activation, Logins & Identity of Click-to-run Editions | Microsoft 365 Apps client diagnosis & repair — version, channel and support dates, license tokens, cached Office accounts, modern auth / WAM settings, AAD token broker, device PRT, Teams cache; resets sign-in and activation, clears the Teams cache, Quick Repair, update now, HTML report |
+
+Cloud & Identity outgrew keys 40–49, so it continues at 70.
 
 ### Data & Migration
 
@@ -926,6 +929,22 @@ Teams Phone call queue and auto attendant audit. Answers "who is in this queue?"
 - Writes `CARILLON_<timestamp>.html` and `CARILLON_Agents_<timestamp>.csv` (one row per queue / agent pairing)
 - Verdict: Broken / Attention / Healthy
 
+### C.H.A.L.I.C.E.
+
+Microsoft 365 Apps client diagnosis and repair, on the machine, for the signed-in user — "Outlook keeps asking for my password", "Word says Unlicensed Product", "Teams won't sign in". The tenant-side tools (RELIQUARY, RAVEN, RAMPART) look at the service; CHALICE looks at the client.
+
+- **Install**: Click-to-Run version and platform, products with their **support dates** (Office 2016 / 2019 ended 2025-10-14, Office 2021 ends 2026-10-13), update channel with any policy override, whether updates are enabled and their source reachable, and when the Office files last changed (90+ days = updates are not landing). MSI-based Office is flagged
+- **Activation**: shared computer activation, and whether this user holds a Microsoft 365 license token
+- **Sign-in**: the accounts Office has cached (work vs personal, how many tenants), `EnableADAL = 0` and `DisableAADWAM` / `DisableADALatopWAMOverride` (classic password-loop causes, local or by policy), the AAD token broker package, cached Office credentials, and the device's Entra join state and Primary Refresh Token from `dsregcmd /status`
+- **Teams**: new vs classic (retired) client, and the cache size
+- **Actions** (`-Action`), each previewed by `-WhatIf`:
+  - `ResetSignIn` — Microsoft's documented activation reset: backs up and clears Office's cached identities and licensing key, deletes the license tokens and cached Office credentials, and re-registers a missing token broker. The user signs in to Office again
+  - `ResetTeams` — closes Teams and clears the new (and classic) Teams cache
+  - `QuickRepair` — Office's offline Quick Repair (requests elevation)
+  - `Update` — starts a Click-to-Run update now
+- **Runs as the signed-in user, not elevated**: Office's accounts, licenses and caches are per user, and an elevated run under another account would read and reset the wrong profile. A run whose account differs from the console user is flagged
+- Verdict: Broken / Attention / Healthy
+
 ---
 
 ## Data & Migration
@@ -1012,7 +1031,7 @@ first four rows is needed.
 | Internet connectivity | All scripts |
 | Windows Package Manager (winget) | `conjure.ps1` (Chocolatey supported as alternative) |
 | PSWindowsUpdate module | `restoration.ps1`, `forge.ps1` (auto-installed if missing) |
-| *(none — built-in cmdlets only)* | `conduit.ps1`, `suture.ps1`, `necropsy.ps1`, `torpor.ps1`, `oath.ps1`, `catacomb.ps1` |
+| *(none — built-in cmdlets only)* | `conduit.ps1`, `suture.ps1`, `necropsy.ps1`, `torpor.ps1`, `oath.ps1`, `catacomb.ps1`, `chalice.ps1` (runs as the signed-in user, not elevated) |
 | Entra ID account with device join permissions | `covenant.ps1` |
 | Robocopy (built into Windows) | `revenant.ps1`, `archive.ps1` |
 | BitLocker-capable Windows edition (Pro/Enterprise) | `cipher.ps1` |
@@ -1235,6 +1254,9 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\rampart.ps
 # C.A.R.I.L.L.O.N. — Teams Phone call queue & auto attendant audit
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\carillon.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/carillon.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
+# C.H.A.L.I.C.E. — Microsoft 365 Apps client diagnosis & repair (run as the affected user)
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\chalice.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/chalice.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
 # ── Data & Migration ─────────────────────────────────────────────────────────
 
 # R.E.V.E.N.A.N.T. — Profile migration
@@ -1322,6 +1344,7 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\raven.ps1         # Exchange Online mailbox security audit and HTML report
 .\rampart.ps1       # Entra ID Conditional Access posture audit
 .\carillon.ps1      # Teams Phone call queues & auto attendants — agents by name
+.\chalice.ps1       # Microsoft 365 Apps client — activation, sign-in loops, Teams cache, Quick Repair
 
 # Data & Migration
 .\revenant.ps1       # Profile migration and data transfer
@@ -1397,6 +1420,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **raven.ps1** | `-DnsOnly` + `-Domain <name[,name]>` — SPF / DKIM / DMARC only, no sign-in; `-Domain` in a full audit limits the DNS checks to those domains (default: every accepted domain except `*.onmicrosoft.com`); `-SkipDelegation` — skip the per-mailbox Full Access / Send As sweep |
 | **rampart.ps1** | None — tenant chosen at sign-in; the exclusion threshold (5) and the privileged-role table are constants in the script |
 | **carillon.ps1** | `-Name <wildcard>` — only queues / attendants whose name matches; `-SkipGraph` — Teams sign-in only (group names left unresolved) |
+| **chalice.ps1** | `-Action {Audit\|ResetSignIn\|ResetTeams\|QuickRepair\|Update}` — Audit is read-only (default); ResetSignIn clears Office's accounts, license tokens and credentials; ResetTeams clears the Teams cache; QuickRepair runs Office's offline repair; Update starts a Click-to-Run update; `-WhatIf` — preview every change |
 | **revenant.ps1** | `config.json` — `Revenant.DefaultDestination`; source, items, and destination also selectable interactively |
 | **archive.ps1** | `config.json` — `Archive.DefaultDestination`; profile, items, and destination also selectable interactively |
 | **tether.ps1** | None — reads HKCU OneDrive and User Shell Folders registry and enumerates Desktop / Documents / Pictures for the currently logged-on user |
@@ -1457,6 +1481,7 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **raven.ps1** | Log directory — `RAVEN_<timestamp>.html` (Exchange Online mailbox security audit) |
 | **rampart.ps1** | Log directory — `RAMPART_<timestamp>.html` (Conditional Access posture) |
 | **carillon.ps1** | Log directory — `CARILLON_<timestamp>.html` (call queues & auto attendants) and `CARILLON_Agents_<timestamp>.csv` (queue / agent roster) |
+| **chalice.ps1** | Log directory — `CHALICE_<timestamp>.html` (install, activation, sign-in, Teams, every action taken). `ResetSignIn` also writes `CHALICE_Identities_<timestamp>.reg` and `CHALICE_Licensing_<timestamp>.reg`, backups of the registry keys it clears |
 | **revenant.ps1** | Log directory — `REVENANT_MigrationLog_<timestamp>.csv` |
 | **archive.ps1** | Script directory — `ARCHIVE_Log_<timestamp>.csv`; manifest inside ZIP |
 | **tether.ps1** | Log directory — `TETHER_<timestamp>.html` (OneDrive KFM readiness report) |

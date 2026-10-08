@@ -173,9 +173,10 @@ DMARC scoring), WARD (LAPS policy precedence), PALADIN (platform-protection verd
 parsers, Netlogon status table) and CATACOMB (rights-mask and SID classification); the
 root `BeforeAll` provides `Get-ToolAst` / `Get-ToolAssignmentValue` / `Get-ToolFunctionText` for
 that. CARILLON's queue-issue, name and routing-target helpers, TORPOR's process / disk
-usage arithmetic and power-plan parsing, and SUTURE's DISM / CBS.log / SFC parsers and
-servicing error-code table, are covered the same way.
-A finding catalog (CONDUIT, SUTURE, NECROPSY, TORPOR, RAVEN, RAMPART, CARILLON, OATH, CATACOMB) is tested against the codes its script
+usage arithmetic and power-plan parsing, SUTURE's DISM / CBS.log / SFC parsers and
+servicing error-code table, and CHALICE's product-family, support-date, channel,
+`dsregcmd` and `cmdkey` parsers, are covered the same way.
+A finding catalog (CONDUIT, SUTURE, NECROPSY, TORPOR, RAVEN, RAMPART, CARILLON, CHALICE, OATH, CATACOMB) is tested against the codes its script
 actually raises, so a new `Add-*Finding -Code` without a catalog entry fails CI.
 
 ### Verifying on Linux / in an agent sandbox
@@ -240,7 +241,7 @@ $ColorSchema = @{
 - All interactive tools expose `[switch]$Unattended` — skips prompts, runs defaults.
 - Destructive or state-changing tools also expose `[switch]$WhatIf` — previews actions without
   executing them. The current set is REVENANT, ARCHIVE, COVENANT, SIGIL, CLEANSE, CIPHER, FORGE,
-  RESTORATION, RUNEPRESS, CONJURE, CONDUIT, SUTURE, and OATH. GRIMOIRE auto-detects and passes `-WhatIf` to any tool that
+  RESTORATION, RUNEPRESS, CONJURE, CONDUIT, SUTURE, OATH, and CHALICE. GRIMOIRE auto-detects and passes `-WhatIf` to any tool that
   declares it, and the Pester suite (`'-WhatIf declared on destructive tools'`) enforces the list.
 - Tools that write logs expose `[switch]$Transcript`.
 
@@ -397,6 +398,21 @@ Both read the event log, but for different questions.
 NECROPSY is read-only and stops at the bugcheck code and parameters. Walking the stack to name
 the faulting driver is a debugger's job (WinDbg `!analyze -v`), and it should not grow a parser
 for that.
+
+### CHALICE vs RELIQUARY vs RAVEN
+
+| Question | Reach for |
+|----------|-----------|
+| "Office says Unlicensed Product / keeps asking for my password / Teams won't sign in — on this machine." | **CHALICE** (the Microsoft 365 Apps client: install, activation tokens, cached accounts, WAM, PRT, Teams cache) |
+| "Is this user actually licensed?" | **RELIQUARY** (tenant side) |
+| "Is the mailbox itself compromised or misconfigured?" | **RAVEN** |
+
+CHALICE is the one tool that deliberately runs **without elevating**: Office's identities, license
+tokens and caches live in the signed-in user's profile, and an elevated run as another account
+reads and resets the wrong one. It flags a run whose account differs from the console user. Its
+resets touch only that user's Office state — never the WAM accounts in Settings, never the tenant.
+Because the desktop app reads the admin gate by substring, chalice.ps1 must not mention either
+gate function, even in a comment.
 
 ### TORPOR vs AUSPEX vs TALON
 
