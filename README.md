@@ -75,7 +75,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | Running through Kaseya VSA LiveConnect | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
 | Need a guided, menu-driven workflow | **This repo** — full prompts and confirmations at every step |
 | Need fire-and-forget with parameter-only input | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
-| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, CONCLAVE, GROVE, TENDRIL, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL, ANVIL, TALON, TOTEM, PYRE, PALADIN, BEACON, PORTAL, NECROPSY, RAVEN, RAMPART, CARILLON, CHALICE, OATH, CATACOMB) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
+| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, CONCLAVE, GROVE, TENDRIL, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL, ANVIL, TALON, TOTEM, PYRE, PALADIN, BEACON, PORTAL, NECROPSY, TORPOR, RAVEN, RAMPART, CARILLON, CHALICE, OATH, CATACOMB) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
 
 ---
 
@@ -131,6 +131,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | 18 | **pyre.ps1** | **P.Y.R.E.** — Power-Yield Reliability Evaluator | Laptop battery health audit — design vs current capacity, cycle count, red/yellow/green replacement verdict, `powercfg /batteryreport` enrichment, HTML report |
 | 19 | **codex.ps1** | **C.O.D.E.X.** — Compiles Output Documents into an EXhibit | Toolkit report index — scans the log directory for existing HTML reports, groups by tool, emits one rollup with relative links |
 | 60 | **necropsy.ps1** | **N.E.C.R.O.P.S.Y.** — Names Each Crash, Reboot & Outage — Post-mortem Summary Yield | Crash & unexpected-reboot analysis — bugchecks, Kernel-Power 41, WHEA hardware errors, display resets, dump files, change timeline, HTML report |
+| 61 | **torpor.ps1** | **T.O.R.P.O.R.** — Traces Overload, Resource Pressure & Offending Routines | Slow-machine triage — CPU, memory and disk load over a sample window, top processes grouped by name with hints, CPU power / thermal limits, boot delays Windows blamed, startup programs, app hangs, HTML report |
 
 Diagnostics outgrew keys 10–19, so it continues at 60 rather than renumbering the keys technicians already know.
 
@@ -478,6 +479,23 @@ Answers "why does this machine keep crashing or rebooting?" from the evidence Wi
 - `-Days <1-365>` sets the look-back window (default 30)
 
 NECROPSY reads the bugcheck code and parameters, not the stack. Naming the faulting driver needs a debugger: open a dump it lists in WinDbg and run `!analyze -v`.
+
+---
+
+### T.O.R.P.O.R.
+
+Answers "why is this PC slow?" by watching the machine for a sample window (30 seconds by default) while the slowness is happening, then naming what is using it. Read-only.
+
+- **CPU**: average and peak load, processor queue length per logical processor, and the `% Performance Limit` counter — a CPU held back by the power plan, battery saver or thermal throttling shows up even when the load looks moderate
+- **Memory**: lowest available RAM, commit charge against the commit limit, hard page faults, the page file, and whether the installed RAM is simply too little
+- **Disks**: busy time, response time, IOPS and throughput per physical disk from raw counters (the formatted class rounds response time to whole seconds), media type, and a spinning system disk; free space on the system drive
+- **Top processes** by CPU, memory and disk I/O, **grouped by name** so thirty browser processes read as one browser; CPU is the share of the whole machine, so the rows add up to the total. Well-known offenders (Defender, Search, servicing, OneDrive, WMI, browsers, Teams, Outlook…) carry a hint, and a busy `svchost` lists the services inside it
+- **Context**: uptime (with Fast Startup on, *Shut down* does not reset it), the power plan and Windows 11 power mode, enabled startup programs, boot times and the apps / drivers / services / Group Policy Windows blamed for slow boots (Diagnostics-Performance log), and applications that keep hanging (Application Hang 1002)
+- Counters come from WMI performance classes rather than `Get-Counter`, whose counter paths are translated on non-English Windows
+- Verdict: Struggling / Strained / Healthy
+- `-SampleSeconds <5-300>` sets the window (default 30); the interactive menu also offers a 120-second sample for slowness that comes and goes
+
+> **TORPOR vs AUSPEX / TALON:** AUSPEX is a general health snapshot and TALON audits startup entries as persistence. TORPOR measures load while the machine is slow and lists startup programs for their cost, not their safety.
 
 ---
 
@@ -993,7 +1011,7 @@ first four rows is needed.
 | Internet connectivity | All scripts |
 | Windows Package Manager (winget) | `conjure.ps1` (Chocolatey supported as alternative) |
 | PSWindowsUpdate module | `restoration.ps1`, `forge.ps1` (auto-installed if missing) |
-| *(none — built-in cmdlets only)* | `conduit.ps1`, `necropsy.ps1`, `oath.ps1`, `catacomb.ps1`, `chalice.ps1` (runs as the signed-in user, not elevated) |
+| *(none — built-in cmdlets only)* | `conduit.ps1`, `necropsy.ps1`, `torpor.ps1`, `oath.ps1`, `catacomb.ps1`, `chalice.ps1` (runs as the signed-in user, not elevated) |
 | Entra ID account with device join permissions | `covenant.ps1` |
 | Robocopy (built into Windows) | `revenant.ps1`, `archive.ps1` |
 | BitLocker-capable Windows edition (Pro/Enterprise) | `cipher.ps1` |
@@ -1128,6 +1146,9 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\codex.ps1"
 
 # N.E.C.R.O.P.S.Y. — Crash & unexpected-reboot analysis
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\necropsy.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/necropsy.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
+# T.O.R.P.O.R. — Slow-machine triage
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\torpor.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/torpor.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # ── Security ─────────────────────────────────────────────────────────────────
 
@@ -1267,6 +1288,7 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\pyre.ps1          # Laptop battery health audit
 .\codex.ps1         # Toolkit report index — rolls up existing HTML reports into one bound exhibit
 .\necropsy.ps1      # Crash & unexpected-reboot analysis and HTML report
+.\torpor.ps1        # Slow-machine triage — what is using the CPU, memory and disk right now
 
 # Security
 .\cipher.ps1        # BitLocker drive encryption management
@@ -1347,6 +1369,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **pyre.ps1** | None — ROOT\WMI battery classes and Win32_Battery are queried unconditionally; thresholds (80/60 pct, 300/500 cycles) are editable constants in the script |
 | **codex.ps1** | `LogDirectory` (read) — defines which directory CODEX scans for existing HTML reports; CLI overrides via `-LogDir`. Optional `-DaysBack <int>` filter and pattern-strict file matching are constants in the script |
 | **necropsy.ps1** | `-Days <int>` — look-back window (default 30, range 1-365); read-only otherwise |
+| **torpor.ps1** | `-SampleSeconds <int>` — sample window (default 30, range 5-300); thresholds are constants at the top of the script |
 | **cipher.ps1** | `LogDirectory` (read) — Export action writes the HTML report there unless `-OutputPath` overrides it. `OrgName` is shown in the report header. Drive and action are selected interactively, or with `-Drive` / `-Action` |
 | **sigil.ps1** | None — categories selected interactively; screensaver timeout editable in script (default 600 s) |
 | **citadel.ps1** | None — user search and action selected interactively; stale threshold is 90 days (editable in script) |
@@ -1405,6 +1428,7 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **anvil.ps1** | Log directory — `ANVIL_<timestamp>.html` (BIOS / UEFI / firmware audit report) |
 | **pyre.ps1** | Log directory — `PYRE_<timestamp>.html` (laptop battery health audit), `PYRE_battery_report_<timestamp>.xml` (parsed `powercfg` data), `PYRE_battery_report_<timestamp>.html` (full Microsoft `powercfg /batteryreport` HTML) |
 | **necropsy.ps1** | Log directory — `NECROPSY_<timestamp>.html` (crash & unexpected-reboot analysis) |
+| **torpor.ps1** | Log directory — `TORPOR_<timestamp>.html` (slow-machine triage) |
 | **codex.ps1** | Log directory — `CODEX_<timestamp>.html` (rollup index of every other report in the log directory; CODEX excludes its own outputs from the index) |
 | **cipher.ps1** | Console only by default; the Export action writes `CIPHER_Report_<timestamp>.html` (status + recovery keys) to `-OutputPath` or the log directory |
 | **sigil.ps1** | Log directory — `SIGIL_BaselineLog_<timestamp>.csv` |

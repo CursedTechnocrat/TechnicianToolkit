@@ -172,9 +172,10 @@ DMARC scoring), WARD (LAPS policy precedence), PALADIN (platform-protection verd
 (Conditional Access predicates and emergency-access exclusion), OATH (`nltest` / `w32tm`
 parsers, Netlogon status table) and CATACOMB (rights-mask and SID classification); the
 root `BeforeAll` provides `Get-ToolAst` / `Get-ToolAssignmentValue` / `Get-ToolFunctionText` for
-that. CARILLON's queue-issue, name and routing-target helpers, and CHALICE's product-family,
-support-date, channel, `dsregcmd` and `cmdkey` parsers, are covered the same way.
-A finding catalog (CONDUIT, NECROPSY, RAVEN, RAMPART, CARILLON, CHALICE, OATH, CATACOMB) is tested against the codes its script
+that. CARILLON's queue-issue, name and routing-target helpers, TORPOR's process / disk
+usage arithmetic and power-plan parsing, and CHALICE's product-family, support-date,
+channel, `dsregcmd` and `cmdkey` parsers, are covered the same way.
+A finding catalog (CONDUIT, NECROPSY, TORPOR, RAVEN, RAMPART, CARILLON, CHALICE, OATH, CATACOMB) is tested against the codes its script
 actually raises, so a new `Add-*Finding -Code` without a catalog entry fails CI.
 
 ### Verifying on Linux / in an agent sandbox
@@ -397,6 +398,17 @@ reads and resets the wrong one. It flags a run whose account differs from the co
 resets touch only that user's Office state — never the WAM accounts in Settings, never the tenant.
 Because the desktop app reads the admin gate by substring, chalice.ps1 must not mention either
 gate function, even in a comment.
+
+### TORPOR vs AUSPEX vs TALON
+
+| Question | Reach for |
+|----------|-----------|
+| "Why is this PC slow right now?" | **TORPOR** (samples CPU / memory / disk load and names the processes, limits and boot delays responsible) |
+| "Give me a general health snapshot of this machine." | **AUSPEX** |
+| "Is anything persisting on this machine that shouldn't be?" | **TALON** |
+
+TORPOR lists startup programs for their *cost*, not their safety, and is read-only — it names
+what to stop or upgrade but never ends a process or disables a startup entry.
 
 ### RAVEN vs RELIQUARY vs TENDRIL
 
