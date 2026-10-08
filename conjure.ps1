@@ -43,7 +43,7 @@
     PS C:\> .\conjure.ps1 -Unattended -WhatIf   # Preview everything; install nothing
 
 .NOTES
-    Version : 5.1
+    Version : 6.0
 
 #>
 

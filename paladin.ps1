@@ -32,7 +32,7 @@
     PS C:\> .\paladin.ps1 [arguments]          # Same as .\griffin.ps1 [arguments]
 
 .NOTES
-    Version : 5.1
+    Version : 6.0
 
 #>
 

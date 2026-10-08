@@ -61,7 +61,7 @@
     PS C:\> .\orrery.ps1 -GroupName 'All_CNP_Users' -Unattended
 
 .NOTES
-    Version : 5.1
+    Version : 6.0
     Read-only — never modifies the target group or any dependency.
 
 #>
@@ -141,7 +141,7 @@ $C = @{
 if (-not $Unattended) { Clear-Host }
 Write-Host ""
 Write-Host "  O.R.R.E.R.Y.  -  Outlines Reliances: Roles, Entitlements, Rules & whY things break" -ForegroundColor Cyan
-Write-Host "  Entra ID Group Dependency Audit  v1.0" -ForegroundColor Cyan
+Write-Host "  Entra ID Group Dependency Audit  v6.0" -ForegroundColor Cyan
 Write-Host ""
 
 # -----------------------------------------------------------------------------
@@ -1254,7 +1254,7 @@ $htmlHead = Get-TKHtmlHead `
     }) `
     -NavItems   $navItems
 
-$htmlFoot = Get-TKHtmlFoot -ScriptName 'O.R.R.E.R.Y. v1.0'
+$htmlFoot = Get-TKHtmlFoot -ScriptName 'O.R.R.E.R.Y. v6.0'
 
 # Summary cards (colors depend on count)
 function Get-SummaryClass { param([int]$Count, [string]$WarnSev = 'warn') if ($Count -gt 0) { $WarnSev } else { 'ok' } }

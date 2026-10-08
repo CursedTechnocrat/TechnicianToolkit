@@ -32,7 +32,7 @@
     PS C:\> .\artifact.ps1 [arguments]          # Same as .\phoenix.ps1 [arguments]
 
 .NOTES
-    Version : 5.1
+    Version : 6.0
 
 #>
 

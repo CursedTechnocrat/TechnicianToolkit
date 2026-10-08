@@ -35,7 +35,7 @@
     PS C:\> .\scryer.ps1 -OutputPath "D:\Reports" # Write report to a specific directory
 
 .NOTES
-    Version : 5.1
+    Version : 6.0
 
 #>
 
@@ -570,7 +570,7 @@ $taskCardBody
 # Footer
 # ------------------------------------------------------------------
 
-$html += Get-TKHtmlFoot -ScriptName "S.C.R.Y.E.R. v3.6"
+$html += Get-TKHtmlFoot -ScriptName "S.C.R.Y.E.R. v6.0"
 
 # ------------------------------------------------------------------
 # Write report and open

@@ -32,7 +32,7 @@
     PS C:\> .\gargoyle.ps1 [arguments]          # Same as .\vigil.ps1 [arguments]
 
 .NOTES
-    Version : 5.1
+    Version : 6.0
 
 #>
 

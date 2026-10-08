@@ -32,7 +32,7 @@
     PS C:\> .\shade.ps1 [arguments]          # Same as .\emissary.ps1 [arguments]
 
 .NOTES
-    Version : 5.1
+    Version : 6.0
 
 #>
 

@@ -37,7 +37,7 @@
     PS C:\> .\asterism.ps1 -Unattended        # Silent: auto-connect + export HTML
 
 .NOTES
-    Version : 5.1
+    Version : 6.0
 
 #>
 
@@ -110,7 +110,7 @@ function Show-AsterismBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
     Write-Host "  A.S.T.E.R.I.S.M. — Audits Settings of Teams: Exposure, Roles, Inactivity, Sprawl & Membership" -ForegroundColor Cyan
-    Write-Host "  Microsoft Teams Audit Tool  v3.6" -ForegroundColor Cyan
+    Write-Host "  Microsoft Teams Audit Tool  v6.0" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -402,7 +402,7 @@ function Build-HtmlReport {
         }) `
         -NavItems   @('Teams Inventory', 'Orphan Teams', 'Public Teams', 'Guest Members', 'Large Teams', 'Stale Teams')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'A.S.T.E.R.I.S.M. v3.6'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'A.S.T.E.R.I.S.M. v6.0'
 
     $orphClass  = if ($Orphans.Count -gt 0) { 'err' } else { 'ok' }
     $pubClass   = if ($Public.Count  -gt 0) { 'warn' } else { 'ok' }

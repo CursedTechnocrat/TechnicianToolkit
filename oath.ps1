@@ -32,7 +32,7 @@
     PS C:\> .\oath.ps1 [arguments]          # Same as .\lodestar.ps1 [arguments]
 
 .NOTES
-    Version : 5.1
+    Version : 6.0
 
 #>
 

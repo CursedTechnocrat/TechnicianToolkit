@@ -49,7 +49,7 @@
     PS C:\> .\halo.ps1 -Unattended        # Silent: sign in, audit, export HTML
 
 .NOTES
-    Version : 5.1
+    Version : 6.0
 
 #>
 
@@ -805,7 +805,7 @@ function Build-HaloReport {
       <tbody>$($lRows.ToString())</tbody></table></div>
   </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'H.A.L.O. v5.1')
+"@ + (Get-TKHtmlFoot -ScriptName 'H.A.L.O. v6.0')
 
     return $html
 }
