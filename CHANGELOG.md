@@ -8,6 +8,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **C.H.A.L.I.C.E. (`chalice.ps1`) — Microsoft 365 Apps client diagnosis and repair.** Registered
+  at key 70 under Cloud & Identity (40–49 is full). The suite audited the tenant but had nothing for
+  the client-side tickets: "Outlook keeps asking for my password", "Unlicensed Product", "Teams
+  won't sign in". CHALICE checks:
+  - **Install:** Click-to-Run version, products and their support dates, channel (with policy
+    override), updates enabled and source reachable, when the Office files last changed, MSI Office.
+  - **Activation:** shared computer activation and the user's license tokens.
+  - **Sign-in:** cached Office accounts (work / personal / tenants), `EnableADAL` and the WAM
+    opt-outs, the AAD token broker, cached Office credentials, Entra join state and the Primary
+    Refresh Token.
+  - **Teams:** new vs classic client and cache size.
+
+  `-Action ResetSignIn` performs Microsoft's activation reset (identities and licensing key backed up
+  to `.reg` and cleared, license tokens and Office credentials deleted, token broker re-registered
+  if missing); `ResetTeams` clears the Teams cache; `QuickRepair` runs Office's offline repair;
+  `Update` starts a Click-to-Run update. Supports `-WhatIf`. Runs as the signed-in user rather than
+  elevating, since everything it reads and resets is per user.
 - **C.A.R.I.L.L.O.N. (`carillon.ps1`) — Teams Phone call queue and auto attendant audit.** Registered
   at key 49 under Cloud & Identity. Answers "who is in this queue?" by display name rather than
   object ID, and where every call can end up:
