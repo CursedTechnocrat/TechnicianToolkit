@@ -192,6 +192,15 @@ $Tools = @(
         Color       = 'Cyan'
         Category    = 'Deployment & Onboarding'
     },
+    [PSCustomObject]@{
+        Key         = '9'
+        Name        = 'S.U.T.U.R.E.'
+        File        = 'suture.ps1'
+        Version     = '5.1'
+        Description = 'Windows servicing repair  -  component store health, pending restarts, last SFC result, update failure codes, DISM RestoreHealth + SFC'
+        Color       = 'Green'
+        Category    = 'Deployment & Onboarding'
+    },
     # ── Diagnostics & Reporting (10–19, overflow 60–69) ─────────────
     [PSCustomObject]@{
         Key         = '10'
