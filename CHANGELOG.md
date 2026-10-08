@@ -8,6 +8,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **S.U.T.U.R.E. (`suture.ps1`) — Windows servicing diagnosis and repair.** Registered at key 9
+  under Deployment & Onboarding, beside CONDUIT and RESTORATION. NECROPSY recommended
+  `DISM /RestoreHealth` + `sfc /scannow` but nothing ran them. SUTURE:
+  - **Audits** pending restarts (servicing-blocking vs not), component store health
+    (`/CheckHealth`, or `/ScanHealth` with `-Deep`) and size (`/AnalyzeComponentStore`), the last
+    SFC result from `CBS.log`, Windows Update install failures from the last 30 days with each code
+    decoded and classed (Store / Client / Reboot / Space / Access / Other), the Windows Modules
+    Installer service, system-drive free space, and where DISM will get repair files (flagging
+    WSUS machines that will fail with `0x800f081f`).
+  - **Repairs** with `DISM /RestoreHealth` (optionally `-Source` install media), then
+    `sfc /scannow`, then re-checks the store; `-Cleanup` adds `/StartComponentCleanup`. Stops for a
+    pending servicing restart, skips SFC when RestoreHealth fails, never runs `/ResetBase`, never
+    edits Windows Update policy or the update cache (CONDUIT's job). Supports `-WhatIf`.
 - **T.O.R.P.O.R. (`torpor.ps1`) — slow-machine triage.** Registered at key 61 under Diagnostics &
   Reporting. Answers "why is this PC slow?", which nothing in the suite measured: it samples the
   machine for 30 seconds (`-SampleSeconds 5-300`) while the slowness is happening and reports:

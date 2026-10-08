@@ -75,7 +75,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | Running through Kaseya VSA LiveConnect | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
 | Need a guided, menu-driven workflow | **This repo** — full prompts and confirmations at every step |
 | Need fire-and-forget with parameter-only input | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
-| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, CONCLAVE, GROVE, TENDRIL, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL, ANVIL, TALON, TOTEM, PYRE, PALADIN, BEACON, PORTAL, NECROPSY, TORPOR, RAVEN, RAMPART, CARILLON, OATH, CATACOMB) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
+| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, CIPHER, ARCHIVE, SHADE, RUNEPRESS, LEYLINE, FORGE, TALISMAN, CITADEL, LANTERN, THRESHOLD, AUGUR, CLEANSE, RELIQUARY, GOLEM, WRAITH, CONCLAVE, GROVE, TENDRIL, TETHER, EXHUME, GARGOYLE, ARTIFACT, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, RESTORATION, SIGIL, ANVIL, TALON, TOTEM, PYRE, PALADIN, BEACON, PORTAL, NECROPSY, TORPOR, SUTURE, RAVEN, RAMPART, CARILLON, OATH, CATACOMB) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
 
 ---
 
@@ -115,6 +115,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | 6 | **hearth.ps1** | **H.E.A.R.T.H.** — Hub for Environment, Admin Runtime & Toolkit Hardening | Toolkit setup wizard — configure org name, log paths, and default values |
 | 7 | **ritual.ps1** | **R.I.T.U.A.L.** — Runs Integrated Tool Usage in Automation Loops | Workflow orchestrator — runs named recipes (Onboard, Retire, HealthCheck, SecuritySweep, NetworkSweep, TenantSweep) or custom PSD1 files, with rollup HTML report |
 | 8 | **conduit.ps1** | **C.O.N.D.U.I.T.** — Checks Or Normalises Device Update Infrastructure Targeting | Windows Update connectivity diagnosis & repair — WSUS pointer, WinHTTP proxy, policy source, update services |
+| 9 | **suture.ps1** | **S.U.T.U.R.E.** — Stitches Up The Update & Repair Engine | Windows servicing diagnosis & repair — component store health and size, pending restarts, last SFC result from CBS.log, Windows Update failure codes decoded, DISM RestoreHealth + SFC |
 
 ### Diagnostics & Reporting
 
@@ -309,6 +310,25 @@ Workflow orchestrator. Runs an ordered sequence of toolkit scripts as a single n
 - Interactive menu lists every built-in recipe with its step summary; `-Recipe` or `-RecipeFile` triggers a headless run and exits with `0` on full success, `1` on any failure
 - Rollup HTML saved as `RITUAL_<timestamp>.html` with summary cards (outcome, total / succeeded / failed / skipped / duration) and step-by-step results
 - Auto-elevates to Administrator (inherits the requirements of the tools it orchestrates)
+
+---
+
+### S.U.T.U.R.E.
+
+Diagnoses and repairs the Windows servicing stack — the component store (WinSxS) that updates, optional features and system-file repair all draw on. Reach for it when updates fail with `0x800f081f`, `0x80073712` or `0x800f0831`, when a feature will not install, or when system files are damaged.
+
+- **Audit** (read-only, default):
+  - **Pending restarts**, split into those that block servicing (CBS `RebootPending` / `PackagesPending`, `pending.xml`, Windows Update `RebootRequired`) and those that do not (file renames, a computer rename)
+  - **Component store health** via `DISM /CheckHealth` (or a full `/ScanHealth` with `-Deep`), and size / reclaimable packages via `/AnalyzeComponentStore`. DISM runs with `/English`, so the output parses on any UI language
+  - **The last System File Checker result**, read from `CBS.log`: files repaired and files SFC could not repair
+  - **Windows Update install failures** from the last 30 days, each code decoded and classed as *Store* (fixed here), *Client* (fixed by CONDUIT), *Reboot*, *Space*, *Access* or *Other*
+  - The Windows Modules Installer service, free space on the system drive, and **where DISM will look for repair files** — a WSUS-managed machine asks WSUS, which serves no repair content, so `RestoreHealth` fails with `0x800f081f` unless policy sends repairs to Windows Update or `-Source` is given
+- **Repair** (`-Action Repair`): `DISM /RestoreHealth` → `sfc /scannow` → re-check the store. SFC is skipped when RestoreHealth fails, since it would copy from a damaged store. A pending servicing restart stops the repair unless the technician chooses to continue. A disabled Windows Modules Installer is set back to Manual. `-Cleanup` (or a prompt, when DISM recommends it) adds `/StartComponentCleanup`
+- `-Source 'WIM:D:\sources\install.wim:6'` (or `ESD:…install.esd:<index>`) repairs from mounted install media of the same build and edition, with `/LimitAccess`
+- Never runs `/ResetBase` (irreversible — updates can no longer be uninstalled), never edits Windows Update policy, never resets the update cache. `-WhatIf` previews every repair
+- Verdict: Broken / Attention / Healthy
+
+> **CONDUIT vs SUTURE vs RESTORATION:** CONDUIT fixes the update client's *connection*; SUTURE fixes the *component store* the update installs into; RESTORATION *installs* the updates. A failure code SUTURE classes as *Client* is CONDUIT's to fix.
 
 ---
 
@@ -992,7 +1012,7 @@ first four rows is needed.
 | Internet connectivity | All scripts |
 | Windows Package Manager (winget) | `conjure.ps1` (Chocolatey supported as alternative) |
 | PSWindowsUpdate module | `restoration.ps1`, `forge.ps1` (auto-installed if missing) |
-| *(none — built-in cmdlets only)* | `conduit.ps1`, `necropsy.ps1`, `torpor.ps1`, `oath.ps1`, `catacomb.ps1` |
+| *(none — built-in cmdlets only)* | `conduit.ps1`, `suture.ps1`, `necropsy.ps1`, `torpor.ps1`, `oath.ps1`, `catacomb.ps1` |
 | Entra ID account with device join permissions | `covenant.ps1` |
 | Robocopy (built into Windows) | `revenant.ps1`, `archive.ps1` |
 | BitLocker-capable Windows edition (Pro/Enterprise) | `cipher.ps1` |
@@ -1092,6 +1112,9 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\ritual.ps1
 
 # C.O.N.D.U.I.T. — Windows Update connectivity diagnosis & repair
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\conduit.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/conduit.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
+# S.U.T.U.R.E. — Windows servicing (component store & SFC) repair
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\suture.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/suture.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # ── Diagnostics & Reporting ──────────────────────────────────────────────────
 
@@ -1253,6 +1276,7 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\hearth.ps1        # Toolkit setup wizard
 .\ritual.ps1        # Workflow orchestrator — runs sequences of other tools
 .\conduit.ps1       # Windows Update connectivity diagnosis and repair
+.\suture.ps1        # Windows servicing repair — component store, SFC, update failure codes
 
 # Diagnostics & Reporting
 .\auspex.ps1        # System diagnostics and HTML health report
@@ -1335,6 +1359,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **hearth.ps1** | None — all settings entered via the interactive wizard; `config.json` is the output (see config key table above) |
 | **ritual.ps1** | `-Recipe {Onboard\|Retire\|HealthCheck\|SecuritySweep\|NetworkSweep\|TenantSweep}` — named recipe to run; `-RecipeFile <path.psd1>` — custom recipe file; `-ContinueOnError` — tolerate per-step failures |
 | **conduit.ps1** | `-Action {Audit\|Repair\|ResetCache}` — Audit is read-only (default), Repair applies the safe fixes, ResetCache also rebuilds SoftwareDistribution / catroot2; `-Force` — remove the WSUS pointer even when the server is reachable, the device is domain-joined, or local Group Policy sets it; `-WhatIf` — preview every change without applying it |
+| **suture.ps1** | `-Action {Audit\|Repair}` — Audit is read-only (default), Repair runs DISM /RestoreHealth then sfc /scannow; `-Deep` — full DISM /ScanHealth in the audit; `-Source <WIM:path:index>` — repair from install media (`/LimitAccess`); `-Cleanup` — also run DISM /StartComponentCleanup; `-WhatIf` — preview every repair |
 | **auspex.ps1** | `$ReportOutputPath` — folder where the HTML report is saved (defaults to script directory; accepts any local or UNC path) |
 | **ward.ps1** | None — audit runs automatically; stale threshold is 90 days (editable in script); LAPS rotation is flagged overdue 3 days past the policy's `PasswordAgeDays` (`$LapsRotationGraceDays`) |
 | **threshold.ps1** | None — thresholds are Warning < 15% free, Critical < 5% free (editable in script); old profile threshold is 90 days |
@@ -1394,6 +1419,7 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **hearth.ps1** | Console only — settings persisted to `config.json` |
 | **ritual.ps1** | Log directory — `RITUAL_<timestamp>.html` (rollup report with per-step status, duration, and links to each child report) |
 | **conduit.ps1** | Log directory — `CONDUIT_<timestamp>.html` (findings, policy values, endpoint reachability, service state, and every action taken). `Repair` also writes `CONDUIT_WUPolicy_<timestamp>.reg`, a backup of the WindowsUpdate policy key, to the same directory. |
+| **suture.ps1** | Log directory — `SUTURE_<timestamp>.html` (store health, pending restarts, SFC result, decoded update failures, every action taken). DISM and SFC keep their own logs in `%WINDIR%\Logs\DISM\dism.log` and `%WINDIR%\Logs\CBS\CBS.log` |
 | **auspex.ps1** | Log directory — `AUSPEX_<timestamp>.html` (dark-themed HTML report) |
 | **ward.ps1** | Log directory — `WARD_<timestamp>.html` (dark-themed HTML report) |
 | **threshold.ps1** | Log directory — `THRESHOLD_<timestamp>.html` (dark-themed HTML report) |

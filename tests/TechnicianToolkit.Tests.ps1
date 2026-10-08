@@ -604,7 +604,7 @@ Describe '-WhatIf declared on destructive tools' {
     $destructiveCases = @(
         'revenant.ps1','archive.ps1','covenant.ps1','sigil.ps1','cleanse.ps1','cipher.ps1',
         'forge.ps1','restoration.ps1','runepress.ps1','conjure.ps1','conduit.ps1',
-        'oath.ps1'
+        'oath.ps1','suture.ps1'
     ) | ForEach-Object {
         @{ Name = $_; FullName = (Join-Path $PSScriptRoot "..\$_") }
     }
@@ -1913,6 +1913,146 @@ Describe 'TORPOR slow-machine helpers' {
             (Get-TorporVerdict -FindingList @([PSCustomObject]@{ Severity = 'Warning' }, [PSCustomObject]@{ Severity = 'Info' })).Verdict | Should -Be 'Strained'
             (Get-TorporVerdict -FindingList @([PSCustomObject]@{ Severity = 'Info' })).Verdict | Should -Be 'Healthy'
             (Get-TorporVerdict -FindingList @()).Verdict | Should -Be 'Healthy'
+        }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SUTURE — the DISM / CBS.log / SFC parsers, the servicing error-code table
+# that decides which tool fixes a failed update, and the finding catalog.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'SUTURE servicing helpers' {
+    BeforeAll {
+        $ast = Get-ToolAst -FileName 'suture.ps1'
+        $SutureFindings      = Get-ToolAssignmentValue -Ast $ast -VarName 'SutureFindings'
+        $ServicingErrorCodes = Get-ToolAssignmentValue -Ast $ast -VarName 'ServicingErrorCodes'
+        foreach ($name in 'ConvertTo-HResultString', 'Get-ServicingErrorInfo', 'ConvertFrom-DismHealth', 'ConvertFrom-DismAnalyze',
+                          'Get-CbsQuotedPath', 'ConvertFrom-CbsSrLine', 'ConvertFrom-SfcOutput', 'Get-PendingRebootReason',
+                          'Get-RepairSourceState', 'Get-SutureVerdict') {
+            . ([scriptblock]::Create((Get-ToolFunctionText -Ast $ast -FuncName $name)))
+        }
+        $sutureSource = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'suture.ps1') -Raw
+    }
+
+    Context 'finding catalog and error-code table' {
+        It 'contains every code the tool raises' {
+            $raised = @([regex]::Matches($sutureSource, "Add-SutureFinding\s+-Code\s+'([^']+)'") | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
+            $raised.Count | Should -BeGreaterThan 12
+            foreach ($code in $raised) { $SutureFindings.ContainsKey($code) | Should -BeTrue -Because "suture.ps1 raises '$code'" }
+            # The update-failure codes are chosen by expression, not a literal.
+            foreach ($code in 'UpdateFailuresStore', 'UpdateFailuresClient') { $SutureFindings.ContainsKey($code) | Should -BeTrue }
+        }
+        It 'gives every finding a renderable Severity, Title, Summary and Remedy' {
+            foreach ($code in $SutureFindings.Keys) {
+                $SutureFindings[$code].Severity | Should -BeIn @('Error', 'Warning', 'Info')
+                $SutureFindings[$code].Title    | Should -Not -BeNullOrEmpty
+                $SutureFindings[$code].Remedy   | Should -Not -BeNullOrEmpty
+            }
+        }
+        It 'keys the error-code table by normalised hex and classifies every entry' {
+            foreach ($k in $ServicingErrorCodes.Keys) {
+                $k | Should -Match '^0x[0-9a-f]{8}$'
+                $ServicingErrorCodes[$k].Kind | Should -BeIn @('Store', 'Client', 'Reboot', 'Space', 'Access', 'Other')
+            }
+            $ServicingErrorCodes['0x800f081f'].Kind | Should -Be 'Store'
+            $ServicingErrorCodes['0x8024402c'].Kind | Should -Be 'Client'
+        }
+    }
+
+    Context 'error codes' {
+        It 'normalises hex, bare hex and signed exit codes to one form' {
+            ConvertTo-HResultString -Code '0x800F081F' | Should -Be '0x800f081f'
+            ConvertTo-HResultString -Code '800f081f'   | Should -Be '0x800f081f'
+            ConvertTo-HResultString -Code -2146498529  | Should -Be '0x800f081f'
+            ConvertTo-HResultString -Code '0x5'        | Should -Be '0x00000005'
+            ConvertTo-HResultString -Code 87           | Should -Be '0x00000057'
+            ConvertTo-HResultString -Code 'nonsense'   | Should -BeNullOrEmpty
+            ConvertTo-HResultString -Code $null        | Should -BeNullOrEmpty
+        }
+        It 'decodes a known code and falls back for an unknown one' {
+            (Get-ServicingErrorInfo -Code -2146498529).Name | Should -Be 'CBS_E_SOURCE_MISSING'
+            (Get-ServicingErrorInfo -Code '0x80070422').Kind | Should -Be 'Client'
+            (Get-ServicingErrorInfo -Code '0x80001234').Kind | Should -Be 'Other'
+            (Get-ServicingErrorInfo -Code $null).Name | Should -Be 'Unknown'
+        }
+    }
+
+    Context 'DISM parsing' {
+        It 'reads each component store state' {
+            (ConvertFrom-DismHealth -Lines @('No component store corruption detected.', 'The operation completed successfully.')).State | Should -Be 'Healthy'
+            (ConvertFrom-DismHealth -Lines @('The component store is repairable.')).State | Should -Be 'Repairable'
+            (ConvertFrom-DismHealth -Lines @('The component store cannot be repaired.')).State | Should -Be 'NotRepairable'
+            (ConvertFrom-DismHealth -Lines @('The restore operation completed successfully.')).State | Should -Be 'Repaired'
+            (ConvertFrom-DismHealth -Lines @('something else')).State | Should -Be 'Unknown'
+        }
+        It 'captures the error code DISM prints' {
+            (ConvertFrom-DismHealth -Lines @('Error: 0x800f081f', '', 'The source files could not be found.')).ErrorCode | Should -Be '0x800f081f'
+            (ConvertFrom-DismHealth -Lines @('Error: 87')).ErrorCode | Should -Be '0x00000057'
+        }
+        It 'reads /AnalyzeComponentStore' {
+            $a = ConvertFrom-DismAnalyze -Lines @('Actual Size of Component Store : 8.15 GB', 'Date of Last Cleanup : 2026-09-01 10:11:12',
+                                                  'Number of Reclaimable Packages : 3', 'Component Store Cleanup Recommended : Yes')
+            $a.ActualSize          | Should -Be '8.15 GB'
+            $a.ReclaimablePackages | Should -Be 3
+            $a.CleanupRecommended  | Should -BeTrue
+            (ConvertFrom-DismAnalyze -Lines @('Component Store Cleanup Recommended : No')).CleanupRecommended | Should -BeFalse
+            (ConvertFrom-DismAnalyze -Lines @()).ReclaimablePackages | Should -BeNullOrEmpty
+        }
+    }
+
+    Context 'System File Checker' {
+        It 'reads repaired and unrepairable files in both CBS path formats' {
+            $r = ConvertFrom-CbsSrLine -Lines @(
+                '2026-10-01 10:00:00, Info  CSI  00000001 [SR] Verifying 100 components'
+                '2026-10-01 10:00:01, Info  CSI  00000002 [SR] Cannot repair member file [l:34]"msvcp_win.dll" of Microsoft-Windows-CoreSystem, version 10.0'
+                '2026-10-01 10:00:02, Info  CSI  00000003 [SR] Repairing corrupted file [ml:520{260},l:66{33}]"\??\C:\WINDOWS\System32\drivers"\[l:22{11}]"netio.sys" from store'
+                '2026-10-01 10:00:03, Info  CSI  00000004 [SR] Repairing corrupted file \??\C:\Windows\System32\foo.dll from store'
+                '2026-10-01 10:00:04, Info  CSI  00000005 [SR] Could not reproject corrupted file [l:40]"\??\C:\Windows\System32"\[l:14]"bar.dll"; source file in store is also corrupted'
+                '2026-10-01 10:00:05, Info  CSI  00000006 [SR] Cannot repair member file [l:34]"msvcp_win.dll" of Microsoft-Windows-CoreSystem, version 10.0'
+                'an unrelated CBS line'
+            )
+            $r.Found        | Should -BeTrue
+            $r.Repaired     | Should -Be @('C:\WINDOWS\System32\drivers\netio.sys', 'C:\Windows\System32\foo.dll')
+            $r.CannotRepair | Should -Be @('msvcp_win.dll', 'C:\Windows\System32\bar.dll')
+            $r.LastRun      | Should -Be '2026-10-01 10:00:05'
+        }
+        It 'reports no SFC run when the log has no [SR] lines' {
+            $r = ConvertFrom-CbsSrLine -Lines @('2026-10-01 10:00:00, Info  CBS  Session started')
+            $r.Found | Should -BeFalse
+            @($r.Repaired).Count | Should -Be 0
+        }
+        It 'reads sfc console output through its UTF-16 NULs' {
+            $nul = [char]0
+            $spread = { param($s) ($s.ToCharArray() | ForEach-Object { "$_$nul" }) -join '' }
+            ConvertFrom-SfcOutput -Lines @(& $spread 'Windows Resource Protection did not find any integrity violations.') | Should -Be 'Clean'
+            ConvertFrom-SfcOutput -Lines @('Windows Resource Protection found corrupt files but was unable to fix some of them.') | Should -Be 'Unrepaired'
+            ConvertFrom-SfcOutput -Lines @('Windows Resource Protection found corrupt files and successfully repaired them.') | Should -Be 'Repaired'
+            ConvertFrom-SfcOutput -Lines @('') | Should -Be 'Unknown'
+        }
+    }
+
+    Context 'pending restarts and repair source' {
+        It 'separates servicing restarts from the rest' {
+            $r = @(Get-PendingRebootReason -Signals @{ CbsRebootPending = $true; PendingXml = $false; FileRenames = $true; ComputerRename = $false })
+            $r.Count | Should -Be 2
+            ($r | Where-Object { $_.Signal -eq 'CbsRebootPending' }).Kind | Should -Be 'Servicing'
+            ($r | Where-Object { $_.Signal -eq 'FileRenames' }).Kind | Should -Be 'Other'
+            @(Get-PendingRebootReason -Signals @{}).Count | Should -Be 0
+        }
+        It 'flags a WSUS machine with no repair source' {
+            (Get-RepairSourceState -WsusConfigured $true -RepairContentServerSource $null -LocalSourcePath '' -UseWindowsUpdate $null).AtRisk | Should -BeTrue
+            (Get-RepairSourceState -WsusConfigured $true -RepairContentServerSource 2 -LocalSourcePath '' -UseWindowsUpdate $null).AtRisk | Should -BeFalse
+            (Get-RepairSourceState -WsusConfigured $true -RepairContentServerSource $null -LocalSourcePath '\\srv\winsxs' -UseWindowsUpdate $null).AtRisk | Should -BeFalse
+            (Get-RepairSourceState -WsusConfigured $false -RepairContentServerSource $null -LocalSourcePath '' -UseWindowsUpdate 2).AtRisk | Should -BeTrue
+            (Get-RepairSourceState -WsusConfigured $false -RepairContentServerSource $null -LocalSourcePath '' -UseWindowsUpdate $null).AtRisk | Should -BeFalse
+        }
+    }
+
+    Context 'verdict' {
+        It 'reports Broken, Attention and Healthy' {
+            (Get-SutureVerdict -FindingList @([PSCustomObject]@{ Severity = 'Error' })).Verdict | Should -Be 'Broken'
+            (Get-SutureVerdict -FindingList @([PSCustomObject]@{ Severity = 'Warning' })).Verdict | Should -Be 'Attention'
+            (Get-SutureVerdict -FindingList @([PSCustomObject]@{ Severity = 'Info' })).Verdict | Should -Be 'Healthy'
         }
     }
 }
