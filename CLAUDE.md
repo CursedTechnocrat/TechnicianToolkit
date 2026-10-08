@@ -173,9 +173,10 @@ DMARC scoring), WARD (LAPS policy precedence), PALADIN (platform-protection verd
 parsers, Netlogon status table) and CATACOMB (rights-mask and SID classification); the
 root `BeforeAll` provides `Get-ToolAst` / `Get-ToolAssignmentValue` / `Get-ToolFunctionText` for
 that. CARILLON's queue-issue, name and routing-target helpers, TORPOR's process / disk
-usage arithmetic and power-plan parsing, and CHALICE's product-family, support-date,
-channel, `dsregcmd` and `cmdkey` parsers, are covered the same way.
-A finding catalog (CONDUIT, NECROPSY, TORPOR, RAVEN, RAMPART, CARILLON, CHALICE, OATH, CATACOMB) is tested against the codes its script
+usage arithmetic and power-plan parsing, SUTURE's DISM / CBS.log / SFC parsers and
+servicing error-code table, and CHALICE's product-family, support-date, channel,
+`dsregcmd` and `cmdkey` parsers, are covered the same way.
+A finding catalog (CONDUIT, SUTURE, NECROPSY, TORPOR, RAVEN, RAMPART, CARILLON, CHALICE, OATH, CATACOMB) is tested against the codes its script
 actually raises, so a new `Add-*Finding -Code` without a catalog entry fails CI.
 
 ### Verifying on Linux / in an agent sandbox
@@ -240,7 +241,7 @@ $ColorSchema = @{
 - All interactive tools expose `[switch]$Unattended` — skips prompts, runs defaults.
 - Destructive or state-changing tools also expose `[switch]$WhatIf` — previews actions without
   executing them. The current set is REVENANT, ARCHIVE, COVENANT, SIGIL, CLEANSE, CIPHER, FORGE,
-  RESTORATION, RUNEPRESS, CONJURE, CONDUIT, OATH, and CHALICE. GRIMOIRE auto-detects and passes `-WhatIf` to any tool that
+  RESTORATION, RUNEPRESS, CONJURE, CONDUIT, SUTURE, OATH, and CHALICE. GRIMOIRE auto-detects and passes `-WhatIf` to any tool that
   declares it, and the Pester suite (`'-WhatIf declared on destructive tools'`) enforces the list.
 - Tools that write logs expose `[switch]$Transcript`.
 
@@ -370,6 +371,20 @@ CONDUIT also declines to auto-fix two policy values it reports —
 deliberate administrative decisions often pushed by domain GPO, so silently clearing them
 would fight Group Policy and mask the real configuration. They are reported with the remedy
 and left to the technician.
+
+### SUTURE — the third Windows Update tool
+
+| Question | Reach for |
+|----------|-----------|
+| "Updates fail with 0x800f081f / 0x80073712, a feature won't install, or system files are damaged." | **SUTURE** (component store and system files: DISM CheckHealth / RestoreHealth, SFC, CBS.log, failure codes decoded) |
+
+The three compose as CONDUIT (can the client connect?) → SUTURE (is the store it installs into
+sound?) → RESTORATION (install). SUTURE classes each recent update failure code as *Store* (its
+own), *Client* (CONDUIT's) or something else, so a technician knows which tool to reach for.
+
+SUTURE never edits the WindowsUpdate policy key, never renames SoftwareDistribution / catroot2
+(CONDUIT's `ResetCache`), and never runs `DISM /ResetBase` — that one is irreversible, removing
+the ability to uninstall updates, and is left to a deliberate manual decision.
 
 ### NECROPSY vs GARGOYLE
 
