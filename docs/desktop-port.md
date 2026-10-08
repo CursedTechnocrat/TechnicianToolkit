@@ -172,8 +172,8 @@ way, so the technique has precedent here.
 |---|---|---|
 | `[switch]$Unattended` | Checkbox, ticked by default — the form supplies what the prompts would have asked | 39 tools |
 | `[switch]$WhatIf` | Checkbox, given prominence on the destructive set | 9 tools |
-| `[ValidateSet('Status','Enable',…)]` | Dropdown of exactly the valid values | `cipher.ps1`, `ritual.ps1` |
-| `[ValidatePattern('^[A-Za-z]:?$')]` | Text field validating live against the regex | `covenant.ps1`, `cipher.ps1` |
+| `[ValidateSet('Status','Enable',…)]` | Dropdown of exactly the valid values | `crypt.ps1`, `ritual.ps1` |
+| `[ValidatePattern('^[A-Za-z]:?$')]` | Text field validating live against the regex | `covenant.ps1`, `crypt.ps1` |
 | `[ValidateScript({ Test-Path … })]` | Path field with a browse button | `revenant.ps1`, `ritual.ps1` |
 | `[securestring]$LocalAdminPassword` | Masked field; never held as plain text | `covenant.ps1` |
 
@@ -700,7 +700,7 @@ release notes about what a user is getting.
 | **med** — signing cannot run in CI | SimplySign needs an interactive session with phone 2FA, which GitHub-hosted runners cannot hold. A release therefore carries a manual step, and a manual step can be skipped or botched | `RELEASING.md` checklist, and `signtool verify /pa` on both binaries before the release is published. Revisit if Certum ships CI/CD support |
 | **high** — SmartScreen on early downloads | Raised from med: 5.0 is unsigned, so this is a certainty rather than a risk. Even once signed it persists — the certificate is OV, not EV, so reputation accrues rather than being granted, and reputation does not begin accruing until the first signed build | Say plainly in the README and the release notes that 5.0 is unsigned and will warn, with the reason and the route past it. Treating a predicted warning as a documented fact is the only honest option; hiding it costs more trust than the warning does |
 | **high** — Antivirus false positives | Raised from med: a single-file executable that unpacks scripts to disk and runs them elevated is structurally what a dropper looks like, and an unsigned one has nothing to offset that | Signing helps most and is not available yet. Submit to Microsoft and the major vendors for whitelisting ahead of the release, and publish the SHA-256 of both binaries in the release notes so a suspicious download can be checked against them |
-| **med** — Prompt-heavy tools | `covenant.ps1` has 26 `Read-Host` calls and `citadel.ps1` has 17; a separate dialog for each is a miserable experience | Prefer `-Unattended` driven by the generated form. Treat modal prompts as the fallback path, not the primary one |
+| **med** — Prompt-heavy tools | `covenant.ps1` has 26 `Read-Host` calls and `steward.ps1` has 17; a separate dialog for each is a miserable experience | Prefer `-Unattended` driven by the generated form. Treat modal prompts as the fallback path, not the primary one |
 | **med** — ARM64 unverified on hardware | The workflow builds ARM64 but nothing has ever run it on a real device. Signing is *not* the gap — `signtool` signs any PE from the same x64 session. The maintainer has no ARM hardware, so this cannot be closed in-house | **Collaboration wanted.** Ship the ARM64 build labelled untested, say so in the README and the release notes, and ask for a report from anyone running a Snapdragon X / Surface Pro device. One field report closes this row |
 | **low** — Everything runs elevated | Read-only tools like `ward.ps1` get Administrator they do not need | Accept for 5.0 and say so in the README. A split-process design is a later refinement |
 | **low** — Binary size | Roughly 150 MB against about 40 MB today | Compression stays on. Trimming stays off — it breaks the reflection the SDK depends on |

@@ -143,7 +143,7 @@ function Get-ToolkitReportFiles {
 
         # The toolkit-wide convention is `<label>_YYYYMMDD_HHMMSS.html`.
         # The label is the tool acronym, optionally followed by a variant
-        # tag (PYRE_battery_report, CITADEL_StaleAccounts, etc.). Capture
+        # tag (PYRE_battery_report, STEWARD_StaleAccounts, etc.). Capture
         # all three groups up front -- $matches gets clobbered by any
         # later -match call below, so we can't rely on it surviving.
         if ($f.BaseName -notmatch '^(?<label>.+)_(?<date>\d{8})_(?<time>\d{6})$') { continue }

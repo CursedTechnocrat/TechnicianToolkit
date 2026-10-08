@@ -280,13 +280,13 @@ $TorporFindings = @{
         Severity = 'Error'
         Title    = 'System drive almost full'
         Summary  = 'Less than 5% of the system drive is free. Paging, updates and temporary files all compete for the space.'
-        Remedy   = 'Free space now: C.L.E.A.N.S.E. clears temp and update caches, T.H.R.E.S.H.O.L.D. finds large folders and old profiles.'
+        Remedy   = 'Free space now: C.L.E.A.N.S.E. clears temp and update caches, H.O.A.R.D. finds large folders and old profiles.'
     }
     'SystemDriveLow' = @{
         Severity = 'Warning'
         Title    = 'System drive low on space'
         Summary  = 'Less than 10% of the system drive is free.'
-        Remedy   = 'Run C.L.E.A.N.S.E., and T.H.R.E.S.H.O.L.D. to find what is using the space.'
+        Remedy   = 'Run C.L.E.A.N.S.E., and H.O.A.R.D. to find what is using the space.'
     }
     'LongUptime' = @{
         Severity = 'Warning'

@@ -165,7 +165,7 @@ compliance, param block compliance (`-Unattended`, and `-WhatIf` on the destruct
 GRIMOIRE registry integrity, license-header compliance (GPL notice and SPDX tag present and
 correctly positioned in every source file), LICENSE integrity, retired tool names and filename
 prefixes, removed deprecation stubs, no locally redefined shared helpers, and the PALADIN /
-BEACON / PORTAL / CONJURE tier-mapper data tables (extracted by AST lookup rather than
+WISP / PORTAL / CONJURE tier-mapper data tables (extracted by AST lookup rather than
 dot-sourcing, since the tools launch their main flow on import). The same AST extraction covers
 the pure helpers of NECROPSY (bugcheck and dump-header parsing), RAVEN (inbox-rule, SPF and
 DMARC scoring), WARD (LAPS policy precedence), PALADIN (platform-protection verdict), RAMPART
@@ -240,7 +240,7 @@ $ColorSchema = @{
 
 - All interactive tools expose `[switch]$Unattended` — skips prompts, runs defaults.
 - Destructive or state-changing tools also expose `[switch]$WhatIf` — previews actions without
-  executing them. The current set is REVENANT, ARCHIVE, COVENANT, SIGIL, CLEANSE, CIPHER, FORGE,
+  executing them. The current set is REVENANT, ARCHIVE, COVENANT, SIGIL, CLEANSE, CRYPT, FORGE,
   RESTORATION, RUNEPRESS, CONJURE, CONDUIT, SUTURE, OATH, and CHALICE. GRIMOIRE auto-detects and passes `-WhatIf` to any tool that
   declares it, and the Pester suite (`'-WhatIf declared on destructive tools'`) enforces the list.
 - Tools that write logs expose `[switch]$Transcript`.
@@ -435,13 +435,13 @@ All three touch Exchange Online or Microsoft 365, at different layers.
 | "Who is licensed, who is unlicensed, who has MFA registered?" | **RELIQUARY** (Microsoft Graph) |
 | "What breaks if I delete this group?" — including its Exchange transport rules and delegations | **TENDRIL** |
 
-### OATH vs LEYLINE vs CITADEL
+### OATH vs LEYLINE vs STEWARD
 
 | Question | Reach for |
 |----------|-----------|
 | "This machine can't reach `<host>`." | **LEYLINE** (general network diagnostics and stack resets) |
 | "The trust relationship with the domain failed" / domain logons fail on one machine | **OATH** (DC discovery, domain DNS, Kerberos time, secure channel; repairs the trust from the client side) |
-| "Reset this user's password / unlock this account." | **CITADEL** (changes the directory) |
+| "Reset this user's password / unlock this account." | **STEWARD** (changes the directory) |
 
 OATH repairs from the member machine and never edits Active Directory, never changes DNS
 settings, and never unjoins or rejoins — a deleted computer account is reported with the
@@ -475,16 +475,16 @@ or edits a queue — changing who takes calls is a Teams admin center task.
 | "Which identities are risky — guests, stale admins, password-never-expires?" | **WRAITH** |
 | "Do the Conditional Access policies actually enforce MFA and block legacy auth, and is there a break-glass path?" | **RAMPART** |
 
-### THRESHOLD vs AUGUR
+### HOARD vs AUGUR
 
 Both tools deal with disk health but cover different layers:
 
 | Tool | Focus |
 |------|-------|
-| **T.H.R.E.S.H.O.L.D.** | Volume space monitoring — used/free space, low-space alerts, temp cleanup, old profile detection |
+| **H.O.A.R.D.** | Volume space monitoring — used/free space, low-space alerts, temp cleanup, old profile detection |
 | **A.U.G.U.R.** | Physical hardware health — SMART status, wear prediction, failure forecasting, bus/media type |
 
-Run THRESHOLD for "is this drive running out of space?"; run AUGUR for "is this drive about to die?".
+Run HOARD for "is this drive running out of space?"; run AUGUR for "is this drive about to die?".
 
 ### SCRYER vs the single-domain diagnostic tools
 
@@ -493,7 +493,7 @@ S.C.R.Y.E.R. (`scryer.ps1`) is a one-shot consolidated report that rolls five di
 | Question | Reach for |
 |----------|-----------|
 | "Give me one file summarising this machine." | **SCRYER** |
-| Deep dive on any one of: system health, users, free space, disk reliability, services | AUSPEX / WARD / THRESHOLD / AUGUR / GARGOYLE respectively |
+| Deep dive on any one of: system health, users, free space, disk reliability, services | AUSPEX / WARD / HOARD / AUGUR / GARGOYLE respectively |
 
 SCRYER's per-section depth is intentionally shallower than the dedicated tools — it samples each domain rather than reproducing the full report.
 
@@ -519,21 +519,21 @@ Both touch Microsoft Defender, but they sit on opposite sides of the audit/enfor
 
 PALADIN is the diagnostic tool you run to decide whether enforcement is needed; SIGIL is the tool that does the enforcing. They compose: SIGIL hardens the machine, PALADIN later confirms the AV side held.
 
-### CITADEL vs HERALD
+### STEWARD vs HERALD
 
 Both are Active Directory tools; they sit on opposite sides of the act/report divide.
 
 | Question | Reach for |
 |----------|-----------|
-| "Unlock this account / reset this password / add them to a group." | **CITADEL** (interactive AD management — it changes the directory) |
+| "Unlock this account / reset this password / add them to a group." | **STEWARD** (interactive AD management — it changes the directory) |
 | "Give the customer a list of every account and what each one can do." | **HERALD** (read-only roster: full name / alias / access level, plus a review CSV) |
 | "What are the password and lockout rules on this domain?" | **HERALD** (reads and scores the default domain policy and any fine-grained policies; SIGIL *sets* local policy but never reports domain policy) |
 
-CITADEL's reports (stale accounts, password expiry) answer *account hygiene* questions about the
+STEWARD's reports (stale accounts, password expiry) answer *account hygiene* questions about the
 directory. HERALD answers an *access review* question — who holds privilege, and through which
 groups. HERALD never writes to AD.
 
-Where they overlap on inactivity: CITADEL's stale report is the standalone "who hasn't logged in"
+Where they overlap on inactivity: STEWARD's stale report is the standalone "who hasn't logged in"
 export; HERALD folds the same signal in as one review flag among several, in the context of the
 account's access level (an inactive Domain Admin ranks differently from an inactive standard user).
 
@@ -550,16 +550,16 @@ WARD runs on any Windows machine, domain-joined or not. HERALD requires a domain
 Neither subsumes the other: a local administrator on a workstation does not appear in HERALD,
 and a Domain Admin does not appear in WARD unless they also hold a local account.
 
-### BEACON vs LANTERN
+### WISP vs LANTERN
 
 Both tools live in Network & Remote, but cover different layers of the network stack.
 
 | Question | Reach for |
 |----------|-----------|
-| "What Wi-Fi networks does this machine remember, and which of them auto-connect?" | **BEACON** (saved WLAN profile inventory: SSID, auth, cipher, autoSwitch, key material) |
+| "What Wi-Fi networks does this machine remember, and which of them auto-connect?" | **WISP** (saved WLAN profile inventory: SSID, auth, cipher, autoSwitch, key material) |
 | "What hosts are alive on the LAN this machine is currently sitting on?" | **LANTERN** (subnet ping sweep + DNS / MAC / port scan of discovered hosts) |
 
-BEACON looks inward at the wireless config baked into the machine; LANTERN looks outward at the LAN segment the machine is attached to. BEACON runs the same regardless of where the machine is plugged in; LANTERN's output is wholly dependent on the network it sits on at audit time.
+WISP looks inward at the wireless config baked into the machine; LANTERN looks outward at the LAN segment the machine is attached to. WISP runs the same regardless of where the machine is plugged in; LANTERN's output is wholly dependent on the network it sits on at audit time.
 
 ### PORTAL vs LEYLINE
 

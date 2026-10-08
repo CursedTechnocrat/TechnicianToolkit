@@ -33,16 +33,16 @@
 
     Built-in recipes:
       Onboard       -- New machine bring-up:
-                       COVENANT -> SIGIL -> CONJURE -> CIPHER -> AUSPEX -> ARTIFACT
+                       COVENANT -> SIGIL -> CONJURE -> CRYPT -> AUSPEX -> ARTIFACT
       Retire        -- Pre-reimage / pre-disposal:
                        TETHER -> EXHUME -> ARCHIVE -> CLEANSE
       HealthCheck   -- Quarterly machine review:
-                       AUSPEX -> WARD -> THRESHOLD -> AUGUR -> GARGOYLE -> ARTIFACT -> PALADIN
+                       AUSPEX -> WARD -> HOARD -> AUGUR -> GARGOYLE -> ARTIFACT -> PALADIN
                        -> NECROPSY -> TORPOR -> SUTURE (audit only)
       SecuritySweep -- Endpoint security posture (read-only):
                        SIGIL -> TALON -> TOTEM -> PALADIN -> ARTIFACT
       NetworkSweep  -- Endpoint network posture (read-only):
-                       LEYLINE -> LANTERN -> BEACON -> PORTAL -> OATH
+                       LEYLINE -> LANTERN -> WISP -> PORTAL -> OATH
       TenantSweep   -- Cloud tenant posture (nine reports):
                        TALISMAN -> RELIQUARY -> GOLEM -> WRAITH -> CONCLAVE -> GROVE
                        -> RAVEN -> RAMPART -> CARILLON
@@ -145,7 +145,7 @@ $script:BuiltInRecipes = @{
             @{ Label = 'Machine onboarding';        Tool = 'covenant.ps1';   Args = @('-Unattended'); StopOnError = $true  }
             @{ Label = 'Security baseline';         Tool = 'sigil.ps1';      Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Core software install';     Tool = 'conjure.ps1';    Args = @('-Unattended'); StopOnError = $false }
-            @{ Label = 'BitLocker enable';          Tool = 'cipher.ps1';     Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'BitLocker enable';          Tool = 'crypt.ps1';     Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'System diagnostics';        Tool = 'auspex.ps1';     Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Certificate health';        Tool = 'artifact.ps1';   Args = @('-Unattended'); StopOnError = $false }
         )
@@ -166,7 +166,7 @@ $script:BuiltInRecipes = @{
         Steps       = @(
             @{ Label = 'System diagnostics';        Tool = 'auspex.ps1';    Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Account audit';             Tool = 'ward.ps1';      Args = @('-Unattended'); StopOnError = $false }
-            @{ Label = 'Disk space';                Tool = 'threshold.ps1'; Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Disk space';                Tool = 'hoard.ps1'; Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Disk hardware (SMART)';     Tool = 'augur.ps1';     Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Services & tasks';          Tool = 'gargoyle.ps1';  Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Certificate health';        Tool = 'artifact.ps1';  Args = @('-Unattended'); StopOnError = $false }
@@ -193,7 +193,7 @@ $script:BuiltInRecipes = @{
         Steps       = @(
             @{ Label = 'Network diagnostics';       Tool = 'leyline.ps1';   Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'LAN discovery';             Tool = 'lantern.ps1';   Args = @('-Unattended'); StopOnError = $false }
-            @{ Label = 'Wi-Fi profile audit';       Tool = 'beacon.ps1';    Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Wi-Fi profile audit';       Tool = 'wisp.ps1';    Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'VPN / Always-On audit';     Tool = 'portal.ps1';    Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Domain trust';              Tool = 'oath.ps1';      Args = @('-Unattended'); StopOnError = $false }
         )

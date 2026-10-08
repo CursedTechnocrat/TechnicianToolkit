@@ -483,12 +483,12 @@ function Invoke-EnvironmentCheck {
         Write-Host "  [!] Chocolatey (choco)          -  Not found (optional for CONJURE)" -ForegroundColor $C.Warning
     }
 
-    # 8. RSAT ActiveDirectory module (for CITADEL)
+    # 8. RSAT ActiveDirectory module (for STEWARD)
     $adModule = Get-Module -ListAvailable -Name ActiveDirectory -ErrorAction SilentlyContinue
     if ($adModule) {
         Write-Host "  [+] RSAT: ActiveDirectory       -  Available ($($adModule[0].Version))" -ForegroundColor $C.Success
     } else {
-        Write-Host "  [!] RSAT: ActiveDirectory       -  Not found (required for CITADEL)" -ForegroundColor $C.Warning
+        Write-Host "  [!] RSAT: ActiveDirectory       -  Not found (required for STEWARD)" -ForegroundColor $C.Warning
     }
 
     # 9. Microsoft.Graph module (for RELIQUARY)

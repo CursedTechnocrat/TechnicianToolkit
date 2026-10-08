@@ -71,6 +71,19 @@ BeforeAll {
 # during Pester's discovery phase, before any BeforeAll body executes.
 $NonSourceDir = '{0}(\.git|\.claude){0}' -f [regex]::Escape([string][IO.Path]::DirectorySeparatorChar)
 
+# Forwarding stubs left at the old filenames of renamed tools (old -> new). They
+# carry no tool logic -- no param() block, so `@args` passes every argument
+# through untouched -- and are exempt from the tool-shape gates below; the
+# 'Renamed-tool forwarding stubs' block checks them instead. Defined at file
+# scope because the -ForEach case lists are built during discovery.
+$RenamedToolStubs = [ordered]@{
+    'cipher.ps1'    = 'crypt.ps1'
+    'beacon.ps1'    = 'wisp.ps1'
+    'citadel.ps1'   = 'steward.ps1'
+    'shade.ps1'     = 'emissary.ps1'
+    'threshold.ps1' = 'hoard.ps1'
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # EscHtml
 # ─────────────────────────────────────────────────────────────────────────────
@@ -423,6 +436,7 @@ Describe 'UTF-8 BOM — all scripts' {
 # ─────────────────────────────────────────────────────────────────────────────
 Describe 'Module bootstrap compliance — all tool scripts' {
     $scriptCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Filter '*.ps1' -File |
+        Where-Object { -not $RenamedToolStubs.Contains($_.Name) } |
         ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
 
     It '<Name> defines $TKModulePath next to $PSScriptRoot' -ForEach $scriptCases {
@@ -445,12 +459,12 @@ Describe 'Module bootstrap compliance — all tool scripts' {
 # ─────────────────────────────────────────────────────────────────────────────
 # Param block compliance — interactive tool scripts must declare -Unattended
 # Excludes the two launcher-style scripts that don't have sensible defaults
-# for their required inputs (grimoire needs a tool choice; shade needs a
+# for their required inputs (grimoire needs a tool choice; emissary needs a
 # target machine + credentials).
 # ─────────────────────────────────────────────────────────────────────────────
 Describe 'Param block compliance — -Unattended switch' {
     $scriptCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Filter '*.ps1' -File |
-        Where-Object { $_.Name -notin @('grimoire.ps1', 'shade.ps1') } |
+        Where-Object { $_.Name -notin @('grimoire.ps1', 'emissary.ps1') -and -not $RenamedToolStubs.Contains($_.Name) } |
         ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
 
     It '<Name> declares -Unattended' -ForEach $scriptCases {
@@ -498,7 +512,7 @@ Describe 'GRIMOIRE registry integrity' {
 # ─────────────────────────────────────────────────────────────────────────────
 # Version consistency — a tool's .NOTES Version and its GRIMOIRE registry entry
 # are two hand-maintained copies of one fact, and they drifted: before 5.0 the
-# suite carried 3.6, 3.6.2, 3.8.3, 4.2 and 1.0 at once, with cipher.ps1 and
+# suite carried 3.6, 3.6.2, 3.8.3, 4.2 and 1.0 at once, with crypt.ps1 and
 # restoration.ps1 disagreeing with their own registry rows. Nothing detected it.
 #
 # The header pattern deliberately tolerates irregular spacing — talisman.ps1
@@ -602,7 +616,7 @@ Describe '-WhatIf declared on destructive tools' {
     # writes, domain joins, disk encryption toggles, AV policy changes, driver
     # and Windows Update installs, printer driver / network printer additions.
     $destructiveCases = @(
-        'revenant.ps1','archive.ps1','covenant.ps1','sigil.ps1','cleanse.ps1','cipher.ps1',
+        'revenant.ps1','archive.ps1','covenant.ps1','sigil.ps1','cleanse.ps1','crypt.ps1',
         'forge.ps1','restoration.ps1','runepress.ps1','conjure.ps1','conduit.ps1',
         'oath.ps1','suture.ps1','chalice.ps1'
     ) | ForEach-Object {
@@ -687,7 +701,7 @@ Describe 'No generic collections built with New-Object' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Tier-mapper data tables — the verdict logic in PALADIN / BEACON / PORTAL
+# Tier-mapper data tables — the verdict logic in PALADIN / WISP / PORTAL
 # leans on small reference hashtables (and one tiny helper for ASR action
 # codes). This block extracts those tables via AST lookup and asserts on
 # their contents, so a careless rename or removal fails CI loudly.
@@ -701,7 +715,7 @@ Describe 'Tier-mapper data tables' {
     BeforeAll {
         $script:ToolkitRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
         $script:PaladinPath = Join-Path $script:ToolkitRoot 'paladin.ps1'
-        $script:BeaconPath  = Join-Path $script:ToolkitRoot 'beacon.ps1'
+        $script:WispPath  = Join-Path $script:ToolkitRoot 'wisp.ps1'
         $script:PortalPath  = Join-Path $script:ToolkitRoot 'portal.ps1'
         $script:ConjurePath = Join-Path $script:ToolkitRoot 'conjure.ps1'
         $script:HeraldPath  = Join-Path $script:ToolkitRoot 'herald.ps1'
@@ -852,20 +866,20 @@ Describe 'Tier-mapper data tables' {
         }
     }
 
-    Context 'BEACON: $AuthStrength hashtable (Wi-Fi)' {
+    Context 'WISP: $AuthStrength hashtable (Wi-Fi)' {
         It 'classifies open / shared / WEP as Insecure' {
-            $auth = Import-ScriptHashtable -ScriptPath $script:BeaconPath -VarName 'AuthStrength'
+            $auth = Import-ScriptHashtable -ScriptPath $script:WispPath -VarName 'AuthStrength'
             $auth['open']   | Should -Be 'Insecure'
             $auth['shared'] | Should -Be 'Insecure'
             $auth['WEP']    | Should -Be 'Insecure'
         }
         It 'classifies WPA1 (WPA / WPAPSK) as Weak' {
-            $auth = Import-ScriptHashtable -ScriptPath $script:BeaconPath -VarName 'AuthStrength'
+            $auth = Import-ScriptHashtable -ScriptPath $script:WispPath -VarName 'AuthStrength'
             $auth['WPA']    | Should -Be 'Weak'
             $auth['WPAPSK'] | Should -Be 'Weak'
         }
         It 'classifies WPA2 personal+enterprise / WPA3 / OWE as Strong' {
-            $auth = Import-ScriptHashtable -ScriptPath $script:BeaconPath -VarName 'AuthStrength'
+            $auth = Import-ScriptHashtable -ScriptPath $script:WispPath -VarName 'AuthStrength'
             $auth['WPA2']    | Should -Be 'Strong'
             $auth['WPA2PSK'] | Should -Be 'Strong'
             $auth['WPA3SAE'] | Should -Be 'Strong'
@@ -874,9 +888,9 @@ Describe 'Tier-mapper data tables' {
         }
     }
 
-    Context 'BEACON: $CipherStrength hashtable (Wi-Fi)' {
+    Context 'WISP: $CipherStrength hashtable (Wi-Fi)' {
         It 'classifies cipher tiers correctly' {
-            $c = Import-ScriptHashtable -ScriptPath $script:BeaconPath -VarName 'CipherStrength'
+            $c = Import-ScriptHashtable -ScriptPath $script:WispPath -VarName 'CipherStrength'
             $c['none'] | Should -Be 'Insecure'
             $c['WEP']  | Should -Be 'Insecure'
             $c['TKIP'] | Should -Be 'Weak'

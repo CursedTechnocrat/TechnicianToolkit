@@ -222,8 +222,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '12'
-        Name        = 'T.H.R.E.S.H.O.L.D.'
-        File        = 'threshold.ps1'
+        Name        = 'H.O.A.R.D.'
+        File        = 'hoard.ps1'
         Version     = '5.1'
         Description = 'Disk space monitor  -  volume usage, low-space alerts, temp cleanup, old profile detection'
         Color       = 'Yellow'
@@ -315,8 +315,8 @@ $Tools = @(
     # ── Security (20–29) ─────────────────────────────────────────────
     [PSCustomObject]@{
         Key         = '20'
-        Name        = 'C.I.P.H.E.R.'
-        File        = 'cipher.ps1'
+        Name        = 'C.R.Y.P.T.'
+        File        = 'crypt.ps1'
         Version     = '5.1'
         Description = 'BitLocker drive encryption  -  enable, disable, backup keys'
         Color       = 'Green'
@@ -333,8 +333,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '22'
-        Name        = 'C.I.T.A.D.E.L.'
-        File        = 'citadel.ps1'
+        Name        = 'S.T.E.W.A.R.D.'
+        File        = 'steward.ps1'
         Version     = '5.1'
         Description = 'Active Directory management  -  search, unlock, reset passwords, group membership'
         Color       = 'Blue'
@@ -406,8 +406,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '31'
-        Name        = 'S.H.A.D.E.'
-        File        = 'shade.ps1'
+        Name        = 'E.M.I.S.S.A.R.Y.'
+        File        = 'emissary.ps1'
         Version     = '5.1'
         Description = 'Remote execution via WinRM  -  run toolkit tools on a remote machine'
         Color       = 'White'
@@ -424,8 +424,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '33'
-        Name        = 'B.E.A.C.O.N.'
-        File        = 'beacon.ps1'
+        Name        = 'W.I.S.P.'
+        File        = 'wisp.ps1'
         Version     = '5.1'
         Description = 'Wi-Fi profile audit  -  saved profiles, auth/cipher tier, auto-connect, hidden SSID, MAC randomisation, key material'
         Color       = 'Yellow'
