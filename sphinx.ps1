@@ -954,7 +954,9 @@ function Invoke-LockoutForensics {
 
         foreach ($evt in $events) {
             $timestamp     = $evt.TimeCreated.ToString("yyyy-MM-dd HH:mm:ss")
-            $callerMachine = $evt.Properties[4].Value
+            # 4740 keeps the caller computer in TargetDomainName (index 1);
+            # index 4 is SubjectUserName, the DC's own machine account.
+            $callerMachine = $evt.Properties[1].Value
             $dc            = $evt.MachineName
             if ([string]::IsNullOrWhiteSpace($callerMachine)) { $callerMachine = "(unknown)" }
 
@@ -973,6 +975,9 @@ function Invoke-LockoutForensics {
         Write-Host "    - Scheduled tasks running under the user account" -ForegroundColor $C.Info
         Write-Host "    - Mobile device or Outlook profile with old password" -ForegroundColor $C.Info
         Write-Host "    - Applications with embedded credentials" -ForegroundColor $C.Info
+        Write-Host ""
+        Write-Host "  For bad-password sources on every DC and an inspection of the source" -ForegroundColor $C.Info
+        Write-Host "  machine's services, tasks and sessions, run G.A.R.M. (garm.ps1)." -ForegroundColor $C.Info
         Write-Host ""
 
     } catch {

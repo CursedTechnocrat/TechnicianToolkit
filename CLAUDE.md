@@ -174,9 +174,10 @@ parsers, Netlogon status table) and MINOTAUR (rights-mask and SID classification
 root `BeforeAll` provides `Get-ToolAst` / `Get-ToolAssignmentValue` / `Get-ToolFunctionText` for
 that. CARILLON's queue-issue, name and routing-target helpers, TORPOR's process / disk
 usage arithmetic and power-plan parsing, SOLDER's DISM / CBS.log / SFC parsers and
-servicing error-code table, and CHALICE's product-family, support-date, channel,
-`dsregcmd` and `cmdkey` parsers, are covered the same way.
-A finding catalog (CONDUIT, SOLDER, NECROPSY, TORPOR, RAVEN, HALO, CARILLON, CHALICE, LODESTAR, MINOTAUR) is tested against the codes its script
+servicing error-code table, CHALICE's product-family, support-date, channel,
+`dsregcmd` and `cmdkey` parsers, and GARM's security-event XML, failure-code, source-ranking,
+run-as and `quser` helpers, are covered the same way.
+A finding catalog (CONDUIT, SOLDER, NECROPSY, TORPOR, RAVEN, HALO, CARILLON, CHALICE, LODESTAR, MINOTAUR, GARM) is tested against the codes its script
 actually raises, so a new `Add-*Finding -Code` without a catalog entry fails CI.
 
 ### Verifying on Linux / in an agent sandbox
@@ -482,6 +483,20 @@ LODESTAR repairs from the member machine and never edits Active Directory, never
 settings, and never unjoins or rejoins — a deleted computer account is reported with the
 rejoin steps. The machine-password reset is interactive only, because it needs domain
 credentials typed by the technician.
+
+### GARM vs SPHINX vs ARGUS
+
+| Question | Reach for |
+|----------|-----------|
+| "Why does this account keep locking out, and from where?" | **GARM** (per-DC lockout state, 4740 / 4771 / 4776 from the DCs, sources ranked, the source machine checked for services, tasks and sessions holding the old password) |
+| "Unlock it / reset the password." | **SPHINX** (its lockout option is the quick 4740 lookup; GARM is the full trace) |
+| "Who holds privilege in the domain, and what is the lockout policy?" | **ARGUS** |
+
+GARM is read-only: it never unlocks, resets a password, stops a service or ends a session, and
+its source scan stops at reading services, scheduled tasks and `quser`. Fix the source, then
+unlock with SPHINX — unlocking first just locks the account again. On event 4740 the caller
+computer lives in `TargetDomainName`, not a field named for it; anything reading 4740 by
+position must use index 1 (index 4 is the DC's own machine account).
 
 ### MINOTAUR vs ARGUS vs WARD
 

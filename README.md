@@ -75,7 +75,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | Running through Kaseya VSA LiveConnect | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
 | Need a guided, menu-driven workflow | **This repo** — full prompts and confirmations at every step |
 | Need fire-and-forget with parameter-only input | **[TechnicianToolkit-LiveConnect](https://github.com/CursedTechnocrat/TechnicianToolkit-LiveConnect)** |
-| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, WYRM, EMBALM, EMISSARY, RUNEPRESS, LEYLINE, FORGE, ZENITH, SPHINX, LANTERN, FATHOM, AUGUR, CLEANSE, ALMANAC, ORBIT, ECLIPSE, ASTERISM, CUMULUS, ORRERY, PHYLACTERY, EXHUME, VIGIL, PHOENIX, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, WHETSTONE, BASILISK, ANVIL, TALON, TOTEM, HOURGLASS, GRIFFIN, WISP, PORTAL, NECROPSY, TORPOR, SOLDER, RAVEN, HALO, CARILLON, CHALICE, LODESTAR, MINOTAUR) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
+| Need tools with no LiveConnect counterpart (COVENANT, CONJURE, REVENANT, WYRM, EMBALM, EMISSARY, RUNEPRESS, LEYLINE, FORGE, ZENITH, SPHINX, LANTERN, FATHOM, AUGUR, CLEANSE, ALMANAC, ORBIT, ECLIPSE, ASTERISM, CUMULUS, ORRERY, PHYLACTERY, EXHUME, VIGIL, PHOENIX, HEARTH, RITUAL, AUSPEX, WARD, SCRYER, WHETSTONE, BASILISK, ANVIL, TALON, TOTEM, HOURGLASS, GRIFFIN, WISP, PORTAL, NECROPSY, TORPOR, SOLDER, RAVEN, HALO, CARILLON, CHALICE, LODESTAR, MINOTAUR, GARM) | **This repo** — these tools are interactive by nature or require auth flows incompatible with LiveConnect |
 
 ---
 
@@ -154,6 +154,7 @@ If you are running scripts through **Kaseya VSA LiveConnect**, that shell cannot
 | 47 | **argus.ps1** | **A.R.G.U.S.** — Access Roster: Groups, Users & Scopes | Active Directory authentication & access review — domain password/lockout policy with verdicts, full name / alias / access level per account, nested group expansion, privileged group membership, review CSV, HTML report |
 | 48 | **minotaur.ps1** | **M.I.N.O.T.A.U.R.** — Maps Inheritance, NTFS Owners, Trustees & Access on UNC Roots | File share & NTFS permissions review — share and NTFS access, everyone-type write, direct user grants, orphaned SIDs, broken inheritance, HTML report + CSV of every entry |
 | 49 | **ward.ps1** | **W.A.R.D.** — Watches Accounts, Reviews Roles & Detects anomalies | Local user account audit with role, last logon, flags, and HTML report |
+| 50 | **garm.ps1** | **G.A.R.M.** — Gets Account-lockout Root causes from Machines | Active Directory lockout source tracer — lockout state on every DC, lockout (4740) and bad-password (4771 / 4776) events with codes decoded, sources ranked, source machine checked for services / tasks / sessions holding the old password, domain-wide sweep, HTML report |
 
 ### The Crossroads — Network & Remote
 
@@ -740,6 +741,27 @@ Audits all local user accounts and exports a dark-themed HTML report to the scri
 
 ---
 
+### G.A.R.M.
+
+Answers *"why does this account keep locking out, and from where?"* — the ticket that unlocking alone never closes. Read-only; G.A.R.M. names the source, and S.P.H.I.N.X. unlocks once it is fixed. Requires RSAT and rights to read the DCs' Security logs (Domain Admins or Event Log Readers, plus the Remote Event Log Management firewall rule).
+
+**Trace** one account (`-Identity`):
+- **Lockout state on every DC** — bad-password count and time, lockout time, last logon. `badPwdCount` is not replicated, so this per-DC view is what shows where the failures land
+- **Lockout events (4740)** from the PDC emulator, with the caller computer each one names
+- **Bad-password events** from the DCs that saw them — Kerberos pre-authentication failures (4771, with client IP) and NTLM validation failures (4776, with workstation) — with each failure code decoded (wrong password, already locked out, expired, clock skew…)
+- **Sources ranked** by lockouts and failures, IPs reverse-resolved and grouped with the same machine's name
+- **Source machines inspected** over CIM (WinRM, falling back to DCOM): services and stored-password scheduled tasks running as the account, and its sessions — disconnected RDP included. `-SkipSourceScan` turns this off
+- Flags a lockout with no caller computer (ActiveSync phones, ADFS, NPS / RADIUS, LDAP binds), sources that are DCs, a recent password change, and a low lockout threshold (fine-grained policy honoured)
+
+**Sweep** (no `-Identity`): every lockout the PDC logged in the window, grouped by account with caller computers, plus every account locked out now.
+
+- `-Hours <1-720>` sets the look-back window (default 24)
+- Report saved as `GARM_<timestamp>.html`
+
+> **GARM vs SPHINX vs ARGUS:** GARM traces *where lockouts come from*; SPHINX *acts* on the account (unlock, reset — its lockout option is the quick 4740 lookup); ARGUS reviews *who holds access*.
+
+---
+
 ## The Crossroads — Network & Remote
 
 How traffic travels and how machines are found and reached — named for arcane paths and lights.
@@ -1080,7 +1102,7 @@ first four rows is needed.
 | Robocopy (built into Windows) | `revenant.ps1`, `embalm.ps1` |
 | BitLocker-capable Windows edition (Pro/Enterprise) | `wyrm.ps1` |
 | WinRM enabled on target machine | `emissary.ps1`, `vigil.ps1` (remote mode) |
-| RSAT ActiveDirectory module | `sphinx.ps1`, `argus.ps1` (auto-installed if missing) |
+| RSAT ActiveDirectory module | `sphinx.ps1`, `argus.ps1`, `garm.ps1` (auto-installed if missing) |
 | Az PowerShell modules | `zenith.ps1`, `orrery.ps1` (optional, auto-installed if -IncludeAzureRbac) |
 | Microsoft.Graph modules | `almanac.ps1`, `orbit.ps1`, `eclipse.ps1`, `asterism.ps1`, `cumulus.ps1`, `orrery.ps1` (auto-installed if missing) |
 | ExchangeOnlineManagement module | `raven.ps1` (offered for install if missing; not needed for `-DnsOnly`), `orrery.ps1` (optional, auto-installed if -IncludeExchange) |
@@ -1091,7 +1113,8 @@ first four rows is needed.
 | MicrosoftTeams module + Teams Administrator (or Global Reader) | `carillon.ps1` (offered for install if missing; Microsoft.Graph.Authentication + Directory.Read.All also used to name groups unless `-SkipGraph`) |
 | Microsoft Intune licence + DeviceManagement Graph permissions | `orbit.ps1`, `orrery.ps1` |
 | RoleManagement.Read.Directory + AuditLog.Read.All Graph scopes | `eclipse.ps1`, `orrery.ps1` |
-| On-premises Active Directory domain membership | `sphinx.ps1`, `argus.ps1`, `lodestar.ps1` |
+| On-premises Active Directory domain membership | `sphinx.ps1`, `argus.ps1`, `lodestar.ps1`, `garm.ps1` |
+| Domain Admins or Event Log Readers on the DCs, Remote Event Log Management firewall rule | `garm.ps1` (reads the DCs' Security logs) |
 
 ---
 
@@ -1249,6 +1272,9 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\minotaur.p
 # W.A.R.D. — Local user account audit
 Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\ward.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/ward.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
+# G.A.R.M. — Account lockout source tracer
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\garm.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/garm.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+
 # ── The Crossroads — Network & Remote ────────────────────────────────────────
 
 # L.E.Y.L.I.N.E. — Network diagnostics & remediation
@@ -1369,6 +1395,7 @@ Select a tool by number. Control returns to the menu when the tool finishes.
 .\argus.ps1        # Active Directory account roster and access-level report
 .\minotaur.ps1      # File share & NTFS permissions review, HTML + CSV
 .\ward.ps1          # User account audit and HTML report
+.\garm.ps1          # Account lockout source tracer (trace one account, or sweep the domain)
 
 # The Crossroads — Network & Remote
 .\leyline.ps1       # Network diagnostics and remediation
@@ -1429,6 +1456,7 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 | **solder.ps1** | `-Action {Audit\|Repair}` — Audit is read-only (default), Repair runs DISM /RestoreHealth then sfc /scannow; `-Deep` — full DISM /ScanHealth in the audit; `-Source <WIM:path:index>` — repair from install media (`/LimitAccess`); `-Cleanup` — also run DISM /StartComponentCleanup; `-WhatIf` — preview every repair |
 | **auspex.ps1** | `$ReportOutputPath` — folder where the HTML report is saved (defaults to script directory; accepts any local or UNC path) |
 | **ward.ps1** | None — audit runs automatically; stale threshold is 90 days (editable in script); LAPS rotation is flagged overdue 3 days past the policy's `PasswordAgeDays` (`$LapsRotationGraceDays`) |
+| **garm.ps1** | `LogDirectory` (read); `OrgName` is shown in the report header. `-Identity <name>` traces one account (sAMAccountName, `DOMAIN\name` or UPN) — without it, unattended runs sweep the domain; `-Hours <1-720>` look-back window (default 24); `-Server <dc>` to discover the domain through a specific DC; `-SkipSourceScan` to read the DCs only. The recent-password-change window (14 days), low-threshold mark (5) and the three-source inspection cap are constants in the script |
 | **fathom.ps1** | None — thresholds are Warning < 15% free, Critical < 5% free (editable in script); old profile threshold is 90 days |
 | **vigil.ps1** | None — critical service list editable in script; `-Target` accepts any WinRM-reachable hostname |
 | **augur.ps1** | None — scans all physical disks automatically; `-Unattended` for silent HTML export |
@@ -1490,6 +1518,7 @@ All HTML reports and transcripts are saved to the configured `LogDirectory` from
 | **solder.ps1** | Log directory — `SOLDER_<timestamp>.html` (store health, pending restarts, SFC result, decoded update failures, every action taken). DISM and SFC keep their own logs in `%WINDIR%\Logs\DISM\dism.log` and `%WINDIR%\Logs\CBS\CBS.log` |
 | **auspex.ps1** | Log directory — `AUSPEX_<timestamp>.html` (dark-themed HTML report) |
 | **ward.ps1** | Log directory — `WARD_<timestamp>.html` (dark-themed HTML report) |
+| **garm.ps1** | Log directory — `GARM_<timestamp>.html` (trace: sources, per-DC lockout state, lockout and failed sign-in events, source-machine findings; sweep: locked accounts and lockouts by account) |
 | **fathom.ps1** | Log directory — `FATHOM_<timestamp>.html` (dark-themed HTML report) |
 | **vigil.ps1** | Log directory — `VIGIL_<timestamp>.html` (dark-themed HTML health report) |
 | **augur.ps1** | Log directory — `AUGUR_<timestamp>.html` (dark-themed HTML report) |
