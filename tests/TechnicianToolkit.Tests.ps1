@@ -1775,6 +1775,149 @@ Describe 'OATH domain trust helpers' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# TORPOR — the usage arithmetic that turns two snapshots into per-process and
+# per-disk load, the parsers, and the finding catalog.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'TORPOR slow-machine helpers' {
+    BeforeAll {
+        $ast = Get-ToolAst -FileName 'torpor.ps1'
+        $TorporFindings       = Get-ToolAssignmentValue -Ast $ast -VarName 'TorporFindings'
+        $ProcessHints         = Get-ToolAssignmentValue -Ast $ast -VarName 'ProcessHints'
+        $BootDegradationKinds = Get-ToolAssignmentValue -Ast $ast -VarName 'BootDegradationKinds'
+        foreach ($name in 'Get-TorporAverage', 'Get-TorporLevel', 'Get-ProcessHint', 'Get-ProcessCpuUsage', 'Group-TorporProcess',
+                          'Get-DiskRawDelta', 'ConvertFrom-PowercfgScheme', 'Get-PowerModeLabel', 'Test-StartupApprovedEnabled',
+                          'Get-BootDegradationKind', 'Get-TorporVerdict') {
+            . ([scriptblock]::Create((Get-ToolFunctionText -Ast $ast -FuncName $name)))
+        }
+        $torporSource = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'torpor.ps1') -Raw
+
+        function New-Snap { param($Id, $Name, $Cpu, $Io = 0, $Private = 1MB) [PSCustomObject]@{ Id = $Id; Name = $Name; CpuSeconds = $Cpu; WorkingSet = $Private; Private = $Private; IoBytes = $Io } }
+    }
+
+    Context 'finding catalog' {
+        It 'contains every code the tool raises' {
+            $raised = @([regex]::Matches($torporSource, "Add-TorporFinding\s+-Code\s+'([^']+)'") | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
+            $raised.Count | Should -BeGreaterThan 15
+            foreach ($code in $raised) { $TorporFindings.ContainsKey($code) | Should -BeTrue -Because "torpor.ps1 raises '$code'" }
+        }
+        It 'gives every finding a renderable Severity, Title, Summary and Remedy' {
+            foreach ($code in $TorporFindings.Keys) {
+                $TorporFindings[$code].Severity | Should -BeIn @('Error', 'Warning', 'Info')
+                $TorporFindings[$code].Title    | Should -Not -BeNullOrEmpty
+                $TorporFindings[$code].Remedy   | Should -Not -BeNullOrEmpty
+            }
+        }
+    }
+
+    Context 'process usage' {
+        It 'reports CPU as a share of the whole machine' {
+            $rows = @(Get-ProcessCpuUsage -Before @(New-Snap 10 'app' 5) -After @(New-Snap 10 'app' 15) -ElapsedSeconds 10 -LogicalProcessors 4)
+            $rows[0].CpuPercent | Should -Be 25
+        }
+        It 'credits a process that started in the window with all of its time' {
+            $rows = @(Get-ProcessCpuUsage -Before @() -After @(New-Snap 20 'new' 2 -Io 1000) -ElapsedSeconds 10 -LogicalProcessors 1)
+            $rows[0].CpuPercent    | Should -Be 20
+            $rows[0].IoBytesPerSec | Should -Be 100
+        }
+        It 'does not credit a reused PID with the old process''s time' {
+            $rows = @(Get-ProcessCpuUsage -Before @(New-Snap 30 'old' 100) -After @(New-Snap 30 'other' 1) -ElapsedSeconds 10 -LogicalProcessors 1)
+            $rows[0].CpuPercent | Should -Be 10
+        }
+        It 'never reports negative usage and tolerates unreadable CPU time' {
+            $rows = @(Get-ProcessCpuUsage -Before @(New-Snap 40 'p' 50 -Io 500) -After @(New-Snap 40 'p' 40 -Io 100), (New-Snap 41 'q' $null) -ElapsedSeconds 10 -LogicalProcessors 2)
+            $rows[0].CpuPercent    | Should -Be 0
+            $rows[0].IoBytesPerSec | Should -Be 0
+            $rows[1].CpuPercent    | Should -Be 0
+        }
+        It 'groups processes by name and sums their usage' {
+            $rows = @(
+                [PSCustomObject]@{ Id = 1; Name = 'msedge'; CpuPercent = 10; WorkingSet = 100; Private = 200; IoBytesPerSec = 5 }
+                [PSCustomObject]@{ Id = 2; Name = 'msedge'; CpuPercent = 5.5; WorkingSet = 100; Private = 300; IoBytesPerSec = 0 }
+                [PSCustomObject]@{ Id = 3; Name = 'svchost'; CpuPercent = 1; WorkingSet = 10; Private = 10; IoBytesPerSec = 0 }
+            )
+            $edge = @(Group-TorporProcess -Rows $rows) | Where-Object { $_.Name -eq 'msedge' }
+            $edge.Count      | Should -Be 2
+            $edge.CpuPercent | Should -Be 15.5
+            $edge.Private    | Should -Be 500
+            $edge.Ids        | Should -Be @(1, 2)
+        }
+        It 'hints at well-known processes regardless of case or .exe' {
+            Get-ProcessHint -Name 'MsMpEng.exe' | Should -Match 'Defender'
+            Get-ProcessHint -Name 'SearchIndexer' | Should -Match 'Search'
+            Get-ProcessHint -Name 'contoso-lob' | Should -BeNullOrEmpty
+            foreach ($k in $ProcessHints.Keys) { $k | Should -BeExactly $k.ToLowerInvariant() -Because 'lookups are lower-case' }
+        }
+    }
+
+    Context 'disk usage from raw counters' {
+        BeforeAll {
+            $before = [PSCustomObject]@{ Frequency_PerfTime = 1e7; Timestamp_PerfTime = 0; Timestamp_Sys100NS = 0; PercentIdleTime = 0
+                                         AvgDisksecPerTransfer = 0; AvgDisksecPerTransfer_Base = 0; DiskTransfersPersec = 0; DiskBytesPersec = 0 }
+        }
+        It 'derives busy time, response time, IOPS and throughput' {
+            # 10 s window, idle 40% of it, 100 transfers taking 0.2 s in total.
+            $after = [PSCustomObject]@{ Frequency_PerfTime = 1e7; Timestamp_PerfTime = 1e8; Timestamp_Sys100NS = 1e8; PercentIdleTime = 4e7
+                                        AvgDisksecPerTransfer = 2e6; AvgDisksecPerTransfer_Base = 100; DiskTransfersPersec = 1000; DiskBytesPersec = 1e7 }
+            $d = Get-DiskRawDelta -Before $before -After $after
+            $d.BusyPercent | Should -Be 60
+            $d.LatencyMs   | Should -Be 2
+            $d.Iops        | Should -Be 100
+            $d.BytesPerSec | Should -Be 1e6
+        }
+        It 'clamps busy time to 0-100 and reports no latency without transfers' {
+            $after = [PSCustomObject]@{ Frequency_PerfTime = 1e7; Timestamp_PerfTime = 1e8; Timestamp_Sys100NS = 1e8; PercentIdleTime = 1.2e8
+                                        AvgDisksecPerTransfer = 0; AvgDisksecPerTransfer_Base = 0; DiskTransfersPersec = 0; DiskBytesPersec = 0 }
+            $d = Get-DiskRawDelta -Before $before -After $after
+            $d.BusyPercent | Should -Be 0
+            $d.LatencyMs   | Should -Be 0
+        }
+    }
+
+    Context 'parsers and levels' {
+        It 'reads the active power scheme GUID and label' {
+            $s = ConvertFrom-PowercfgScheme -Lines @('Power Scheme GUID: A1841308-3541-4FAB-BC81-F71556F20B4A  (Power saver)')
+            $s.Guid | Should -Be 'a1841308-3541-4fab-bc81-f71556f20b4a'
+            $s.Name | Should -Be 'Power saver'
+            (ConvertFrom-PowercfgScheme -Lines @('nothing here')).Guid | Should -BeNullOrEmpty
+        }
+        It 'names the Windows power modes' {
+            Get-PowerModeLabel -Guid '961cc777-2547-4f9d-8174-7d86181b8a7a' | Should -Be 'Best power efficiency'
+            Get-PowerModeLabel -Guid '' | Should -BeNullOrEmpty
+            Get-PowerModeLabel -Guid 'abc' | Should -Match 'Unrecognised'
+        }
+        It 'reads Task Manager startup state' {
+            Test-StartupApprovedEnabled -Bytes ([byte[]](2, 0, 0)) | Should -BeTrue
+            Test-StartupApprovedEnabled -Bytes ([byte[]](3, 0, 0)) | Should -BeFalse
+            Test-StartupApprovedEnabled -Bytes ([byte[]](7, 0)) | Should -BeFalse
+            Test-StartupApprovedEnabled -Bytes $null | Should -BeTrue
+        }
+        It 'classifies boot degradation events and falls back to Other' {
+            Get-BootDegradationKind -EventId 102 | Should -Be 'Driver'
+            Get-BootDegradationKind -EventId 999 | Should -Be 'Other'
+            $BootDegradationKinds.ContainsKey(100) | Should -BeFalse -Because 'event 100 is the boot itself, not a component'
+        }
+        It 'grades values in both directions and averages only real samples' {
+            Get-TorporLevel -Value 95 -Warning 70 -ErrorAt 90 | Should -Be 'Error'
+            Get-TorporLevel -Value 75 -Warning 70 -ErrorAt 90 | Should -Be 'Warning'
+            Get-TorporLevel -Value 12 -Warning 15 -ErrorAt 5 -LowerIsWorse | Should -Be 'Warning'
+            Get-TorporLevel -Value 4 -Warning 15 -ErrorAt 5 -LowerIsWorse | Should -Be 'Error'
+            Get-TorporLevel -Value $null -Warning 1 -ErrorAt 2 | Should -Be 'Ok'
+            Get-TorporAverage -Values @(10, $null, 20) | Should -Be 15
+            Get-TorporAverage -Values @() | Should -BeNullOrEmpty
+        }
+    }
+
+    Context 'verdict' {
+        It 'reports Struggling, Strained and Healthy' {
+            (Get-TorporVerdict -FindingList @([PSCustomObject]@{ Severity = 'Error' })).Verdict | Should -Be 'Struggling'
+            (Get-TorporVerdict -FindingList @([PSCustomObject]@{ Severity = 'Warning' }, [PSCustomObject]@{ Severity = 'Info' })).Verdict | Should -Be 'Strained'
+            (Get-TorporVerdict -FindingList @([PSCustomObject]@{ Severity = 'Info' })).Verdict | Should -Be 'Healthy'
+            (Get-TorporVerdict -FindingList @()).Verdict | Should -Be 'Healthy'
+        }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # CATACOMB — the rights-mask collapse and SID categories that decide what
 # counts as broad write access, and the finding catalog.
 # ─────────────────────────────────────────────────────────────────────────────
