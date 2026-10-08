@@ -25,7 +25,7 @@
 
 .DESCRIPTION
     Interactive wizard for configuring the TechnicianToolkit. Sets org name,
-    log directory, default paths for ARCHIVE and REVENANT, and default values
+    log directory, default paths for EMBALM and REVENANT, and default values
     for COVENANT. Runs first-run environment checks to confirm prerequisites
     (PowerShell version, RSAT, winget, required modules). All settings are
     persisted to config.json in the toolkit directory.
@@ -128,10 +128,10 @@ $Fields = @(
         IsPath      = $false
     },
     [PSCustomObject]@{
-        DisplayName = 'ARCHIVE Default Destination'
+        DisplayName = 'EMBALM Default Destination'
         Key         = 'DefaultDestination'
         Section     = 'Archive'
-        Description = 'Default backup path for ARCHIVE (pre-reimaging profile backup)'
+        Description = 'Default backup path for EMBALM (pre-reimaging profile backup)'
         Hint        = '\\fileserver\Backups\Archive'
         IsPath      = $true
     },
@@ -483,28 +483,28 @@ function Invoke-EnvironmentCheck {
         Write-Host "  [!] Chocolatey (choco)          -  Not found (optional for CONJURE)" -ForegroundColor $C.Warning
     }
 
-    # 8. RSAT ActiveDirectory module (for CITADEL)
+    # 8. RSAT ActiveDirectory module (for SPHINX)
     $adModule = Get-Module -ListAvailable -Name ActiveDirectory -ErrorAction SilentlyContinue
     if ($adModule) {
         Write-Host "  [+] RSAT: ActiveDirectory       -  Available ($($adModule[0].Version))" -ForegroundColor $C.Success
     } else {
-        Write-Host "  [!] RSAT: ActiveDirectory       -  Not found (required for CITADEL)" -ForegroundColor $C.Warning
+        Write-Host "  [!] RSAT: ActiveDirectory       -  Not found (required for SPHINX)" -ForegroundColor $C.Warning
     }
 
-    # 9. Microsoft.Graph module (for RELIQUARY)
+    # 9. Microsoft.Graph module (for ALMANAC)
     $graphModule = Get-Module -ListAvailable -Name Microsoft.Graph -ErrorAction SilentlyContinue
     if ($graphModule) {
         Write-Host "  [+] Microsoft.Graph module      -  Available ($($graphModule[0].Version))" -ForegroundColor $C.Success
     } else {
-        Write-Host "  [!] Microsoft.Graph module      -  Not found (required for RELIQUARY)" -ForegroundColor $C.Warning
+        Write-Host "  [!] Microsoft.Graph module      -  Not found (required for ALMANAC)" -ForegroundColor $C.Warning
     }
 
-    # 10. Az module (for TALISMAN)
+    # 10. Az module (for ZENITH)
     $azModule = Get-Module -ListAvailable -Name Az -ErrorAction SilentlyContinue
     if ($azModule) {
         Write-Host "  [+] Az module                   -  Available ($($azModule[0].Version))" -ForegroundColor $C.Success
     } else {
-        Write-Host "  [!] Az module                   -  Not found (required for TALISMAN)" -ForegroundColor $C.Warning
+        Write-Host "  [!] Az module                   -  Not found (required for ZENITH)" -ForegroundColor $C.Warning
     }
 
     Write-Host ""

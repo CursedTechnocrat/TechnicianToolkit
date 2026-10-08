@@ -86,7 +86,7 @@ namespace TechnicianToolkit.Harness
             Console.WriteLine();
             Console.WriteLine("Parameters are passed through as they are declared:");
             Console.WriteLine("  run WARD -Unattended");
-            Console.WriteLine("  run CIPHER -Action Status -Drive C");
+            Console.WriteLine("  run WYRM -Action Status -Drive C");
         }
 
         private static int Unknown(string command)

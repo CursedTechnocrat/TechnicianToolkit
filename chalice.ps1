@@ -245,7 +245,7 @@ $ChaliceFindings = @{
         Severity = 'Warning'
         Title    = 'No Microsoft 365 license token for this user'
         Summary  = 'Microsoft 365 Apps is installed but this user has no license token, so Office shows Unlicensed Product or asks to activate.'
-        Remedy   = 'Sign in to Office with the licensed work account (File > Account). If it still says Unlicensed, run -Action ResetSignIn and sign in again; confirm the license in R.E.L.I.Q.U.A.R.Y.'
+        Remedy   = 'Sign in to Office with the licensed work account (File > Account). If it still says Unlicensed, run -Action ResetSignIn and sign in again; confirm the license in A.L.M.A.N.A.C.'
     }
     'PersonalAccountOnly' = @{
         Severity = 'Warning'

@@ -101,25 +101,28 @@ $ColorSchema = @{
 # ===========================
 
 $CategoryOrder = @(
-    'Deployment & Onboarding'
-    'Diagnostics & Reporting'
-    'Security'
-    'Network & Remote'
-    'Cloud & Identity'
-    'Data & Migration'
+    'The Workshop — Deployment & Onboarding'
+    'The Observatory — Diagnostics & Reporting'
+    'The Bestiary — Security'
+    'The Crossroads — Network & Remote'
+    'The Firmament — Cloud & Identity'
+    'The Necropolis — Data & Migration'
 )
 
+# Menu letters follow the plain half of each name, so they stay the ones
+# technicians already know. Each category's tools take their names from its
+# theme (see CLAUDE.md, 'Naming').
 $CategoryKeys = [ordered]@{
-    'D' = 'Deployment & Onboarding'
-    'R' = 'Diagnostics & Reporting'
-    'S' = 'Security'
-    'N' = 'Network & Remote'
-    'C' = 'Cloud & Identity'
-    'M' = 'Data & Migration'
+    'D' = 'The Workshop — Deployment & Onboarding'
+    'R' = 'The Observatory — Diagnostics & Reporting'
+    'S' = 'The Bestiary — Security'
+    'N' = 'The Crossroads — Network & Remote'
+    'C' = 'The Firmament — Cloud & Identity'
+    'M' = 'The Necropolis — Data & Migration'
 }
 
 $Tools = @(
-    # ── Deployment & Onboarding (1–9) ───────────────────────────────
+    # ── The Workshop (1–19) — the artificer: crafting & enchanting ──────────
     [PSCustomObject]@{
         Key         = '1'
         Name        = 'C.O.V.E.N.A.N.T.'
@@ -127,7 +130,7 @@ $Tools = @(
         Version     = '5.1'
         Description = 'Machine onboarding, Entra ID domain join, and new device setup'
         Color       = 'Blue'
-        Category    = 'Deployment & Onboarding'
+        Category    = 'The Workshop — Deployment & Onboarding'
     },
     [PSCustomObject]@{
         Key         = '2'
@@ -136,7 +139,7 @@ $Tools = @(
         Version     = '5.1'
         Description = 'Software deployment via Windows Package Manager or Chocolatey'
         Color       = 'Magenta'
-        Category    = 'Deployment & Onboarding'
+        Category    = 'The Workshop — Deployment & Onboarding'
     },
     [PSCustomObject]@{
         Key         = '3'
@@ -145,7 +148,7 @@ $Tools = @(
         Version     = '5.1'
         Description = 'Printer driver installation and network printer configuration'
         Color       = 'Cyan'
-        Category    = 'Deployment & Onboarding'
+        Category    = 'The Workshop — Deployment & Onboarding'
     },
     [PSCustomObject]@{
         Key         = '4'
@@ -154,16 +157,16 @@ $Tools = @(
         Version     = '5.1'
         Description = 'Driver detection & installation  -  problem devices, Windows Update, local packages'
         Color       = 'Yellow'
-        Category    = 'Deployment & Onboarding'
+        Category    = 'The Workshop — Deployment & Onboarding'
     },
     [PSCustomObject]@{
         Key         = '5'
-        Name        = 'R.E.S.T.O.R.A.T.I.O.N.'
-        File        = 'restoration.ps1'
+        Name        = 'W.H.E.T.S.T.O.N.E.'
+        File        = 'whetstone.ps1'
         Version     = '5.1'
         Description = 'Automated Windows Update management and maintenance'
         Color       = 'Green'
-        Category    = 'Deployment & Onboarding'
+        Category    = 'The Workshop — Deployment & Onboarding'
     },
     [PSCustomObject]@{
         Key         = '6'
@@ -172,7 +175,7 @@ $Tools = @(
         Version     = '5.1'
         Description = 'Toolkit setup wizard  -  org name, log path, Teams webhook, and tool defaults'
         Color       = 'White'
-        Category    = 'Deployment & Onboarding'
+        Category    = 'The Workshop — Deployment & Onboarding'
     },
     [PSCustomObject]@{
         Key         = '7'
@@ -181,7 +184,7 @@ $Tools = @(
         Version     = '5.1'
         Description = 'Workflow orchestrator  -  runs named recipes (Onboard, Retire, HealthCheck, SecuritySweep, NetworkSweep, TenantSweep) or custom PSD1 files'
         Color       = 'Magenta'
-        Category    = 'Deployment & Onboarding'
+        Category    = 'The Workshop — Deployment & Onboarding'
     },
     [PSCustomObject]@{
         Key         = '8'
@@ -190,402 +193,399 @@ $Tools = @(
         Version     = '5.1'
         Description = 'Windows Update connectivity diagnosis & repair  -  WSUS pointer, WinHTTP proxy, policy source, update services'
         Color       = 'Cyan'
-        Category    = 'Deployment & Onboarding'
+        Category    = 'The Workshop — Deployment & Onboarding'
     },
     [PSCustomObject]@{
         Key         = '9'
-        Name        = 'S.U.T.U.R.E.'
-        File        = 'suture.ps1'
+        Name        = 'S.O.L.D.E.R.'
+        File        = 'solder.ps1'
         Version     = '5.1'
         Description = 'Windows servicing repair  -  component store health, pending restarts, last SFC result, update failure codes, DISM RestoreHealth + SFC'
         Color       = 'Green'
-        Category    = 'Deployment & Onboarding'
+        Category    = 'The Workshop — Deployment & Onboarding'
     },
-    # ── Diagnostics & Reporting (10–19, overflow 60–69) ─────────────
     [PSCustomObject]@{
         Key         = '10'
-        Name        = 'A.U.S.P.E.X.'
-        File        = 'auspex.ps1'
-        Version     = '5.1'
-        Description = 'System diagnostics, health assessment, and HTML report generation'
-        Color       = 'Yellow'
-        Category    = 'Diagnostics & Reporting'
-    },
-    [PSCustomObject]@{
-        Key         = '11'
-        Name        = 'W.A.R.D.'
-        File        = 'ward.ps1'
-        Version     = '5.1'
-        Description = 'User account audit  -  roles, last logon, flags, HTML report'
-        Color       = 'Yellow'
-        Category    = 'Diagnostics & Reporting'
-    },
-    [PSCustomObject]@{
-        Key         = '12'
-        Name        = 'T.H.R.E.S.H.O.L.D.'
-        File        = 'threshold.ps1'
-        Version     = '5.1'
-        Description = 'Disk space monitor  -  volume usage, low-space alerts, temp cleanup, old profile detection'
-        Color       = 'Yellow'
-        Category    = 'Diagnostics & Reporting'
-    },
-    [PSCustomObject]@{
-        Key         = '13'
-        Name        = 'G.A.R.G.O.Y.L.E.'
-        File        = 'gargoyle.ps1'
-        Version     = '5.1'
-        Description = 'Service & task monitor  -  critical services, scheduled tasks, event log errors'
-        Color       = 'Red'
-        Category    = 'Diagnostics & Reporting'
-    },
-    [PSCustomObject]@{
-        Key         = '14'
-        Name        = 'A.U.G.U.R.'
-        File        = 'augur.ps1'
-        Version     = '5.1'
-        Description = 'Disk wear & health  -  SMART status, physical disk reliability, HTML report'
-        Color       = 'Yellow'
-        Category    = 'Diagnostics & Reporting'
-    },
-    [PSCustomObject]@{
-        Key         = '15'
         Name        = 'C.L.E.A.N.S.E.'
         File        = 'cleanse.ps1'
         Version     = '5.1'
         Description = 'Disk cleanup  -  temp files, Windows Update cache, browser caches, Recycle Bin'
         Color       = 'Magenta'
-        Category    = 'Diagnostics & Reporting'
+        Category    = 'The Workshop — Deployment & Onboarding'
     },
     [PSCustomObject]@{
-        Key         = '16'
-        Name        = 'S.C.R.Y.E.R.'
-        File        = 'scryer.ps1'
-        Version     = '5.1'
-        Description = 'Unified diagnostic report  -  system info, users, disks, SMART, services in one HTML'
-        Color       = 'Cyan'
-        Category    = 'Diagnostics & Reporting'
-    },
-    [PSCustomObject]@{
-        Key         = '17'
+        Key         = '11'
         Name        = 'A.N.V.I.L.'
         File        = 'anvil.ps1'
         Version     = '5.1'
         Description = 'BIOS / UEFI / firmware audit  -  system identity, Secure Boot, vendor channels, pending WU updates'
         Color       = 'Yellow'
-        Category    = 'Diagnostics & Reporting'
+        Category    = 'The Workshop — Deployment & Onboarding'
     },
     [PSCustomObject]@{
-        Key         = '18'
-        Name        = 'P.Y.R.E.'
-        File        = 'pyre.ps1'
-        Version     = '5.1'
-        Description = 'Laptop battery health audit  -  design vs current capacity, cycle count, replacement verdict, powercfg /batteryreport enrichment'
-        Color       = 'Red'
-        Category    = 'Diagnostics & Reporting'
-    },
-    [PSCustomObject]@{
-        Key         = '19'
-        Name        = 'C.O.D.E.X.'
-        File        = 'codex.ps1'
-        Version     = '5.1'
-        Description = 'Toolkit report index  -  scans log directory for existing HTML reports, groups by tool, emits a single rollup with relative links'
-        Color       = 'Blue'
-        Category    = 'Diagnostics & Reporting'
-    },
-    # 10–19 is full; Diagnostics continues at 60 rather than renumbering the
-    # keys technicians already know.
-    [PSCustomObject]@{
-        Key         = '60'
-        Name        = 'N.E.C.R.O.P.S.Y.'
-        File        = 'necropsy.ps1'
-        Version     = '5.1'
-        Description = 'Crash & unexpected-reboot analysis  -  bugchecks, Kernel-Power 41, WHEA hardware errors, display resets, dump files, change timeline'
-        Color       = 'Red'
-        Category    = 'Diagnostics & Reporting'
-    },
-    [PSCustomObject]@{
-        Key         = '61'
-        Name        = 'T.O.R.P.O.R.'
-        File        = 'torpor.ps1'
-        Version     = '5.1'
-        Description = 'Slow-machine triage  -  CPU, memory and disk load over a sample, top processes by name, CPU limits, boot delays, startup programs, app hangs'
-        Color       = 'Yellow'
-        Category    = 'Diagnostics & Reporting'
-    },
-    # ── Security (20–29) ─────────────────────────────────────────────
-    [PSCustomObject]@{
-        Key         = '20'
-        Name        = 'C.I.P.H.E.R.'
-        File        = 'cipher.ps1'
-        Version     = '5.1'
-        Description = 'BitLocker drive encryption  -  enable, disable, backup keys'
-        Color       = 'Green'
-        Category    = 'Security'
-    },
-    [PSCustomObject]@{
-        Key         = '21'
-        Name        = 'S.I.G.I.L.'
-        File        = 'sigil.ps1'
-        Version     = '5.1'
-        Description = 'Security baseline enforcement  -  telemetry, UAC, firewall, audit policy'
-        Color       = 'Red'
-        Category    = 'Security'
-    },
-    [PSCustomObject]@{
-        Key         = '22'
-        Name        = 'C.I.T.A.D.E.L.'
-        File        = 'citadel.ps1'
-        Version     = '5.1'
-        Description = 'Active Directory management  -  search, unlock, reset passwords, group membership'
-        Color       = 'Blue'
-        Category    = 'Security'
-    },
-    [PSCustomObject]@{
-        Key         = '23'
-        Name        = 'A.R.T.I.F.A.C.T.'
-        File        = 'artifact.ps1'
-        Version     = '5.1'
-        Description = 'Certificate health monitor  -  local cert stores, SSL/TLS expiry, HTML report'
-        Color       = 'Yellow'
-        Category    = 'Security'
-    },
-    [PSCustomObject]@{
-        Key         = '24'
-        Name        = 'T.A.L.O.N.'
-        File        = 'talon.ps1'
-        Version     = '5.1'
-        Description = 'Persistence / autoruns audit  -  Run keys, startup folders, services, tasks, WMI, IFEO, Winlogon'
-        Color       = 'Red'
-        Category    = 'Security'
-    },
-    [PSCustomObject]@{
-        Key         = '25'
-        Name        = 'T.O.T.E.M.'
-        File        = 'totem.ps1'
-        Version     = '5.1'
-        Description = 'TPM health audit  -  presence, spec, ownership, readiness, BitLocker dependency, attestation'
-        Color       = 'Cyan'
-        Category    = 'Security'
-    },
-    [PSCustomObject]@{
-        Key         = '26'
-        Name        = 'P.A.L.A.D.I.N.'
-        File        = 'paladin.ps1'
-        Version     = '5.1'
-        Description = 'AV / Microsoft Defender health audit  -  state, signatures, scans, threats, exclusions, ASR rules, services'
-        Color       = 'Magenta'
-        Category    = 'Security'
-    },
-    [PSCustomObject]@{
-        Key         = '27'
-        Name        = 'H.E.R.A.L.D.'
-        File        = 'herald.ps1'
-        Version     = '5.1'
-        Description = 'Active Directory account roster  -  domain password & lockout policy verdicts, full name / alias / access level per account, nested group expansion, privileged group membership, HTML + review CSV'
-        Color       = 'Cyan'
-        Category    = 'Security'
-    },
-    [PSCustomObject]@{
-        Key         = '28'
-        Name        = 'C.A.T.A.C.O.M.B.'
-        File        = 'catacomb.ps1'
-        Version     = '5.1'
-        Description = 'File share & NTFS permissions review  -  share and NTFS access, everyone-type write, direct user grants, orphaned SIDs, broken inheritance, HTML + CSV'
-        Color       = 'Yellow'
-        Category    = 'Security'
-    },
-    # ── Network & Remote (30–39) ─────────────────────────────────────
-    [PSCustomObject]@{
-        Key         = '30'
-        Name        = 'L.E.Y.L.I.N.E.'
-        File        = 'leyline.ps1'
-        Version     = '5.1'
-        Description = 'Network diagnostics & remediation  -  adapters, ping, DNS, port tests'
-        Color       = 'Cyan'
-        Category    = 'Network & Remote'
-    },
-    [PSCustomObject]@{
-        Key         = '31'
-        Name        = 'S.H.A.D.E.'
-        File        = 'shade.ps1'
-        Version     = '5.1'
-        Description = 'Remote execution via WinRM  -  run toolkit tools on a remote machine'
-        Color       = 'White'
-        Category    = 'Network & Remote'
-    },
-    [PSCustomObject]@{
-        Key         = '32'
-        Name        = 'L.A.N.T.E.R.N.'
-        File        = 'lantern.ps1'
-        Version     = '5.1'
-        Description = 'Network discovery & asset inventory  -  subnet sweep, DNS, MAC, port scan'
-        Color       = 'Cyan'
-        Category    = 'Network & Remote'
-    },
-    [PSCustomObject]@{
-        Key         = '33'
-        Name        = 'B.E.A.C.O.N.'
-        File        = 'beacon.ps1'
-        Version     = '5.1'
-        Description = 'Wi-Fi profile audit  -  saved profiles, auth/cipher tier, auto-connect, hidden SSID, MAC randomisation, key material'
-        Color       = 'Yellow'
-        Category    = 'Network & Remote'
-    },
-    [PSCustomObject]@{
-        Key         = '34'
-        Name        = 'P.O.R.T.A.L.'
-        File        = 'portal.ps1'
-        Version     = '5.1'
-        Description = 'VPN / Always-On VPN audit  -  built-in connections, app triggers, NRPT, tunnel interfaces, third-party clients'
-        Color       = 'Green'
-        Category    = 'Network & Remote'
-    },
-    [PSCustomObject]@{
-        Key         = '35'
-        Name        = 'O.A.T.H.'
-        File        = 'oath.ps1'
-        Version     = '5.1'
-        Description = 'Domain trust & secure channel diagnosis and repair  -  DC discovery, DNS, DC ports, clock skew, nltest secure channel, machine password reset'
-        Color       = 'Green'
-        Category    = 'Network & Remote'
-    },
-    # ── Cloud & Identity (40–49) ─────────────────────────────────────
-    [PSCustomObject]@{
-        Key         = '40'
-        Name        = 'T.A.L.I.S.M.A.N.'
-        File        = 'talisman.ps1'
-        Version     = '5.1'
-        Description = 'Azure environment assessment  -  security posture, RBAC, backup coverage, HTML report'
-        Color       = 'Cyan'
-        Category    = 'Cloud & Identity'
-    },
-    [PSCustomObject]@{
-        Key         = '41'
-        Name        = 'R.E.L.I.Q.U.A.R.Y.'
-        File        = 'reliquary.ps1'
-        Version     = '5.1'
-        Description = 'M365 license & mailbox audit  -  SKU inventory, unlicensed users, MFA status'
-        Color       = 'Green'
-        Category    = 'Cloud & Identity'
-    },
-    [PSCustomObject]@{
-        Key         = '42'
-        Name        = 'G.O.L.E.M.'
-        File        = 'golem.ps1'
-        Version     = '5.1'
-        Description = 'Intune / MDM compliance audit  -  managed devices, compliance state, stale devices, config profiles'
-        Color       = 'Yellow'
-        Category    = 'Cloud & Identity'
-    },
-    [PSCustomObject]@{
-        Key         = '43'
-        Name        = 'W.R.A.I.T.H.'
-        File        = 'wraith.ps1'
-        Version     = '5.1'
-        Description = 'Entra ID identity hygiene audit  -  guests, privileged roles, password-never-expires, stale admins, disabled-but-licensed'
-        Color       = 'Red'
-        Category    = 'Cloud & Identity'
-    },
-    [PSCustomObject]@{
-        Key         = '44'
-        Name        = 'C.O.N.C.L.A.V.E.'
-        File        = 'conclave.ps1'
-        Version     = '5.1'
-        Description = 'Microsoft Teams audit  -  orphan teams, public teams, guest membership, large teams, stale teams'
-        Color       = 'Magenta'
-        Category    = 'Cloud & Identity'
-    },
-    [PSCustomObject]@{
-        Key         = '45'
-        Name        = 'G.R.O.V.E.'
-        File        = 'grove.ps1'
-        Version     = '5.1'
-        Description = 'SharePoint Online audit  -  site inventory, storage, external sharing, ownerless and stale sites'
-        Color       = 'Green'
-        Category    = 'Cloud & Identity'
-    },
-    [PSCustomObject]@{
-        Key         = '46'
-        Name        = 'T.E.N.D.R.I.L.'
-        File        = 'tendril.ps1'
-        Version     = '5.1'
-        Description = 'Entra ID group dependency audit  -  what breaks if we delete this group? Licensing, CA, apps, roles, AUs, Intune, SP, EXO, Azure RBAC'
-        Color       = 'Blue'
-        Category    = 'Cloud & Identity'
-    },
-    [PSCustomObject]@{
-        Key         = '47'
-        Name        = 'R.A.V.E.N.'
-        File        = 'raven.ps1'
-        Version     = '5.1'
-        Description = 'Exchange Online mailbox security audit  -  external forwarding, suspicious inbox rules, SMTP AUTH, auditing, delegation, SPF / DKIM / DMARC'
-        Color       = 'Magenta'
-        Category    = 'Cloud & Identity'
-    },
-    [PSCustomObject]@{
-        Key         = '48'
-        Name        = 'R.A.M.P.A.R.T.'
-        File        = 'rampart.ps1'
-        Version     = '5.1'
-        Description = 'Entra ID Conditional Access posture  -  MFA and legacy-auth baseline, admin coverage, report-only and disabled policies, exclusions, break-glass, named locations'
-        Color       = 'Cyan'
-        Category    = 'Cloud & Identity'
-    },
-    [PSCustomObject]@{
-        Key         = '49'
-        Name        = 'C.A.R.I.L.L.O.N.'
-        File        = 'carillon.ps1'
-        Version     = '5.1'
-        Description = 'Teams Phone call queues & auto attendants  -  agents by display name, opt-in and voice state, overflow / timeout routing, menus, resource accounts'
-        Color       = 'Magenta'
-        Category    = 'Cloud & Identity'
-    },
-    # 40–49 is full; Cloud & Identity continues at 70, as Diagnostics did at 60.
-    [PSCustomObject]@{
-        Key         = '70'
+        Key         = '12'
         Name        = 'C.H.A.L.I.C.E.'
         File        = 'chalice.ps1'
         Version     = '5.1'
         Description = 'Microsoft 365 Apps client repair  -  version, channel, support dates, license tokens, cached accounts, WAM / token broker, PRT, Teams cache; reset sign-in, Teams, Quick Repair'
         Color       = 'Yellow'
-        Category    = 'Cloud & Identity'
+        Category    = 'The Workshop — Deployment & Onboarding'
     },
-    # ── Data & Migration (50–59) ─────────────────────────────────────
+    # ── The Observatory (20–39) — scrying & magical sight ───────────────────
     [PSCustomObject]@{
-        Key         = '50'
+        Key         = '20'
+        Name        = 'A.U.S.P.E.X.'
+        File        = 'auspex.ps1'
+        Version     = '5.1'
+        Description = 'System diagnostics, health assessment, and HTML report generation'
+        Color       = 'Yellow'
+        Category    = 'The Observatory — Diagnostics & Reporting'
+    },
+    [PSCustomObject]@{
+        Key         = '21'
+        Name        = 'S.C.R.Y.E.R.'
+        File        = 'scryer.ps1'
+        Version     = '5.1'
+        Description = 'Unified diagnostic report  -  system info, users, disks, SMART, services in one HTML'
+        Color       = 'Cyan'
+        Category    = 'The Observatory — Diagnostics & Reporting'
+    },
+    [PSCustomObject]@{
+        Key         = '22'
+        Name        = 'A.U.G.U.R.'
+        File        = 'augur.ps1'
+        Version     = '5.1'
+        Description = 'Disk wear & health  -  SMART status, physical disk reliability, HTML report'
+        Color       = 'Yellow'
+        Category    = 'The Observatory — Diagnostics & Reporting'
+    },
+    [PSCustomObject]@{
+        Key         = '23'
+        Name        = 'F.A.T.H.O.M.'
+        File        = 'fathom.ps1'
+        Version     = '5.1'
+        Description = 'Disk space monitor  -  volume usage, low-space alerts, temp cleanup, old profile detection'
+        Color       = 'Yellow'
+        Category    = 'The Observatory — Diagnostics & Reporting'
+    },
+    [PSCustomObject]@{
+        Key         = '24'
+        Name        = 'V.I.G.I.L.'
+        File        = 'vigil.ps1'
+        Version     = '5.1'
+        Description = 'Service & task monitor  -  critical services, scheduled tasks, event log errors'
+        Color       = 'Red'
+        Category    = 'The Observatory — Diagnostics & Reporting'
+    },
+    [PSCustomObject]@{
+        Key         = '25'
+        Name        = 'H.O.U.R.G.L.A.S.S.'
+        File        = 'hourglass.ps1'
+        Version     = '5.1'
+        Description = 'Laptop battery health audit  -  design vs current capacity, cycle count, replacement verdict, powercfg /batteryreport enrichment'
+        Color       = 'Red'
+        Category    = 'The Observatory — Diagnostics & Reporting'
+    },
+    [PSCustomObject]@{
+        Key         = '26'
+        Name        = 'N.E.C.R.O.P.S.Y.'
+        File        = 'necropsy.ps1'
+        Version     = '5.1'
+        Description = 'Crash & unexpected-reboot analysis  -  bugchecks, Kernel-Power 41, WHEA hardware errors, display resets, dump files, change timeline'
+        Color       = 'Red'
+        Category    = 'The Observatory — Diagnostics & Reporting'
+    },
+    [PSCustomObject]@{
+        Key         = '27'
+        Name        = 'T.O.R.P.O.R.'
+        File        = 'torpor.ps1'
+        Version     = '5.1'
+        Description = 'Slow-machine triage  -  CPU, memory and disk load over a sample, top processes by name, CPU limits, boot delays, startup programs, app hangs'
+        Color       = 'Yellow'
+        Category    = 'The Observatory — Diagnostics & Reporting'
+    },
+    [PSCustomObject]@{
+        Key         = '28'
+        Name        = 'C.O.D.E.X.'
+        File        = 'codex.ps1'
+        Version     = '5.1'
+        Description = 'Toolkit report index  -  scans log directory for existing HTML reports, groups by tool, emits a single rollup with relative links'
+        Color       = 'Blue'
+        Category    = 'The Observatory — Diagnostics & Reporting'
+    },
+    # ── The Bestiary (40–59) — guardian beasts ──────────────────────────────
+    [PSCustomObject]@{
+        Key         = '40'
+        Name        = 'W.Y.R.M.'
+        File        = 'wyrm.ps1'
+        Version     = '5.1'
+        Description = 'BitLocker drive encryption  -  enable, disable, backup keys'
+        Color       = 'Green'
+        Category    = 'The Bestiary — Security'
+    },
+    [PSCustomObject]@{
+        Key         = '41'
+        Name        = 'B.A.S.I.L.I.S.K.'
+        File        = 'basilisk.ps1'
+        Version     = '5.1'
+        Description = 'Security baseline enforcement  -  telemetry, UAC, firewall, audit policy'
+        Color       = 'Red'
+        Category    = 'The Bestiary — Security'
+    },
+    [PSCustomObject]@{
+        Key         = '42'
+        Name        = 'S.P.H.I.N.X.'
+        File        = 'sphinx.ps1'
+        Version     = '5.1'
+        Description = 'Active Directory management  -  search, unlock, reset passwords, group membership'
+        Color       = 'Blue'
+        Category    = 'The Bestiary — Security'
+    },
+    [PSCustomObject]@{
+        Key         = '43'
+        Name        = 'P.H.O.E.N.I.X.'
+        File        = 'phoenix.ps1'
+        Version     = '5.1'
+        Description = 'Certificate health monitor  -  local cert stores, SSL/TLS expiry, HTML report'
+        Color       = 'Yellow'
+        Category    = 'The Bestiary — Security'
+    },
+    [PSCustomObject]@{
+        Key         = '44'
+        Name        = 'T.A.L.O.N.'
+        File        = 'talon.ps1'
+        Version     = '5.1'
+        Description = 'Persistence / autoruns audit  -  Run keys, startup folders, services, tasks, WMI, IFEO, Winlogon'
+        Color       = 'Red'
+        Category    = 'The Bestiary — Security'
+    },
+    [PSCustomObject]@{
+        Key         = '45'
+        Name        = 'T.O.T.E.M.'
+        File        = 'totem.ps1'
+        Version     = '5.1'
+        Description = 'TPM health audit  -  presence, spec, ownership, readiness, BitLocker dependency, attestation'
+        Color       = 'Cyan'
+        Category    = 'The Bestiary — Security'
+    },
+    [PSCustomObject]@{
+        Key         = '46'
+        Name        = 'G.R.I.F.F.I.N.'
+        File        = 'griffin.ps1'
+        Version     = '5.1'
+        Description = 'AV / Microsoft Defender health audit  -  state, signatures, scans, threats, exclusions, ASR rules, services'
+        Color       = 'Magenta'
+        Category    = 'The Bestiary — Security'
+    },
+    [PSCustomObject]@{
+        Key         = '47'
+        Name        = 'A.R.G.U.S.'
+        File        = 'argus.ps1'
+        Version     = '5.1'
+        Description = 'Active Directory account roster  -  domain password & lockout policy verdicts, full name / alias / access level per account, nested group expansion, privileged group membership, HTML + review CSV'
+        Color       = 'Cyan'
+        Category    = 'The Bestiary — Security'
+    },
+    [PSCustomObject]@{
+        Key         = '48'
+        Name        = 'M.I.N.O.T.A.U.R.'
+        File        = 'minotaur.ps1'
+        Version     = '5.1'
+        Description = 'File share & NTFS permissions review  -  share and NTFS access, everyone-type write, direct user grants, orphaned SIDs, broken inheritance, HTML + CSV'
+        Color       = 'Yellow'
+        Category    = 'The Bestiary — Security'
+    },
+    [PSCustomObject]@{
+        Key         = '49'
+        Name        = 'W.A.R.D.'
+        File        = 'ward.ps1'
+        Version     = '5.1'
+        Description = 'User account audit  -  roles, last logon, flags, HTML report'
+        Color       = 'Yellow'
+        Category    = 'The Bestiary — Security'
+    },
+    # ── The Crossroads (60–69) — arcane paths & lights ──────────────────────
+    [PSCustomObject]@{
+        Key         = '60'
+        Name        = 'L.E.Y.L.I.N.E.'
+        File        = 'leyline.ps1'
+        Version     = '5.1'
+        Description = 'Network diagnostics & remediation  -  adapters, ping, DNS, port tests'
+        Color       = 'Cyan'
+        Category    = 'The Crossroads — Network & Remote'
+    },
+    [PSCustomObject]@{
+        Key         = '61'
+        Name        = 'E.M.I.S.S.A.R.Y.'
+        File        = 'emissary.ps1'
+        Version     = '5.1'
+        Description = 'Remote execution via WinRM  -  run toolkit tools on a remote machine'
+        Color       = 'White'
+        Category    = 'The Crossroads — Network & Remote'
+    },
+    [PSCustomObject]@{
+        Key         = '62'
+        Name        = 'L.A.N.T.E.R.N.'
+        File        = 'lantern.ps1'
+        Version     = '5.1'
+        Description = 'Network discovery & asset inventory  -  subnet sweep, DNS, MAC, port scan'
+        Color       = 'Cyan'
+        Category    = 'The Crossroads — Network & Remote'
+    },
+    [PSCustomObject]@{
+        Key         = '63'
+        Name        = 'W.I.S.P.'
+        File        = 'wisp.ps1'
+        Version     = '5.1'
+        Description = 'Wi-Fi profile audit  -  saved profiles, auth/cipher tier, auto-connect, hidden SSID, MAC randomisation, key material'
+        Color       = 'Yellow'
+        Category    = 'The Crossroads — Network & Remote'
+    },
+    [PSCustomObject]@{
+        Key         = '64'
+        Name        = 'P.O.R.T.A.L.'
+        File        = 'portal.ps1'
+        Version     = '5.1'
+        Description = 'VPN / Always-On VPN audit  -  built-in connections, app triggers, NRPT, tunnel interfaces, third-party clients'
+        Color       = 'Green'
+        Category    = 'The Crossroads — Network & Remote'
+    },
+    [PSCustomObject]@{
+        Key         = '65'
+        Name        = 'L.O.D.E.S.T.A.R.'
+        File        = 'lodestar.ps1'
+        Version     = '5.1'
+        Description = 'Domain trust & secure channel diagnosis and repair  -  DC discovery, DNS, DC ports, clock skew, nltest secure channel, machine password reset'
+        Color       = 'Green'
+        Category    = 'The Crossroads — Network & Remote'
+    },
+    # ── The Firmament (70–89) — the sky & the celestial ─────────────────────
+    [PSCustomObject]@{
+        Key         = '70'
+        Name        = 'Z.E.N.I.T.H.'
+        File        = 'zenith.ps1'
+        Version     = '5.1'
+        Description = 'Azure environment assessment  -  security posture, RBAC, backup coverage, HTML report'
+        Color       = 'Cyan'
+        Category    = 'The Firmament — Cloud & Identity'
+    },
+    [PSCustomObject]@{
+        Key         = '71'
+        Name        = 'A.L.M.A.N.A.C.'
+        File        = 'almanac.ps1'
+        Version     = '5.1'
+        Description = 'M365 license & mailbox audit  -  SKU inventory, unlicensed users, MFA status'
+        Color       = 'Green'
+        Category    = 'The Firmament — Cloud & Identity'
+    },
+    [PSCustomObject]@{
+        Key         = '72'
+        Name        = 'O.R.B.I.T.'
+        File        = 'orbit.ps1'
+        Version     = '5.1'
+        Description = 'Intune / MDM compliance audit  -  managed devices, compliance state, stale devices, config profiles'
+        Color       = 'Yellow'
+        Category    = 'The Firmament — Cloud & Identity'
+    },
+    [PSCustomObject]@{
+        Key         = '73'
+        Name        = 'E.C.L.I.P.S.E.'
+        File        = 'eclipse.ps1'
+        Version     = '5.1'
+        Description = 'Entra ID identity hygiene audit  -  guests, privileged roles, password-never-expires, stale admins, disabled-but-licensed'
+        Color       = 'Red'
+        Category    = 'The Firmament — Cloud & Identity'
+    },
+    [PSCustomObject]@{
+        Key         = '74'
+        Name        = 'A.S.T.E.R.I.S.M.'
+        File        = 'asterism.ps1'
+        Version     = '5.1'
+        Description = 'Microsoft Teams audit  -  orphan teams, public teams, guest membership, large teams, stale teams'
+        Color       = 'Magenta'
+        Category    = 'The Firmament — Cloud & Identity'
+    },
+    [PSCustomObject]@{
+        Key         = '75'
+        Name        = 'C.U.M.U.L.U.S.'
+        File        = 'cumulus.ps1'
+        Version     = '5.1'
+        Description = 'SharePoint Online audit  -  site inventory, storage, external sharing, ownerless and stale sites'
+        Color       = 'Green'
+        Category    = 'The Firmament — Cloud & Identity'
+    },
+    [PSCustomObject]@{
+        Key         = '76'
+        Name        = 'O.R.R.E.R.Y.'
+        File        = 'orrery.ps1'
+        Version     = '5.1'
+        Description = 'Entra ID group dependency audit  -  what breaks if we delete this group? Licensing, CA, apps, roles, AUs, Intune, SP, EXO, Azure RBAC'
+        Color       = 'Blue'
+        Category    = 'The Firmament — Cloud & Identity'
+    },
+    [PSCustomObject]@{
+        Key         = '77'
+        Name        = 'R.A.V.E.N.'
+        File        = 'raven.ps1'
+        Version     = '5.1'
+        Description = 'Exchange Online mailbox security audit  -  external forwarding, suspicious inbox rules, SMTP AUTH, auditing, delegation, SPF / DKIM / DMARC'
+        Color       = 'Magenta'
+        Category    = 'The Firmament — Cloud & Identity'
+    },
+    [PSCustomObject]@{
+        Key         = '78'
+        Name        = 'H.A.L.O.'
+        File        = 'halo.ps1'
+        Version     = '5.1'
+        Description = 'Entra ID Conditional Access posture  -  MFA and legacy-auth baseline, admin coverage, report-only and disabled policies, exclusions, break-glass, named locations'
+        Color       = 'Cyan'
+        Category    = 'The Firmament — Cloud & Identity'
+    },
+    [PSCustomObject]@{
+        Key         = '79'
+        Name        = 'C.A.R.I.L.L.O.N.'
+        File        = 'carillon.ps1'
+        Version     = '5.1'
+        Description = 'Teams Phone call queues & auto attendants  -  agents by display name, opt-in and voice state, overflow / timeout routing, menus, resource accounts'
+        Color       = 'Magenta'
+        Category    = 'The Firmament — Cloud & Identity'
+    },
+    # ── The Necropolis (90–99) — the undead & ghosts ────────────────────────
+    [PSCustomObject]@{
+        Key         = '90'
         Name        = 'R.E.V.E.N.A.N.T.'
         File        = 'revenant.ps1'
         Version     = '5.1'
         Description = 'Profile migration and data transfer to a new machine'
         Color       = 'Cyan'
-        Category    = 'Data & Migration'
+        Category    = 'The Necropolis — Data & Migration'
     },
     [PSCustomObject]@{
-        Key         = '51'
-        Name        = 'A.R.C.H.I.V.E.'
-        File        = 'archive.ps1'
+        Key         = '91'
+        Name        = 'E.M.B.A.L.M.'
+        File        = 'embalm.ps1'
         Version     = '5.1'
         Description = 'Pre-reimaging profile backup  -  ZIP to local or network share'
         Color       = 'Magenta'
-        Category    = 'Data & Migration'
+        Category    = 'The Necropolis — Data & Migration'
     },
     [PSCustomObject]@{
-        Key         = '52'
-        Name        = 'T.E.T.H.E.R.'
-        File        = 'tether.ps1'
+        Key         = '92'
+        Name        = 'P.H.Y.L.A.C.T.E.R.Y.'
+        File        = 'phylactery.ps1'
         Version     = '5.1'
         Description = 'OneDrive Known-Folder-Move pre-migration validator  -  client, accounts, KFM, volume, sync errors, HTML report'
         Color       = 'Cyan'
-        Category    = 'Data & Migration'
+        Category    = 'The Necropolis — Data & Migration'
     },
     [PSCustomObject]@{
-        Key         = '53'
+        Key         = '93'
         Name        = 'E.X.H.U.M.E.'
         File        = 'exhume.ps1'
         Version     = '5.1'
         Description = 'Outlook PST / OST discovery  -  profiles, data files, orphans, oversize, stale archives, HTML report'
         Color       = 'Yellow'
-        Category    = 'Data & Migration'
+        Category    = 'The Necropolis — Data & Migration'
     }
 )
 
@@ -641,7 +641,7 @@ function Show-Menu {
     Write-Host ""
     Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
 
-    # CODEX is registered in Diagnostics & Reporting (key 19) for completeness,
+    # CODEX is registered in The Observatory (key 28) for completeness,
     # but is also surfaced here as a top-level shortcut so the rollup is one
     # keystroke away after a multi-tool session. The hint and colour shift
     # once the session has produced something worth indexing (>= 2 runs).
@@ -654,7 +654,7 @@ function Show-Menu {
     Write-Host "  [F]  Find a tool by name or keyword" -ForegroundColor $ColorSchema.Menu
     Write-Host "  [Q]  Exit GRIMOIRE" -ForegroundColor $ColorSchema.Warning
     Write-Host ""
-    Write-Host "  Tip: type a tool name or number (e.g. 'pyre' or '18') to jump straight to it." -ForegroundColor $ColorSchema.Info
+    Write-Host "  Tip: type a tool name or number (e.g. 'hourglass' or '25') to jump straight to it." -ForegroundColor $ColorSchema.Info
     Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
     Write-Host ""
 }
@@ -776,11 +776,11 @@ function Pause-ForKey {
 
 function Find-Tool {
     # Resolve a free-text query to one or more tools. Matching order:
-    #   1. Exact tool key       (e.g. '18')
-    #   2. Exact acronym/file   (e.g. 'pyre', 'P.Y.R.E.', 'pyre.ps1')
+    #   1. Exact tool key       (e.g. '25')
+    #   2. Exact acronym/file   (e.g. 'hourglass', 'H.O.U.R.G.L.A.S.S.', 'hourglass.ps1')
     #   3. Substring on acronym/filename, plus a keyword scan of descriptions
-    # Acronyms are normalised by dropping dots/spaces/hyphens so 'P.Y.R.E.',
-    # 'pyre' and 'PYRE' all collapse to the same token.
+    # Acronyms are normalised by dropping dots/spaces/hyphens so 'H.O.U.R.G.L.A.S.S.',
+    # 'hourglass' and 'HOURGLASS' all collapse to the same token.
     param([string]$Query)
 
     $q = $Query.Trim()
@@ -904,7 +904,7 @@ do {
 
     if (-not $SelectedCategory) {
         # Not a category letter — treat the input as a tool name/number search
-        # so 'pyre' or '18' jumps straight to the tool from the main menu.
+        # so 'hourglass' or '25' jumps straight to the tool from the main menu.
         $found = Find-Tool -Query $CatSelection
         if ($found.Count -gt 0) {
             $chosen = Select-FromMatches -Found $found

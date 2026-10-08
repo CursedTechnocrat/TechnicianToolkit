@@ -75,7 +75,7 @@ namespace TechnicianToolkit.Spike
         public override Size MaxWindowSize => new Size(240, 100);
 
         // No keyboard is attached to a GUI host. Scripts that poll this — see
-        // covenant.ps1 and restoration.ps1 — must be guarded on it.
+        // covenant.ps1 and whetstone.ps1 — must be guarded on it.
         public override bool KeyAvailable => false;
 
         public override void FlushInputBuffer() { }

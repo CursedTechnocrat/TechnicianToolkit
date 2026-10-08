@@ -5,8 +5,8 @@ AUSPEX_*.html
 # RUNEPRESS — CSV install logs (saved alongside the script)
 RUNEPRESS_InstallLog_*.csv
 
-# RESTORATION — transcript logs (saved to %TEMP%, but guard against local copies)
-RESTORATION_*.log
+# WHETSTONE — transcript logs (saved to %TEMP%, but guard against local copies)
+WHETSTONE_*.log
 
 # ─── General Log / Report Files ───────────────────────────────────────────────
 *.log

@@ -105,7 +105,7 @@ function Write-TKError {
         Logs a structured error to the central toolkit error log and optionally
         posts to a Teams incoming webhook configured as TeamsWebhook in config.json.
     .EXAMPLE
-        Write-TKError -ScriptName 'sigil' -Message $_.Exception.Message -Category 'Registry'
+        Write-TKError -ScriptName 'basilisk' -Message $_.Exception.Message -Category 'Registry'
     #>
     param(
         [Parameter(Mandatory)][string]$ScriptName,

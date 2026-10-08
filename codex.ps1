@@ -29,7 +29,7 @@
     groups them by tool prefix, and emits a single dark-themed HTML
     rollup with relative links to each child report. Where R.I.T.U.A.L.
     composes a fresh recipe run, CODEX answers "what reports already
-    exist on disk?" -- useful when a technician has run AUSPEX, PYRE,
+    exist on disk?" -- useful when a technician has run AUSPEX, HOURGLASS,
     AUGUR, etc. ad-hoc throughout the week and wants one bound volume
     to attach to a ticket.
 
@@ -119,6 +119,37 @@ function Show-CodexBanner {
 # REPORT DISCOVERY
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Reports written before the 6.0 renames carry the old tool name as their
+# prefix. Group them under the new name so a machine's history stays in one
+# section instead of splitting across two.
+$RenamedToolPrefixes = @{
+    'RESTORATION'   = 'WHETSTONE'
+    'SUTURE'        = 'SOLDER'
+    'THRESHOLD'     = 'FATHOM'
+    'GARGOYLE'      = 'VIGIL'
+    'PYRE'          = 'HOURGLASS'
+    'CIPHER'        = 'WYRM'
+    'SIGIL'         = 'BASILISK'
+    'CITADEL'       = 'SPHINX'
+    'ARTIFACT'      = 'PHOENIX'
+    'PALADIN'       = 'GRIFFIN'
+    'HERALD'        = 'ARGUS'
+    'CATACOMB'      = 'MINOTAUR'
+    'BEACON'        = 'WISP'
+    'SHADE'         = 'EMISSARY'
+    'OATH'          = 'LODESTAR'
+    'TALISMAN'      = 'ZENITH'
+    'RELIQUARY'     = 'ALMANAC'
+    'GOLEM'         = 'ORBIT'
+    'WRAITH'        = 'ECLIPSE'
+    'CONCLAVE'      = 'ASTERISM'
+    'GROVE'         = 'CUMULUS'
+    'TENDRIL'       = 'ORRERY'
+    'RAMPART'       = 'HALO'
+    'ARCHIVE'       = 'EMBALM'
+    'TETHER'        = 'PHYLACTERY'
+}
+
 # Walks the log directory for HTML files whose names end in the toolkit's
 # canonical _YYYYMMDD_HHMMSS timestamp. Files outside that pattern are
 # skipped on purpose so that browser-saved pages or hand-renamed copies
@@ -143,7 +174,7 @@ function Get-ToolkitReportFiles {
 
         # The toolkit-wide convention is `<label>_YYYYMMDD_HHMMSS.html`.
         # The label is the tool acronym, optionally followed by a variant
-        # tag (PYRE_battery_report, CITADEL_StaleAccounts, etc.). Capture
+        # tag (HOURGLASS_battery_report, SPHINX_StaleAccounts, etc.). Capture
         # all three groups up front -- $matches gets clobbered by any
         # later -match call below, so we can't rely on it surviving.
         if ($f.BaseName -notmatch '^(?<label>.+)_(?<date>\d{8})_(?<time>\d{6})$') { continue }
@@ -152,6 +183,7 @@ function Get-ToolkitReportFiles {
         $timeStr = $matches['time']
 
         $tool    = ($label -split '_', 2)[0].ToUpper()
+        if ($RenamedToolPrefixes.ContainsKey($tool)) { $tool = $RenamedToolPrefixes[$tool] }
         $variant = if ($label -match '^[^_]+_(?<v>.+)$') { $matches['v'] } else { '' }
 
         $ts = $null

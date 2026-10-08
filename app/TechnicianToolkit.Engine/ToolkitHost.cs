@@ -54,7 +54,7 @@ namespace TechnicianToolkit.Engine
 
         /// <summary>
         /// No keyboard is attached to a hosted runspace. covenant.ps1 and
-        /// restoration.ps1 poll [Console]::KeyAvailable directly rather than
+        /// whetstone.ps1 poll [Console]::KeyAvailable directly rather than
         /// this property, which is why they carry their own probe.
         /// </summary>
         public override bool KeyAvailable => false;

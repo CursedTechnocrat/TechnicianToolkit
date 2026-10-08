@@ -53,7 +53,7 @@ namespace TechnicianToolkit.App
     {
         /// <summary>
         /// Past this many lines the oldest are dropped. A long LANTERN or
-        /// THRESHOLD run is otherwise unbounded, and nobody scrolls back
+        /// FATHOM run is otherwise unbounded, and nobody scrolls back
         /// twenty thousand lines -- that is what saving the output is for.
         /// </summary>
         private const int MaxLines = 20000;

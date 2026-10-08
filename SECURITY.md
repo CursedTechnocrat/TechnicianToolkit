@@ -40,8 +40,8 @@ assume it is patched.
 - **Privilege escalation** beyond what a tool documents — a read-only audit tool
   that writes system state, or any path that grants rights the operator did not
   already hold.
-- **Credential handling.** Several tools touch secrets: `beacon.ps1` reads saved
-  WLAN profiles including key material, `cipher.ps1` handles BitLocker recovery
+- **Credential handling.** Several tools touch secrets: `wisp.ps1` reads saved
+  WLAN profiles including key material, `wyrm.ps1` handles BitLocker recovery
   keys, and `covenant.ps1` accepts a local administrator password. Leaking any of
   those into a log, a transcript, an HTML report, or the console when it should
   not be there is a vulnerability.
