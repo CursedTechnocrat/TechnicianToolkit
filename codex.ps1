@@ -29,7 +29,7 @@
     groups them by tool prefix, and emits a single dark-themed HTML
     rollup with relative links to each child report. Where R.I.T.U.A.L.
     composes a fresh recipe run, CODEX answers "what reports already
-    exist on disk?" -- useful when a technician has run AUSPEX, PYRE,
+    exist on disk?" -- useful when a technician has run AUSPEX, HOURGLASS,
     AUGUR, etc. ad-hoc throughout the week and wants one bound volume
     to attach to a ticket.
 
@@ -143,7 +143,7 @@ function Get-ToolkitReportFiles {
 
         # The toolkit-wide convention is `<label>_YYYYMMDD_HHMMSS.html`.
         # The label is the tool acronym, optionally followed by a variant
-        # tag (PYRE_battery_report, STEWARD_StaleAccounts, etc.). Capture
+        # tag (HOURGLASS_battery_report, SPHINX_StaleAccounts, etc.). Capture
         # all three groups up front -- $matches gets clobbered by any
         # later -match call below, so we can't rely on it surviving.
         if ($f.BaseName -notmatch '^(?<label>.+)_(?<date>\d{8})_(?<time>\d{6})$') { continue }

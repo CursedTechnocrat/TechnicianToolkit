@@ -26,7 +26,7 @@ body:
     attributes:
       label: Which existing tool
       description: Leave blank if this is a new tool.
-      placeholder: hoard.ps1
+      placeholder: fathom.ps1
 
   - type: textarea
     id: problem

@@ -160,14 +160,14 @@ $PowerSaverSchemeGuid = 'a1841308-3541-4fab-bc81-f71556f20b4a'
 # Well-known processes and what their load usually means. Keyed by process
 # name, lower-case, without .exe.
 $ProcessHints = @{
-    'msmpeng'             = 'Microsoft Defender scanning. Check for a scheduled or running scan, or a busy folder it keeps rescanning (P.A.L.A.D.I.N. lists exclusions).'
+    'msmpeng'             = 'Microsoft Defender scanning. Check for a scheduled or running scan, or a busy folder it keeps rescanning (G.R.I.F.F.I.N. lists exclusions).'
     'mssense'             = 'Microsoft Defender for Endpoint sensor.'
     'tiworker'            = 'Windows servicing installing updates or features. Settles when the install finishes; a restart may be pending.'
     'trustedinstaller'    = 'Windows Modules Installer (servicing). Settles when the update or feature install finishes.'
     'searchindexer'       = 'Windows Search indexing. Heavy after a migration or a large sync; settles once the index catches up.'
     'searchprotocolhost'  = 'Windows Search reading files to index them.'
     'searchfilterhost'    = 'Windows Search extracting file contents to index them.'
-    'onedrive'            = 'OneDrive sync. A large first sync or a sync loop; T.E.T.H.E.R. shows sync errors.'
+    'onedrive'            = 'OneDrive sync. A large first sync or a sync loop; P.H.Y.L.A.C.T.E.R.Y. shows sync errors.'
     'wmiprvse'            = 'WMI provider host. Something is querying WMI hard, often a monitoring or management agent.'
     'svchost'             = 'Windows service host. The services inside it are listed with the process.'
     'compattelrunner'     = 'Windows compatibility telemetry. Runs on a schedule and exits.'
@@ -280,13 +280,13 @@ $TorporFindings = @{
         Severity = 'Error'
         Title    = 'System drive almost full'
         Summary  = 'Less than 5% of the system drive is free. Paging, updates and temporary files all compete for the space.'
-        Remedy   = 'Free space now: C.L.E.A.N.S.E. clears temp and update caches, H.O.A.R.D. finds large folders and old profiles.'
+        Remedy   = 'Free space now: C.L.E.A.N.S.E. clears temp and update caches, F.A.T.H.O.M. finds large folders and old profiles.'
     }
     'SystemDriveLow' = @{
         Severity = 'Warning'
         Title    = 'System drive low on space'
         Summary  = 'Less than 10% of the system drive is free.'
-        Remedy   = 'Run C.L.E.A.N.S.E., and H.O.A.R.D. to find what is using the space.'
+        Remedy   = 'Run C.L.E.A.N.S.E., and F.A.T.H.O.M. to find what is using the space.'
     }
     'LongUptime' = @{
         Severity = 'Warning'

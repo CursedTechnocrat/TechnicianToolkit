@@ -158,8 +158,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '5'
-        Name        = 'R.E.S.T.O.R.A.T.I.O.N.'
-        File        = 'restoration.ps1'
+        Name        = 'W.H.E.T.S.T.O.N.E.'
+        File        = 'whetstone.ps1'
         Version     = '5.1'
         Description = 'Automated Windows Update management and maintenance'
         Color       = 'Green'
@@ -194,8 +194,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '9'
-        Name        = 'S.U.T.U.R.E.'
-        File        = 'suture.ps1'
+        Name        = 'S.O.L.D.E.R.'
+        File        = 'solder.ps1'
         Version     = '5.1'
         Description = 'Windows servicing repair  -  component store health, pending restarts, last SFC result, update failure codes, DISM RestoreHealth + SFC'
         Color       = 'Green'
@@ -222,8 +222,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '12'
-        Name        = 'H.O.A.R.D.'
-        File        = 'hoard.ps1'
+        Name        = 'F.A.T.H.O.M.'
+        File        = 'fathom.ps1'
         Version     = '5.1'
         Description = 'Disk space monitor  -  volume usage, low-space alerts, temp cleanup, old profile detection'
         Color       = 'Yellow'
@@ -231,8 +231,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '13'
-        Name        = 'G.A.R.G.O.Y.L.E.'
-        File        = 'gargoyle.ps1'
+        Name        = 'V.I.G.I.L.'
+        File        = 'vigil.ps1'
         Version     = '5.1'
         Description = 'Service & task monitor  -  critical services, scheduled tasks, event log errors'
         Color       = 'Red'
@@ -276,8 +276,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '18'
-        Name        = 'P.Y.R.E.'
-        File        = 'pyre.ps1'
+        Name        = 'H.O.U.R.G.L.A.S.S.'
+        File        = 'hourglass.ps1'
         Version     = '5.1'
         Description = 'Laptop battery health audit  -  design vs current capacity, cycle count, replacement verdict, powercfg /batteryreport enrichment'
         Color       = 'Red'
@@ -315,8 +315,8 @@ $Tools = @(
     # ── Security (20–29) ─────────────────────────────────────────────
     [PSCustomObject]@{
         Key         = '20'
-        Name        = 'C.R.Y.P.T.'
-        File        = 'crypt.ps1'
+        Name        = 'W.Y.R.M.'
+        File        = 'wyrm.ps1'
         Version     = '5.1'
         Description = 'BitLocker drive encryption  -  enable, disable, backup keys'
         Color       = 'Green'
@@ -324,8 +324,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '21'
-        Name        = 'S.I.G.I.L.'
-        File        = 'sigil.ps1'
+        Name        = 'B.A.S.I.L.I.S.K.'
+        File        = 'basilisk.ps1'
         Version     = '5.1'
         Description = 'Security baseline enforcement  -  telemetry, UAC, firewall, audit policy'
         Color       = 'Red'
@@ -333,8 +333,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '22'
-        Name        = 'S.T.E.W.A.R.D.'
-        File        = 'steward.ps1'
+        Name        = 'S.P.H.I.N.X.'
+        File        = 'sphinx.ps1'
         Version     = '5.1'
         Description = 'Active Directory management  -  search, unlock, reset passwords, group membership'
         Color       = 'Blue'
@@ -342,8 +342,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '23'
-        Name        = 'A.R.T.I.F.A.C.T.'
-        File        = 'artifact.ps1'
+        Name        = 'P.H.O.E.N.I.X.'
+        File        = 'phoenix.ps1'
         Version     = '5.1'
         Description = 'Certificate health monitor  -  local cert stores, SSL/TLS expiry, HTML report'
         Color       = 'Yellow'
@@ -369,8 +369,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '26'
-        Name        = 'P.A.L.A.D.I.N.'
-        File        = 'paladin.ps1'
+        Name        = 'G.R.I.F.F.I.N.'
+        File        = 'griffin.ps1'
         Version     = '5.1'
         Description = 'AV / Microsoft Defender health audit  -  state, signatures, scans, threats, exclusions, ASR rules, services'
         Color       = 'Magenta'
@@ -378,8 +378,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '27'
-        Name        = 'H.E.R.A.L.D.'
-        File        = 'herald.ps1'
+        Name        = 'A.R.G.U.S.'
+        File        = 'argus.ps1'
         Version     = '5.1'
         Description = 'Active Directory account roster  -  domain password & lockout policy verdicts, full name / alias / access level per account, nested group expansion, privileged group membership, HTML + review CSV'
         Color       = 'Cyan'
@@ -387,8 +387,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '28'
-        Name        = 'C.A.T.A.C.O.M.B.'
-        File        = 'catacomb.ps1'
+        Name        = 'M.I.N.O.T.A.U.R.'
+        File        = 'minotaur.ps1'
         Version     = '5.1'
         Description = 'File share & NTFS permissions review  -  share and NTFS access, everyone-type write, direct user grants, orphaned SIDs, broken inheritance, HTML + CSV'
         Color       = 'Yellow'
@@ -442,8 +442,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '35'
-        Name        = 'O.A.T.H.'
-        File        = 'oath.ps1'
+        Name        = 'L.O.D.E.S.T.A.R.'
+        File        = 'lodestar.ps1'
         Version     = '5.1'
         Description = 'Domain trust & secure channel diagnosis and repair  -  DC discovery, DNS, DC ports, clock skew, nltest secure channel, machine password reset'
         Color       = 'Green'
@@ -452,8 +452,8 @@ $Tools = @(
     # ── Cloud & Identity (40–49) ─────────────────────────────────────
     [PSCustomObject]@{
         Key         = '40'
-        Name        = 'T.A.L.I.S.M.A.N.'
-        File        = 'talisman.ps1'
+        Name        = 'Z.E.N.I.T.H.'
+        File        = 'zenith.ps1'
         Version     = '5.1'
         Description = 'Azure environment assessment  -  security posture, RBAC, backup coverage, HTML report'
         Color       = 'Cyan'
@@ -461,8 +461,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '41'
-        Name        = 'R.E.L.I.Q.U.A.R.Y.'
-        File        = 'reliquary.ps1'
+        Name        = 'A.L.M.A.N.A.C.'
+        File        = 'almanac.ps1'
         Version     = '5.1'
         Description = 'M365 license & mailbox audit  -  SKU inventory, unlicensed users, MFA status'
         Color       = 'Green'
@@ -470,8 +470,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '42'
-        Name        = 'G.O.L.E.M.'
-        File        = 'golem.ps1'
+        Name        = 'O.R.B.I.T.'
+        File        = 'orbit.ps1'
         Version     = '5.1'
         Description = 'Intune / MDM compliance audit  -  managed devices, compliance state, stale devices, config profiles'
         Color       = 'Yellow'
@@ -479,8 +479,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '43'
-        Name        = 'W.R.A.I.T.H.'
-        File        = 'wraith.ps1'
+        Name        = 'E.C.L.I.P.S.E.'
+        File        = 'eclipse.ps1'
         Version     = '5.1'
         Description = 'Entra ID identity hygiene audit  -  guests, privileged roles, password-never-expires, stale admins, disabled-but-licensed'
         Color       = 'Red'
@@ -488,8 +488,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '44'
-        Name        = 'C.O.N.C.L.A.V.E.'
-        File        = 'conclave.ps1'
+        Name        = 'A.S.T.E.R.I.S.M.'
+        File        = 'asterism.ps1'
         Version     = '5.1'
         Description = 'Microsoft Teams audit  -  orphan teams, public teams, guest membership, large teams, stale teams'
         Color       = 'Magenta'
@@ -497,8 +497,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '45'
-        Name        = 'G.R.O.V.E.'
-        File        = 'grove.ps1'
+        Name        = 'C.U.M.U.L.U.S.'
+        File        = 'cumulus.ps1'
         Version     = '5.1'
         Description = 'SharePoint Online audit  -  site inventory, storage, external sharing, ownerless and stale sites'
         Color       = 'Green'
@@ -506,8 +506,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '46'
-        Name        = 'T.E.N.D.R.I.L.'
-        File        = 'tendril.ps1'
+        Name        = 'O.R.R.E.R.Y.'
+        File        = 'orrery.ps1'
         Version     = '5.1'
         Description = 'Entra ID group dependency audit  -  what breaks if we delete this group? Licensing, CA, apps, roles, AUs, Intune, SP, EXO, Azure RBAC'
         Color       = 'Blue'
@@ -524,8 +524,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '48'
-        Name        = 'R.A.M.P.A.R.T.'
-        File        = 'rampart.ps1'
+        Name        = 'H.A.L.O.'
+        File        = 'halo.ps1'
         Version     = '5.1'
         Description = 'Entra ID Conditional Access posture  -  MFA and legacy-auth baseline, admin coverage, report-only and disabled policies, exclusions, break-glass, named locations'
         Color       = 'Cyan'
@@ -562,8 +562,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '51'
-        Name        = 'A.R.C.H.I.V.E.'
-        File        = 'archive.ps1'
+        Name        = 'E.M.B.A.L.M.'
+        File        = 'embalm.ps1'
         Version     = '5.1'
         Description = 'Pre-reimaging profile backup  -  ZIP to local or network share'
         Color       = 'Magenta'
@@ -571,8 +571,8 @@ $Tools = @(
     },
     [PSCustomObject]@{
         Key         = '52'
-        Name        = 'T.E.T.H.E.R.'
-        File        = 'tether.ps1'
+        Name        = 'P.H.Y.L.A.C.T.E.R.Y.'
+        File        = 'phylactery.ps1'
         Version     = '5.1'
         Description = 'OneDrive Known-Folder-Move pre-migration validator  -  client, accounts, KFM, volume, sync errors, HTML report'
         Color       = 'Cyan'
@@ -654,7 +654,7 @@ function Show-Menu {
     Write-Host "  [F]  Find a tool by name or keyword" -ForegroundColor $ColorSchema.Menu
     Write-Host "  [Q]  Exit GRIMOIRE" -ForegroundColor $ColorSchema.Warning
     Write-Host ""
-    Write-Host "  Tip: type a tool name or number (e.g. 'pyre' or '18') to jump straight to it." -ForegroundColor $ColorSchema.Info
+    Write-Host "  Tip: type a tool name or number (e.g. 'hourglass' or '18') to jump straight to it." -ForegroundColor $ColorSchema.Info
     Write-Host ("  " + ("-" * 62)) -ForegroundColor $ColorSchema.Header
     Write-Host ""
 }
@@ -777,10 +777,10 @@ function Pause-ForKey {
 function Find-Tool {
     # Resolve a free-text query to one or more tools. Matching order:
     #   1. Exact tool key       (e.g. '18')
-    #   2. Exact acronym/file   (e.g. 'pyre', 'P.Y.R.E.', 'pyre.ps1')
+    #   2. Exact acronym/file   (e.g. 'hourglass', 'H.O.U.R.G.L.A.S.S.', 'hourglass.ps1')
     #   3. Substring on acronym/filename, plus a keyword scan of descriptions
-    # Acronyms are normalised by dropping dots/spaces/hyphens so 'P.Y.R.E.',
-    # 'pyre' and 'PYRE' all collapse to the same token.
+    # Acronyms are normalised by dropping dots/spaces/hyphens so 'H.O.U.R.G.L.A.S.S.',
+    # 'hourglass' and 'HOURGLASS' all collapse to the same token.
     param([string]$Query)
 
     $q = $Query.Trim()
@@ -904,7 +904,7 @@ do {
 
     if (-not $SelectedCategory) {
         # Not a category letter — treat the input as a tool name/number search
-        # so 'pyre' or '18' jumps straight to the tool from the main menu.
+        # so 'hourglass' or '18' jumps straight to the tool from the main menu.
         $found = Find-Tool -Query $CatSelection
         if ($found.Count -gt 0) {
             $chosen = Select-FromMatches -Found $found

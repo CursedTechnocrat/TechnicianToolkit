@@ -1,4 +1,4 @@
-﻿# catacomb.ps1 - C.A.T.A.C.O.M.B. — Catalogs Access To All Content: Owners, Members & Breadth
+﻿# minotaur.ps1 - M.I.N.O.T.A.U.R. — Maps Inheritance, NTFS Owners, Trustees & Access on UNC Roots
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -20,11 +20,11 @@
 
 <#
 .SYNOPSIS
-    C.A.T.A.C.O.M.B. — Catalogs Access To All Content: Owners, Members & Breadth
+    M.I.N.O.T.A.U.R. — Maps Inheritance, NTFS Owners, Trustees & Access on UNC Roots
     File Share & NTFS Permissions Review Tool for PowerShell 5.1+
 
 .DESCRIPTION
-    Answers "who has access to this share?" on a file server, the way HERALD
+    Answers "who has access to this share?" on a file server, the way ARGUS
     answers it for the domain and WARD for the local machine:
 
       - Every non-administrative SMB share with its share permissions and the
@@ -41,10 +41,10 @@
     ready for a customer access review. Read-only -- no permission is changed.
 
 .USAGE
-    PS C:\> .\catacomb.ps1                         # Interactive: all shares, two levels deep
-    PS C:\> .\catacomb.ps1 -Unattended             # Silent: all shares + HTML + CSV
-    PS C:\> .\catacomb.ps1 -Depth 4                # Walk four folder levels into each share
-    PS C:\> .\catacomb.ps1 -Path 'D:\Data'         # Review one folder tree instead of the shares
+    PS C:\> .\minotaur.ps1                         # Interactive: all shares, two levels deep
+    PS C:\> .\minotaur.ps1 -Unattended             # Silent: all shares + HTML + CSV
+    PS C:\> .\minotaur.ps1 -Depth 4                # Walk four folder levels into each share
+    PS C:\> .\minotaur.ps1 -Path 'D:\Data'         # Review one folder tree instead of the shares
 
 .NOTES
     Version : 5.1
@@ -139,7 +139,7 @@ $MaxFolders = 5000
 # FINDING CATALOG
 # ─────────────────────────────────────────────────────────────────────────────
 
-$CatacombFindings = @{
+$MinotaurFindings = @{
     'BroadWriteAccess' = @{
         Severity = 'Error'
         Title    = 'Everyone-type group can write'
@@ -178,7 +178,7 @@ $CatacombFindings = @{
     }
     'FolderUnreadable' = @{
         Severity = 'Info'
-        Title    = 'Folders C.A.T.A.C.O.M.B. could not read'
+        Title    = 'Folders M.I.N.O.T.A.U.R. could not read'
         Summary  = 'Access was denied even to the elevated session, so these folders were not reviewed.'
         Remedy   = 'Take ownership only if you are authorised to; otherwise review them with their owner.'
     }
@@ -202,9 +202,9 @@ $CatacombFindings = @{
 
 $Findings = [System.Collections.Generic.List[object]]::new()
 
-function Add-CatacombFinding {
+function Add-MinotaurFinding {
     param([Parameter(Mandatory)][string]$Code, [string]$Subject = '', [string]$Detail = '')
-    $meta = $CatacombFindings[$Code]
+    $meta = $MinotaurFindings[$Code]
     if (-not $meta) { $meta = @{ Severity = 'Warning'; Title = $Code; Summary = ''; Remedy = '' } }
     [void]$Findings.Add([PSCustomObject]@{
         Code = $Code; Severity = $meta.Severity; Title = $meta.Title; Summary = $meta.Summary; Remedy = $meta.Remedy; Subject = $Subject; Detail = $Detail
@@ -224,19 +224,19 @@ function Get-SeverityClass {
 # BANNER
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Show-CatacombBanner {
+function Show-MinotaurBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host @"
 
-   ██████╗ █████╗ ████████╗ █████╗  ██████╗ ██████╗ ███╗   ███╗██████╗
-  ██╔════╝██╔══██╗╚══██╔══╝██╔══██╗██╔════╝██╔═══██╗████╗ ████║██╔══██╗
-  ██║     ███████║   ██║   ███████║██║     ██║   ██║██╔████╔██║██████╔╝
-  ██║     ██╔══██║   ██║   ██╔══██║██║     ██║   ██║██║╚██╔╝██║██╔══██╗
-  ╚██████╗██║  ██║   ██║   ██║  ██║╚██████╗╚██████╔╝██║ ╚═╝ ██║██████╔╝
-   ╚═════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚═════╝
+  ███╗   ███╗██╗███╗   ██╗ ██████╗ ████████╗ █████╗ ██╗   ██╗██████╗
+  ████╗ ████║██║████╗  ██║██╔═══██╗╚══██╔══╝██╔══██╗██║   ██║██╔══██╗
+  ██╔████╔██║██║██╔██╗ ██║██║   ██║   ██║   ███████║██║   ██║██████╔╝
+  ██║╚██╔╝██║██║██║╚██╗██║██║   ██║   ██║   ██╔══██║██║   ██║██╔══██╗
+  ██║ ╚═╝ ██║██║██║ ╚████║╚██████╔╝   ██║   ██║  ██║╚██████╔╝██║  ██║
+  ╚═╝     ╚═╝╚═╝╚═╝  ╚═══╝ ╚═════╝    ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝
 
 "@ -ForegroundColor Cyan
-    Write-Host "    C.A.T.A.C.O.M.B. — Catalogs Access To All Content: Owners, Members & Breadth" -ForegroundColor Cyan
+    Write-Host "    M.I.N.O.T.A.U.R. — Maps Inheritance, NTFS Owners, Trustees & Access on UNC Roots" -ForegroundColor Cyan
     Write-Host "    File Share & NTFS Permissions Review Tool" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -275,7 +275,7 @@ function Get-SidCategory {
     return 'WellKnown'
 }
 
-function Get-CatacombVerdict {
+function Get-MinotaurVerdict {
     param([object[]]$FindingList)
     $sev = @($FindingList | ForEach-Object { $_.Severity })
     if ($sev -contains 'Error')   { return [PSCustomObject]@{ Verdict = 'Exposed'; Class = 'err'  } }
@@ -343,7 +343,7 @@ function ConvertTo-SidString {
 # COLLECTORS
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Get-CatacombTargets {
+function Get-MinotaurTargets {
     if ($Path) {
         return @([PSCustomObject]@{ Name = $Path; Path = $Path; ShareAccess = $null; Description = 'Folder tree (-Path)' })
     }
@@ -352,7 +352,7 @@ function Get-CatacombTargets {
         $shares = @(Get-SmbShare -ErrorAction Stop | Where-Object { -not $_.Special -and "$($_.ShareType)" -eq 'FileSystemDirectory' -and $_.Path })
     } catch {
         Write-Fail "Get-SmbShare failed: $($_.Exception.Message)"
-        Write-TKError -ScriptName 'catacomb' -Message "Get-SmbShare failed: $($_.Exception.Message)" -Category 'Shares'
+        Write-TKError -ScriptName 'minotaur' -Message "Get-SmbShare failed: $($_.Exception.Message)" -Category 'Shares'
     }
     $targets = foreach ($s in $shares) {
         $access = @()
@@ -401,7 +401,7 @@ function Get-FolderAces {
     return [PSCustomObject]@{ Protected = [bool]$acl.AreAccessRulesProtected; Owner = "$($acl.Owner)"; Aces = @($rows) }
 }
 
-function Invoke-CatacombWalk {
+function Invoke-MinotaurWalk {
     # Breadth-first to -Depth, recording the root and every folder that has
     # explicit entries or broken inheritance. Inherited-only folders repeat
     # their parent and are not stored.
@@ -448,11 +448,11 @@ function Invoke-CatacombWalk {
 # ANALYSIS
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Invoke-CatacombAudit {
+function Invoke-MinotaurAudit {
     Write-Section "SHARES"
-    $targets = Get-CatacombTargets
+    $targets = Get-MinotaurTargets
     if ($targets.Count -eq 0) {
-        Add-CatacombFinding -Code 'NoShares' -Subject $env:COMPUTERNAME
+        Add-MinotaurFinding -Code 'NoShares' -Subject $env:COMPUTERNAME
         Write-Info "No file shares to review."
         return [PSCustomObject]@{ Shares = @(); AceRows = @() }
     }
@@ -465,7 +465,7 @@ function Invoke-CatacombAudit {
     foreach ($t in $targets) {
         Write-Section "SHARE: $($t.Name)"
         Write-Step "Walking $($t.Path) ($Depth level(s))..."
-        $walk = Invoke-CatacombWalk -Target $t -Budget ([ref]$budget)
+        $walk = Invoke-MinotaurWalk -Target $t -Budget ([ref]$budget)
         Write-Info ("{0} folder(s) with their own permissions, {1} unreadable" -f $walk.Folders.Count, $walk.Unreadable.Count)
 
         foreach ($f in $walk.Folders) {
@@ -491,30 +491,30 @@ function Invoke-CatacombAudit {
         }
 
         if ($shareBroadWrite -and $broadWrite.Count -gt 0) {
-            Add-CatacombFinding -Code 'BroadWriteAccess' -Subject $t.Name -Detail (($broadWrite | Select-Object -First 10) -join '; ')
+            Add-MinotaurFinding -Code 'BroadWriteAccess' -Subject $t.Name -Detail (($broadWrite | Select-Object -First 10) -join '; ')
         }
         if ($shareBroadRead -and $broadRead.Count -gt 0 -and $t.Name -notin $ExpectedBroadReadShares) {
-            Add-CatacombFinding -Code 'BroadReadAccess' -Subject $t.Name -Detail ($broadRead -join '; ')
+            Add-MinotaurFinding -Code 'BroadReadAccess' -Subject $t.Name -Detail ($broadRead -join '; ')
         }
 
         $direct = @($walk.Folders | ForEach-Object { $_.Explicit } | Where-Object { $_.Kind -eq 'User' -and $_.Type -eq 'Allow' })
         if ($direct.Count -gt 0) {
-            Add-CatacombFinding -Code 'DirectUserAce' -Subject $t.Name -Detail ("{0} entr(ies): {1}" -f $direct.Count, (@($direct | Select-Object -First 10 | ForEach-Object { "$($_.Identity) on $($_.Folder)" }) -join '; '))
+            Add-MinotaurFinding -Code 'DirectUserAce' -Subject $t.Name -Detail ("{0} entr(ies): {1}" -f $direct.Count, (@($direct | Select-Object -First 10 | ForEach-Object { "$($_.Identity) on $($_.Folder)" }) -join '; '))
         }
         $orphans = @($walk.Folders | ForEach-Object { $_.Aces } | Where-Object { $_.Kind -eq 'Orphaned' } | ForEach-Object { $_.Sid } | Select-Object -Unique)
-        if ($orphans.Count -gt 0) { Add-CatacombFinding -Code 'OrphanedSid' -Subject $t.Name -Detail ($orphans -join ', ') }
+        if ($orphans.Count -gt 0) { Add-MinotaurFinding -Code 'OrphanedSid' -Subject $t.Name -Detail ($orphans -join ', ') }
         $protected = @($walk.Folders | Where-Object { $_.Protected -and $_.Level -gt 0 })
         if ($protected.Count -gt 0) {
-            Add-CatacombFinding -Code 'InheritanceBroken' -Subject $t.Name -Detail ("{0} folder(s): {1}" -f $protected.Count, (@($protected | Select-Object -First 10 | ForEach-Object { $_.Folder }) -join '; '))
+            Add-MinotaurFinding -Code 'InheritanceBroken' -Subject $t.Name -Detail ("{0} folder(s): {1}" -f $protected.Count, (@($protected | Select-Object -First 10 | ForEach-Object { $_.Folder }) -join '; '))
         }
         $denies = @($walk.Folders | ForEach-Object { $_.Explicit } | Where-Object { $_.Type -eq 'Deny' })
         if ($denies.Count -gt 0) {
-            Add-CatacombFinding -Code 'DenyAce' -Subject $t.Name -Detail (@($denies | Select-Object -First 10 | ForEach-Object { "$($_.Identity) on $($_.Folder)" }) -join '; ')
+            Add-MinotaurFinding -Code 'DenyAce' -Subject $t.Name -Detail (@($denies | Select-Object -First 10 | ForEach-Object { "$($_.Identity) on $($_.Folder)" }) -join '; ')
         }
         if ($walk.Unreadable.Count -gt 0) {
-            Add-CatacombFinding -Code 'FolderUnreadable' -Subject $t.Name -Detail ("{0} folder(s): {1}" -f $walk.Unreadable.Count, (@($walk.Unreadable | Select-Object -First 10) -join '; '))
+            Add-MinotaurFinding -Code 'FolderUnreadable' -Subject $t.Name -Detail ("{0} folder(s): {1}" -f $walk.Unreadable.Count, (@($walk.Unreadable | Select-Object -First 10) -join '; '))
         }
-        if ($walk.Truncated) { Add-CatacombFinding -Code 'ScanTruncated' -Subject $t.Name }
+        if ($walk.Truncated) { Add-MinotaurFinding -Code 'ScanTruncated' -Subject $t.Name }
 
         [void]$results.Add([PSCustomObject]@{
             Name        = $t.Name
@@ -542,7 +542,7 @@ function Format-AceSummary {
     return (@($Aces | Where-Object { $_.Type -eq 'Allow' } | Sort-Object Identity | ForEach-Object { "$($_.Identity): $($_.Level)" } | Select-Object -Unique) -join '; ')
 }
 
-function Build-CatacombReport {
+function Build-MinotaurReport {
     param([object]$Audit, [object]$Verdict, [string]$CsvName)
 
     $cfg        = Get-TKConfig
@@ -583,8 +583,8 @@ function Build-CatacombReport {
     }
 
     $htmlHead = Get-TKHtmlHead `
-        -Title      'C.A.T.A.C.O.M.B. Share Permissions Report' `
-        -ScriptName 'C.A.T.A.C.O.M.B.' `
+        -Title      'M.I.N.O.T.A.U.R. Share Permissions Report' `
+        -ScriptName 'M.I.N.O.T.A.U.R.' `
         -Subtitle   "${orgPrefix}File Share & NTFS Permissions -- $machine" `
         -MetaItems  ([ordered]@{
             'Machine'   = $machine
@@ -628,7 +628,7 @@ function Build-CatacombReport {
       <div class="tk-info-box"><span class="tk-info-label">Full detail</span> Every access-control entry scanned is in <span class="tk-mono">$(EscHtml $CsvName)</span> next to this report.</div></div>
   </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'C.A.T.A.C.O.M.B. v5.1')
+"@ + (Get-TKHtmlFoot -ScriptName 'M.I.N.O.T.A.U.R. v5.1')
     return $html
 }
 
@@ -636,14 +636,14 @@ function Build-CatacombReport {
 # MAIN
 # ─────────────────────────────────────────────────────────────────────────────
 
-Show-CatacombBanner
+Show-MinotaurBanner
 
 if ($Path -and -not (Test-Path -LiteralPath $Path -PathType Container)) {
     Write-Fail "-Path '$Path' is not a folder."
     exit 1
 }
 
-$audit = Invoke-CatacombAudit
+$audit = Invoke-MinotaurAudit
 
 Write-Section "FINDINGS"
 if ($Findings.Count -eq 0) { Write-Ok "No broad, direct or orphaned access found." }
@@ -652,14 +652,14 @@ foreach ($f in $Findings) {
     switch ($f.Severity) { 'Error' { Write-Fail $line } 'Warning' { Write-Warn $line } default { Write-Info $line } }
 }
 
-$verdict = Get-CatacombVerdict -FindingList $Findings.ToArray()
+$verdict = Get-MinotaurVerdict -FindingList $Findings.ToArray()
 Write-Section "VERDICT"
 switch ($verdict.Class) { 'err' { Write-Fail $verdict.Verdict } 'warn' { Write-Warn $verdict.Verdict } default { Write-Ok $verdict.Verdict } }
-Add-TKNote -Text ("CATACOMB on {0}: verdict {1}; {2} share(s), {3} finding(s)." -f $env:COMPUTERNAME, $verdict.Verdict, @($audit.Shares).Count, $Findings.Count) -Category 'Info' -ScriptName 'catacomb'
+Add-TKNote -Text ("MINOTAUR on {0}: verdict {1}; {2} share(s), {3} finding(s)." -f $env:COMPUTERNAME, $verdict.Verdict, @($audit.Shares).Count, $Findings.Count) -Category 'Info' -ScriptName 'minotaur'
 
 $stamp   = Get-Date -Format 'yyyyMMdd_HHmmss'
 $logDir  = Resolve-LogDirectory -FallbackPath $ScriptPath
-$csvName = "CATACOMB_$stamp.csv"
+$csvName = "MINOTAUR_$stamp.csv"
 try {
     $audit.AceRows | Export-Csv -LiteralPath (Join-Path $logDir $csvName) -NoTypeInformation -Encoding UTF8
     Write-Ok "Access-control entries exported: $csvName"
@@ -668,13 +668,13 @@ try {
 }
 
 Write-Step "Generating HTML report..."
-$outPath = Join-Path $logDir "CATACOMB_$stamp.html"
+$outPath = Join-Path $logDir "MINOTAUR_$stamp.html"
 try {
-    [System.IO.File]::WriteAllText($outPath, (Build-CatacombReport -Audit $audit -Verdict $verdict -CsvName $csvName), [System.Text.Encoding]::UTF8)
+    [System.IO.File]::WriteAllText($outPath, (Build-MinotaurReport -Audit $audit -Verdict $verdict -CsvName $csvName), [System.Text.Encoding]::UTF8)
     Show-TKReportResult -Path $outPath -Unattended:$Unattended
 } catch {
     Write-Fail "Could not save report: $($_.Exception.Message)"
-    Write-TKError -ScriptName 'catacomb' -Message "Report save failed: $($_.Exception.Message)" -Category 'Report'
+    Write-TKError -ScriptName 'minotaur' -Message "Report save failed: $($_.Exception.Message)" -Category 'Report'
 }
 
 if (-not $Unattended) { Read-Host "  Press Enter to exit" | Out-Null }

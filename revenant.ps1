@@ -27,7 +27,7 @@
     Migrates user profile data from a source profile or machine to a destination.
     Handles common user folders, Outlook data, browser bookmarks, and email signatures.
     Uses Robocopy for reliable folder transfers and generates a timestamped CSV log.
-    Can restore directly from an ARCHIVE ZIP in both interactive and unattended modes.
+    Can restore directly from an EMBALM ZIP in both interactive and unattended modes.
 
 .USAGE
     PS C:\> .\revenant.ps1                                         # Must be run as Administrator
@@ -358,7 +358,7 @@ if ($Unattended) {
 } else {
     Write-Host "  [1] Select from local profiles on this machine" -ForegroundColor $ColorSchema.Info
     Write-Host "  [2] Enter a custom or remote path  (e.g. \\OldPC\C`$\Users\John)" -ForegroundColor $ColorSchema.Info
-    Write-Host "  [3] Restore from an A.R.C.H.I.V.E. ZIP" -ForegroundColor $ColorSchema.Info
+    Write-Host "  [3] Restore from an E.M.B.A.L.M. ZIP" -ForegroundColor $ColorSchema.Info
     Write-Host ""
     Write-Host -NoNewline "  Enter selection: " -ForegroundColor $ColorSchema.Header
     $sourceChoice = (Read-Host).Trim()
@@ -406,7 +406,7 @@ if ($Unattended) {
     }
     elseif ($sourceChoice -eq "3") {
         Write-Host ""
-        Write-Host -NoNewline "  Enter path to A.R.C.H.I.V.E. ZIP file: " -ForegroundColor $ColorSchema.Header
+        Write-Host -NoNewline "  Enter path to E.M.B.A.L.M. ZIP file: " -ForegroundColor $ColorSchema.Header
         $zipSource = (Read-Host).Trim().Trim('"')
 
         if (-not (Test-Path $zipSource)) {
@@ -597,7 +597,7 @@ Write-Host ""
 
 $destMigration = Join-Path $DestRoot "REVENANT_Migration"
 
-# ARCHIVE ZIPs use a flat folder structure (Desktop, Outlook, Chrome, etc. at root).
+# EMBALM ZIPs use a flat folder structure (Desktop, Outlook, Chrome, etc. at root).
 # Live profiles use deep AppData paths. Build the item map accordingly.
 if ($IsArchiveZip) {
     $itemMap = [ordered]@{
@@ -645,7 +645,7 @@ foreach ($num in $selectedItems) {
     }
 }
 
-# ── CLEANUP ARCHIVE EXTRACT ───────────────────────────────────────────────────
+# ── CLEANUP EMBALM EXTRACT ───────────────────────────────────────────────────
 
 if ($IsArchiveZip -and $TempExtractDir -and (Test-Path $TempExtractDir)) {
     Write-Host ""

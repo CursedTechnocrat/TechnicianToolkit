@@ -1,4 +1,4 @@
-﻿# talisman.ps1 - T.A.L.I.S.M.A.N.  -  Tenant Assessment, Logging, Infrastructure, Security, Monitoring & Access Navigator
+﻿# zenith.ps1 - Z.E.N.I.T.H.  -  Zone-wide Evaluation of Networks, Identity, Tenancy & Hardening
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -20,7 +20,7 @@
 
 <#
 .SYNOPSIS
-    T.A.L.I.S.M.A.N.  -  Tenant Assessment, Logging, Infrastructure, Security, Monitoring & Access Navigator
+    Z.E.N.I.T.H.  -  Zone-wide Evaluation of Networks, Identity, Tenancy & Hardening
     Azure subscription assessment and HTML report generator for PowerShell 5.1+
 
 .DESCRIPTION
@@ -33,9 +33,9 @@
     remediation recommendations.
 
 .USAGE
-    PS C:\> .\talisman.ps1
-    PS C:\> .\talisman.ps1 -SubscriptionId "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    PS C:\> .\talisman.ps1 -OutputPath "C:\Reports\azure.html" -NoOpen
+    PS C:\> .\zenith.ps1
+    PS C:\> .\zenith.ps1 -SubscriptionId "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    PS C:\> .\zenith.ps1 -OutputPath "C:\Reports\azure.html" -NoOpen
 
 .NOTES
     Version  : 5.1
@@ -105,15 +105,15 @@ $C = @{
 Clear-Host
 Write-Host @"
 
-  ████████╗ █████╗ ██╗     ██╗███████╗███╗   ███╗ █████╗ ███╗   ██╗
-  ╚══██╔══╝██╔══██╗██║     ██║██╔════╝████╗ ████║██╔══██╗████╗  ██║
-     ██║   ███████║██║     ██║███████╗██╔████╔██║███████║██╔██╗ ██║
-     ██║   ██╔══██║██║     ██║╚════██║██║╚██╔╝██║██╔══██║██║╚██╗██║
-     ██║   ██║  ██║███████╗██║███████║██║ ╚═╝ ██║██║  ██║██║ ╚████║
-     ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝╚══════╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝
+  ███████╗███████╗███╗   ██╗██╗████████╗██╗  ██╗
+  ╚══███╔╝██╔════╝████╗  ██║██║╚══██╔══╝██║  ██║
+    ███╔╝ █████╗  ██╔██╗ ██║██║   ██║   ███████║
+   ███╔╝  ██╔══╝  ██║╚██╗██║██║   ██║   ██╔══██║
+  ███████╗███████╗██║ ╚████║██║   ██║   ██║  ██║
+  ╚══════╝╚══════╝╚═╝  ╚═══╝╚═╝   ╚═╝   ╚═╝  ╚═╝
 
 "@ -ForegroundColor Cyan
-Write-Host "  T.A.L.I.S.M.A.N.  -  Tenant Assessment, Logging, Infrastructure, Security, Monitoring & Access Navigator" -ForegroundColor Cyan
+Write-Host "  Z.E.N.I.T.H.  -  Zone-wide Evaluation of Networks, Identity, Tenancy & Hardening" -ForegroundColor Cyan
 Write-Host "  Azure Subscription Assessment & Report Generator  v3.6" -ForegroundColor Cyan
 Write-Host ""
 
@@ -1034,7 +1034,7 @@ $defenderStatBox = if ($null -ne $defenderPct) {
 
 $htmlHead = Get-TKHtmlHead `
     -Title      "Azure Environment Assessment -- $orgName" `
-    -ScriptName 'T.A.L.I.S.M.A.N.' `
+    -ScriptName 'Z.E.N.I.T.H.' `
     -Subtitle   "$orgName -- Cloud Infrastructure Review" `
     -MetaItems  ([ordered]@{
         'Report Date'     = $reportDate
@@ -1056,7 +1056,7 @@ $htmlHead = Get-TKHtmlHead `
         'Recommendations'
     )
 
-$htmlFoot = Get-TKHtmlFoot -ScriptName 'T.A.L.I.S.M.A.N. v3.6'
+$htmlFoot = Get-TKHtmlFoot -ScriptName 'Z.E.N.I.T.H. v3.6'
 
 $html = $htmlHead + @"
 

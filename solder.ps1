@@ -1,4 +1,4 @@
-﻿# suture.ps1 - S.U.T.U.R.E. — Stitches Up The Update & Repair Engine
+﻿# solder.ps1 - S.O.L.D.E.R. — Servicing-stack Overhaul: Locates Damage, Enacts Repair
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -20,7 +20,7 @@
 
 <#
 .SYNOPSIS
-    S.U.T.U.R.E. — Stitches Up The Update & Repair Engine
+    S.O.L.D.E.R. — Servicing-stack Overhaul: Locates Damage, Enacts Repair
     Windows Servicing (Component Store & System File) Diagnosis and Repair Tool for PowerShell 5.1+
 
 .DESCRIPTION
@@ -52,12 +52,12 @@
     update client's plumbing. -WhatIf previews every repair.
 
 .USAGE
-    PS C:\> .\suture.ps1                                    # Interactive menu
-    PS C:\> .\suture.ps1 -Unattended                        # Read-only audit + HTML report
-    PS C:\> .\suture.ps1 -Unattended -Deep                  # Audit with a full ScanHealth
-    PS C:\> .\suture.ps1 -Unattended -Action Repair         # RestoreHealth + SFC + re-check
-    PS C:\> .\suture.ps1 -Action Repair -Source 'WIM:D:\sources\install.wim:6'   # Repair from mounted media
-    PS C:\> .\suture.ps1 -Action Repair -WhatIf             # Preview the repairs only
+    PS C:\> .\solder.ps1                                    # Interactive menu
+    PS C:\> .\solder.ps1 -Unattended                        # Read-only audit + HTML report
+    PS C:\> .\solder.ps1 -Unattended -Deep                  # Audit with a full ScanHealth
+    PS C:\> .\solder.ps1 -Unattended -Action Repair         # RestoreHealth + SFC + re-check
+    PS C:\> .\solder.ps1 -Action Repair -Source 'WIM:D:\sources\install.wim:6'   # Repair from mounted media
+    PS C:\> .\solder.ps1 -Action Repair -WhatIf             # Preview the repairs only
 
 .NOTES
     Version : 5.1
@@ -181,7 +181,7 @@ $ServicingErrorCodes = @{
 # FINDING CATALOG
 # ─────────────────────────────────────────────────────────────────────────────
 
-$SutureFindings = @{
+$SolderFindings = @{
     'StoreRepairable' = @{
         Severity = 'Error'
         Title    = 'Component store is corrupt (repairable)'
@@ -197,14 +197,14 @@ $SutureFindings = @{
     'StoreCheckFailed' = @{
         Severity = 'Warning'
         Title    = 'Component store health could not be read'
-        Summary  = 'DISM did not run, or returned output S.U.T.U.R.E. could not read.'
+        Summary  = 'DISM did not run, or returned output S.O.L.D.E.R. could not read.'
         Remedy   = 'Run DISM /Online /Cleanup-Image /ScanHealth by hand and read %WINDIR%\Logs\DISM\dism.log.'
     }
     'CleanupRecommended' = @{
         Severity = 'Info'
         Title    = 'Component store cleanup recommended'
         Summary  = 'DISM reports superseded packages that a cleanup would remove, reclaiming space on the system drive.'
-        Remedy   = 'Repair with -Cleanup runs DISM /StartComponentCleanup. S.U.T.U.R.E. never runs /ResetBase.'
+        Remedy   = 'Repair with -Cleanup runs DISM /StartComponentCleanup. S.O.L.D.E.R. never runs /ResetBase.'
     }
     'SfcUnrepairedFiles' = @{
         Severity = 'Error'
@@ -234,7 +234,7 @@ $SutureFindings = @{
         Severity = 'Error'
         Title    = 'Updates are failing because of the component store'
         Summary  = 'Recent Windows Update installs failed with codes that point at component-store damage.'
-        Remedy   = 'Repair, then retry the update (R.E.S.T.O.R.A.T.I.O.N.). If RestoreHealth reports 0x800f081f, give it a -Source.'
+        Remedy   = 'Repair, then retry the update (W.H.E.T.S.T.O.N.E.). If RestoreHealth reports 0x800f081f, give it a -Source.'
     }
     'UpdateFailuresClient' = @{
         Severity = 'Warning'
@@ -293,16 +293,16 @@ $SutureFindings = @{
 $Findings = [System.Collections.Generic.List[object]]::new()
 $Actions  = [System.Collections.Generic.List[object]]::new()
 
-function Add-SutureFinding {
+function Add-SolderFinding {
     param([Parameter(Mandatory)][string]$Code, [string]$Detail = '')
-    $meta = $SutureFindings[$Code]
+    $meta = $SolderFindings[$Code]
     if (-not $meta) { $meta = @{ Severity = 'Warning'; Title = $Code; Summary = ''; Remedy = '' } }
     [void]$Findings.Add([PSCustomObject]@{
         Code = $Code; Severity = $meta.Severity; Title = $meta.Title; Summary = $meta.Summary; Remedy = $meta.Remedy; Detail = $Detail
     })
 }
 
-function Add-SutureAction {
+function Add-SolderAction {
     param([Parameter(Mandatory)][string]$Step, [Parameter(Mandatory)][string]$Status, [string]$Detail = '')
     [void]$Actions.Add([PSCustomObject]@{ Timestamp = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'); Step = $Step; Status = $Status; Detail = $Detail })
 }
@@ -320,19 +320,19 @@ function Get-SeverityClass {
 # BANNER
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Show-SutureBanner {
+function Show-SolderBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host @"
 
-  ███████╗██╗   ██╗████████╗██╗   ██╗██████╗ ███████╗
-  ██╔════╝██║   ██║╚══██╔══╝██║   ██║██╔══██╗██╔════╝
-  ███████╗██║   ██║   ██║   ██║   ██║██████╔╝█████╗
-  ╚════██║██║   ██║   ██║   ██║   ██║██╔══██╗██╔══╝
-  ███████║╚██████╔╝   ██║   ╚██████╔╝██║  ██║███████╗
-  ╚══════╝ ╚═════╝    ╚═╝    ╚═════╝ ╚═╝  ╚═╝╚══════╝
+  ███████╗ ██████╗ ██╗     ██████╗ ███████╗██████╗
+  ██╔════╝██╔═══██╗██║     ██╔══██╗██╔════╝██╔══██╗
+  ███████╗██║   ██║██║     ██║  ██║█████╗  ██████╔╝
+  ╚════██║██║   ██║██║     ██║  ██║██╔══╝  ██╔══██╗
+  ███████║╚██████╔╝███████╗██████╔╝███████╗██║  ██║
+  ╚══════╝ ╚═════╝ ╚══════╝╚═════╝ ╚══════╝╚═╝  ╚═╝
 
 "@ -ForegroundColor Cyan
-    Write-Host "    S.U.T.U.R.E. — Stitches Up The Update & Repair Engine" -ForegroundColor Cyan
+    Write-Host "    S.O.L.D.E.R. — Servicing-stack Overhaul: Locates Damage, Enacts Repair" -ForegroundColor Cyan
     Write-Host "    Windows Servicing Diagnosis and Repair Tool" -ForegroundColor Cyan
     if ($WhatIf) {
         Write-Host ""
@@ -369,7 +369,7 @@ function Get-ServicingErrorInfo {
     if (-not $hex) { return [PSCustomObject]@{ Code = "$Code"; Name = 'Unknown'; Kind = 'Other'; Meaning = 'No code was reported.' } }
     $entry = $ServicingErrorCodes[$hex]
     if ($entry) { return [PSCustomObject]@{ Code = $hex; Name = $entry.Name; Kind = $entry.Kind; Meaning = $entry.Meaning } }
-    return [PSCustomObject]@{ Code = $hex; Name = $hex; Kind = 'Other'; Meaning = 'Not a code S.U.T.U.R.E. recognises -- search the code with "Windows Update".' }
+    return [PSCustomObject]@{ Code = $hex; Name = $hex; Kind = 'Other'; Meaning = 'Not a code S.O.L.D.E.R. recognises -- search the code with "Windows Update".' }
 }
 
 function ConvertFrom-DismHealth {
@@ -509,7 +509,7 @@ function Get-RepairSourceState {
     }
 }
 
-function Get-SutureVerdict {
+function Get-SolderVerdict {
     param([object[]]$FindingList)
     $sev = @($FindingList | ForEach-Object { $_.Severity })
     if ($sev -contains 'Error')   { return [PSCustomObject]@{ Verdict = 'Broken';    Class = 'err'  } }
@@ -580,7 +580,7 @@ function Get-LogLength {
     try { return (Get-Item -LiteralPath $Path -ErrorAction Stop).Length } catch { return 0 }
 }
 
-function Get-SutureContext {
+function Get-SolderContext {
     $os = $null
     try { $os = Get-CimInstance Win32_OperatingSystem -ErrorAction Stop } catch { $os = $null }
     $cv = Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -ErrorAction SilentlyContinue
@@ -598,7 +598,7 @@ function Get-SutureContext {
     }
 }
 
-function Get-SutureRebootSignal {
+function Get-SolderRebootSignal {
     $sm = Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager' -ErrorAction SilentlyContinue
     $renames = @()
     if ($sm) { $renames = @($sm.PendingFileRenameOperations) + @($sm.PendingFileRenameOperations2) | Where-Object { -not [string]::IsNullOrWhiteSpace("$_") } }
@@ -614,7 +614,7 @@ function Get-SutureRebootSignal {
     }
 }
 
-function Get-SutureUpdateFailure {
+function Get-SolderUpdateFailure {
     $since = (Get-Date).AddDays(-$UpdateLookbackDays)
     $rows = foreach ($e in (Get-EventsSafe -Filter @{ LogName = 'System'; ProviderName = 'Microsoft-Windows-WindowsUpdateClient'; Id = 20; StartTime = $since } -MaxEvents 200)) {
         $d = Get-EventDataMap -Record $e
@@ -631,7 +631,7 @@ function Get-SutureUpdateFailure {
     return @($rows | Sort-Object Time -Descending)
 }
 
-function Get-SutureRepairSource {
+function Get-SolderRepairSource {
     $svc = Get-ItemProperty -Path $ServicingPolicyKey -ErrorAction SilentlyContinue
     $wu  = Get-ItemProperty -Path $WuPolicyKey -ErrorAction SilentlyContinue
     $au  = Get-ItemProperty -Path "$WuPolicyKey\AU" -ErrorAction SilentlyContinue
@@ -650,7 +650,7 @@ function Get-DismArgumentList {
     return $a
 }
 
-function Invoke-SutureStoreCheck {
+function Invoke-SolderStoreCheck {
     param([switch]$Scan)
     $op = if ($Scan) { 'ScanHealth' } else { 'CheckHealth' }
     if ($Scan) { Write-Step "DISM /ScanHealth -- reads the whole store, usually 5-15 minutes..." } else { Write-Step "DISM /CheckHealth..." }
@@ -659,40 +659,40 @@ function Invoke-SutureStoreCheck {
     return [PSCustomObject]@{ Operation = $op; State = $parsed.State; ErrorCode = $(if ($parsed.ErrorCode) { $parsed.ErrorCode } elseif ($r.ExitCode) { ConvertTo-HResultString -Code $r.ExitCode } else { '' }); ExitCode = $r.ExitCode }
 }
 
-function Invoke-SutureAudit {
+function Invoke-SolderAudit {
     Write-Section "SYSTEM"
-    $ctx = Get-SutureContext
+    $ctx = Get-SolderContext
     Write-Info "$($ctx.Computer)  |  $($ctx.OS) $($ctx.Display)  |  build $($ctx.Build)"
     if ($null -ne $ctx.FreeBytes) {
         $freeGB = [math]::Round($ctx.FreeBytes / 1GB, 1)
         Write-Info "$($env:SystemDrive) free: $(Format-Bytes $ctx.FreeBytes)"
-        if ($freeGB -lt $FreeSpaceErrorGB)       { Add-SutureFinding -Code 'DiskSpaceCritical' -Detail "$freeGB GB free on $($env:SystemDrive)" }
-        elseif ($freeGB -lt $FreeSpaceWarningGB) { Add-SutureFinding -Code 'DiskSpaceLow'      -Detail "$freeGB GB free on $($env:SystemDrive)" }
+        if ($freeGB -lt $FreeSpaceErrorGB)       { Add-SolderFinding -Code 'DiskSpaceCritical' -Detail "$freeGB GB free on $($env:SystemDrive)" }
+        elseif ($freeGB -lt $FreeSpaceWarningGB) { Add-SolderFinding -Code 'DiskSpaceLow'      -Detail "$freeGB GB free on $($env:SystemDrive)" }
     }
 
     $ti = $null
     try { $ti = Get-CimInstance Win32_Service -Filter "Name='TrustedInstaller'" -ErrorAction Stop } catch { $ti = $null }
-    if ($ti -and $ti.StartMode -eq 'Disabled') { Add-SutureFinding -Code 'TrustedInstallerDisabled' -Detail 'TrustedInstaller start type: Disabled' }
+    if ($ti -and $ti.StartMode -eq 'Disabled') { Add-SolderFinding -Code 'TrustedInstallerDisabled' -Detail 'TrustedInstaller start type: Disabled' }
     Write-Info ("Windows Modules Installer: {0}" -f $(if ($ti) { "$($ti.StartMode), $($ti.State)" } else { 'not found' }))
 
     Write-Section "PENDING RESTART"
-    $reboot = @(Get-PendingRebootReason -Signals (Get-SutureRebootSignal))
+    $reboot = @(Get-PendingRebootReason -Signals (Get-SolderRebootSignal))
     if ($reboot.Count -eq 0) { Write-Ok "No restart pending." }
     foreach ($r in $reboot) { if ($r.Kind -eq 'Servicing') { Write-Warn $r.Text } else { Write-Info $r.Text } }
     $servicingReboot = @($reboot | Where-Object { $_.Kind -eq 'Servicing' })
-    if ($servicingReboot.Count -gt 0) { Add-SutureFinding -Code 'RebootPendingServicing' -Detail (($servicingReboot | ForEach-Object { $_.Text }) -join '; ') }
-    elseif ($reboot.Count -gt 0)      { Add-SutureFinding -Code 'RebootPendingOther'     -Detail (($reboot | ForEach-Object { $_.Text }) -join '; ') }
+    if ($servicingReboot.Count -gt 0) { Add-SolderFinding -Code 'RebootPendingServicing' -Detail (($servicingReboot | ForEach-Object { $_.Text }) -join '; ') }
+    elseif ($reboot.Count -gt 0)      { Add-SolderFinding -Code 'RebootPendingOther'     -Detail (($reboot | ForEach-Object { $_.Text }) -join '; ') }
 
     Write-Section "COMPONENT STORE"
-    $store = Invoke-SutureStoreCheck -Scan:$Deep
+    $store = Invoke-SolderStoreCheck -Scan:$Deep
     switch ($store.State) {
         'Healthy'       { Write-Ok "No component store corruption detected ($($store.Operation))." }
-        'Repairable'    { Write-Fail "Component store is corrupt and repairable."; Add-SutureFinding -Code 'StoreRepairable' -Detail "DISM /$($store.Operation)" }
-        'NotRepairable' { Write-Fail "Component store is corrupt and cannot be repaired from current sources."; Add-SutureFinding -Code 'StoreNotRepairable' -Detail "DISM /$($store.Operation)" }
+        'Repairable'    { Write-Fail "Component store is corrupt and repairable."; Add-SolderFinding -Code 'StoreRepairable' -Detail "DISM /$($store.Operation)" }
+        'NotRepairable' { Write-Fail "Component store is corrupt and cannot be repaired from current sources."; Add-SolderFinding -Code 'StoreNotRepairable' -Detail "DISM /$($store.Operation)" }
         default {
             Write-Warn "Could not read the store state."
             $info = Get-ServicingErrorInfo -Code $store.ErrorCode
-            Add-SutureFinding -Code 'StoreCheckFailed' -Detail ("DISM /{0} exit {1}{2}" -f $store.Operation, $store.ExitCode, $(if ($store.ErrorCode) { " -- $($info.Code) $($info.Name)" } else { '' }))
+            Add-SolderFinding -Code 'StoreCheckFailed' -Detail ("DISM /{0} exit {1}{2}" -f $store.Operation, $store.ExitCode, $(if ($store.ErrorCode) { " -- $($info.Code) $($info.Name)" } else { '' }))
         }
     }
     if (-not $Deep -and $store.State -eq 'Healthy') { Write-Info "CheckHealth reads the last recorded state; -Deep runs a full ScanHealth." }
@@ -700,35 +700,35 @@ function Invoke-SutureAudit {
     Write-Step "DISM /AnalyzeComponentStore..."
     $analyze = ConvertFrom-DismAnalyze -Lines (Invoke-Native -File 'dism.exe' -Arguments @('/English', '/Online', '/Cleanup-Image', '/AnalyzeComponentStore')).Lines
     if ($analyze.ActualSize) { Write-Info ("Store size {0}; reclaimable packages {1}; cleanup recommended: {2}" -f $analyze.ActualSize, $analyze.ReclaimablePackages, $(if ($analyze.CleanupRecommended) { 'yes' } else { 'no' })) }
-    if ($analyze.CleanupRecommended) { Add-SutureFinding -Code 'CleanupRecommended' -Detail ("{0} reclaimable package(s); last cleanup {1}" -f $analyze.ReclaimablePackages, $analyze.LastCleanup) }
+    if ($analyze.CleanupRecommended) { Add-SolderFinding -Code 'CleanupRecommended' -Detail ("{0} reclaimable package(s); last cleanup {1}" -f $analyze.ReclaimablePackages, $analyze.LastCleanup) }
 
-    $src = Get-SutureRepairSource
+    $src = Get-SolderRepairSource
     Write-Info "Repair files come from: $($src.Description)"
-    if ($src.AtRisk -and [string]::IsNullOrWhiteSpace($Source)) { Add-SutureFinding -Code 'WsusRepairSource' -Detail $src.Description }
+    if ($src.AtRisk -and [string]::IsNullOrWhiteSpace($Source)) { Add-SolderFinding -Code 'WsusRepairSource' -Detail $src.Description }
 
     Write-Section "SYSTEM FILE CHECKER (last run)"
     $sfc = ConvertFrom-CbsSrLine -Lines (Read-LogTail -Path $CbsLogPath -MaxBytes $CbsTailBytes)
     if (-not $sfc.Found) { Write-Info "No SFC run found in the recent CBS.log." }
     else {
         Write-Info ("Last SFC activity {0}: {1} repaired, {2} could not be repaired" -f $sfc.LastRun, $sfc.Repaired.Count, $sfc.CannotRepair.Count)
-        if ($sfc.CannotRepair.Count -gt 0) { Add-SutureFinding -Code 'SfcUnrepairedFiles' -Detail (($sfc.CannotRepair | Select-Object -First 5) -join ', ') }
-        elseif ($sfc.Repaired.Count -gt 0) { Add-SutureFinding -Code 'SfcRepairedFiles' -Detail (($sfc.Repaired | Select-Object -First 5) -join ', ') }
+        if ($sfc.CannotRepair.Count -gt 0) { Add-SolderFinding -Code 'SfcUnrepairedFiles' -Detail (($sfc.CannotRepair | Select-Object -First 5) -join ', ') }
+        elseif ($sfc.Repaired.Count -gt 0) { Add-SolderFinding -Code 'SfcRepairedFiles' -Detail (($sfc.Repaired | Select-Object -First 5) -join ', ') }
     }
 
     Write-Section "WINDOWS UPDATE FAILURES ($UpdateLookbackDays days)"
-    $failures = @(Get-SutureUpdateFailure)
+    $failures = @(Get-SolderUpdateFailure)
     if ($failures.Count -eq 0) { Write-Ok "No failed update installs logged." }
     foreach ($f in ($failures | Select-Object -First 8)) { Write-Info ("{0}  {1} {2}  {3}" -f $f.Time.ToString('yyyy-MM-dd'), $f.Code, $f.Kind, $f.Update) }
     foreach ($kind in 'Store', 'Client') {
         $hit = @($failures | Where-Object { $_.Kind -eq $kind })
         if ($hit.Count -gt 0) {
             $codes = ($hit | Group-Object Code | ForEach-Object { "$($_.Name) $($_.Group[0].Name) x$($_.Count)" }) -join '; '
-            Add-SutureFinding -Code $(if ($kind -eq 'Store') { 'UpdateFailuresStore' } else { 'UpdateFailuresClient' }) -Detail $codes
+            Add-SolderFinding -Code $(if ($kind -eq 'Store') { 'UpdateFailuresStore' } else { 'UpdateFailuresClient' }) -Detail $codes
         }
     }
     $other = @($failures | Where-Object { $_.Kind -notin @('Store', 'Client') })
     if ($other.Count -gt 0) {
-        Add-SutureFinding -Code 'UpdateFailuresOther' -Detail (($other | Group-Object Code | ForEach-Object { "$($_.Name) $($_.Group[0].Name) x$($_.Count)" }) -join '; ')
+        Add-SolderFinding -Code 'UpdateFailuresOther' -Detail (($other | Group-Object Code | ForEach-Object { "$($_.Name) $($_.Group[0].Name) x$($_.Count)" }) -join '; ')
     }
 
     return [PSCustomObject]@{
@@ -747,28 +747,28 @@ function Invoke-SutureAudit {
 # REPAIR
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Repair-SutureTrustedInstaller {
+function Repair-SolderTrustedInstaller {
     if ($WhatIf) {
         Write-Warn "[WhatIf] Would set the Windows Modules Installer (TrustedInstaller) service to Manual."
-        Add-SutureAction -Step 'Re-enable Windows Modules Installer' -Status 'WhatIf'
+        Add-SolderAction -Step 'Re-enable Windows Modules Installer' -Status 'WhatIf'
         return
     }
     try {
         Set-Service -Name 'TrustedInstaller' -StartupType Manual -ErrorAction Stop
         Write-Ok "Windows Modules Installer set to Manual."
-        Add-SutureAction -Step 'Re-enable Windows Modules Installer' -Status 'Done' -Detail 'Start type: Manual'
-        Add-TKNote -Text 'Set the Windows Modules Installer service back to Manual.' -Category 'Action' -ScriptName 'suture'
+        Add-SolderAction -Step 'Re-enable Windows Modules Installer' -Status 'Done' -Detail 'Start type: Manual'
+        Add-TKNote -Text 'Set the Windows Modules Installer service back to Manual.' -Category 'Action' -ScriptName 'solder'
     } catch {
         Write-Fail "Could not change the service: $($_.Exception.Message)"
-        Add-SutureAction -Step 'Re-enable Windows Modules Installer' -Status 'Failed' -Detail $_.Exception.Message
+        Add-SolderAction -Step 'Re-enable Windows Modules Installer' -Status 'Failed' -Detail $_.Exception.Message
     }
 }
 
-function Repair-SutureRestoreHealth {
+function Repair-SolderRestoreHealth {
     $argList = Get-DismArgumentList -Operation 'RestoreHealth'
     if ($WhatIf) {
         Write-Warn "[WhatIf] Would run: dism.exe $($argList -join ' ')"
-        Add-SutureAction -Step 'DISM /RestoreHealth' -Status 'WhatIf' -Detail ($argList -join ' ')
+        Add-SolderAction -Step 'DISM /RestoreHealth' -Status 'WhatIf' -Detail ($argList -join ' ')
         return $true
     }
     Write-Section "REPAIR — DISM /RestoreHealth"
@@ -778,23 +778,23 @@ function Repair-SutureRestoreHealth {
     $code = if ($parsed.ErrorCode) { $parsed.ErrorCode } elseif ($r.ExitCode) { ConvertTo-HResultString -Code $r.ExitCode } else { '' }
     if ($r.ExitCode -eq 0 -and $parsed.State -ne 'NotRepairable') {
         Write-Ok "RestoreHealth completed."
-        Add-SutureAction -Step 'DISM /RestoreHealth' -Status 'Done' -Detail $(if ($Source) { "Source: $Source" } else { 'Source: Windows Update' })
-        Add-TKNote -Text "Ran DISM /RestoreHealth$(if ($Source) { " from $Source" }) -- completed." -Category 'Action' -ScriptName 'suture'
+        Add-SolderAction -Step 'DISM /RestoreHealth' -Status 'Done' -Detail $(if ($Source) { "Source: $Source" } else { 'Source: Windows Update' })
+        Add-TKNote -Text "Ran DISM /RestoreHealth$(if ($Source) { " from $Source" }) -- completed." -Category 'Action' -ScriptName 'solder'
         return $true
     }
     $info = Get-ServicingErrorInfo -Code $code
     Write-Fail "RestoreHealth failed: $($info.Code) $($info.Name) -- $($info.Meaning)"
-    if ($info.Code -eq '0x800f081f') { Add-SutureFinding -Code 'SourceMissing' -Detail $(if ($Source) { "Source tried: $Source" } else { 'Source tried: Windows Update' }) }
-    else                              { Add-SutureFinding -Code 'RepairFailed' -Detail "DISM /RestoreHealth: $($info.Code) $($info.Name)" }
-    Add-SutureAction -Step 'DISM /RestoreHealth' -Status 'Failed' -Detail "$($info.Code) $($info.Name) -- $($info.Meaning)"
-    Write-TKError -ScriptName 'suture' -Message "DISM /RestoreHealth failed: $($info.Code) $($info.Name)" -Category 'Servicing'
+    if ($info.Code -eq '0x800f081f') { Add-SolderFinding -Code 'SourceMissing' -Detail $(if ($Source) { "Source tried: $Source" } else { 'Source tried: Windows Update' }) }
+    else                              { Add-SolderFinding -Code 'RepairFailed' -Detail "DISM /RestoreHealth: $($info.Code) $($info.Name)" }
+    Add-SolderAction -Step 'DISM /RestoreHealth' -Status 'Failed' -Detail "$($info.Code) $($info.Name) -- $($info.Meaning)"
+    Write-TKError -ScriptName 'solder' -Message "DISM /RestoreHealth failed: $($info.Code) $($info.Name)" -Category 'Servicing'
     return $false
 }
 
-function Repair-SutureSfc {
+function Repair-SolderSfc {
     if ($WhatIf) {
         Write-Warn "[WhatIf] Would run: sfc.exe /scannow"
-        Add-SutureAction -Step 'sfc /scannow' -Status 'WhatIf'
+        Add-SolderAction -Step 'sfc /scannow' -Status 'WhatIf'
         return $null
     }
     Write-Section "REPAIR — sfc /scannow"
@@ -812,23 +812,23 @@ function Repair-SutureSfc {
         'Unrepaired' {
             Write-Fail "SFC could not repair some files."
             $status = 'Failed'; $detail = "Could not repair: $(($fromLog.CannotRepair | Select-Object -First 5) -join ', ')"
-            Add-SutureFinding -Code 'RepairFailed' -Detail "sfc /scannow: $detail"
+            Add-SolderFinding -Code 'RepairFailed' -Detail "sfc /scannow: $detail"
         }
         default {
             Write-Warn "Could not read the SFC result (exit $($r.ExitCode)); check CBS.log."
             $status = 'Failed'; $detail = "Result unreadable, exit $($r.ExitCode)"
         }
     }
-    Add-SutureAction -Step 'sfc /scannow' -Status $status -Detail $detail
-    Add-TKNote -Text "Ran sfc /scannow -- $detail." -Category 'Action' -ScriptName 'suture'
+    Add-SolderAction -Step 'sfc /scannow' -Status $status -Detail $detail
+    Add-TKNote -Text "Ran sfc /scannow -- $detail." -Category 'Action' -ScriptName 'solder'
     return $outcome
 }
 
-function Repair-SutureCleanup {
+function Repair-SolderCleanup {
     $argList = @('/English', '/Online', '/Cleanup-Image', '/StartComponentCleanup')
     if ($WhatIf) {
         Write-Warn "[WhatIf] Would run: dism.exe $($argList -join ' ')  (never /ResetBase)"
-        Add-SutureAction -Step 'DISM /StartComponentCleanup' -Status 'WhatIf'
+        Add-SolderAction -Step 'DISM /StartComponentCleanup' -Status 'WhatIf'
         return
     }
     Write-Section "REPAIR — component cleanup"
@@ -836,20 +836,20 @@ function Repair-SutureCleanup {
     $r = Invoke-Native -File 'dism.exe' -Arguments $argList -Echo
     if ($r.ExitCode -eq 0) {
         Write-Ok "Component cleanup completed."
-        Add-SutureAction -Step 'DISM /StartComponentCleanup' -Status 'Done'
-        Add-TKNote -Text 'Ran DISM /StartComponentCleanup.' -Category 'Action' -ScriptName 'suture'
+        Add-SolderAction -Step 'DISM /StartComponentCleanup' -Status 'Done'
+        Add-TKNote -Text 'Ran DISM /StartComponentCleanup.' -Category 'Action' -ScriptName 'solder'
     } else {
         $info = Get-ServicingErrorInfo -Code $r.ExitCode
         Write-Warn "Component cleanup failed: $($info.Code) $($info.Name)"
-        Add-SutureAction -Step 'DISM /StartComponentCleanup' -Status 'Failed' -Detail "$($info.Code) $($info.Name)"
+        Add-SolderAction -Step 'DISM /StartComponentCleanup' -Status 'Failed' -Detail "$($info.Code) $($info.Name)"
     }
 }
 
-function Invoke-SutureRepair {
+function Invoke-SolderRepair {
     param([object]$Audit)
     $codes = @($Findings | ForEach-Object { $_.Code })
 
-    if ($codes -contains 'TrustedInstallerDisabled') { Repair-SutureTrustedInstaller }
+    if ($codes -contains 'TrustedInstallerDisabled') { Repair-SolderTrustedInstaller }
 
     if ($codes -contains 'RebootPendingServicing' -and -not $WhatIf) {
         $proceed = $false
@@ -860,32 +860,32 @@ function Invoke-SutureRepair {
         }
         if (-not $proceed) {
             Write-Warn "Restart the machine, then run the repair again."
-            Add-SutureAction -Step 'DISM /RestoreHealth and sfc /scannow' -Status 'Skipped' -Detail 'A servicing restart is pending -- restart first.'
+            Add-SolderAction -Step 'DISM /RestoreHealth and sfc /scannow' -Status 'Skipped' -Detail 'A servicing restart is pending -- restart first.'
             return
         }
     }
 
     if ($codes -contains 'DiskSpaceCritical') { Write-Warn "The system drive is almost full; DISM may fail for lack of space." }
 
-    $restored = Repair-SutureRestoreHealth
+    $restored = Repair-SolderRestoreHealth
     # SFC copies from the store, so it is only worth running once the store is
     # sound; after a failed RestoreHealth it would report the same damage.
-    if ($restored) { [void](Repair-SutureSfc) }
-    else           { Add-SutureAction -Step 'sfc /scannow' -Status 'Skipped' -Detail 'RestoreHealth failed; SFC would copy from a damaged store.' }
+    if ($restored) { [void](Repair-SolderSfc) }
+    else           { Add-SolderAction -Step 'sfc /scannow' -Status 'Skipped' -Detail 'RestoreHealth failed; SFC would copy from a damaged store.' }
 
     $doCleanup = [bool]$Cleanup
     if (-not $doCleanup -and -not $Unattended -and -not $WhatIf -and $Audit.Analyze.CleanupRecommended -and $restored) {
         $ans = Read-Host "  DISM recommends a component cleanup. Run /StartComponentCleanup now? [y/N]"
         $doCleanup = ($ans -match '^[Yy]')
     }
-    if ($doCleanup) { Repair-SutureCleanup }
+    if ($doCleanup) { Repair-SolderCleanup }
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # HTML REPORT
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Build-SutureReport {
+function Build-SolderReport {
     param([object]$Audit, [object]$Verdict, [object]$After)
 
     $cfg        = Get-TKConfig
@@ -944,8 +944,8 @@ function Build-SutureReport {
     $tiText   = if ($Audit.TrustedInstaller) { "$($Audit.TrustedInstaller.StartMode), $($Audit.TrustedInstaller.State)" } else { 'not found' }
 
     $htmlHead = Get-TKHtmlHead `
-        -Title      'S.U.T.U.R.E. Servicing Report' `
-        -ScriptName 'S.U.T.U.R.E.' `
+        -Title      'S.O.L.D.E.R. Servicing Report' `
+        -ScriptName 'S.O.L.D.E.R.' `
         -Subtitle   "${orgPrefix}Windows Servicing -- $machine" `
         -MetaItems  ([ordered]@{
             'Machine'   = $machine
@@ -1016,7 +1016,7 @@ function Build-SutureReport {
       <tbody>$($aRows.ToString())</tbody></table></div>
   </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'S.U.T.U.R.E. v5.1')
+"@ + (Get-TKHtmlFoot -ScriptName 'S.O.L.D.E.R. v5.1')
     return $html
 }
 
@@ -1024,12 +1024,12 @@ function Build-SutureReport {
 # ORCHESTRATION
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Invoke-SutureRun {
+function Invoke-SolderRun {
     param([string]$Mode)
     $Findings.Clear()
     $Actions.Clear()
 
-    $audit = Invoke-SutureAudit
+    $audit = Invoke-SolderAudit
     Write-Section "FINDINGS"
     if ($Findings.Count -eq 0) { Write-Ok "Component store, system files and servicing state all in order." }
     foreach ($f in $Findings) {
@@ -1039,32 +1039,32 @@ function Invoke-SutureRun {
 
     $after = $null
     if ($Mode -eq 'Repair') {
-        Invoke-SutureRepair -Audit $audit
+        Invoke-SolderRepair -Audit $audit
         $ran = @($Actions | Where-Object { $_.Step -eq 'DISM /RestoreHealth' -and $_.Status -eq 'Done' }).Count -gt 0
         if ($ran) {
             Write-Section "VERIFY"
-            $after = Invoke-SutureStoreCheck
+            $after = Invoke-SolderStoreCheck
             if ($after.State -eq 'Healthy') { Write-Ok "Component store reports healthy after repair." }
             else                            { Write-Warn "Component store still reports: $($after.State)" }
-            Add-TKNote -Text "SUTURE repair on $($env:COMPUTERNAME): component store now $($after.State)." -Category $(if ($after.State -eq 'Healthy') { 'Resolution' } else { 'Issue' }) -ScriptName 'suture'
+            Add-TKNote -Text "SOLDER repair on $($env:COMPUTERNAME): component store now $($after.State)." -Category $(if ($after.State -eq 'Healthy') { 'Resolution' } else { 'Issue' }) -ScriptName 'solder'
         }
     }
 
-    $verdict = Get-SutureVerdict -FindingList $Findings.ToArray()
+    $verdict = Get-SolderVerdict -FindingList $Findings.ToArray()
     Write-Section "VERDICT"
     switch ($verdict.Class) { 'err' { Write-Fail $verdict.Verdict } 'warn' { Write-Warn $verdict.Verdict } default { Write-Ok $verdict.Verdict } }
     if ($after -and $after.State -eq 'Healthy' -and $verdict.Class -ne 'ok') { Write-Info "Findings describe the state before the repair; the store now reports healthy. Audit again after a restart." }
-    Add-TKNote -Text ("SUTURE {0} on {1}: verdict {2} ({3} finding(s))." -f $Mode, $env:COMPUTERNAME, $verdict.Verdict, $Findings.Count) -Category 'Info' -ScriptName 'suture'
+    Add-TKNote -Text ("SOLDER {0} on {1}: verdict {2} ({3} finding(s))." -f $Mode, $env:COMPUTERNAME, $verdict.Verdict, $Findings.Count) -Category 'Info' -ScriptName 'solder'
 
     Write-Step "Generating HTML report..."
-    $html    = Build-SutureReport -Audit $audit -Verdict $verdict -After $after
-    $outPath = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) ("SUTURE_{0}.html" -f (Get-Date -Format 'yyyyMMdd_HHmmss'))
+    $html    = Build-SolderReport -Audit $audit -Verdict $verdict -After $after
+    $outPath = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) ("SOLDER_{0}.html" -f (Get-Date -Format 'yyyyMMdd_HHmmss'))
     try {
         [System.IO.File]::WriteAllText($outPath, $html, [System.Text.Encoding]::UTF8)
         Show-TKReportResult -Path $outPath -Unattended:$Unattended
     } catch {
         Write-Fail "Could not save report: $($_.Exception.Message)"
-        Write-TKError -ScriptName 'suture' -Message "Report save failed: $($_.Exception.Message)" -Category 'Report'
+        Write-TKError -ScriptName 'solder' -Message "Report save failed: $($_.Exception.Message)" -Category 'Report'
     }
 }
 
@@ -1073,12 +1073,12 @@ function Invoke-SutureRun {
 # ─────────────────────────────────────────────────────────────────────────────
 
 if ($Unattended) {
-    Show-SutureBanner
-    Invoke-SutureRun -Mode $Action
+    Show-SolderBanner
+    Invoke-SolderRun -Mode $Action
 } else {
     $choice = ''
     do {
-        Show-SutureBanner
+        Show-SolderBanner
         Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
         Write-Host "  ACTIONS" -ForegroundColor $C.Header
         Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
@@ -1094,10 +1094,10 @@ if ($Unattended) {
         $choice = (Read-Host).Trim().ToUpper()
 
         switch ($choice) {
-            '1' { Invoke-SutureRun -Mode 'Audit' }
-            '2' { $script:Deep = $true; Invoke-SutureRun -Mode 'Audit'; $script:Deep = $false }
-            '3' { Invoke-SutureRun -Mode 'Repair' }
-            'Q' { Write-Host ""; Write-Host "  Closing S.U.T.U.R.E." -ForegroundColor $C.Header; Write-Host "" }
+            '1' { Invoke-SolderRun -Mode 'Audit' }
+            '2' { $script:Deep = $true; Invoke-SolderRun -Mode 'Audit'; $script:Deep = $false }
+            '3' { Invoke-SolderRun -Mode 'Repair' }
+            'Q' { Write-Host ""; Write-Host "  Closing S.O.L.D.E.R." -ForegroundColor $C.Header; Write-Host "" }
             default {
                 Write-Host ""
                 Write-Host "  [!!] Invalid selection. Enter 1, 2, 3 or Q." -ForegroundColor $C.Warning

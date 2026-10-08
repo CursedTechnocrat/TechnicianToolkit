@@ -1,4 +1,4 @@
-﻿# archive.ps1 - A.R.C.H.I.V.E. — Automated Repository Compressing & Housing Important Volume Exports
+﻿# embalm.ps1 - E.M.B.A.L.M. — Encapsulates My Belongings As Lasting Mementos
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -20,7 +20,7 @@
 
 <#
 .SYNOPSIS
-    A.R.C.H.I.V.E. — Automated Repository Compressing & Housing Important Volume Exports
+    E.M.B.A.L.M. — Encapsulates My Belongings As Lasting Mementos
     Pre-Reimaging Profile Backup Tool for PowerShell 5.1+
 
 .DESCRIPTION
@@ -29,10 +29,10 @@
     a manifest file listing every archived item and a timestamped CSV log.
 
 .USAGE
-    PS C:\> .\archive.ps1                                                           # Must be run as Administrator
-    PS C:\> .\archive.ps1 -Unattended -Username "John"                              # Archive all items for user John
-    PS C:\> .\archive.ps1 -Unattended -Username "John" -Items "1,2,3" -Destination "\\server\backup"
-    PS C:\> .\archive.ps1 -WhatIf                                                   # Preview actions without staging or compressing
+    PS C:\> .\embalm.ps1                                                           # Must be run as Administrator
+    PS C:\> .\embalm.ps1 -Unattended -Username "John"                              # Archive all items for user John
+    PS C:\> .\embalm.ps1 -Unattended -Username "John" -Items "1,2,3" -Destination "\\server\backup"
+    PS C:\> .\embalm.ps1 -WhatIf                                                   # Preview actions without staging or compressing
 
 .NOTES
     Version : 5.1
@@ -112,19 +112,19 @@ $ColorSchema = @{
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ARCHIVE LOG
+# EMBALM LOG
 # ─────────────────────────────────────────────────────────────────────────────
 
-$ArchiveLog = New-Object System.Collections.ArrayList
+$EmbalmLog = New-Object System.Collections.ArrayList
 
-function Add-ArchiveRecord {
+function Add-EmbalmRecord {
     param(
         [string]$Item,
         [string]$Status,
         [string]$Detail    = "",
         [string]$Timestamp = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
     )
-    [void]$ArchiveLog.Add([PSCustomObject]@{
+    [void]$EmbalmLog.Add([PSCustomObject]@{
         Timestamp = $Timestamp
         Item      = $Item
         Status    = $Status
@@ -136,19 +136,19 @@ function Add-ArchiveRecord {
 # BANNER
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Show-ArchiveBanner {
+function Show-EmbalmBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host @"
 
-   █████╗ ██████╗  ██████╗██╗  ██╗██╗██╗   ██╗███████╗
-  ██╔══██╗██╔══██╗██╔════╝██║  ██║██║██║   ██║██╔════╝
-  ███████║██████╔╝██║     ███████║██║██║   ██║█████╗
-  ██╔══██║██╔══██╗██║     ██╔══██║██║╚██╗ ██╔╝██╔══╝
-  ██║  ██║██║  ██║╚██████╗██║  ██║██║ ╚████╔╝ ███████╗
-  ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═══╝  ╚══════╝
+  ███████╗███╗   ███╗██████╗  █████╗ ██╗     ███╗   ███╗
+  ██╔════╝████╗ ████║██╔══██╗██╔══██╗██║     ████╗ ████║
+  █████╗  ██╔████╔██║██████╔╝███████║██║     ██╔████╔██║
+  ██╔══╝  ██║╚██╔╝██║██╔══██╗██╔══██║██║     ██║╚██╔╝██║
+  ███████╗██║ ╚═╝ ██║██████╔╝██║  ██║███████╗██║ ╚═╝ ██║
+  ╚══════╝╚═╝     ╚═╝╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝
 
 "@ -ForegroundColor Cyan
-    Write-Host "    A.R.C.H.I.V.E. — Automated Repository Compressing & Housing Important Volume Exports" -ForegroundColor Cyan
+    Write-Host "    E.M.B.A.L.M. — Encapsulates My Belongings As Lasting Mementos" -ForegroundColor Cyan
     Write-Host "    Pre-Reimaging Profile Backup Tool" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -216,7 +216,7 @@ function Stage-Item {
 
     if (-not (Test-Path $SourcePath)) {
         Write-Host "    [!!] $Label — not found, skipping." -ForegroundColor $ColorSchema.Warning
-        Add-ArchiveRecord -Item $Label -Status "Skipped" -Detail "Source not found"
+        Add-EmbalmRecord -Item $Label -Status "Skipped" -Detail "Source not found"
         return
     }
 
@@ -224,7 +224,7 @@ function Stage-Item {
 
     if ($WhatIf) {
         Write-Host "    [~] Would stage $Label from $SourcePath" -ForegroundColor Cyan
-        Add-ArchiveRecord -Item $Label -Status "WhatIf" -Detail "Would stage from: $SourcePath"
+        Add-EmbalmRecord -Item $Label -Status "WhatIf" -Detail "Would stage from: $SourcePath"
         return
     }
 
@@ -242,15 +242,15 @@ function Stage-Item {
 
         if ($ok) {
             Write-Host "    [+] $Label — staged." -ForegroundColor $ColorSchema.Success
-            Add-ArchiveRecord -Item $Label -Status "Staged"
+            Add-EmbalmRecord -Item $Label -Status "Staged"
         } else {
             Write-Host "    [!!] $Label — staged with warnings." -ForegroundColor $ColorSchema.Warning
-            Add-ArchiveRecord -Item $Label -Status "Partial" -Detail "Robocopy exit $LASTEXITCODE"
+            Add-EmbalmRecord -Item $Label -Status "Partial" -Detail "Robocopy exit $LASTEXITCODE"
         }
     }
     catch {
         Write-Host "    [-] $Label — failed: $_" -ForegroundColor $ColorSchema.Error
-        Add-ArchiveRecord -Item $Label -Status "Failed" -Detail $_
+        Add-EmbalmRecord -Item $Label -Status "Failed" -Detail $_
     }
 }
 
@@ -258,7 +258,7 @@ function Stage-Item {
 # MAIN
 # ─────────────────────────────────────────────────────────────────────────────
 
-if (-not $Unattended) { Show-ArchiveBanner }
+if (-not $Unattended) { Show-EmbalmBanner }
 
 if ($WhatIf) {
     Write-Host ""
@@ -273,7 +273,7 @@ Write-Host ""
 # ── PROFILE SELECTION ─────────────────────────────────────────────────────────
 
 Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
-Write-Host "  SELECT PROFILE TO ARCHIVE" -ForegroundColor $ColorSchema.Header
+Write-Host "  SELECT PROFILE TO EMBALM" -ForegroundColor $ColorSchema.Header
 Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host ""
 
@@ -337,7 +337,7 @@ if ($oneDrivePath) {
 
 Write-Host ""
 Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
-Write-Host "  SELECT ITEMS TO ARCHIVE" -ForegroundColor $ColorSchema.Header
+Write-Host "  SELECT ITEMS TO EMBALM" -ForegroundColor $ColorSchema.Header
 Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host ""
 
@@ -475,7 +475,7 @@ if ($Unattended) {
 # ── STAGE FILES ───────────────────────────────────────────────────────────────
 
 $timestamp    = Get-Date -Format 'yyyyMMdd_HHmmss'
-$archiveName  = "ARCHIVE_$($env:COMPUTERNAME)_${profileUsername}_$timestamp"
+$archiveName  = "EMBALM_$($env:COMPUTERNAME)_${profileUsername}_$timestamp"
 $stagingDir   = Join-Path $env:TEMP $archiveName
 
 Write-Host ""
@@ -516,7 +516,7 @@ Write-Host "  [*] Writing manifest..." -ForegroundColor $ColorSchema.Progress
 
 $manifestPath = Join-Path $stagingDir "MANIFEST.txt"
 $manifestLines = @(
-    "A.R.C.H.I.V.E. Backup Manifest",
+    "E.M.B.A.L.M. Backup Manifest",
     "================================",
     "Machine   : $env:COMPUTERNAME",
     "Profile   : $profileRoot",
@@ -527,7 +527,7 @@ $manifestLines = @(
     "Items Archived",
     "--------------"
 )
-foreach ($record in $ArchiveLog) {
+foreach ($record in $EmbalmLog) {
     $manifestLines += "{0,-30} [{1}]  {2}" -f $record.Item, $record.Status, $record.Detail
 }
 
@@ -543,7 +543,7 @@ catch {
 
 Write-Host ""
 Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
-Write-Host "  COMPRESSING ARCHIVE" -ForegroundColor $ColorSchema.Header
+Write-Host "  COMPRESSING EMBALM" -ForegroundColor $ColorSchema.Header
 Write-Host ("  " + ("─" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host ""
 
@@ -561,7 +561,7 @@ Write-Host ""
 if ($WhatIf) {
     Write-Host "  [~] Would compress staged files into: $zipPath" -ForegroundColor Cyan
     Write-Host ""
-    Add-ArchiveRecord -Item "ZIP Archive" -Status "WhatIf" -Detail "Would create: $zipPath ($stagedCount files, $stagedSizeMB MB)"
+    Add-EmbalmRecord -Item "ZIP Archive" -Status "WhatIf" -Detail "Would create: $zipPath ($stagedCount files, $stagedSizeMB MB)"
 } else {
 
 $compressionStart = Get-Date
@@ -573,12 +573,12 @@ try {
     $zipSizeMB      = [math]::Round((Get-Item $zipPath).Length / 1MB, 1)
     $compressionSec = [math]::Round(((Get-Date) - $compressionStart).TotalSeconds, 1)
     Write-Host ("  [+] Archive created: {0}  ({1} MB, {2}s)" -f $zipPath, $zipSizeMB, $compressionSec) -ForegroundColor $ColorSchema.Success
-    Add-ArchiveRecord -Item "ZIP Archive" -Status "Created" -Detail "$zipSizeMB MB — $zipPath"
+    Add-EmbalmRecord -Item "ZIP Archive" -Status "Created" -Detail "$zipSizeMB MB — $zipPath"
 }
 catch {
     Write-Host "  [-] Compression failed: $_" -ForegroundColor $ColorSchema.Error
-    Add-ArchiveRecord -Item "ZIP Archive" -Status "Failed" -Detail $_
-    Write-TKError -ScriptName 'archive' -Message "ZIP creation failed for '$zipPath': $($_.Exception.Message)" -Category 'Compression'
+    Add-EmbalmRecord -Item "ZIP Archive" -Status "Failed" -Detail $_
+    Write-TKError -ScriptName 'embalm' -Message "ZIP creation failed for '$zipPath': $($_.Exception.Message)" -Category 'Compression'
 }
 finally {
     Write-Host "  [*] Cleaning up staging folder..." -ForegroundColor $ColorSchema.Progress
@@ -594,10 +594,10 @@ finally {
 
 # ── LOG ───────────────────────────────────────────────────────────────────────
 
-$logFile = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "ARCHIVE_Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').csv"
+$logFile = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "EMBALM_Log_$(Get-Date -Format 'yyyyMMdd_HHmmss').csv"
 
 try {
-    $ArchiveLog | Export-Csv -Path $logFile -NoTypeInformation -Encoding UTF8
+    $EmbalmLog | Export-Csv -Path $logFile -NoTypeInformation -Encoding UTF8
     Write-Host ""
     Write-Host "  [+] Log saved: $logFile" -ForegroundColor $ColorSchema.Success
 }
@@ -610,11 +610,11 @@ catch {
 
 Write-Host ""
 Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
-Write-Host "  ARCHIVE SUMMARY" -ForegroundColor $ColorSchema.Header
+Write-Host "  EMBALM SUMMARY" -ForegroundColor $ColorSchema.Header
 Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host ""
 
-foreach ($record in $ArchiveLog) {
+foreach ($record in $EmbalmLog) {
     $color = switch ($record.Status) {
         "Staged"   { $ColorSchema.Success }
         "Created"  { $ColorSchema.Success }
@@ -628,14 +628,14 @@ foreach ($record in $ArchiveLog) {
 }
 
 Write-Host ""
-$staged  = ($ArchiveLog | Where-Object { $_.Status -eq "Staged"  } | Measure-Object).Count
-$skipped = ($ArchiveLog | Where-Object { $_.Status -eq "Skipped" } | Measure-Object).Count
-$failed  = ($ArchiveLog | Where-Object { $_.Status -eq "Failed"  } | Measure-Object).Count
+$staged  = ($EmbalmLog | Where-Object { $_.Status -eq "Staged"  } | Measure-Object).Count
+$skipped = ($EmbalmLog | Where-Object { $_.Status -eq "Skipped" } | Measure-Object).Count
+$failed  = ($EmbalmLog | Where-Object { $_.Status -eq "Failed"  } | Measure-Object).Count
 
 Write-Host "  Staged: $staged  |  Skipped: $skipped  |  Failed: $failed" -ForegroundColor $ColorSchema.Header
 Write-Host ""
 Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
-Write-Host "  A.R.C.H.I.V.E. COMPLETE" -ForegroundColor $ColorSchema.Header
+Write-Host "  E.M.B.A.L.M. COMPLETE" -ForegroundColor $ColorSchema.Header
 Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host ""
 

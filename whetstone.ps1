@@ -1,4 +1,4 @@
-﻿# restoration.ps1 - R.E.S.T.O.R.A.T.I.O.N. — Renews Every System Through Orderly Rite — Automating The Installation Of New updates
+﻿# whetstone.ps1 - W.H.E.T.S.T.O.N.E. — Windows Hotfixes, Enforced Through Staged Testing Of Needed Enhancements
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -20,7 +20,7 @@
 
 <#
 .SYNOPSIS
-    R.E.S.T.O.R.A.T.I.O.N. — Renews Every System Through Orderly Rite — Automating The Installation Of New updates
+    W.H.E.T.S.T.O.N.E. — Windows Hotfixes, Enforced Through Staged Testing Of Needed Enhancements
     Windows Update & Maintenance Tool for PowerShell 5.1+
 
 .DESCRIPTION
@@ -30,9 +30,9 @@
     on exit. PSWindowsUpdate module is auto-installed if missing.
 
 .USAGE
-    PS C:\> .\restoration.ps1                          # Must be run as Administrator
-    PS C:\> .\restoration.ps1 -Unattended              # Silent mode — skip prompts and countdown
-    PS C:\> .\restoration.ps1 -Unattended -AutoReboot  # Silent mode — reboot automatically if needed
+    PS C:\> .\whetstone.ps1                          # Must be run as Administrator
+    PS C:\> .\whetstone.ps1 -Unattended              # Silent mode — skip prompts and countdown
+    PS C:\> .\whetstone.ps1 -Unattended -AutoReboot  # Silent mode — reboot automatically if needed
 
 .NOTES
     Version : 5.1
@@ -84,19 +84,19 @@ Assert-AdminPrivilege
 # BANNER DISPLAY
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Show-RestorationBanner {
+function Show-WhetstoneBanner {
     Write-Host @"
 
-  ██████╗ ███████╗███████╗████████╗ ██████╗ ██████╗  █████╗ ████████╗██╗ ██████╗ ███╗   ██╗
-  ██╔══██╗██╔════╝██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗██╔══██╗╚══██╔══╝██║██╔═══██╗████╗  ██║
-  ██████╔╝█████╗  ███████╗   ██║   ██║   ██║██████╔╝███████║   ██║   ██║██║   ██║██╔██╗ ██║
-  ██╔══██╗██╔══╝  ╚════██╗   ██║   ██║   ██║██╔══██╗██╔══██║   ██║   ██║██║   ██║██║╚██╗██║
-  ██║  ██║███████╗███████║   ██║   ╚██████╔╝██║  ██║██║  ██║   ██║   ██║╚██████╔╝██║ ╚████║
-  ╚═╝  ╚═╝╚══════╝╚══════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝
+  ██╗    ██╗██╗  ██╗███████╗████████╗███████╗████████╗ ██████╗ ███╗   ██╗███████╗
+  ██║    ██║██║  ██║██╔════╝╚══██╔══╝██╔════╝╚══██╔══╝██╔═══██╗████╗  ██║██╔════╝
+  ██║ █╗ ██║███████║█████╗     ██║   ███████╗   ██║   ██║   ██║██╔██╗ ██║█████╗
+  ██║███╗██║██╔══██║██╔══╝     ██║   ╚════██║   ██║   ██║   ██║██║╚██╗██║██╔══╝
+  ╚███╔███╔╝██║  ██║███████╗   ██║   ███████║   ██║   ╚██████╔╝██║ ╚████║███████╗
+   ╚══╝╚══╝ ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═══╝╚══════╝
 
 "@ -ForegroundColor Cyan
-    Write-Host "    R.E.S.T.O.R.A.T.I.O.N. — Renews Every System Through Orderly Rite" -ForegroundColor Cyan
-    Write-Host "    Automating The Installation Of New updates" -ForegroundColor Cyan
+    Write-Host "    W.H.E.T.S.T.O.N.E. — Windows Hotfixes, Enforced Through Staged Testing Of Needed Enhancements" -ForegroundColor Cyan
+    Write-Host "    Windows Update Deployment & Maintenance Tool" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -124,7 +124,7 @@ try {
     # LogDirectory; otherwise keep the long-standing %TEMP% default so an
     # unattended run always leaves a local log behind.
     $transcriptRoot = if ($Transcript) { Resolve-LogDirectory -FallbackPath $PSScriptRoot } else { $env:TEMP }
-    $transcriptPath = Join-Path $transcriptRoot "RESTORATION_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+    $transcriptPath = Join-Path $transcriptRoot "WHETSTONE_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
     Start-Transcript -Path $transcriptPath | Out-Null
 }
 catch {
@@ -135,7 +135,7 @@ catch {
 # DISPLAY BANNER
 # ─────────────────────────────────────────────────────────────────────────────
 
-Show-RestorationBanner
+Show-WhetstoneBanner
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor $ColorSchema.Header
@@ -268,7 +268,7 @@ try {
 }
 catch {
     Write-Host "[-] Error installing updates: $_" -ForegroundColor $ColorSchema.Error
-    Write-TKError -ScriptName 'restoration' -Message "Windows Update install failed: $($_.Exception.Message)" -Category 'Windows Update'
+    Write-TKError -ScriptName 'whetstone' -Message "Windows Update install failed: $($_.Exception.Message)" -Category 'Windows Update'
 }
 
 Write-Host ""

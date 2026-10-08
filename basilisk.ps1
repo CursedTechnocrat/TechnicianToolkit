@@ -1,4 +1,4 @@
-﻿# sigil.ps1 - S.I.G.I.L. — Secures Infrastructure: Governs via Integrated Lockdown
+﻿# basilisk.ps1 - B.A.S.I.L.I.S.K. — Baseline Applier: Sets Integrity, Locks In Security Knobs
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -20,7 +20,7 @@
 
 <#
 .SYNOPSIS
-    S.I.G.I.L. — Secures Infrastructure: Governs via Integrated Lockdown
+    B.A.S.I.L.I.S.K. — Baseline Applier: Sets Integrity, Locks In Security Knobs
     Security Baseline Enforcement Tool for PowerShell 5.1+
 
 .DESCRIPTION
@@ -32,11 +32,11 @@
     post-onboarding hardening step. Changes are logged to a timestamped CSV.
 
 .USAGE
-    PS C:\> .\sigil.ps1                                    # Must be run as Administrator
-    PS C:\> .\sigil.ps1 -WhatIf                            # Preview all changes without applying them
-    PS C:\> .\sigil.ps1 -Unattended                        # Apply all categories silently (default)
-    PS C:\> .\sigil.ps1 -Unattended -Categories "1,3,5"   # Apply specific categories silently
-    PS C:\> .\sigil.ps1 -Unattended -WhatIf               # Preview unattended run without applying
+    PS C:\> .\basilisk.ps1                                    # Must be run as Administrator
+    PS C:\> .\basilisk.ps1 -WhatIf                            # Preview all changes without applying them
+    PS C:\> .\basilisk.ps1 -Unattended                        # Apply all categories silently (default)
+    PS C:\> .\basilisk.ps1 -Unattended -Categories "1,3,5"   # Apply specific categories silently
+    PS C:\> .\basilisk.ps1 -Unattended -WhatIf               # Preview unattended run without applying
 
 .NOTES
     Version : 5.1
@@ -140,19 +140,19 @@ function Add-ActionRecord {
 # BANNER
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Show-SigilBanner {
+function Show-BasiliskBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host @"
 
-   ███████╗██╗ ██████╗ ██╗██╗
-   ██╔════╝██║██╔════╝ ██║██║
-   ███████╗██║██║  ███╗██║██║
-   ╚════██║██║██║   ██║██║██║
-   ███████║██║╚██████╔╝██║███████╗
-   ╚══════╝╚═╝ ╚═════╝ ╚═╝╚══════╝
+  ██████╗  █████╗ ███████╗██╗██╗     ██╗███████╗██╗  ██╗
+  ██╔══██╗██╔══██╗██╔════╝██║██║     ██║██╔════╝██║ ██╔╝
+  ██████╔╝███████║███████╗██║██║     ██║███████╗█████╔╝
+  ██╔══██╗██╔══██║╚════██║██║██║     ██║╚════██║██╔═██╗
+  ██████╔╝██║  ██║███████║██║███████╗██║███████║██║  ██╗
+  ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝╚══════╝╚═╝╚══════╝╚═╝  ╚═╝
 
 "@ -ForegroundColor Cyan
-    Write-Host "    S.I.G.I.L. — Secures Infrastructure: Governs via Integrated Lockdown" -ForegroundColor Cyan
+    Write-Host "    B.A.S.I.L.I.S.K. — Baseline Applier: Sets Integrity, Locks In Security Knobs" -ForegroundColor Cyan
     Write-Host "    Security Baseline & Policy Enforcement Tool" -ForegroundColor Cyan
     Write-Host ""
     if ($WhatIf) {
@@ -204,7 +204,7 @@ function Set-BaselineReg {
     catch {
         Write-Host "    [-] $Label — failed: $_" -ForegroundColor $ColorSchema.Error
         Add-ActionRecord -Category $Category -Setting $Label -Status "Failed" -Detail $_
-        Write-TKError -ScriptName 'sigil' -Message "Baseline setting '$Label' ($Category) failed at '$Path!$Name': $($_.Exception.Message)" -Category "Baseline/$Category"
+        Write-TKError -ScriptName 'basilisk' -Message "Baseline setting '$Label' ($Category) failed at '$Path!$Name': $($_.Exception.Message)" -Category "Baseline/$Category"
     }
 }
 
@@ -675,7 +675,7 @@ function Apply-CredentialProtection {
 # MAIN MENU
 # ─────────────────────────────────────────────────────────────────────────────
 
-if (-not $Unattended) { Show-SigilBanner }
+if (-not $Unattended) { Show-BasiliskBanner }
 
 Write-Host "  [!!] This script modifies registry keys and local security policy." -ForegroundColor $ColorSchema.Warning
 Write-Host "       Domain Group Policy will override local settings where applicable." -ForegroundColor $ColorSchema.Warning
@@ -758,7 +758,7 @@ foreach ($key in $selectedKeys) {
 
 # ── LOG ───────────────────────────────────────────────────────────────────────
 
-$logFile = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "SIGIL_BaselineLog_$(Get-Date -Format 'yyyyMMdd_HHmmss').csv"
+$logFile = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "BASILISK_BaselineLog_$(Get-Date -Format 'yyyyMMdd_HHmmss').csv"
 
 try {
     $ActionLog | Export-Csv -Path $logFile -NoTypeInformation -Encoding UTF8
@@ -807,7 +807,7 @@ if ($WhatIf) {
 }
 Write-Host ""
 Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
-$completeLabel = if ($WhatIf) { "S.I.G.I.L. DRY RUN COMPLETE — No changes were made." } else { "S.I.G.I.L. BASELINE COMPLETE" }
+$completeLabel = if ($WhatIf) { "B.A.S.I.L.I.S.K. DRY RUN COMPLETE — No changes were made." } else { "B.A.S.I.L.I.S.K. BASELINE COMPLETE" }
 Write-Host "  $completeLabel" -ForegroundColor $ColorSchema.Header
 Write-Host ("  " + ("═" * 62)) -ForegroundColor $ColorSchema.Header
 Write-Host ""

@@ -1,4 +1,4 @@
-﻿# wraith.ps1 - W.R.A.I.T.H. — Watches Registrations, Access, Identities, Tokens & Hygiene
+﻿# eclipse.ps1 - E.C.L.I.P.S.E. — Entra Credentials: Lapsed, Idle, Privileged, Stale & External
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -20,7 +20,7 @@
 
 <#
 .SYNOPSIS
-    W.R.A.I.T.H. — Watches Registrations, Access, Identities, Tokens & Hygiene
+    E.C.L.I.P.S.E. — Entra Credentials: Lapsed, Idle, Privileged, Stale & External
     Entra ID Identity Hygiene Audit Tool for PowerShell 5.1+
 
 .DESCRIPTION
@@ -29,13 +29,13 @@
     their MFA state, members with password-never-expires set, stale
     privileged users, and disabled-but-licensed accounts that still consume
     paid SKUs. Produces a dark-themed HTML report that complements
-    R.E.L.I.Q.U.A.R.Y. (licensing / mailboxes) and G.O.L.E.M. (device
+    A.L.M.A.N.A.C. (licensing / mailboxes) and O.R.B.I.T. (device
     compliance) — together the three tools give a full tenant posture
     report.
 
 .USAGE
-    PS C:\> .\wraith.ps1                    # Interactive menu
-    PS C:\> .\wraith.ps1 -Unattended        # Silent mode — auto-connect and export HTML
+    PS C:\> .\eclipse.ps1                    # Interactive menu
+    PS C:\> .\eclipse.ps1 -Unattended        # Silent mode — auto-connect and export HTML
 
 .NOTES
     Version : 5.1
@@ -106,10 +106,10 @@ $GraphScopes = @(
     'RoleManagement.Read.Directory'
 )
 
-function Show-WraithBanner {
+function Show-EclipseBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
-    Write-Host "  W.R.A.I.T.H. — Watches Registrations, Access, Identities, Tokens & Hygiene" -ForegroundColor Cyan
+    Write-Host "  E.C.L.I.P.S.E. — Entra Credentials: Lapsed, Idle, Privileged, Stale & External" -ForegroundColor Cyan
     Write-Host "  Entra ID Identity Hygiene Audit Tool  v3.6" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -149,7 +149,7 @@ function Install-GraphModule {
                 Write-Ok "Microsoft.Graph installed."
             } catch {
                 Write-Fail "Install failed: $_"
-                Write-TKError -ScriptName 'wraith' -Message "Microsoft.Graph install failed: $($_.Exception.Message)" -Category 'Module Install'
+                Write-TKError -ScriptName 'eclipse' -Message "Microsoft.Graph install failed: $($_.Exception.Message)" -Category 'Module Install'
                 exit 1
             }
         } else {
@@ -219,7 +219,7 @@ function Invoke-Connect {
         }
     } catch {
         Write-Fail "Authentication failed: $($_.Exception.Message)"
-        Write-TKError -ScriptName 'wraith' -Message "Connect-MgGraph failed: $($_.Exception.Message)" -Category 'Graph Auth'
+        Write-TKError -ScriptName 'eclipse' -Message "Connect-MgGraph failed: $($_.Exception.Message)" -Category 'Graph Auth'
         if ($Unattended) { exit 1 }
     }
 
@@ -245,7 +245,7 @@ function Get-GuestAudit {
             -ErrorAction Stop
     } catch {
         Write-Fail "Failed to retrieve guests: $_"
-        Write-TKError -ScriptName 'wraith' -Message "Get-MgUser (guest filter) failed: $($_.Exception.Message)" -Category 'Graph Query'
+        Write-TKError -ScriptName 'eclipse' -Message "Get-MgUser (guest filter) failed: $($_.Exception.Message)" -Category 'Graph Query'
         return @()
     }
 
@@ -297,7 +297,7 @@ function Get-PrivilegedRoleAudit {
         $roles = Get-MgDirectoryRole -All -ErrorAction Stop
     } catch {
         Write-Fail "Failed to retrieve directory roles: $_"
-        Write-TKError -ScriptName 'wraith' -Message "Get-MgDirectoryRole failed: $($_.Exception.Message)" -Category 'Graph Query'
+        Write-TKError -ScriptName 'eclipse' -Message "Get-MgDirectoryRole failed: $($_.Exception.Message)" -Category 'Graph Query'
         return @()
     }
 
@@ -359,7 +359,7 @@ function Get-PasswordNeverExpiresAudit {
             -ErrorAction Stop
     } catch {
         Write-Fail "Failed to retrieve users: $_"
-        Write-TKError -ScriptName 'wraith' -Message "Get-MgUser (all) failed: $($_.Exception.Message)" -Category 'Graph Query'
+        Write-TKError -ScriptName 'eclipse' -Message "Get-MgUser (all) failed: $($_.Exception.Message)" -Category 'Graph Query'
         return @()
     }
 
@@ -470,7 +470,7 @@ function Get-DisabledLicensedAudit {
             -ErrorAction Stop
     } catch {
         Write-Fail "Failed to retrieve users: $_"
-        Write-TKError -ScriptName 'wraith' -Message "Get-MgUser (disabled filter) failed: $($_.Exception.Message)" -Category 'Graph Query'
+        Write-TKError -ScriptName 'eclipse' -Message "Get-MgUser (disabled filter) failed: $($_.Exception.Message)" -Category 'Graph Query'
         return @()
     }
 
@@ -578,8 +578,8 @@ function Build-HtmlReport {
     $dClass = if ($DisabledLic.Count -gt 0) { 'err'  } else { 'ok' }
 
     $htmlHead = Get-TKHtmlHead `
-        -Title      'W.R.A.I.T.H. Identity Hygiene Report' `
-        -ScriptName 'W.R.A.I.T.H.' `
+        -Title      'E.C.L.I.P.S.E. Identity Hygiene Report' `
+        -ScriptName 'E.C.L.I.P.S.E.' `
         -Subtitle   "${orgPrefix}Entra ID Identity Hygiene Audit -- $tenantDisplay" `
         -MetaItems  ([ordered]@{
             'Generated'    = $reportDate
@@ -588,7 +588,7 @@ function Build-HtmlReport {
         }) `
         -NavItems   @('Guests', 'Privileged Roles', 'Password Never Expires', 'Stale Admins', 'Disabled but Licensed')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'W.R.A.I.T.H. v3.6'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'E.C.L.I.P.S.E. v3.6'
 
     $html = $htmlHead + @"
 
@@ -664,7 +664,7 @@ function Export-HtmlReport {
 
     $html      = Build-HtmlReport -Guests $Guests -Roles $Roles -PwdNever $PwdNever -StaleAdmins $StaleAdmins -DisabledLic $DisabledLic
     $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-    $outPath   = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "WRAITH_${timestamp}.html"
+    $outPath   = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "ECLIPSE_${timestamp}.html"
 
     try {
         $html | Out-File -FilePath $outPath -Encoding UTF8 -Force
@@ -679,7 +679,7 @@ function Export-HtmlReport {
 # ─────────────────────────────────────────────────────────────────────────────
 
 function Show-Menu {
-    Show-WraithBanner
+    Show-EclipseBanner
 
     $connStatus = if ($script:Connected) { "  Connected as : $($script:ConnectedAs)" } else { "  Not Connected — select option 1 to authenticate" }
     $connColor  = if ($script:Connected) { $C.Success } else { $C.Warning }
@@ -714,7 +714,7 @@ function Assert-Connected {
 # ENTRY POINT
 # ─────────────────────────────────────────────────────────────────────────────
 
-Show-WraithBanner
+Show-EclipseBanner
 Install-GraphModule
 
 if (Test-GraphConnection) {

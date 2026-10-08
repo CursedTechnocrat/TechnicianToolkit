@@ -90,7 +90,7 @@ namespace TechnicianToolkit.Engine
             {
                 Key = "DefaultDestination",
                 Section = "Archive",
-                Label = "ARCHIVE destination",
+                Label = "EMBALM destination",
                 Description = "Default path for pre-reimaging profile backups.",
                 IsPath = true,
             },

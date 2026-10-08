@@ -1,4 +1,4 @@
-﻿# pyre.ps1 - P.Y.R.E. — Power-Yield Reliability Evaluator
+﻿# hourglass.ps1 - H.O.U.R.G.L.A.S.S. — Health Of Unit's Rechargeable Gauge: Life, Ageing, State & Service
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -20,7 +20,7 @@
 
 <#
 .SYNOPSIS
-    P.Y.R.E. — Power-Yield Reliability Evaluator
+    H.O.U.R.G.L.A.S.S. — Health Of Unit's Rechargeable Gauge: Life, Ageing, State & Service
     Laptop Battery Health Audit Tool for PowerShell 5.1+
 
 .DESCRIPTION
@@ -39,12 +39,12 @@
     date, the full-charge capacity history (degradation trend), and
     Windows' own runtime estimates for active use and connected standby
     at both current full charge and original design capacity. The full
-    Microsoft-formatted HTML report is saved alongside PYRE's report and
+    Microsoft-formatted HTML report is saved alongside HOURGLASS's report and
     linked from it.
 
 .USAGE
-    PS C:\> .\pyre.ps1                    # Interactive run
-    PS C:\> .\pyre.ps1 -Unattended        # Silent: export HTML and exit
+    PS C:\> .\hourglass.ps1                    # Interactive run
+    PS C:\> .\hourglass.ps1 -Unattended        # Silent: export HTML and exit
 
 .NOTES
     Version : 5.1
@@ -105,10 +105,10 @@ $C = @{
     Progress = 'Magenta'
 }
 
-function Show-PyreBanner {
+function Show-HourglassBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
-    Write-Host "  P.Y.R.E. — Power-Yield Reliability Evaluator" -ForegroundColor Cyan
+    Write-Host "  H.O.U.R.G.L.A.S.S. — Health Of Unit's Rechargeable Gauge: Life, Ageing, State & Service" -ForegroundColor Cyan
     Write-Host "  Laptop Battery Health Audit Tool  v3.6" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -276,8 +276,8 @@ function Invoke-PowerCfgBatteryReport {
         [Parameter(Mandatory)] [string]$Timestamp
     )
 
-    $xmlPath  = Join-Path $LogDir "PYRE_battery_report_${Timestamp}.xml"
-    $htmlPath = Join-Path $LogDir "PYRE_battery_report_${Timestamp}.html"
+    $xmlPath  = Join-Path $LogDir "HOURGLASS_battery_report_${Timestamp}.xml"
+    $htmlPath = Join-Path $LogDir "HOURGLASS_battery_report_${Timestamp}.html"
 
     $result = [PSCustomObject]@{
         XmlPath         = $xmlPath
@@ -537,8 +537,8 @@ function Build-HtmlReport {
     }
 
     $htmlHead = Get-TKHtmlHead `
-        -Title      'P.Y.R.E. Battery Health Report' `
-        -ScriptName 'P.Y.R.E.' `
+        -Title      'H.O.U.R.G.L.A.S.S. Battery Health Report' `
+        -ScriptName 'H.O.U.R.G.L.A.S.S.' `
         -Subtitle   "${orgPrefix}Laptop Battery Health -- $machine" `
         -MetaItems  ([ordered]@{
             'Machine'   = $machine
@@ -548,7 +548,7 @@ function Build-HtmlReport {
         }) `
         -NavItems   @('Verdict', 'Batteries', 'powercfg Report')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'P.Y.R.E. v3.6'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'H.O.U.R.G.L.A.S.S. v3.6'
 
     $bestCard  = if ($null -ne $bestHealth)  { "$bestHealth%"  } else { 'n/a' }
     $worstCard = if ($null -ne $worstHealth) { "$worstHealth%" } else { 'n/a' }
@@ -699,7 +699,7 @@ $powerCfgBlock
 # MAIN
 # ─────────────────────────────────────────────────────────────────────────────
 
-Show-PyreBanner
+Show-HourglassBanner
 
 Write-Section "BATTERY INVENTORY"
 $batteries = Get-BatteryHealthRecords
@@ -767,7 +767,7 @@ Write-Host ""
 
 Write-Step "Generating HTML report..."
 $html    = Build-HtmlReport -Batteries $batteries -Verdict $verdict -PowerCfg $powerCfg
-$outPath = Join-Path $logDir "PYRE_${timestamp}.html"
+$outPath = Join-Path $logDir "HOURGLASS_${timestamp}.html"
 
 try {
     [System.IO.File]::WriteAllText($outPath, $html, [System.Text.Encoding]::UTF8)

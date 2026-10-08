@@ -1,4 +1,4 @@
-﻿# paladin.ps1 - P.A.L.A.D.I.N. — Protection Auditor: Logs Antivirus, Defender, Intrusions & Notifications
+﻿# griffin.ps1 - G.R.I.F.F.I.N. — Gauges Real-time protection, Inspects Findings, Freshness, Intrusions & Notifications
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -20,7 +20,7 @@
 
 <#
 .SYNOPSIS
-    P.A.L.A.D.I.N. — Protection Auditor: Logs Antivirus, Defender, Intrusions & Notifications
+    G.R.I.F.F.I.N. — Gauges Real-time protection, Inspects Findings, Freshness, Intrusions & Notifications
     Antivirus / Microsoft Defender Health Audit Tool for PowerShell 5.1+
 
 .DESCRIPTION
@@ -43,10 +43,10 @@
     Read-only audit -- no state-changing actions are performed.
 
 .USAGE
-    PS C:\> .\paladin.ps1                    # Interactive run
-    PS C:\> .\paladin.ps1 -Unattended        # Silent: export HTML and exit
-    PS C:\> .\paladin.ps1 -EventDays 14      # Look back 14 days for Defender events (default 7)
-    PS C:\> .\paladin.ps1 -SignatureMaxAgeDays 3   # Tighter signature-age threshold (default 7)
+    PS C:\> .\griffin.ps1                    # Interactive run
+    PS C:\> .\griffin.ps1 -Unattended        # Silent: export HTML and exit
+    PS C:\> .\griffin.ps1 -EventDays 14      # Look back 14 days for Defender events (default 7)
+    PS C:\> .\griffin.ps1 -SignatureMaxAgeDays 3   # Tighter signature-age threshold (default 7)
 
 .NOTES
     Version : 5.1
@@ -111,10 +111,10 @@ $C = @{
     Progress = 'Magenta'
 }
 
-function Show-PaladinBanner {
+function Show-GriffinBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
-    Write-Host "  P.A.L.A.D.I.N. -- Protection Auditor: Logs Antivirus, Defender, Intrusions & Notifications" -ForegroundColor Magenta
+    Write-Host "  G.R.I.F.F.I.N. -- Gauges Real-time protection, Inspects Findings, Freshness, Intrusions & Notifications" -ForegroundColor Magenta
     Write-Host "  AV / Microsoft Defender Health Audit  v3.6" -ForegroundColor Magenta
     Write-Host ""
 }
@@ -196,7 +196,7 @@ function Get-DefenderState {
     try {
         $s = Get-MpComputerStatus -ErrorAction Stop
     } catch {
-        Write-TKError -ScriptName 'paladin.ps1' -Message "Get-MpComputerStatus failed: $($_.Exception.Message)" -Category 'Defender'
+        Write-TKError -ScriptName 'griffin.ps1' -Message "Get-MpComputerStatus failed: $($_.Exception.Message)" -Category 'Defender'
         return [PSCustomObject]@{ CollectorError = $_.Exception.Message }
     }
 
@@ -559,7 +559,7 @@ function Get-PlatformProtectionVerdict {
 # VERDICT
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Get-PaladinVerdict {
+function Get-GriffinVerdict {
     param($State, $Pref, $Threats, $ThirdParty, $Services)
 
     $issues = [System.Collections.Generic.List[string]]::new()
@@ -664,7 +664,7 @@ function Get-PaladinVerdict {
 # HTML REPORT
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Build-PaladinReport {
+function Build-GriffinReport {
     param($State, $Pref, $Threats, $Detections, $ThirdParty, $Services, $Events, $Verdict, $Platform, $PlatformVerdict)
 
     $reportDate = Get-Date -Format 'MMMM d, yyyy HH:mm'
@@ -890,8 +890,8 @@ function Build-PaladinReport {
     $threatClass = if ($Threats.UnresolvedHigh -gt 0) { 'err' } elseif ($Threats.Threats.Count -gt 0) { 'warn' } else { 'ok' }
 
     $htmlHead = Get-TKHtmlHead `
-        -Title      'P.A.L.A.D.I.N. AV / Defender Health Report' `
-        -ScriptName 'P.A.L.A.D.I.N.' `
+        -Title      'G.R.I.F.F.I.N. AV / Defender Health Report' `
+        -ScriptName 'G.R.I.F.F.I.N.' `
         -Subtitle   "${orgPrefix}AV / Microsoft Defender Health Audit -- $machine" `
         -MetaItems  ([ordered]@{
             'Machine'       = $machine
@@ -902,7 +902,7 @@ function Build-PaladinReport {
         }) `
         -NavItems   @('Verdict', 'Defender Core', 'Platform Protection', 'Cloud & Sample', 'Signatures', 'Scans', 'Threats', 'Detections', 'Exclusions', 'ASR Rules', 'Third-Party AV', 'Services', 'Events')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'P.A.L.A.D.I.N. v3.6'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'G.R.I.F.F.I.N. v3.6'
 
     $html = $htmlHead + @"
 
@@ -1067,7 +1067,7 @@ function Build-PaladinReport {
 # MAIN
 # ─────────────────────────────────────────────────────────────────────────────
 
-Show-PaladinBanner
+Show-GriffinBanner
 
 Write-Section "DEFENDER STATE"
 $state = Get-DefenderState
@@ -1105,7 +1105,7 @@ Write-Host ("  Threats in history   : {0}" -f $threats.Threats.Count) -Foregroun
 Write-Host ("  Unresolved high/sev  : {0}" -f $threats.UnresolvedHigh) -ForegroundColor $(if ($threats.UnresolvedHigh -gt 0) { $C.Error } else { $C.Success })
 foreach ($t in $threats.Threats | Where-Object { $_.IsActive -and $_.SeverityID -ge 4 }) {
     # Telemetry path: every active high/severe threat warrants a Teams ping if a webhook is configured.
-    Write-TKError -ScriptName 'paladin.ps1' -Message "Active high/severe threat: $($t.ThreatName) (Severity $($t.Severity), DetectionCount $($t.DetectionCount))" -Category 'Defender'
+    Write-TKError -ScriptName 'griffin.ps1' -Message "Active high/severe threat: $($t.ThreatName) (Severity $($t.Severity), DetectionCount $($t.DetectionCount))" -Category 'Defender'
 }
 $detections = Get-RecentDetectionSnapshot
 Write-Host ("  Recent detections    : {0}" -f $detections.Detections.Count) -ForegroundColor $C.Info
@@ -1155,7 +1155,7 @@ Write-Host ("  LSA protection       : {0}" -f $(if ($platform.LsaPplConfigured) 
 Write-Host ("  Platform verdict     : {0} ({1} of {2})" -f $platformVerdict.Verdict, $platformVerdict.Enabled, $platformVerdict.Total) -ForegroundColor $(switch ($platformVerdict.Class) { 'ok' { $C.Success } 'warn' { $C.Warning } default { $C.Error } })
 Write-Host ""
 
-$verdict = Get-PaladinVerdict -State $state -Pref $pref -Threats $threats -ThirdParty $thirdParty -Services $services
+$verdict = Get-GriffinVerdict -State $state -Pref $pref -Threats $threats -ThirdParty $thirdParty -Services $services
 
 Write-Section "AV / DEFENDER VERDICT"
 $verdictColor = switch ($verdict.Class) { 'ok' { $C.Success } 'warn' { $C.Warning } default { $C.Error } }
@@ -1168,9 +1168,9 @@ if ($verdict.Issues.Count -eq 0 -and $verdict.Warns.Count -eq 0) {
 Write-Host ""
 
 Write-Step "Generating HTML report..."
-$html      = Build-PaladinReport -State $state -Pref $pref -Threats $threats -Detections $detections -ThirdParty $thirdParty -Services $services -Events $events -Verdict $verdict -Platform $platform -PlatformVerdict $platformVerdict
+$html      = Build-GriffinReport -State $state -Pref $pref -Threats $threats -Detections $detections -ThirdParty $thirdParty -Services $services -Events $events -Verdict $verdict -Platform $platform -PlatformVerdict $platformVerdict
 $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-$outPath   = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "PALADIN_${timestamp}.html"
+$outPath   = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "GRIFFIN_${timestamp}.html"
 
 try {
     [System.IO.File]::WriteAllText($outPath, $html, [System.Text.Encoding]::UTF8)

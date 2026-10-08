@@ -1,4 +1,4 @@
-﻿# grove.ps1 - G.R.O.V.E. — Gathers, Reports On, & Verifies Estates (SharePoint)
+﻿# cumulus.ps1 - C.U.M.U.L.U.S. — Catalogs Usage, Members, Unowned, Links, Untouched & Shared sites (SharePoint)
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -20,7 +20,7 @@
 
 <#
 .SYNOPSIS
-    G.R.O.V.E. — Gathers, Reports On, & Verifies Estates (SharePoint)
+    C.U.M.U.L.U.S. — Catalogs Usage, Members, Unowned, Links, Untouched & Shared sites (SharePoint)
     SharePoint Online Site Inventory Tool for PowerShell 5.1+
 
 .DESCRIPTION
@@ -33,8 +33,8 @@
     stale sites with no recent activity.
 
 .USAGE
-    PS C:\> .\grove.ps1                    # Interactive menu
-    PS C:\> .\grove.ps1 -Unattended        # Silent: auto-connect + export HTML
+    PS C:\> .\cumulus.ps1                    # Interactive menu
+    PS C:\> .\cumulus.ps1 -Unattended        # Silent: auto-connect + export HTML
 
 .NOTES
     Version : 5.1
@@ -104,10 +104,10 @@ $GraphScopes = @(
     'Directory.Read.All'
 )
 
-function Show-GroveBanner {
+function Show-CumulusBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
-    Write-Host "  G.R.O.V.E. — Gathers, Reports On, & Verifies Estates" -ForegroundColor Cyan
+    Write-Host "  C.U.M.U.L.U.S. — Catalogs Usage, Members, Unowned, Links, Untouched & Shared sites" -ForegroundColor Cyan
     Write-Host "  SharePoint Online Site Inventory Tool  v3.6" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -143,7 +143,7 @@ function Install-GraphModule {
                 Write-Ok "Microsoft.Graph installed."
             } catch {
                 Write-Fail "Install failed: $_"
-                Write-TKError -ScriptName 'grove' -Message "Microsoft.Graph install failed: $($_.Exception.Message)" -Category 'Module Install'
+                Write-TKError -ScriptName 'cumulus' -Message "Microsoft.Graph install failed: $($_.Exception.Message)" -Category 'Module Install'
                 exit 1
             }
         } else {
@@ -205,7 +205,7 @@ function Invoke-Connect {
         }
     } catch {
         Write-Fail "Authentication failed: $($_.Exception.Message)"
-        Write-TKError -ScriptName 'grove' -Message "Connect-MgGraph failed: $($_.Exception.Message)" -Category 'Graph Auth'
+        Write-TKError -ScriptName 'cumulus' -Message "Connect-MgGraph failed: $($_.Exception.Message)" -Category 'Graph Auth'
         if ($Unattended) { exit 1 }
     }
 
@@ -237,7 +237,7 @@ function Get-SharePointInventory {
         }
     } catch {
         Write-Fail "Usage report fetch failed: $($_.Exception.Message)"
-        Write-TKError -ScriptName 'grove' -Message "getSharePointSiteUsageDetail failed: $($_.Exception.Message)" -Category 'Graph Query'
+        Write-TKError -ScriptName 'cumulus' -Message "getSharePointSiteUsageDetail failed: $($_.Exception.Message)" -Category 'Graph Query'
         return @()
     }
 
@@ -406,8 +406,8 @@ function Build-HtmlReport {
     } else { '' }
 
     $htmlHead = Get-TKHtmlHead `
-        -Title      'G.R.O.V.E. SharePoint Inventory Report' `
-        -ScriptName 'G.R.O.V.E.' `
+        -Title      'C.U.M.U.L.U.S. SharePoint Inventory Report' `
+        -ScriptName 'C.U.M.U.L.U.S.' `
         -Subtitle   "${orgPrefix}SharePoint Online Estate Audit -- $tenantDisplay" `
         -MetaItems  ([ordered]@{
             'Generated'    = $reportDate
@@ -416,7 +416,7 @@ function Build-HtmlReport {
         }) `
         -NavItems   @('Sharing Policy', 'Site Inventory', 'Large Sites', 'External Sharing', 'Ownerless Sites', 'Stale Sites')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'G.R.O.V.E. v3.6'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'C.U.M.U.L.U.S. v3.6'
 
     $largeClass     = if ($Large.Count -gt 0)     { 'warn' } else { 'ok' }
     $sharedClass    = if ($Shared.Count -gt 0)    { 'warn' } else { 'ok' }
@@ -487,7 +487,7 @@ function Export-HtmlReport {
     Write-Section "EXPORTING HTML REPORT"
     $html      = Build-HtmlReport -Sites $Sites -Policy $Policy -Large $Large -Shared $Shared -Ownerless $Ownerless -Stale $Stale
     $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-    $outPath   = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "GROVE_${timestamp}.html"
+    $outPath   = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "CUMULUS_${timestamp}.html"
 
     try {
         $html | Out-File -FilePath $outPath -Encoding UTF8 -Force
@@ -502,7 +502,7 @@ function Export-HtmlReport {
 # ─────────────────────────────────────────────────────────────────────────────
 
 function Show-Menu {
-    Show-GroveBanner
+    Show-CumulusBanner
     $connStatus = if ($script:Connected) { "  Connected as : $($script:ConnectedAs)" } else { "  Not Connected — select option 1 to authenticate" }
     $connColor  = if ($script:Connected) { $C.Success } else { $C.Warning }
     Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
@@ -529,7 +529,7 @@ function Assert-Connected {
 # ENTRY POINT
 # ─────────────────────────────────────────────────────────────────────────────
 
-Show-GroveBanner
+Show-CumulusBanner
 Install-GraphModule
 
 if (Test-GraphConnection) { Write-Ok "Already connected as $($script:ConnectedAs)"; Write-Host "" }

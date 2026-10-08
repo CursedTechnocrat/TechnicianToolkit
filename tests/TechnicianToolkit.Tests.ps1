@@ -30,7 +30,7 @@ BeforeAll {
     $ModulePath = Join-Path $PSScriptRoot '..\TechnicianToolkit.psm1'
     Import-Module $ModulePath -Force
 
-    # Tool helper extraction for the NECROPSY / RAVEN / WARD / PALADIN blocks.
+    # Tool helper extraction for the NECROPSY / RAVEN / WARD / GRIFFIN blocks.
     # Each tool launches its main flow on import, so its tables and pure
     # helpers are pulled out of the AST and evaluated on their own.
     function Get-ToolAst {
@@ -70,19 +70,6 @@ BeforeAll {
 # fail on every one. Defined at file scope because the file enumerations run
 # during Pester's discovery phase, before any BeforeAll body executes.
 $NonSourceDir = '{0}(\.git|\.claude){0}' -f [regex]::Escape([string][IO.Path]::DirectorySeparatorChar)
-
-# Forwarding stubs left at the old filenames of renamed tools (old -> new). They
-# carry no tool logic -- no param() block, so `@args` passes every argument
-# through untouched -- and are exempt from the tool-shape gates below; the
-# 'Renamed-tool forwarding stubs' block checks them instead. Defined at file
-# scope because the -ForEach case lists are built during discovery.
-$RenamedToolStubs = [ordered]@{
-    'cipher.ps1'    = 'crypt.ps1'
-    'beacon.ps1'    = 'wisp.ps1'
-    'citadel.ps1'   = 'steward.ps1'
-    'shade.ps1'     = 'emissary.ps1'
-    'threshold.ps1' = 'hoard.ps1'
-}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # EscHtml
@@ -436,7 +423,6 @@ Describe 'UTF-8 BOM — all scripts' {
 # ─────────────────────────────────────────────────────────────────────────────
 Describe 'Module bootstrap compliance — all tool scripts' {
     $scriptCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Filter '*.ps1' -File |
-        Where-Object { -not $RenamedToolStubs.Contains($_.Name) } |
         ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
 
     It '<Name> defines $TKModulePath next to $PSScriptRoot' -ForEach $scriptCases {
@@ -459,12 +445,12 @@ Describe 'Module bootstrap compliance — all tool scripts' {
 # ─────────────────────────────────────────────────────────────────────────────
 # Param block compliance — interactive tool scripts must declare -Unattended
 # Excludes the two launcher-style scripts that don't have sensible defaults
-# for their required inputs (grimoire needs a tool choice; emissary needs a
+# for their required inputs (grimoire needs a tool choice; shade needs a
 # target machine + credentials).
 # ─────────────────────────────────────────────────────────────────────────────
 Describe 'Param block compliance — -Unattended switch' {
     $scriptCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Filter '*.ps1' -File |
-        Where-Object { $_.Name -notin @('grimoire.ps1', 'emissary.ps1') -and -not $RenamedToolStubs.Contains($_.Name) } |
+        Where-Object { $_.Name -notin @('grimoire.ps1', 'emissary.ps1') } |
         ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
 
     It '<Name> declares -Unattended' -ForEach $scriptCases {
@@ -512,10 +498,10 @@ Describe 'GRIMOIRE registry integrity' {
 # ─────────────────────────────────────────────────────────────────────────────
 # Version consistency — a tool's .NOTES Version and its GRIMOIRE registry entry
 # are two hand-maintained copies of one fact, and they drifted: before 5.0 the
-# suite carried 3.6, 3.6.2, 3.8.3, 4.2 and 1.0 at once, with crypt.ps1 and
-# restoration.ps1 disagreeing with their own registry rows. Nothing detected it.
+# suite carried 3.6, 3.6.2, 3.8.3, 4.2 and 1.0 at once, with wyrm.ps1 and
+# whetstone.ps1 disagreeing with their own registry rows. Nothing detected it.
 #
-# The header pattern deliberately tolerates irregular spacing — talisman.ps1
+# The header pattern deliberately tolerates irregular spacing — zenith.ps1
 # writes 'Version  : 5.0' with two spaces — because a stricter pattern would
 # silently skip that file rather than fail, which is how it drifted unnoticed.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -616,9 +602,9 @@ Describe '-WhatIf declared on destructive tools' {
     # writes, domain joins, disk encryption toggles, AV policy changes, driver
     # and Windows Update installs, printer driver / network printer additions.
     $destructiveCases = @(
-        'revenant.ps1','archive.ps1','covenant.ps1','sigil.ps1','cleanse.ps1','crypt.ps1',
-        'forge.ps1','restoration.ps1','runepress.ps1','conjure.ps1','conduit.ps1',
-        'oath.ps1','suture.ps1','chalice.ps1'
+        'revenant.ps1','embalm.ps1','covenant.ps1','basilisk.ps1','cleanse.ps1','wyrm.ps1',
+        'forge.ps1','whetstone.ps1','runepress.ps1','conjure.ps1','conduit.ps1',
+        'lodestar.ps1','solder.ps1','chalice.ps1'
     ) | ForEach-Object {
         @{ Name = $_; FullName = (Join-Path $PSScriptRoot "..\$_") }
     }
@@ -678,10 +664,10 @@ Describe 'No duplicated helper functions' {
 # List[object] created by New-Object throws "Argument types do not match"; the
 # same list from ::new() does not. Windows PowerShell 5.1 is unaffected, so the
 # primary path never showed it, but the desktop app hosts PowerShell 7 -- and
-# HERALD lost its report to it twice before the cause was known. ::new() works
+# ARGUS lost its report to it twice before the cause was known. ::new() works
 # on 5.1 too, so the gate bans the New-Object form for every generic collection
 # rather than tracking which variables later meet an @(). This test file is
-# exempt: the ConvertTo-HeraldArray tests build the New-Object form on purpose.
+# exempt: the ConvertTo-ArgusArray tests build the New-Object form on purpose.
 # ─────────────────────────────────────────────────────────────────────────────
 Describe 'No generic collections built with New-Object' {
     $collectionCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Include '*.ps1', '*.psm1' -File -Recurse |
@@ -701,7 +687,7 @@ Describe 'No generic collections built with New-Object' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Tier-mapper data tables — the verdict logic in PALADIN / WISP / PORTAL
+# Tier-mapper data tables — the verdict logic in GRIFFIN / WISP / PORTAL
 # leans on small reference hashtables (and one tiny helper for ASR action
 # codes). This block extracts those tables via AST lookup and asserts on
 # their contents, so a careless rename or removal fails CI loudly.
@@ -714,11 +700,11 @@ Describe 'No generic collections built with New-Object' {
 Describe 'Tier-mapper data tables' {
     BeforeAll {
         $script:ToolkitRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
-        $script:PaladinPath = Join-Path $script:ToolkitRoot 'paladin.ps1'
+        $script:GriffinPath = Join-Path $script:ToolkitRoot 'griffin.ps1'
         $script:WispPath  = Join-Path $script:ToolkitRoot 'wisp.ps1'
         $script:PortalPath  = Join-Path $script:ToolkitRoot 'portal.ps1'
         $script:ConjurePath = Join-Path $script:ToolkitRoot 'conjure.ps1'
-        $script:HeraldPath  = Join-Path $script:ToolkitRoot 'herald.ps1'
+        $script:ArgusPath  = Join-Path $script:ToolkitRoot 'argus.ps1'
         $script:ConduitPath = Join-Path $script:ToolkitRoot 'conduit.ps1'
 
         function Import-ScriptHashtable {
@@ -753,33 +739,33 @@ Describe 'Tier-mapper data tables' {
         }
     }
 
-    Context 'PALADIN: $AsrRuleNames hashtable' {
+    Context 'GRIFFIN: $AsrRuleNames hashtable' {
         It 'covers at least 16 well-known ASR rule GUIDs' {
-            $asr = Import-ScriptHashtable -ScriptPath $script:PaladinPath -VarName 'AsrRuleNames'
+            $asr = Import-ScriptHashtable -ScriptPath $script:GriffinPath -VarName 'AsrRuleNames'
             $asr | Should -Not -BeNullOrEmpty
             $asr.Count | Should -BeGreaterOrEqual 16
         }
         It 'maps the abused-driver GUID to a recognisable name' {
-            $asr = Import-ScriptHashtable -ScriptPath $script:PaladinPath -VarName 'AsrRuleNames'
+            $asr = Import-ScriptHashtable -ScriptPath $script:GriffinPath -VarName 'AsrRuleNames'
             $asr['56a863a9-875e-4185-98a7-b882c64b5ce5'] | Should -Match 'vulnerable signed drivers'
         }
         It 'maps the LSASS-credential-theft GUID' {
-            $asr = Import-ScriptHashtable -ScriptPath $script:PaladinPath -VarName 'AsrRuleNames'
+            $asr = Import-ScriptHashtable -ScriptPath $script:GriffinPath -VarName 'AsrRuleNames'
             $asr['9e6c4e1f-7d60-472f-ba1a-a39ef669e4b2'] | Should -Match 'LSASS'
         }
         It 'uses lowercase GUID keys (matches the case from Get-MpPreference output)' {
-            $asr = Import-ScriptHashtable -ScriptPath $script:PaladinPath -VarName 'AsrRuleNames'
+            $asr = Import-ScriptHashtable -ScriptPath $script:GriffinPath -VarName 'AsrRuleNames'
             foreach ($k in $asr.Keys) {
                 $k | Should -Match '^[0-9a-f-]+$' -Because "ASR keys must be lowercase to match Get-MpPreference output (saw '$k')"
             }
         }
     }
 
-    Context 'PALADIN: Get-AsrActionLabel function' {
+    Context 'GRIFFIN: Get-AsrActionLabel function' {
         BeforeAll {
-            # Extract the function definition AST from paladin.ps1 and dot-source
+            # Extract the function definition AST from griffin.ps1 and dot-source
             # it so this Context can call the function directly.
-            $sb = Get-ScriptFunctionScriptBlock -ScriptPath $script:PaladinPath -FuncName 'Get-AsrActionLabel'
+            $sb = Get-ScriptFunctionScriptBlock -ScriptPath $script:GriffinPath -FuncName 'Get-AsrActionLabel'
             . $sb
         }
         It 'maps action 0 to Not Configured' {
@@ -965,16 +951,16 @@ Describe 'Tier-mapper data tables' {
         }
     }
 
-    Context 'HERALD: $PrivilegedGroupTiers group table' {
+    Context 'ARGUS: $PrivilegedGroupTiers group table' {
         It 'covers the four forest/domain-wide administrative groups' {
-            $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'PrivilegedGroupTiers'
+            $t = Import-ScriptHashtable -ScriptPath $script:ArgusPath -VarName 'PrivilegedGroupTiers'
             $t | Should -Not -BeNullOrEmpty
             foreach ($g in 'Enterprise Admins', 'Schema Admins', 'Domain Admins', 'Administrators') {
                 $t[$g].Role | Should -Be 'Domain Administrator' -Because "$g confers full domain control"
             }
         }
         It 'classifies the built-in operator groups as delegated administrators' {
-            $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'PrivilegedGroupTiers'
+            $t = Import-ScriptHashtable -ScriptPath $script:ArgusPath -VarName 'PrivilegedGroupTiers'
             foreach ($g in 'Account Operators', 'Server Operators', 'Backup Operators', 'Print Operators') {
                 $t[$g].Role | Should -Be 'Delegated Administrator'
             }
@@ -982,37 +968,37 @@ Describe 'Tier-mapper data tables' {
         It 'resolves domain-scoped groups by their well-known RID' {
             # Resolving by RID rather than name is what makes the audit survive a
             # renamed or localised "Domain Admins".
-            $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'PrivilegedGroupTiers'
+            $t = Import-ScriptHashtable -ScriptPath $script:ArgusPath -VarName 'PrivilegedGroupTiers'
             $t['Domain Admins'].Rid       | Should -Be 512
             $t['Domain Admins'].Scope     | Should -Be 'Domain'
             $t['Enterprise Admins'].Rid   | Should -Be 519
             $t['Schema Admins'].Rid       | Should -Be 518
         }
         It 'resolves BUILTIN groups against the S-1-5-32 authority' {
-            $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'PrivilegedGroupTiers'
+            $t = Import-ScriptHashtable -ScriptPath $script:ArgusPath -VarName 'PrivilegedGroupTiers'
             $t['Administrators'].Scope     | Should -Be 'Builtin'
             $t['Administrators'].Rid       | Should -Be 544
             $t['Backup Operators'].Scope   | Should -Be 'Builtin'
             $t['Backup Operators'].Rid     | Should -Be 551
         }
         It 'resolves DnsAdmins by name, since it has no fixed RID' {
-            $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'PrivilegedGroupTiers'
+            $t = Import-ScriptHashtable -ScriptPath $script:ArgusPath -VarName 'PrivilegedGroupTiers'
             $t['DnsAdmins'].Scope | Should -Be 'Name'
             $t['DnsAdmins'].Rid   | Should -BeNullOrEmpty
         }
         It 'every entry carries a known role and a non-empty reason' {
-            $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'PrivilegedGroupTiers'
+            $t = Import-ScriptHashtable -ScriptPath $script:ArgusPath -VarName 'PrivilegedGroupTiers'
             foreach ($k in $t.Keys) {
-                $t[$k].Role   | Should -BeIn @('Domain Administrator', 'Delegated Administrator') -Because "group $k must map to a role HERALD ranks"
+                $t[$k].Role   | Should -BeIn @('Domain Administrator', 'Delegated Administrator') -Because "group $k must map to a role ARGUS ranks"
                 $t[$k].Reason | Should -Not -BeNullOrEmpty -Because "group $k must explain to the customer why it matters"
                 $t[$k].Scope  | Should -BeIn @('Domain', 'Builtin', 'Name')
             }
         }
     }
 
-    Context 'HERALD: $PasswordPolicyBaseline table' {
+    Context 'ARGUS: $PasswordPolicyBaseline table' {
         It 'covers the four settings the access questionnaire asks about' {
-            $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'PasswordPolicyBaseline'
+            $t = Import-ScriptHashtable -ScriptPath $script:ArgusPath -VarName 'PasswordPolicyBaseline'
             $t | Should -Not -BeNullOrEmpty
             foreach ($k in 'MinPasswordLength', 'ComplexityEnabled', 'PasswordHistoryCount',
                            'MaxPasswordAgeDays', 'LockoutThreshold') {
@@ -1020,7 +1006,7 @@ Describe 'Tier-mapper data tables' {
             }
         }
         It 'gives every setting a Kind the verdict logic can evaluate' {
-            $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'PasswordPolicyBaseline'
+            $t = Import-ScriptHashtable -ScriptPath $script:ArgusPath -VarName 'PasswordPolicyBaseline'
             foreach ($k in $t.Keys) {
                 $t[$k].Kind  | Should -BeIn @('Number', 'Threshold', 'Age', 'Boolean', 'Duration')
                 $t[$k].Label | Should -Not -BeNullOrEmpty
@@ -1030,19 +1016,19 @@ Describe 'Tier-mapper data tables' {
         It 'treats lockout duration as a Duration, not a plain number' {
             # 0 minutes means "until an administrator unlocks", the strictest
             # setting available; scoring it as higher-is-better calls it Weak.
-            $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'PasswordPolicyBaseline'
+            $t = Import-ScriptHashtable -ScriptPath $script:ArgusPath -VarName 'PasswordPolicyBaseline'
             $t['LockoutDurationMinutes'].Kind | Should -Be 'Duration'
         }
         It 'flags reversible encryption as bad when enabled' {
-            $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'PasswordPolicyBaseline'
+            $t = Import-ScriptHashtable -ScriptPath $script:ArgusPath -VarName 'PasswordPolicyBaseline'
             $t['ReversibleEncryptionEnabled'].Kind | Should -Be 'Boolean'
             $t['ReversibleEncryptionEnabled'].Good | Should -BeFalse
         }
     }
 
-    Context 'HERALD: $RoleTiers rank table' {
+    Context 'ARGUS: $RoleTiers rank table' {
         It 'ranks the roles from most to least privileged' {
-            $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'RoleTiers'
+            $t = Import-ScriptHashtable -ScriptPath $script:ArgusPath -VarName 'RoleTiers'
             $t['Domain Administrator'].Rank    | Should -Be 1
             $t['Delegated Administrator'].Rank | Should -Be 2
             $t['Elevated (Custom Group)'].Rank | Should -Be 3
@@ -1051,14 +1037,14 @@ Describe 'Tier-mapper data tables' {
         It 'covers every role $PrivilegedGroupTiers can produce' {
             # Build-AccountRoster indexes $RoleTiers by the Role string a group
             # carries; a role with no tier entry would throw at classification time.
-            $groups = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'PrivilegedGroupTiers'
-            $roles  = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'RoleTiers'
+            $groups = Import-ScriptHashtable -ScriptPath $script:ArgusPath -VarName 'PrivilegedGroupTiers'
+            $roles  = Import-ScriptHashtable -ScriptPath $script:ArgusPath -VarName 'RoleTiers'
             foreach ($k in $groups.Keys) {
                 $roles.Contains($groups[$k].Role) | Should -BeTrue -Because "role '$($groups[$k].Role)' (from $k) must have a rank"
             }
         }
         It 'assigns every role a badge class the shared CSS defines' {
-            $t = Import-ScriptHashtable -ScriptPath $script:HeraldPath -VarName 'RoleTiers'
+            $t = Import-ScriptHashtable -ScriptPath $script:ArgusPath -VarName 'RoleTiers'
             foreach ($k in $t.Keys) {
                 $t[$k].Badge | Should -BeIn @('ok', 'warn', 'err', 'info')
                 $t[$k].Blurb | Should -Not -BeNullOrEmpty -Because "role $k is explained to the customer in the report"
@@ -1367,12 +1353,12 @@ Describe 'WARD LAPS policy resolution' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PALADIN — platform protection scoring. Kept separate from the AV verdict, so
+# GRIFFIN — platform protection scoring. Kept separate from the AV verdict, so
 # these tests pin down its own Hardened / Partial / Not hardened boundaries.
 # ─────────────────────────────────────────────────────────────────────────────
-Describe 'PALADIN platform protection' {
+Describe 'GRIFFIN platform protection' {
     BeforeAll {
-        $ast = Get-ToolAst -FileName 'paladin.ps1'
+        $ast = Get-ToolAst -FileName 'griffin.ps1'
         $DeviceGuardServiceNames = Get-ToolAssignmentValue -Ast $ast -VarName 'DeviceGuardServiceNames'
         $VbsStatusLabels         = Get-ToolAssignmentValue -Ast $ast -VarName 'VbsStatusLabels'
         . ([scriptblock]::Create((Get-ToolFunctionText -Ast $ast -FuncName 'Get-PlatformProtectionVerdict')))
@@ -1418,22 +1404,22 @@ Describe 'PALADIN platform protection' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# RAMPART — the finding catalog and the Conditional Access policy predicates.
+# HALO — the finding catalog and the Conditional Access policy predicates.
 # Policies are built as nested hashtables, the shape Invoke-MgGraphRequest
 # returns, so the predicates are tested against what they will really read.
 # ─────────────────────────────────────────────────────────────────────────────
-Describe 'RAMPART Conditional Access helpers' {
+Describe 'HALO Conditional Access helpers' {
     BeforeAll {
-        $ast = Get-ToolAst -FileName 'rampart.ps1'
-        $RampartFindings         = Get-ToolAssignmentValue -Ast $ast -VarName 'RampartFindings'
+        $ast = Get-ToolAst -FileName 'halo.ps1'
+        $HaloFindings         = Get-ToolAssignmentValue -Ast $ast -VarName 'HaloFindings'
         $PrivilegedRoleTemplates = Get-ToolAssignmentValue -Ast $ast -VarName 'PrivilegedRoleTemplates'
         $GlobalAdminTemplateId   = Get-ToolAssignmentValue -Ast $ast -VarName 'GlobalAdminTemplateId'
         foreach ($name in 'Get-CaList', 'Test-CaPolicyEnforced', 'Test-CaTargetsAllUsers', 'Test-CaTargetsAllApps',
                           'Test-CaRequiresMfa', 'Test-CaBlocks', 'Test-CaBlocksLegacyAuth', 'Test-CaCoversRole',
-                          'Get-CaEmergencyExclusion', 'Test-BroadCidr', 'Get-RampartVerdict') {
+                          'Get-CaEmergencyExclusion', 'Test-BroadCidr', 'Get-HaloVerdict') {
             . ([scriptblock]::Create((Get-ToolFunctionText -Ast $ast -FuncName $name)))
         }
-        $rampartSource = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'rampart.ps1') -Raw
+        $rampartSource = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'halo.ps1') -Raw
 
         function New-CaPolicy {
             param([string]$State = 'enabled', [string[]]$Users = @('All'), [string[]]$Exclude = @(), [string[]]$Roles = @(),
@@ -1456,24 +1442,24 @@ Describe 'RAMPART Conditional Access helpers' {
 
     Context 'finding catalog' {
         It 'contains every code the tool raises' {
-            $raised = @([regex]::Matches($rampartSource, "Add-RampartFinding\s+-Code\s+'([^']+)'") | ForEach-Object { $_.Groups[1].Value }) +
+            $raised = @([regex]::Matches($rampartSource, "Add-HaloFinding\s+-Code\s+'([^']+)'") | ForEach-Object { $_.Groups[1].Value }) +
                       @([regex]::Matches($rampartSource, "_cover\s+'[^']+'\s+\`$\w+\s+'([^']+)'") | ForEach-Object { $_.Groups[1].Value })
             $raised = @($raised | Select-Object -Unique)
             $raised.Count | Should -BeGreaterThan 10
-            foreach ($code in $raised) { $RampartFindings.ContainsKey($code) | Should -BeTrue -Because "rampart.ps1 raises '$code'" }
+            foreach ($code in $raised) { $HaloFindings.ContainsKey($code) | Should -BeTrue -Because "halo.ps1 raises '$code'" }
         }
         It 'gives every finding a renderable Severity, Title, Summary and Remedy' {
-            foreach ($code in $RampartFindings.Keys) {
-                $RampartFindings[$code].Severity | Should -BeIn @('Error', 'Warning', 'Info')
-                $RampartFindings[$code].Title    | Should -Not -BeNullOrEmpty
-                $RampartFindings[$code].Summary  | Should -Not -BeNullOrEmpty
-                $RampartFindings[$code].Remedy   | Should -Not -BeNullOrEmpty
+            foreach ($code in $HaloFindings.Keys) {
+                $HaloFindings[$code].Severity | Should -BeIn @('Error', 'Warning', 'Info')
+                $HaloFindings[$code].Title    | Should -Not -BeNullOrEmpty
+                $HaloFindings[$code].Summary  | Should -Not -BeNullOrEmpty
+                $HaloFindings[$code].Remedy   | Should -Not -BeNullOrEmpty
             }
         }
         It 'ranks the three baseline gaps as Errors' {
-            $RampartFindings['NoMfaAllUsers'].Severity        | Should -Be 'Error'
-            $RampartFindings['NoMfaAdmins'].Severity          | Should -Be 'Error'
-            $RampartFindings['LegacyAuthNotBlocked'].Severity | Should -Be 'Error'
+            $HaloFindings['NoMfaAllUsers'].Severity        | Should -Be 'Error'
+            $HaloFindings['NoMfaAdmins'].Severity          | Should -Be 'Error'
+            $HaloFindings['LegacyAuthNotBlocked'].Severity | Should -Be 'Error'
         }
         It 'keys the privileged roles by the Global Administrator template ID' {
             $PrivilegedRoleTemplates[$GlobalAdminTemplateId] | Should -Be 'Global Administrator'
@@ -1544,9 +1530,9 @@ Describe 'RAMPART Conditional Access helpers' {
             Test-BroadCidr 'not-a-range'    | Should -BeFalse
         }
         It 'maps the worst severity to Exposed / Gaps / Enforced' {
-            (Get-RampartVerdict -FindingList @([PSCustomObject]@{ Severity = 'Error' })).Verdict   | Should -Be 'Exposed'
-            (Get-RampartVerdict -FindingList @([PSCustomObject]@{ Severity = 'Warning' })).Verdict | Should -Be 'Gaps'
-            (Get-RampartVerdict -FindingList @([PSCustomObject]@{ Severity = 'Info' })).Verdict    | Should -Be 'Enforced'
+            (Get-HaloVerdict -FindingList @([PSCustomObject]@{ Severity = 'Error' })).Verdict   | Should -Be 'Exposed'
+            (Get-HaloVerdict -FindingList @([PSCustomObject]@{ Severity = 'Warning' })).Verdict | Should -Be 'Gaps'
+            (Get-HaloVerdict -FindingList @([PSCustomObject]@{ Severity = 'Info' })).Verdict    | Should -Be 'Enforced'
         }
     }
 }
@@ -1688,31 +1674,31 @@ Describe 'CARILLON call queue helpers' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# OATH — parsers for nltest and w32tm output, captured from real runs, and the
+# LODESTAR — parsers for nltest and w32tm output, captured from real runs, and the
 # Netlogon status table that decides connectivity versus a broken trust.
 # ─────────────────────────────────────────────────────────────────────────────
-Describe 'OATH domain trust helpers' {
+Describe 'LODESTAR domain trust helpers' {
     BeforeAll {
-        $ast = Get-ToolAst -FileName 'oath.ps1'
-        $OathFindings        = Get-ToolAssignmentValue -Ast $ast -VarName 'OathFindings'
+        $ast = Get-ToolAst -FileName 'lodestar.ps1'
+        $LodestarFindings        = Get-ToolAssignmentValue -Ast $ast -VarName 'LodestarFindings'
         $NetlogonStatusCodes = Get-ToolAssignmentValue -Ast $ast -VarName 'NetlogonStatusCodes'
         foreach ($name in 'ConvertFrom-NltestDsGetDc', 'ConvertFrom-NltestSecureChannel', 'Get-NetlogonStatusInfo',
-                          'ConvertFrom-W32tmStripchart', 'Test-PublicIpAddress', 'Get-OathVerdict') {
+                          'ConvertFrom-W32tmStripchart', 'Test-PublicIpAddress', 'Get-LodestarVerdict') {
             . ([scriptblock]::Create((Get-ToolFunctionText -Ast $ast -FuncName $name)))
         }
-        $oathSource = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'oath.ps1') -Raw
+        $oathSource = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'lodestar.ps1') -Raw
     }
 
     Context 'finding catalog and status table' {
         It 'contains every code the tool raises' {
-            $raised = @([regex]::Matches($oathSource, "Add-OathFinding\s+-Code\s+'([^']+)'") | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
+            $raised = @([regex]::Matches($oathSource, "Add-LodestarFinding\s+-Code\s+'([^']+)'") | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
             $raised.Count | Should -BeGreaterThan 8
-            foreach ($code in $raised) { $OathFindings.ContainsKey($code) | Should -BeTrue -Because "oath.ps1 raises '$code'" }
+            foreach ($code in $raised) { $LodestarFindings.ContainsKey($code) | Should -BeTrue -Because "lodestar.ps1 raises '$code'" }
         }
         It 'gives every finding a renderable Severity, Title, Summary and Remedy' {
-            foreach ($code in $OathFindings.Keys) {
-                $OathFindings[$code].Severity | Should -BeIn @('Error', 'Warning', 'Info')
-                $OathFindings[$code].Remedy   | Should -Not -BeNullOrEmpty
+            foreach ($code in $LodestarFindings.Keys) {
+                $LodestarFindings[$code].Severity | Should -BeIn @('Error', 'Warning', 'Info')
+                $LodestarFindings[$code].Remedy   | Should -Not -BeNullOrEmpty
             }
         }
         It 'classifies every Netlogon status as Ok, Connectivity or Trust' {
@@ -1780,10 +1766,10 @@ Describe 'OATH domain trust helpers' {
 
     Context 'verdict' {
         It 'reports Not joined, Broken, Degraded and Healthy' {
-            (Get-OathVerdict -FindingList @([PSCustomObject]@{ Code = 'NotDomainJoined'; Severity = 'Info' })).Verdict | Should -Be 'Not joined'
-            (Get-OathVerdict -FindingList @([PSCustomObject]@{ Code = 'TrustBroken'; Severity = 'Error' })).Verdict     | Should -Be 'Broken'
-            (Get-OathVerdict -FindingList @([PSCustomObject]@{ Code = 'ClockDrift'; Severity = 'Warning' })).Verdict    | Should -Be 'Degraded'
-            (Get-OathVerdict -FindingList @()).Verdict | Should -Be 'Healthy'
+            (Get-LodestarVerdict -FindingList @([PSCustomObject]@{ Code = 'NotDomainJoined'; Severity = 'Info' })).Verdict | Should -Be 'Not joined'
+            (Get-LodestarVerdict -FindingList @([PSCustomObject]@{ Code = 'TrustBroken'; Severity = 'Error' })).Verdict     | Should -Be 'Broken'
+            (Get-LodestarVerdict -FindingList @([PSCustomObject]@{ Code = 'ClockDrift'; Severity = 'Warning' })).Verdict    | Should -Be 'Degraded'
+            (Get-LodestarVerdict -FindingList @()).Verdict | Should -Be 'Healthy'
         }
     }
 }
@@ -1932,35 +1918,35 @@ Describe 'TORPOR slow-machine helpers' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SUTURE — the DISM / CBS.log / SFC parsers, the servicing error-code table
+# SOLDER — the DISM / CBS.log / SFC parsers, the servicing error-code table
 # that decides which tool fixes a failed update, and the finding catalog.
 # ─────────────────────────────────────────────────────────────────────────────
-Describe 'SUTURE servicing helpers' {
+Describe 'SOLDER servicing helpers' {
     BeforeAll {
-        $ast = Get-ToolAst -FileName 'suture.ps1'
-        $SutureFindings      = Get-ToolAssignmentValue -Ast $ast -VarName 'SutureFindings'
+        $ast = Get-ToolAst -FileName 'solder.ps1'
+        $SolderFindings      = Get-ToolAssignmentValue -Ast $ast -VarName 'SolderFindings'
         $ServicingErrorCodes = Get-ToolAssignmentValue -Ast $ast -VarName 'ServicingErrorCodes'
         foreach ($name in 'ConvertTo-HResultString', 'Get-ServicingErrorInfo', 'ConvertFrom-DismHealth', 'ConvertFrom-DismAnalyze',
                           'Get-CbsQuotedPath', 'ConvertFrom-CbsSrLine', 'ConvertFrom-SfcOutput', 'Get-PendingRebootReason',
-                          'Get-RepairSourceState', 'Get-SutureVerdict') {
+                          'Get-RepairSourceState', 'Get-SolderVerdict') {
             . ([scriptblock]::Create((Get-ToolFunctionText -Ast $ast -FuncName $name)))
         }
-        $sutureSource = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'suture.ps1') -Raw
+        $sutureSource = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'solder.ps1') -Raw
     }
 
     Context 'finding catalog and error-code table' {
         It 'contains every code the tool raises' {
-            $raised = @([regex]::Matches($sutureSource, "Add-SutureFinding\s+-Code\s+'([^']+)'") | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
+            $raised = @([regex]::Matches($sutureSource, "Add-SolderFinding\s+-Code\s+'([^']+)'") | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
             $raised.Count | Should -BeGreaterThan 12
-            foreach ($code in $raised) { $SutureFindings.ContainsKey($code) | Should -BeTrue -Because "suture.ps1 raises '$code'" }
+            foreach ($code in $raised) { $SolderFindings.ContainsKey($code) | Should -BeTrue -Because "solder.ps1 raises '$code'" }
             # The update-failure codes are chosen by expression, not a literal.
-            foreach ($code in 'UpdateFailuresStore', 'UpdateFailuresClient') { $SutureFindings.ContainsKey($code) | Should -BeTrue }
+            foreach ($code in 'UpdateFailuresStore', 'UpdateFailuresClient') { $SolderFindings.ContainsKey($code) | Should -BeTrue }
         }
         It 'gives every finding a renderable Severity, Title, Summary and Remedy' {
-            foreach ($code in $SutureFindings.Keys) {
-                $SutureFindings[$code].Severity | Should -BeIn @('Error', 'Warning', 'Info')
-                $SutureFindings[$code].Title    | Should -Not -BeNullOrEmpty
-                $SutureFindings[$code].Remedy   | Should -Not -BeNullOrEmpty
+            foreach ($code in $SolderFindings.Keys) {
+                $SolderFindings[$code].Severity | Should -BeIn @('Error', 'Warning', 'Info')
+                $SolderFindings[$code].Title    | Should -Not -BeNullOrEmpty
+                $SolderFindings[$code].Remedy   | Should -Not -BeNullOrEmpty
             }
         }
         It 'keys the error-code table by normalised hex and classifies every entry' {
@@ -2064,9 +2050,9 @@ Describe 'SUTURE servicing helpers' {
 
     Context 'verdict' {
         It 'reports Broken, Attention and Healthy' {
-            (Get-SutureVerdict -FindingList @([PSCustomObject]@{ Severity = 'Error' })).Verdict | Should -Be 'Broken'
-            (Get-SutureVerdict -FindingList @([PSCustomObject]@{ Severity = 'Warning' })).Verdict | Should -Be 'Attention'
-            (Get-SutureVerdict -FindingList @([PSCustomObject]@{ Severity = 'Info' })).Verdict | Should -Be 'Healthy'
+            (Get-SolderVerdict -FindingList @([PSCustomObject]@{ Severity = 'Error' })).Verdict | Should -Be 'Broken'
+            (Get-SolderVerdict -FindingList @([PSCustomObject]@{ Severity = 'Warning' })).Verdict | Should -Be 'Attention'
+            (Get-SolderVerdict -FindingList @([PSCustomObject]@{ Severity = 'Info' })).Verdict | Should -Be 'Healthy'
         }
     }
 }
@@ -2214,29 +2200,29 @@ Describe 'CHALICE Microsoft 365 Apps helpers' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CATACOMB — the rights-mask collapse and SID categories that decide what
+# MINOTAUR — the rights-mask collapse and SID categories that decide what
 # counts as broad write access, and the finding catalog.
 # ─────────────────────────────────────────────────────────────────────────────
-Describe 'CATACOMB permission helpers' {
+Describe 'MINOTAUR permission helpers' {
     BeforeAll {
-        $ast = Get-ToolAst -FileName 'catacomb.ps1'
-        $CatacombFindings = Get-ToolAssignmentValue -Ast $ast -VarName 'CatacombFindings'
+        $ast = Get-ToolAst -FileName 'minotaur.ps1'
+        $MinotaurFindings = Get-ToolAssignmentValue -Ast $ast -VarName 'MinotaurFindings'
         $BroadSids        = Get-ToolAssignmentValue -Ast $ast -VarName 'BroadSids'
         $BroadDomainRids  = Get-ToolAssignmentValue -Ast $ast -VarName 'BroadDomainRids'
-        foreach ($name in 'Get-NtfsRightsLevel', 'Test-WriteLevel', 'Get-SidCategory', 'Get-CatacombVerdict') {
+        foreach ($name in 'Get-NtfsRightsLevel', 'Test-WriteLevel', 'Get-SidCategory', 'Get-MinotaurVerdict') {
             . ([scriptblock]::Create((Get-ToolFunctionText -Ast $ast -FuncName $name)))
         }
-        $catacombSource = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'catacomb.ps1') -Raw
+        $catacombSource = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'minotaur.ps1') -Raw
     }
 
     It 'contains every code the tool raises' {
-        $raised = @([regex]::Matches($catacombSource, "Add-CatacombFinding\s+-Code\s+'([^']+)'") | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
+        $raised = @([regex]::Matches($catacombSource, "Add-MinotaurFinding\s+-Code\s+'([^']+)'") | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
         $raised.Count | Should -BeGreaterThan 7
-        foreach ($code in $raised) { $CatacombFindings.ContainsKey($code) | Should -BeTrue -Because "catacomb.ps1 raises '$code'" }
+        foreach ($code in $raised) { $MinotaurFindings.ContainsKey($code) | Should -BeTrue -Because "minotaur.ps1 raises '$code'" }
     }
     It 'ranks broad write as an Error and broad read as a Warning' {
-        $CatacombFindings['BroadWriteAccess'].Severity | Should -Be 'Error'
-        $CatacombFindings['BroadReadAccess'].Severity  | Should -Be 'Warning'
+        $MinotaurFindings['BroadWriteAccess'].Severity | Should -Be 'Error'
+        $MinotaurFindings['BroadReadAccess'].Severity  | Should -Be 'Warning'
     }
     It 'collapses the standard FileSystemRights masks' {
         Get-NtfsRightsLevel -Value 2032127 | Should -Be 'Full'
@@ -2262,28 +2248,28 @@ Describe 'CATACOMB permission helpers' {
         Get-SidCategory 'S-1-5-32-544'        | Should -Be 'WellKnown'
     }
     It 'maps the worst severity to Exposed / Review / Tidy' {
-        (Get-CatacombVerdict -FindingList @([PSCustomObject]@{ Severity = 'Error' })).Verdict   | Should -Be 'Exposed'
-        (Get-CatacombVerdict -FindingList @([PSCustomObject]@{ Severity = 'Warning' })).Verdict | Should -Be 'Review'
-        (Get-CatacombVerdict -FindingList @([PSCustomObject]@{ Severity = 'Info' })).Verdict    | Should -Be 'Tidy'
+        (Get-MinotaurVerdict -FindingList @([PSCustomObject]@{ Severity = 'Error' })).Verdict   | Should -Be 'Exposed'
+        (Get-MinotaurVerdict -FindingList @([PSCustomObject]@{ Severity = 'Warning' })).Verdict | Should -Be 'Review'
+        (Get-MinotaurVerdict -FindingList @([PSCustomObject]@{ Severity = 'Info' })).Verdict    | Should -Be 'Tidy'
     }
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# HERALD LDAP / DN helpers — HERALD interpolates distinguished names straight
+# ARGUS LDAP / DN helpers — ARGUS interpolates distinguished names straight
 # into LDAP filter strings, so the escaping helper is the boundary between a
 # correct query and one whose meaning a stray parenthesis has changed. The
 # helpers are pure, so they are extracted by AST and exercised directly rather
 # than dot-sourcing the tool (which launches its main flow on import).
 # ─────────────────────────────────────────────────────────────────────────────
-Describe 'HERALD LDAP and DN helpers' {
+Describe 'ARGUS LDAP and DN helpers' {
     BeforeAll {
         # Pester 5 restricts Should to It bodies, so the "did the helper load?"
         # check is recorded here and asserted in its own It below rather than
         # being asserted inline.
-        $heraldPath = Join-Path $PSScriptRoot '..\herald.ps1'
+        $heraldPath = Join-Path $PSScriptRoot '..\argus.ps1'
         $errs = $null
         $ast  = [System.Management.Automation.Language.Parser]::ParseFile($heraldPath, [ref]$null, [ref]$errs)
-        $script:HeraldHelpersLoaded = @()
+        $script:ArgusHelpersLoaded = @()
         foreach ($name in 'ConvertTo-LdapFilterValue', 'Get-DnLeaf', 'Get-DnParent') {
             $fn = $ast.FindAll({
                 param($n)
@@ -2291,14 +2277,14 @@ Describe 'HERALD LDAP and DN helpers' {
             }, $true) | Select-Object -First 1
             if ($fn) {
                 . ([scriptblock]::Create($fn.Extent.Text))
-                $script:HeraldHelpersLoaded += $name
+                $script:ArgusHelpersLoaded += $name
             }
         }
     }
 
-    It 'herald.ps1 defines the LDAP and DN helpers' {
+    It 'argus.ps1 defines the LDAP and DN helpers' {
         foreach ($name in 'ConvertTo-LdapFilterValue', 'Get-DnLeaf', 'Get-DnParent') {
-            $script:HeraldHelpersLoaded | Should -Contain $name -Because "herald.ps1 must define $name"
+            $script:ArgusHelpersLoaded | Should -Contain $name -Because "argus.ps1 must define $name"
         }
     }
 
@@ -2344,17 +2330,17 @@ Describe 'HERALD LDAP and DN helpers' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# HERALD report-section guard — HERALD renders a whole domain's roster, so a
+# ARGUS report-section guard — ARGUS renders a whole domain's roster, so a
 # single unrenderable row must not cost the technician the entire document. The
 # guard replaces a failed section with a visible placeholder and reports where
 # the fault came from, rather than losing the report to one exception.
 # ─────────────────────────────────────────────────────────────────────────────
-Describe 'HERALD report-section guard' {
+Describe 'ARGUS report-section guard' {
     BeforeAll {
-        $heraldPath = Join-Path $PSScriptRoot '..\herald.ps1'
+        $heraldPath = Join-Path $PSScriptRoot '..\argus.ps1'
         $errs = $null
         $ast  = [System.Management.Automation.Language.Parser]::ParseFile($heraldPath, [ref]$null, [ref]$errs)
-        $script:HeraldGuardLoaded = @()
+        $script:ArgusGuardLoaded = @()
         foreach ($name in 'Invoke-ReportSection', 'Get-FaultLocation') {
             $fn = $ast.FindAll({
                 param($n)
@@ -2362,14 +2348,14 @@ Describe 'HERALD report-section guard' {
             }, $true) | Select-Object -First 1
             if ($fn) {
                 . ([scriptblock]::Create($fn.Extent.Text))
-                $script:HeraldGuardLoaded += $name
+                $script:ArgusGuardLoaded += $name
             }
         }
     }
 
-    It 'herald.ps1 defines the section guard and the fault locator' {
-        $script:HeraldGuardLoaded | Should -Contain 'Invoke-ReportSection'
-        $script:HeraldGuardLoaded | Should -Contain 'Get-FaultLocation'
+    It 'argus.ps1 defines the section guard and the fault locator' {
+        $script:ArgusGuardLoaded | Should -Contain 'Invoke-ReportSection'
+        $script:ArgusGuardLoaded | Should -Contain 'Get-FaultLocation'
     }
 
     It 'passes a section that renders cleanly straight through' {
@@ -2409,16 +2395,16 @@ Describe 'HERALD report-section guard' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# HERALD password-policy verdicts — the report answers an access questionnaire,
+# ARGUS password-policy verdicts — the report answers an access questionnaire,
 # so each setting is scored rather than merely printed. The zero cases carry the
 # most meaning and the least intuition: zero lockout threshold disables lockout
 # entirely, zero max age means passwords never expire, and zero lockout duration
 # means locked until an administrator intervenes — the strictest option, not the
 # weakest.
 # ─────────────────────────────────────────────────────────────────────────────
-Describe 'HERALD password-policy verdicts' {
+Describe 'ARGUS password-policy verdicts' {
     BeforeAll {
-        $heraldPath = Join-Path $PSScriptRoot '..\herald.ps1'
+        $heraldPath = Join-Path $PSScriptRoot '..\argus.ps1'
         $errs = $null
         $ast  = [System.Management.Automation.Language.Parser]::ParseFile($heraldPath, [ref]$null, [ref]$errs)
 
@@ -2510,26 +2496,26 @@ Describe 'HERALD password-policy verdicts' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# HERALD report parameters must stay untyped — a live 91-account domain on
+# ARGUS report parameters must stay untyped — a live 91-account domain on
 # Windows PowerShell 5.1 threw System.ArgumentException "Argument types do not
-# match" binding arguments into Build-HeraldReport, at the call statement and
+# match" binding arguments into Build-ArgusReport, at the call statement and
 # therefore before any section guard could catch it, losing the whole report. A
 # type constraint is the only thing that can fail at a call site, so the
 # parameters are deliberately unconstrained and the collections are normalised
 # inside the function instead.
 # ─────────────────────────────────────────────────────────────────────────────
-Describe 'HERALD report parameters' {
+Describe 'ARGUS report parameters' {
     BeforeAll {
-        $heraldPath = Join-Path $PSScriptRoot '..\herald.ps1'
+        $heraldPath = Join-Path $PSScriptRoot '..\argus.ps1'
         $errs = $null
         $ast  = [System.Management.Automation.Language.Parser]::ParseFile($heraldPath, [ref]$null, [ref]$errs)
         $script:BuildReportFn = $ast.FindAll({
             param($n)
-            $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'Build-HeraldReport'
+            $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'Build-ArgusReport'
         }, $true) | Select-Object -First 1
     }
 
-    It 'defines Build-HeraldReport' {
+    It 'defines Build-ArgusReport' {
         $script:BuildReportFn | Should -Not -BeNullOrEmpty
     }
 
@@ -2552,79 +2538,79 @@ Describe 'HERALD report parameters' {
         # does not use @(), which is the construct suspected of raising
         # "Argument types do not match" over a List[object].
         $text = $script:BuildReportFn.Extent.Text
-        $text | Should -Match '\$Roster\s*=\s*ConvertTo-HeraldArray\s+\$Roster'
-        $text | Should -Match '\$GroupSummary\s*=\s*ConvertTo-HeraldArray\s+\$GroupSummary'
+        $text | Should -Match '\$Roster\s*=\s*ConvertTo-ArgusArray\s+\$Roster'
+        $text | Should -Match '\$GroupSummary\s*=\s*ConvertTo-ArgusArray\s+\$GroupSummary'
         $text | Should -Not -Match '@\(\$Roster\)'
         $text | Should -Not -Match '@\(\$GroupSummary\)'
     }
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ConvertTo-HeraldArray — the report was lost repeatedly to an ArgumentException
+# ConvertTo-ArgusArray — the report was lost repeatedly to an ArgumentException
 # ("Argument types do not match") raised while preparing its arguments. The one
 # collection built as a System.Collections.Generic.List[object] is the group
 # summary, and @() over such a list is the construct under suspicion. Rather
 # than depend on @() behaving, the helper enumerates explicitly; these cases pin
 # that it handles every shape the report is given.
 # ─────────────────────────────────────────────────────────────────────────────
-Describe 'ConvertTo-HeraldArray' {
+Describe 'ConvertTo-ArgusArray' {
     BeforeAll {
-        $heraldPath = Join-Path $PSScriptRoot '..\herald.ps1'
+        $heraldPath = Join-Path $PSScriptRoot '..\argus.ps1'
         $errs = $null
         $ast  = [System.Management.Automation.Language.Parser]::ParseFile($heraldPath, [ref]$null, [ref]$errs)
         $fn = $ast.FindAll({
             param($n)
-            $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'ConvertTo-HeraldArray'
+            $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'ConvertTo-ArgusArray'
         }, $true) | Select-Object -First 1
         $script:ConvertLoaded = $null -ne $fn
         if ($fn) { . ([scriptblock]::Create($fn.Extent.Text)) }
     }
 
-    It 'is defined in herald.ps1' {
+    It 'is defined in argus.ps1' {
         $script:ConvertLoaded | Should -BeTrue
     }
 
     It 'converts a List[object] built with New-Object' {
-        # The construction the group summary used before 5.1. HERALD now builds
+        # The construction the group summary used before 5.1. ARGUS now builds
         # its lists with ::new(), but the helper must still accept this form.
         $list = New-Object System.Collections.Generic.List[object]
         $list.Add([PSCustomObject]@{ Name = 'G1' })
         $list.Add([PSCustomObject]@{ Name = 'G2' })
-        $result = ConvertTo-HeraldArray $list
+        $result = ConvertTo-ArgusArray $list
         $result -is [array] | Should -BeTrue
         $result.Count | Should -Be 2
     }
 
     It 'converts an empty List[object] to an empty array, not null' {
         $list = New-Object System.Collections.Generic.List[object]
-        $result = ConvertTo-HeraldArray $list
+        $result = ConvertTo-ArgusArray $list
         $result -is [array] | Should -BeTrue
         $result.Count | Should -Be 0
     }
 
     It 'passes an array through with its contents intact' {
-        $result = ConvertTo-HeraldArray @(1, 2, 3)
+        $result = ConvertTo-ArgusArray @(1, 2, 3)
         $result.Count | Should -Be 3
     }
 
     It 'returns an empty array for null rather than null' {
-        $result = ConvertTo-HeraldArray $null
+        $result = ConvertTo-ArgusArray $null
         $result -is [array] | Should -BeTrue
         $result.Count | Should -Be 0
     }
 
     It 'wraps a scalar as a single element' {
-        (ConvertTo-HeraldArray ([PSCustomObject]@{ A = 1 })).Count | Should -Be 1
+        (ConvertTo-ArgusArray ([PSCustomObject]@{ A = 1 })).Count | Should -Be 1
     }
 
     It 'does not split a string into characters' {
-        $result = ConvertTo-HeraldArray 'hello'
+        $result = ConvertTo-ArgusArray 'hello'
         $result.Count | Should -Be 1
         $result[0] | Should -Be 'hello'
     }
 
     It 'keeps a hashtable as one element rather than enumerating its entries' {
-        (ConvertTo-HeraldArray @{ a = 1; b = 2 }).Count | Should -Be 1
+        (ConvertTo-ArgusArray @{ a = 1; b = 2 }).Count | Should -Be 1
     }
 }
 
@@ -2740,7 +2726,7 @@ Describe 'LICENSE file' {
 #
 #   1. CLEANSE: a tool referenced `$ColorSchema.Menu` six times but never
 #      defined a `Menu` key, so `-ForegroundColor` received $null.
-#   2. ANVIL / PORTAL / TENDRIL: a `foreach ($c in ...)` loop variable collided
+#   2. ANVIL / PORTAL / ORRERY: a `foreach ($c in ...)` loop variable collided
 #      (PowerShell variables are case-insensitive) with the `$C` color map,
 #      clobbering it so later `$C.Success` reads returned $null.
 #

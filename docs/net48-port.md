@@ -145,7 +145,7 @@ on 5.1. This is the part that looked expensive and is not.
 .NET Framework executables default to `Prefer32Bit=true` under AnyCPU. A 32-bit
 process on 64-bit Windows gets WOW64 registry redirection (`Wow6432Node`) and
 File System redirection (`SysWOW64`). The suite would then read a different
-machine than the one in front of it — SIGIL writes baseline registry values,
+machine than the one in front of it — BASILISK writes baseline registry values,
 TALON reads autorun keys, ANVIL and AUGUR read firmware and disk data. Nothing
 would error. The reports would just be wrong.
 

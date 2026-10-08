@@ -1,4 +1,4 @@
-﻿# herald.ps1 - H.E.R.A.L.D. — Hierarchy, Entitlements, Roles & Access-Level Directory
+﻿# argus.ps1 - A.R.G.U.S. — Access Roster: Groups, Users & Scopes
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -20,7 +20,7 @@
 
 <#
 .SYNOPSIS
-    H.E.R.A.L.D. — Hierarchy, Entitlements, Roles & Access-Level Directory
+    A.R.G.U.S. — Access Roster: Groups, Users & Scopes
     Active Directory account roster & access-level report for PowerShell 5.1+
 
 .DESCRIPTION
@@ -45,14 +45,14 @@
                                -AdminGroupPattern (e.g. "IT Admins", "Helpdesk Operators").
       Standard User            No privileged membership found.
 
-    Read-only. HERALD queries the directory and writes a report; it never modifies AD.
+    Read-only. ARGUS queries the directory and writes a report; it never modifies AD.
 
 .USAGE
-    PS C:\> .\herald.ps1                             # Interactive — enabled accounts, HTML + CSV
-    PS C:\> .\herald.ps1 -Unattended                 # Silent export, no prompts
-    PS C:\> .\herald.ps1 -IncludeDisabled            # Include disabled accounts in the roster
-    PS C:\> .\herald.ps1 -SearchBase 'OU=Staff,DC=contoso,DC=com'
-    PS C:\> .\herald.ps1 -Server dc01.contoso.com -StaleDays 60
+    PS C:\> .\argus.ps1                             # Interactive — enabled accounts, HTML + CSV
+    PS C:\> .\argus.ps1 -Unattended                 # Silent export, no prompts
+    PS C:\> .\argus.ps1 -IncludeDisabled            # Include disabled accounts in the roster
+    PS C:\> .\argus.ps1 -SearchBase 'OU=Staff,DC=contoso,DC=com'
+    PS C:\> .\argus.ps1 -Server dc01.contoso.com -StaleDays 60
 
 .NOTES
     Version : 5.1
@@ -239,19 +239,19 @@ foreach ($policyKey in $PolicyKeyOrder) { $PolicyBaseline[$policyKey] = $Passwor
 # BANNER
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Show-HeraldBanner {
+function Show-ArgusBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host @"
 
-  ██╗  ██╗███████╗██████╗  █████╗ ██╗     ██████╗
-  ██║  ██║██╔════╝██╔══██╗██╔══██╗██║     ██╔══██╗
-  ███████║█████╗  ██████╔╝███████║██║     ██║  ██║
-  ██╔══██║██╔══╝  ██╔══██╗██╔══██║██║     ██║  ██║
-  ██║  ██║███████╗██║  ██║██║  ██║███████╗██████╔╝
-  ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═════╝
+   █████╗ ██████╗  ██████╗ ██╗   ██╗███████╗
+  ██╔══██╗██╔══██╗██╔════╝ ██║   ██║██╔════╝
+  ███████║██████╔╝██║  ███╗██║   ██║███████╗
+  ██╔══██║██╔══██╗██║   ██║██║   ██║╚════██║
+  ██║  ██║██║  ██║╚██████╔╝╚██████╔╝███████║
+  ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚══════╝
 
 "@ -ForegroundColor Cyan
-    Write-Host "    H.E.R.A.L.D. — Hierarchy, Entitlements, Roles & Access-Level Directory" -ForegroundColor Cyan
+    Write-Host "    A.R.G.U.S. — Access Roster: Groups, Users & Scopes" -ForegroundColor Cyan
     Write-Host "    Active Directory Account Roster & Access-Level Report" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -284,13 +284,13 @@ function ConvertTo-LdapFilterValue {
     return $sb.ToString()
 }
 
-function ConvertTo-HeraldArray {
+function ConvertTo-ArgusArray {
     <#
         Normalises any value to [object[]] by explicit enumeration.
 
         The report was repeatedly lost to System.ArgumentException "Argument
         types do not match" raised while preparing the arguments for
-        Build-HeraldReport. The group summary is the one collection built as a
+        Build-ArgusReport. The group summary is the one collection built as a
         System.Collections.Generic.List[object], and @() over that list is the
         construct under suspicion - but sandbox testing gave contradictory
         results, so this does not rely on @() behaving. Enumerating item by item
@@ -349,7 +349,7 @@ function Get-DnParent {
     return ($parts[1..($parts.Count - 1)] -join ',')
 }
 
-function Format-HeraldDate {
+function Format-ArgusDate {
     param($Value)
     if (-not $Value) { return 'Never' }
     return ([datetime]$Value).ToString('yyyy-MM-dd')
@@ -365,7 +365,7 @@ function Get-DaysSince {
 # MODULE & DOMAIN CHECK
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Assert-HeraldADModule {
+function Assert-ArgusADModule {
     if (Get-Module -ListAvailable -Name ActiveDirectory) {
         try {
             Import-Module ActiveDirectory -ErrorAction Stop
@@ -644,7 +644,7 @@ function Get-AuthenticationPolicy {
     return $result
 }
 
-function Get-HeraldUser {
+function Get-ArgusUser {
     param([hashtable]$AdCommon)
 
     $props = @(
@@ -768,9 +768,9 @@ function Build-AccountRoster {
             Department           = $u.Department
             Manager              = Get-DnLeaf $u.Manager
             GrantedBy            = ($grants -join '; ')
-            LastLogon            = Format-HeraldDate $u.LastLogonDate
+            LastLogon            = Format-ArgusDate $u.LastLogonDate
             DaysInactive         = $daysInactive
-            PasswordLastSet      = Format-HeraldDate $u.PasswordLastSet
+            PasswordLastSet      = Format-ArgusDate $u.PasswordLastSet
             PasswordNeverExpires = [bool]$u.PasswordNeverExpires
             AdminCount           = ($u.adminCount -eq 1)
             OrganizationalUnit   = Get-DnParent $u.DistinguishedName
@@ -826,13 +826,13 @@ function Invoke-ReportSection {
         foreach ($frame in ($_.ScriptStackTrace -split "`r?`n")) {
             if ($frame.Trim()) { Write-Info $frame.Trim() }
         }
-        Write-TKError -ScriptName 'herald' -Category 'Report' `
+        Write-TKError -ScriptName 'argus' -Category 'Report' `
             -Message "Section '$Name': $($_.Exception.GetType().FullName): $($_.Exception.Message) [$where]"
         return "<tr><td colspan=""$ColSpan""><strong>This section could not be rendered.</strong> See the console output for the failure detail.</td></tr>"
     }
 }
 
-function Build-HeraldReport {
+function Build-ArgusReport {
     <#
         Parameters are deliberately untyped.
 
@@ -859,8 +859,8 @@ function Build-HeraldReport {
 
     # Normalise here instead of at the binder, so .Count is still safe on a
     # single-element or empty result.
-    $Roster       = ConvertTo-HeraldArray $Roster
-    $GroupSummary = ConvertTo-HeraldArray $GroupSummary
+    $Roster       = ConvertTo-ArgusArray $Roster
+    $GroupSummary = ConvertTo-ArgusArray $GroupSummary
 
     $tkConfig  = Get-TKConfig
     $orgPrefix = ''
@@ -1123,7 +1123,7 @@ function Build-HeraldReport {
 
     $html = (Get-TKHtmlHead `
         -Title      'Active Directory Account Roster & Access Levels' `
-        -ScriptName 'H.E.R.A.L.D.' `
+        -ScriptName 'A.R.G.U.S.' `
         -Subtitle   "$orgPrefix$DomainName" `
         -MetaItems  $metaItems `
         -NavItems   $navItems) + @"
@@ -1271,17 +1271,17 @@ function Build-HeraldReport {
     </table>
     <div class="tk-info-box" style="margin-top:18px">
       <span class="tk-info-label">Scope &amp; caveats</span>
-      HERALD reports privilege conferred by <em>security-group membership</em> in this domain.
+      ARGUS reports privilege conferred by <em>security-group membership</em> in this domain.
       It does not evaluate rights delegated directly on an OU or object ACL, local administrator
       membership on individual workstations, Group Policy user-rights assignments, or group
       Managed Service Accounts (gMSAs), which are not user objects.
-      Entra ID / Microsoft 365 directory roles are a separate surface — run W.R.A.I.T.H. for those.
+      Entra ID / Microsoft 365 directory roles are a separate surface — run E.C.L.I.P.S.E. for those.
       Local accounts on a single machine are covered by W.A.R.D.
     </div>
   </div>
 </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'H.E.R.A.L.D. v3.8.3')
+"@ + (Get-TKHtmlFoot -ScriptName 'A.R.G.U.S. v3.8.3')
 
     return $html
 }
@@ -1290,7 +1290,7 @@ function Build-HeraldReport {
 # MAIN
 # ─────────────────────────────────────────────────────────────────────────────
 
-if (-not $Unattended) { Show-HeraldBanner }
+if (-not $Unattended) { Show-ArgusBanner }
 
 # A bad -AdminGroupPattern would otherwise surface as a confusing mid-scan
 # exception, so it is validated before any directory work starts.
@@ -1306,12 +1306,12 @@ if (-not $SkipCustomGroupScan) {
 
 if (-not (Test-DomainJoined)) {
     Write-Fail 'This machine is not joined to an Active Directory domain.'
-    Write-Info 'Run HERALD from a domain-joined machine, or point it at a domain controller with -Server.'
+    Write-Info 'Run ARGUS from a domain-joined machine, or point it at a domain controller with -Server.'
     if ($Transcript) { Stop-TKTranscript }
     exit 1
 }
 
-if (-not (Assert-HeraldADModule)) {
+if (-not (Assert-ArgusADModule)) {
     if ($Transcript) { Stop-TKTranscript }
     exit 1
 }
@@ -1325,7 +1325,7 @@ try {
     $domain = Get-ADDomain @AdCommon -ErrorAction Stop
 } catch {
     Write-Fail "Could not contact the domain: $($_.Exception.Message)"
-    Write-TKError -ScriptName 'herald' -Message $_.Exception.Message -Category 'Directory'
+    Write-TKError -ScriptName 'argus' -Message $_.Exception.Message -Category 'Directory'
     if ($Transcript) { Stop-TKTranscript }
     exit 1
 }
@@ -1468,10 +1468,10 @@ Write-Section 'ACCOUNTS'
 Write-Step 'Reading user accounts from the directory...'
 
 try {
-    $users = Get-HeraldUser -AdCommon $AdCommon
+    $users = Get-ArgusUser -AdCommon $AdCommon
 } catch {
     Write-Fail "Could not read user accounts: $($_.Exception.Message)"
-    Write-TKError -ScriptName 'herald' -Message $_.Exception.Message -Category 'Directory'
+    Write-TKError -ScriptName 'argus' -Message $_.Exception.Message -Category 'Directory'
     if ($Transcript) { Stop-TKTranscript }
     exit 1
 }
@@ -1548,18 +1548,18 @@ if (-not (Test-Path $outDir)) {
 }
 
 $stamp      = Get-Date -Format 'yyyyMMdd_HHmmss'
-$reportPath = Join-Path $outDir "HERALD_$stamp.html"
-$csvPath    = Join-Path $outDir "HERALD_Roster_$stamp.csv"
+$reportPath = Join-Path $outDir "ARGUS_$stamp.html"
+$csvPath    = Join-Path $outDir "ARGUS_Roster_$stamp.csv"
 
 # Every argument is prepared on its own line and the call is splatted.
 #
 # The report was lost twice to a System.ArgumentException raised at the call
-# statement with no Build-HeraldReport frame in the stack trace, which places the
+# statement with no Build-ArgusReport frame in the stack trace, which places the
 # fault in evaluating or binding the arguments rather than inside the function.
 # The type constraints that could have explained binding are already gone
 # (3.8.1), leaving the two composite argument expressions -- and both are now
 # removed. The @() that wrapped $groupSummary is redundant because
-# Build-HeraldReport normalises both collections itself, and the inline Get-Date
+# Build-ArgusReport normalises both collections itself, and the inline Get-Date
 # becomes its own statement.
 #
 # Root cause, found in 5.1: under PowerShell 7.4, @() over a List[object] built
@@ -1580,7 +1580,7 @@ try {
     $reportArgs['Counts']          = $counts
     $reportArgs['AuthPolicy']      = $authPolicy
 
-    $html = Build-HeraldReport @reportArgs
+    $html = Build-ArgusReport @reportArgs
     [System.IO.File]::WriteAllText($reportPath, $html, [System.Text.Encoding]::UTF8)
 } catch {
     # Name the exception type and the originating line: "could not save the
@@ -1611,7 +1611,7 @@ try {
         Write-Info 'argument types could not be read.'
     }
 
-    Write-TKError -ScriptName 'herald' -Category 'Report' `
+    Write-TKError -ScriptName 'argus' -Category 'Report' `
         -Message "$($_.Exception.GetType().FullName): $($_.Exception.Message) [$where]"
 }
 
@@ -1638,7 +1638,7 @@ Show-TKReportResult -Path $reportPath -Unattended:$Unattended -Label 'Account ro
 
 Write-Host ""
 Write-Host ("  " + ("=" * 62)) -ForegroundColor $C.Header
-Write-Host "  H.E.R.A.L.D. REPORT COMPLETE" -ForegroundColor $C.Header
+Write-Host "  A.R.G.U.S. REPORT COMPLETE" -ForegroundColor $C.Header
 Write-Host ("  " + ("=" * 62)) -ForegroundColor $C.Header
 Write-Host ""
 

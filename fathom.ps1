@@ -1,4 +1,4 @@
-﻿# hoard.ps1 - H.O.A.R.D. — Highlights Overgrown Allocations & Reclaimable Data
+﻿# fathom.ps1 - F.A.T.H.O.M. — Free-space Analysis: Tallies Hogs, Old profiles & Mess
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -20,12 +20,12 @@
 
 <#
 .SYNOPSIS
-    H.O.A.R.D. — Highlights Overgrown Allocations & Reclaimable Data
-    Disk Space & Storage Monitor for PowerShell 5.1+
+    F.A.T.H.O.M. — Free-space Analysis: Tallies Hogs, Old profiles & Mess
+    Disk & Storage Health Monitor for PowerShell 5.1+
 
 .DESCRIPTION
-    H.O.A.R.D. answers "what is filling this disk?". It provides volume space summaries,
-    a basic physical disk health check via CIM/WMI, disk cleanup operations,
+    F.A.T.H.O.M. is a comprehensive disk and storage health monitoring tool that provides
+    physical disk health checks via CIM/WMI, volume space summaries, disk cleanup operations,
     old profile detection, and HTML report generation. It uses Get-PhysicalDisk, Get-Disk,
     Get-Volume, and Win32_DiskDrive to surface health status, operational state, and space usage.
     Volumes below 15% free are flagged as Warning; below 5% as Critical. Full SMART attribute
@@ -33,8 +33,8 @@
     as a proxy.
 
 .USAGE
-    PS C:\> .\hoard.ps1                         # Interactive menu
-    PS C:\> .\hoard.ps1 -Unattended             # Run health check and export HTML report silently
+    PS C:\> .\fathom.ps1                         # Interactive menu
+    PS C:\> .\fathom.ps1 -Unattended             # Run health check and export HTML report silently
 
 .NOTES
     Version : 5.1
@@ -102,16 +102,16 @@ function Show-Banner {
     Clear-Host
     $banner = @"
 
-  ██╗  ██╗ ██████╗  █████╗ ██████╗ ██████╗
-  ██║  ██║██╔═══██╗██╔══██╗██╔══██╗██╔══██╗
-  ███████║██║   ██║███████║██████╔╝██║  ██║
-  ██╔══██║██║   ██║██╔══██║██╔══██╗██║  ██║
-  ██║  ██║╚██████╔╝██║  ██║██║  ██║██████╔╝
-  ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝
+  ███████╗ █████╗ ████████╗██╗  ██╗ ██████╗ ███╗   ███╗
+  ██╔════╝██╔══██╗╚══██╔══╝██║  ██║██╔═══██╗████╗ ████║
+  █████╗  ███████║   ██║   ███████║██║   ██║██╔████╔██║
+  ██╔══╝  ██╔══██║   ██║   ██╔══██║██║   ██║██║╚██╔╝██║
+  ██║     ██║  ██║   ██║   ██║  ██║╚██████╔╝██║ ╚═╝ ██║
+  ╚═╝     ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚═╝     ╚═╝
 "@
     Write-Host $banner -ForegroundColor $C.Cyan
-    Write-Host "  Highlights Overgrown Allocations & Reclaimable Data" -ForegroundColor $C.Gray
-    Write-Host "  Disk Space & Storage Monitor  |  v3.6" -ForegroundColor $C.Gray
+    Write-Host "  Free-space Analysis: Tallies Hogs, Old profiles & Mess" -ForegroundColor $C.Gray
+    Write-Host "  Disk & Storage Health Monitor  |  v3.6" -ForegroundColor $C.Gray
     Write-Host ""
 }
 
@@ -490,7 +490,7 @@ function Show-OldProfiles {
 
     Write-Host ""
     Write-Host ("  {0} profile(s) found older than 90 days." -f $profiles.Count) -ForegroundColor $C.Cyan
-    Write-Host "  Review before deletion  -  use ARCHIVE or REVENANT for profile migration." -ForegroundColor $C.Gray
+    Write-Host "  Review before deletion  -  use EMBALM or REVENANT for profile migration." -ForegroundColor $C.Gray
 }
 
 #endregion
@@ -505,7 +505,7 @@ function Build-HtmlReport {
 
     $timestamp  = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $hostname   = $env:COMPUTERNAME
-    $filename   = "HOARD_{0}.html" -f (Get-Date -Format "yyyyMMdd_HHmmss")
+    $filename   = "FATHOM_{0}.html" -f (Get-Date -Format "yyyyMMdd_HHmmss")
     $outputPath = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) $filename
 
     $totalDrives   = $DiskData.Count
@@ -603,7 +603,7 @@ function Build-HtmlReport {
 
     $html  = Get-TKHtmlHead `
         -Title      'Disk & Storage Health Report' `
-        -ScriptName 'H.O.A.R.D.' `
+        -ScriptName 'F.A.T.H.O.M.' `
         -Subtitle   "$orgPrefix$hostname" `
         -MetaItems  ([ordered]@{
             'Host'      = $hostname
@@ -705,7 +705,7 @@ $recommendations
 
 "@
 
-    $html += Get-TKHtmlFoot -ScriptName 'H.O.A.R.D. v3.6'
+    $html += Get-TKHtmlFoot -ScriptName 'F.A.T.H.O.M. v3.6'
 
     $html | Out-File -FilePath $outputPath -Encoding UTF8 -Force
     return $outputPath
@@ -793,7 +793,7 @@ do {
         }
         'Q' {
             Show-Banner
-            Write-Host "  Exiting H.O.A.R.D.  -  Disk Space & Storage Monitor." -ForegroundColor $C.Cyan
+            Write-Host "  Exiting F.A.T.H.O.M.  -  Disk & Storage Health Monitor." -ForegroundColor $C.Cyan
             Write-Host ""
         }
         default {

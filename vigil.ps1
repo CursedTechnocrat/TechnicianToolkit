@@ -1,4 +1,4 @@
-﻿# gargoyle.ps1 - G.A.R.G.O.Y.L.E. — Guards Against Runtime Glitches On Your Log Events
+﻿# vigil.ps1 - V.I.G.I.L. — Verifies Integrity of services, Guards & Inspects Logs
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -20,7 +20,7 @@
 
 <#
 .SYNOPSIS
-    G.A.R.G.O.Y.L.E. — Guards Against Runtime Glitches On Your Log Events
+    V.I.G.I.L. — Verifies Integrity of services, Guards & Inspects Logs
     Service, Task & Event Log Monitor for PowerShell 5.1+
 
 .DESCRIPTION
@@ -30,9 +30,9 @@
     per-service confirmation prompts.
 
 .USAGE
-    PS C:\> .\gargoyle.ps1                              # Interactive menu (local machine)
-    PS C:\> .\gargoyle.ps1 -Unattended                  # Export health report silently
-    PS C:\> .\gargoyle.ps1 -Unattended -Target HOSTNAME  # Remote machine report
+    PS C:\> .\vigil.ps1                              # Interactive menu (local machine)
+    PS C:\> .\vigil.ps1 -Unattended                  # Export health report silently
+    PS C:\> .\vigil.ps1 -Unattended -Target HOSTNAME  # Remote machine report
 
 .NOTES
     Version : 5.1
@@ -118,19 +118,19 @@ $script:RemoteTarget = $Target.Trim()
 # BANNER
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Show-GargoyleBanner {
+function Show-VigilBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host @"
 
-   ██████╗  █████╗ ██████╗  ██████╗  ██████╗ ██╗   ██╗██╗     ███████╗
-  ██╔════╝ ██╔══██╗██╔══██╗██╔════╝ ██╔═══██╗╚██╗ ██╔╝██║     ██╔════╝
-  ██║  ███╗███████║██████╔╝██║  ███╗██║   ██║ ╚████╔╝ ██║     █████╗
-  ██║   ██║██╔══██║██╔══██╗██║   ██║██║   ██║  ╚██╔╝  ██║     ██╔══╝
-  ╚██████╔╝██║  ██║██║  ██║╚██████╔╝╚██████╔╝   ██║   ███████╗███████╗
-   ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝  ╚═════╝    ╚═╝   ╚══════╝╚══════╝
+  ██╗   ██╗██╗ ██████╗ ██╗██╗
+  ██║   ██║██║██╔════╝ ██║██║
+  ██║   ██║██║██║  ███╗██║██║
+  ╚██╗ ██╔╝██║██║   ██║██║██║
+   ╚████╔╝ ██║╚██████╔╝██║███████╗
+    ╚═══╝  ╚═╝ ╚═════╝ ╚═╝╚══════╝
 
 "@ -ForegroundColor Cyan
-    Write-Host "    G.A.R.G.O.Y.L.E. — Guards Against Runtime Glitches On Your Log Events" -ForegroundColor Cyan
+    Write-Host "    V.I.G.I.L. — Verifies Integrity of services, Guards & Inspects Logs" -ForegroundColor Cyan
     Write-Host "    Service, Task & Event Log Monitor" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -704,7 +704,7 @@ function Build-HtmlReport {
 
     $html  = Get-TKHtmlHead `
         -Title      'Service & Task Health Report' `
-        -ScriptName 'G.A.R.G.O.Y.L.E.' `
+        -ScriptName 'V.I.G.I.L.' `
         -Subtitle   "$orgPrefix$MachineName" `
         -MetaItems  ([ordered]@{
             'Machine'   = $MachineName
@@ -827,7 +827,7 @@ function Build-HtmlReport {
 
 "@
 
-    $html += Get-TKHtmlFoot -ScriptName 'G.A.R.G.O.Y.L.E. v3.6'
+    $html += Get-TKHtmlFoot -ScriptName 'V.I.G.I.L. v3.6'
     return $html
 }
 
@@ -872,7 +872,7 @@ function Export-HtmlReport {
 
     $machineName = if ($script:RemoteTarget) { $script:RemoteTarget } else { $env:COMPUTERNAME }
     $timestamp   = Get-Date -Format 'yyyyMMdd_HHmmss'
-    $reportName  = "GARGOYLE_${timestamp}.html"
+    $reportName  = "VIGIL_${timestamp}.html"
     $reportPath  = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) $reportName
 
     Write-Host "  [*] Building HTML report..." -ForegroundColor $C.Progress
@@ -898,7 +898,7 @@ function Export-HtmlReport {
 # ─────────────────────────────────────────────────────────────────────────────
 
 if ($Unattended) {
-    Show-GargoyleBanner
+    Show-VigilBanner
     $machineName = if ($script:RemoteTarget) { $script:RemoteTarget } else { $env:COMPUTERNAME }
     Write-Host "  [*] Unattended mode  -  Target: $machineName" -ForegroundColor $C.Progress
     Write-Host ""
@@ -914,7 +914,7 @@ if ($Unattended) {
 
     Export-HtmlReport -Services $services -Tasks $tasks -Events $events
     Write-Host ""
-    Write-Host "  [+] G.A.R.G.O.Y.L.E. unattended run complete." -ForegroundColor $C.Success
+    Write-Host "  [+] V.I.G.I.L. unattended run complete." -ForegroundColor $C.Success
     Write-Host ""
     if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }
     exit 0
@@ -946,13 +946,13 @@ function Invoke-RefreshAll {
 }
 
 # Initial data load
-Show-GargoyleBanner
+Show-VigilBanner
 Invoke-RefreshAll
 
 $choice = ''
 
 do {
-    Show-GargoyleBanner
+    Show-VigilBanner
 
     $targetLabel = if ($script:RemoteTarget) { $script:RemoteTarget } else { 'LOCAL' }
     $svcConcern  = if ($cachedServices) { ($cachedServices | Where-Object { $_.Concern }).Count } else { '?' }
@@ -960,7 +960,7 @@ do {
     $evtCount    = if ($cachedEvents)   { $cachedEvents.TotalCount } else { '?' }
 
     Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
-    Write-Host "  G.A.R.G.O.Y.L.E. MENU   -   Target: $targetLabel" -ForegroundColor $C.Header
+    Write-Host "  V.I.G.I.L. MENU   -   Target: $targetLabel" -ForegroundColor $C.Header
     Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host ""
 
@@ -991,7 +991,7 @@ do {
 
     switch ($choice) {
         '1' {
-            Show-GargoyleBanner
+            Show-VigilBanner
             if (-not $cachedServices) {
                 Write-Host "  [*] Collecting service health..." -ForegroundColor $C.Progress
                 $cachedServices = Get-ServiceHealth
@@ -1002,7 +1002,7 @@ do {
             Read-Host | Out-Null
         }
         '2' {
-            Show-GargoyleBanner
+            Show-VigilBanner
             if (-not $cachedTasks) {
                 Write-Host "  [*] Collecting task audit..." -ForegroundColor $C.Progress
                 $cachedTasks = Get-TaskAudit
@@ -1013,7 +1013,7 @@ do {
             Read-Host | Out-Null
         }
         '3' {
-            Show-GargoyleBanner
+            Show-VigilBanner
             if (-not $cachedEvents) {
                 Write-Host "  [*] Collecting event log errors (this may take a moment)..." -ForegroundColor $C.Progress
                 $cachedEvents = Get-EventErrors
@@ -1024,7 +1024,7 @@ do {
             Read-Host | Out-Null
         }
         '4' {
-            Show-GargoyleBanner
+            Show-VigilBanner
             Write-Section "RESTART STOPPED CRITICAL SERVICES"
             if (-not $cachedServices) {
                 Write-Host "  [*] Collecting service health..." -ForegroundColor $C.Progress
@@ -1039,7 +1039,7 @@ do {
             Read-Host | Out-Null
         }
         '5' {
-            Show-GargoyleBanner
+            Show-VigilBanner
             Write-Section "EXPORT HTML REPORT"
             if (-not $cachedServices) {
                 Write-Host "  [*] Collecting service health..." -ForegroundColor $C.Progress
@@ -1059,7 +1059,7 @@ do {
             Read-Host | Out-Null
         }
         '6' {
-            Show-GargoyleBanner
+            Show-VigilBanner
             Connect-RemoteTarget
             # Clear cached data so next action re-fetches from new target
             $cachedServices = $null
@@ -1075,7 +1075,7 @@ do {
             Read-Host | Out-Null
         }
         'R' {
-            Show-GargoyleBanner
+            Show-VigilBanner
             Write-Section "REFRESH ALL DATA"
             Invoke-RefreshAll
             Write-Host ""
@@ -1084,7 +1084,7 @@ do {
         }
         'Q' {
             Write-Host ""
-            Write-Host "  Closing G.A.R.G.O.Y.L.E." -ForegroundColor $C.Header
+            Write-Host "  Closing V.I.G.I.L." -ForegroundColor $C.Header
             Write-Host ""
         }
         default {

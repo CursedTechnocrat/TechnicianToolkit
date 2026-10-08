@@ -1,4 +1,4 @@
-﻿# tendril.ps1 - T.E.N.D.R.I.L. — Traces Entitlements, Nested Dependencies, Roles, Integrations & Licenses
+﻿# orrery.ps1 - O.R.R.E.R.Y. — Outlines Reliances: Roles, Entitlements, Rules & whY things break
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -20,7 +20,7 @@
 
 <#
 .SYNOPSIS
-    T.E.N.D.R.I.L. — Traces Entitlements, Nested Dependencies, Roles, Integrations & Licenses
+    O.R.R.E.R.Y. — Outlines Reliances: Roles, Entitlements, Rules & whY things break
     Entra ID Group Dependency Audit Tool for PowerShell 5.1+
 
 .DESCRIPTION
@@ -52,13 +52,13 @@
     retired (or its membership reshaped) without breaking access.
 
 .USAGE
-    PS C:\> .\tendril.ps1
-    PS C:\> .\tendril.ps1 -GroupName 'All_CNP_Users'
-    PS C:\> .\tendril.ps1 -GroupId 'a1b2c3d4-e5f6-7890-abcd-ef0123456789'
-    PS C:\> .\tendril.ps1 -GroupName 'All_CNP_Users' -IncludeAzureRbac
-    PS C:\> .\tendril.ps1 -GroupName 'All_CNP_Users' -IncludeExchange -IncludeAzureRbac
-    PS C:\> .\tendril.ps1 -GroupName 'All_CNP_Users' -IncludeSharePoint -SharePointAdminUrl 'https://contoso-admin.sharepoint.com'
-    PS C:\> .\tendril.ps1 -GroupName 'All_CNP_Users' -Unattended
+    PS C:\> .\orrery.ps1
+    PS C:\> .\orrery.ps1 -GroupName 'All_CNP_Users'
+    PS C:\> .\orrery.ps1 -GroupId 'a1b2c3d4-e5f6-7890-abcd-ef0123456789'
+    PS C:\> .\orrery.ps1 -GroupName 'All_CNP_Users' -IncludeAzureRbac
+    PS C:\> .\orrery.ps1 -GroupName 'All_CNP_Users' -IncludeExchange -IncludeAzureRbac
+    PS C:\> .\orrery.ps1 -GroupName 'All_CNP_Users' -IncludeSharePoint -SharePointAdminUrl 'https://contoso-admin.sharepoint.com'
+    PS C:\> .\orrery.ps1 -GroupName 'All_CNP_Users' -Unattended
 
 .NOTES
     Version : 5.1
@@ -140,7 +140,7 @@ $C = @{
 
 if (-not $Unattended) { Clear-Host }
 Write-Host ""
-Write-Host "  T.E.N.D.R.I.L.  -  Traces Entitlements, Nested Dependencies, Roles, Integrations & Licenses" -ForegroundColor Cyan
+Write-Host "  O.R.R.E.R.Y.  -  Outlines Reliances: Roles, Entitlements, Rules & whY things break" -ForegroundColor Cyan
 Write-Host "  Entra ID Group Dependency Audit  v1.0" -ForegroundColor Cyan
 Write-Host ""
 
@@ -186,7 +186,7 @@ function Install-OptionalModule {
         Write-Ok "$installTarget installed"
     } catch {
         Write-Fail "Install failed for ${installTarget}: $($_.Exception.Message)"
-        Write-TKError -ScriptName 'tendril' -Message "Install $installTarget failed: $($_.Exception.Message)" -Category 'Module Install'
+        Write-TKError -ScriptName 'orrery' -Message "Install $installTarget failed: $($_.Exception.Message)" -Category 'Module Install'
         if ($Required) { exit 1 }
         return $false
     }
@@ -273,7 +273,7 @@ try {
     }
 } catch {
     Write-Fail "Graph authentication failed: $($_.Exception.Message)"
-    Write-TKError -ScriptName 'tendril' -Message "Connect-MgGraph failed: $($_.Exception.Message)" -Category 'Graph Auth'
+    Write-TKError -ScriptName 'orrery' -Message "Connect-MgGraph failed: $($_.Exception.Message)" -Category 'Graph Auth'
     exit 1
 }
 
@@ -341,7 +341,7 @@ try {
     }
 } catch {
     Write-Fail "Failed to resolve group: $($_.Exception.Message)"
-    Write-TKError -ScriptName 'tendril' -Message "Get-MgGroup failed: $($_.Exception.Message)" -Category 'Graph Query'
+    Write-TKError -ScriptName 'orrery' -Message "Get-MgGroup failed: $($_.Exception.Message)" -Category 'Graph Query'
     exit 1
 }
 
@@ -669,7 +669,7 @@ if ($IncludeSharePoint -and $PnpAvailable) {
         Write-Ok "SharePoint sites scanned: $SharePointSiteScanned (skipped over limit: $SharePointSiteSkipped). Hits: $($SharePointRows.Count)"
     } catch {
         Write-Warn "SharePoint enumeration failed: $($_.Exception.Message)"
-        Write-TKError -ScriptName 'tendril' -Message "PnP scan failed: $($_.Exception.Message)" -Category 'PnP'
+        Write-TKError -ScriptName 'orrery' -Message "PnP scan failed: $($_.Exception.Message)" -Category 'PnP'
     }
 }
 
@@ -827,7 +827,7 @@ if ($IncludeAzureRbac -and $AzAvailable) {
         }
     } catch {
         Write-Warn "Azure RBAC enumeration failed: $($_.Exception.Message)"
-        Write-TKError -ScriptName 'tendril' -Message "Az RBAC scan failed: $($_.Exception.Message)" -Category 'Az'
+        Write-TKError -ScriptName 'orrery' -Message "Az RBAC scan failed: $($_.Exception.Message)" -Category 'Az'
     }
     Write-Ok "Subscriptions scanned: $AzSubsScanned. RBAC assignments: $($AzureRbacHits.Count)"
 }
@@ -1242,7 +1242,7 @@ $navItems += @('Cleanup Checklist', 'Manual Verification')
 
 $htmlHead = Get-TKHtmlHead `
     -Title      "Group Dependency Audit -- $GroupName" `
-    -ScriptName 'T.E.N.D.R.I.L.' `
+    -ScriptName 'O.R.R.E.R.Y.' `
     -Subtitle   "${orgPrefix}Entra ID Group Dependency Audit -- $tenantDisplay" `
     -MetaItems  ([ordered]@{
         'Generated'    = $reportDate
@@ -1254,7 +1254,7 @@ $htmlHead = Get-TKHtmlHead `
     }) `
     -NavItems   $navItems
 
-$htmlFoot = Get-TKHtmlFoot -ScriptName 'T.E.N.D.R.I.L. v1.0'
+$htmlFoot = Get-TKHtmlFoot -ScriptName 'O.R.R.E.R.Y. v1.0'
 
 # Summary cards (colors depend on count)
 function Get-SummaryClass { param([int]$Count, [string]$WarnSev = 'warn') if ($Count -gt 0) { $WarnSev } else { 'ok' } }
@@ -1469,14 +1469,14 @@ $html = $htmlHead + @"
 if (-not $OutputPath) {
     $safe      = ($GroupName -replace '[^A-Za-z0-9_.-]', '_')
     $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-    $OutputPath = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "TENDRIL_${safe}_${timestamp}.html"
+    $OutputPath = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "ORRERY_${safe}_${timestamp}.html"
 }
 
 try {
     $html | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
 } catch {
     Write-Fail "Could not save report: $($_.Exception.Message)"
-    Write-TKError -ScriptName 'tendril' -Message "Save report failed: $($_.Exception.Message)" -Category 'Report Output'
+    Write-TKError -ScriptName 'orrery' -Message "Save report failed: $($_.Exception.Message)" -Category 'Report Output'
     if ($Transcript) { Stop-TKTranscript }
     exit 1
 }

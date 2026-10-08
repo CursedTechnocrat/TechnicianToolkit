@@ -1,4 +1,4 @@
-﻿# oath.ps1 - O.A.T.H. — Observes And Tends the Host's domain trust
+﻿# lodestar.ps1 - L.O.D.E.S.T.A.R. — Locates Our Domain controller, Establishes Secure Trust And Repairs
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -20,7 +20,7 @@
 
 <#
 .SYNOPSIS
-    O.A.T.H. — Observes And Tends the Host's domain trust
+    L.O.D.E.S.T.A.R. — Locates Our Domain controller, Establishes Secure Trust And Repairs
     Domain Trust & Secure Channel Diagnostics and Repair Tool for PowerShell 5.1+
 
 .DESCRIPTION
@@ -47,10 +47,10 @@
     -WhatIf previews every repair.
 
 .USAGE
-    PS C:\> .\oath.ps1                               # Interactive menu
-    PS C:\> .\oath.ps1 -Unattended                   # Read-only audit + HTML report
-    PS C:\> .\oath.ps1 -Unattended -Action Repair    # Audit, then the repairs that need no credentials
-    PS C:\> .\oath.ps1 -Action Repair -WhatIf        # Preview the repairs only
+    PS C:\> .\lodestar.ps1                               # Interactive menu
+    PS C:\> .\lodestar.ps1 -Unattended                   # Read-only audit + HTML report
+    PS C:\> .\lodestar.ps1 -Unattended -Action Repair    # Audit, then the repairs that need no credentials
+    PS C:\> .\lodestar.ps1 -Action Repair -WhatIf        # Preview the repairs only
 
 .NOTES
     Version : 5.1
@@ -160,7 +160,7 @@ $NetlogonParamsKey = 'HKLM:\SYSTEM\CurrentControlSet\Services\Netlogon\Parameter
 # FINDING CATALOG
 # ─────────────────────────────────────────────────────────────────────────────
 
-$OathFindings = @{
+$LodestarFindings = @{
     'NotDomainJoined' = @{
         Severity = 'Info'
         Title    = 'Not joined to an Active Directory domain'
@@ -183,7 +183,7 @@ $OathFindings = @{
         Severity = 'Warning'
         Title    = 'Public DNS resolver configured on a domain member'
         Summary  = 'A public resolver cannot answer for the internal domain. Windows uses it whenever the first server is slow, so domain lookups fail intermittently.'
-        Remedy   = 'Use only the domain DNS servers on domain members; let those forward to public resolvers. O.A.T.H. never changes DNS itself.'
+        Remedy   = 'Use only the domain DNS servers on domain members; let those forward to public resolvers. L.O.D.E.S.T.A.R. never changes DNS itself.'
     }
     'DcPortBlocked' = @{
         Severity = 'Error'
@@ -219,12 +219,12 @@ $OathFindings = @{
         Severity = 'Error'
         Title    = 'Computer account missing from the domain'
         Summary  = 'The DC reports no account for this machine (ERROR_NO_TRUST_SAM_ACCOUNT). A password reset cannot fix this.'
-        Remedy   = 'Rejoin the domain: sign in with a local admin, Remove-Computer to a workgroup, restart, then Add-Computer. O.A.T.H. never rejoins automatically.'
+        Remedy   = 'Rejoin the domain: sign in with a local admin, Remove-Computer to a workgroup, restart, then Add-Computer. L.O.D.E.S.T.A.R. never rejoins automatically.'
     }
     'SecureChannelUnknown' = @{
         Severity = 'Warning'
         Title    = 'Secure channel state could not be determined'
-        Summary  = 'nltest returned output O.A.T.H. could not read, or was not available.'
+        Summary  = 'nltest returned output L.O.D.E.S.T.A.R. could not read, or was not available.'
         Remedy   = 'Run elevated, and check nltest /sc_verify:<domain> by hand.'
     }
     'PasswordChangeDisabled' = @{
@@ -242,16 +242,16 @@ $OathFindings = @{
 $Findings = [System.Collections.Generic.List[object]]::new()
 $Actions  = [System.Collections.Generic.List[object]]::new()
 
-function Add-OathFinding {
+function Add-LodestarFinding {
     param([Parameter(Mandatory)][string]$Code, [string]$Detail = '')
-    $meta = $OathFindings[$Code]
+    $meta = $LodestarFindings[$Code]
     if (-not $meta) { $meta = @{ Severity = 'Warning'; Title = $Code; Summary = ''; Remedy = '' } }
     [void]$Findings.Add([PSCustomObject]@{
         Code = $Code; Severity = $meta.Severity; Title = $meta.Title; Summary = $meta.Summary; Remedy = $meta.Remedy; Detail = $Detail
     })
 }
 
-function Add-OathAction {
+function Add-LodestarAction {
     param([Parameter(Mandatory)][string]$Step, [Parameter(Mandatory)][string]$Status, [string]$Detail = '')
     [void]$Actions.Add([PSCustomObject]@{ Timestamp = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'); Step = $Step; Status = $Status; Detail = $Detail })
 }
@@ -269,19 +269,19 @@ function Get-SeverityClass {
 # BANNER
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Show-OathBanner {
+function Show-LodestarBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host @"
 
-   ██████╗  █████╗ ████████╗██╗  ██╗
-  ██╔═══██╗██╔══██╗╚══██╔══╝██║  ██║
-  ██║   ██║███████║   ██║   ███████║
-  ██║   ██║██╔══██║   ██║   ██╔══██║
-  ╚██████╔╝██║  ██║   ██║   ██║  ██║
-   ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝
+  ██╗      ██████╗ ██████╗ ███████╗███████╗████████╗ █████╗ ██████╗
+  ██║     ██╔═══██╗██╔══██╗██╔════╝██╔════╝╚══██╔══╝██╔══██╗██╔══██╗
+  ██║     ██║   ██║██║  ██║█████╗  ███████╗   ██║   ███████║██████╔╝
+  ██║     ██║   ██║██║  ██║██╔══╝  ╚════██║   ██║   ██╔══██║██╔══██╗
+  ███████╗╚██████╔╝██████╔╝███████╗███████║   ██║   ██║  ██║██║  ██║
+  ╚══════╝ ╚═════╝ ╚═════╝ ╚══════╝╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝
 
 "@ -ForegroundColor Cyan
-    Write-Host "    O.A.T.H. — Observes And Tends the Host's domain trust" -ForegroundColor Cyan
+    Write-Host "    L.O.D.E.S.T.A.R. — Locates Our Domain controller, Establishes Secure Trust And Repairs" -ForegroundColor Cyan
     Write-Host "    Domain Trust & Secure Channel Diagnostics and Repair Tool" -ForegroundColor Cyan
     if ($WhatIf) {
         Write-Host ""
@@ -344,7 +344,7 @@ function Get-NetlogonStatusInfo {
     if ($null -eq $Code) { return [PSCustomObject]@{ Name = 'Unknown'; Kind = 'Unknown'; Meaning = 'No status could be read.' } }
     $entry = $NetlogonStatusCodes[[int]$Code]
     if ($entry) { return [PSCustomObject]@{ Name = $entry.Name; Kind = $entry.Kind; Meaning = $entry.Meaning } }
-    return [PSCustomObject]@{ Name = "Status $Code"; Kind = 'Unknown'; Meaning = 'Not a status O.A.T.H. recognises -- look it up with: net helpmsg ' + $Code }
+    return [PSCustomObject]@{ Name = "Status $Code"; Kind = 'Unknown'; Meaning = 'Not a status L.O.D.E.S.T.A.R. recognises -- look it up with: net helpmsg ' + $Code }
 }
 
 function ConvertFrom-W32tmStripchart {
@@ -378,7 +378,7 @@ function Test-PublicIpAddress {
     return $true
 }
 
-function Get-OathVerdict {
+function Get-LodestarVerdict {
     param([object[]]$FindingList)
     $codes = @($FindingList | ForEach-Object { $_.Code })
     $sev   = @($FindingList | ForEach-Object { $_.Severity })
@@ -420,7 +420,7 @@ function Test-TcpPort {
     }
 }
 
-function Get-OathContext {
+function Get-LodestarContext {
     $cs = $null; $os = $null
     try { $cs = Get-CimInstance Win32_ComputerSystem  -ErrorAction Stop } catch { $cs = $null }
     try { $os = Get-CimInstance Win32_OperatingSystem -ErrorAction Stop } catch { $os = $null }
@@ -433,7 +433,7 @@ function Get-OathContext {
     }
 }
 
-function Get-OathDnsServers {
+function Get-LodestarDnsServers {
     $rows = @()
     try {
         $up = @(Get-NetAdapter -ErrorAction Stop | Where-Object { $_.Status -eq 'Up' } | ForEach-Object { $_.ifIndex })
@@ -447,13 +447,13 @@ function Get-OathDnsServers {
     return $rows
 }
 
-function Invoke-OathAudit {
+function Invoke-LodestarAudit {
     Write-Section "DOMAIN MEMBERSHIP"
-    $ctx = Get-OathContext
+    $ctx = Get-LodestarContext
     Write-Info "$($ctx.Computer)  |  $($ctx.OS)"
     if (-not $ctx.PartOfDomain) {
         Write-Info "Not joined to an Active Directory domain."
-        Add-OathFinding -Code 'NotDomainJoined' -Detail "Workgroup / domain field: $($ctx.Domain)"
+        Add-LodestarFinding -Code 'NotDomainJoined' -Detail "Workgroup / domain field: $($ctx.Domain)"
         return [PSCustomObject]@{
             Context = $ctx; Joined = $false; Domain = ''; Dns = @(); SrvOk = $false; Ports = @(); Offset = $null; MaxPwdAge = $null
             DsGetDc = [PSCustomObject]@{ Success = $false; Dc = ''; Address = ''; DcSite = ''; OurSite = ''; StatusCode = $null; StatusName = '' }
@@ -465,21 +465,21 @@ function Invoke-OathAudit {
     Write-Info "Domain: $domain"
 
     Write-Section "DNS"
-    $dns = Get-OathDnsServers
+    $dns = Get-LodestarDnsServers
     foreach ($d in $dns) { Write-Info ("{0,-24} {1}{2}" -f $d.Interface, $d.Server, $(if ($d.Public) { '  (public resolver)' } else { '' })) }
     $public = @($dns | Where-Object { $_.Public })
-    if ($public.Count -gt 0) { Add-OathFinding -Code 'PublicDnsServer' -Detail (($public | ForEach-Object { "$($_.Server) on $($_.Interface)" }) -join ', ') }
+    if ($public.Count -gt 0) { Add-LodestarFinding -Code 'PublicDnsServer' -Detail (($public | ForEach-Object { "$($_.Server) on $($_.Interface)" }) -join ', ') }
 
     $srvName = "_ldap._tcp.dc._msdcs.$domain"
     $srvOk = $false
     try { $srvOk = [bool](@(Resolve-DnsName -Name $srvName -Type SRV -DnsOnly -ErrorAction Stop | Where-Object { $_.Type -eq 'SRV' }).Count) } catch { $srvOk = $false }
-    if (-not $srvOk) { Add-OathFinding -Code 'DcSrvMissing' -Detail $srvName }
+    if (-not $srvOk) { Add-LodestarFinding -Code 'DcSrvMissing' -Detail $srvName }
     Write-Info ("DC locator SRV: {0}" -f $(if ($srvOk) { 'resolves' } else { 'DOES NOT RESOLVE' }))
 
     Write-Section "DOMAIN CONTROLLER"
     $dsget = ConvertFrom-NltestDsGetDc -Lines (Invoke-Native -File 'nltest.exe' -Arguments @("/dsgetdc:$domain"))
     if (-not $dsget.Success) {
-        Add-OathFinding -Code 'DomainNotFound' -Detail ("nltest /dsgetdc: {0} {1}" -f $dsget.StatusCode, $dsget.StatusName)
+        Add-LodestarFinding -Code 'DomainNotFound' -Detail ("nltest /dsgetdc: {0} {1}" -f $dsget.StatusCode, $dsget.StatusName)
         Write-Fail "No DC located ($($dsget.StatusName))."
     } else {
         Write-Info "DC: $($dsget.Dc)  ($($dsget.Address))  site $($dsget.DcSite)"
@@ -493,7 +493,7 @@ function Invoke-OathAudit {
         }
         $ports = @($ports)
         $closed = @($ports | Where-Object { -not $_.Open })
-        if ($closed.Count -gt 0) { Add-OathFinding -Code 'DcPortBlocked' -Detail (($closed | ForEach-Object { "$($_.Port) $($_.Service)" }) -join ', ') }
+        if ($closed.Count -gt 0) { Add-LodestarFinding -Code 'DcPortBlocked' -Detail (($closed | ForEach-Object { "$($_.Port) $($_.Service)" }) -join ', ') }
         foreach ($p in $ports) { Write-Info ("{0,-5} {1,-26} {2}" -f $p.Port, $p.Service, $(if ($p.Open) { 'open' } else { 'BLOCKED' })) }
 
         Write-Section "TIME"
@@ -502,19 +502,19 @@ function Invoke-OathAudit {
             Write-Warn "Could not measure the offset from $($dsget.Dc)."
         } else {
             Write-Info ("Offset from DC: {0:N2}s" -f $offset)
-            if ([math]::Abs($offset) -gt $ClockSkewErrorSeconds)       { Add-OathFinding -Code 'ClockSkew'  -Detail ("{0:N0} seconds" -f $offset) }
-            elseif ([math]::Abs($offset) -gt $ClockSkewWarningSeconds) { Add-OathFinding -Code 'ClockDrift' -Detail ("{0:N0} seconds" -f $offset) }
+            if ([math]::Abs($offset) -gt $ClockSkewErrorSeconds)       { Add-LodestarFinding -Code 'ClockSkew'  -Detail ("{0:N0} seconds" -f $offset) }
+            elseif ([math]::Abs($offset) -gt $ClockSkewWarningSeconds) { Add-LodestarFinding -Code 'ClockDrift' -Detail ("{0:N0} seconds" -f $offset) }
         }
     }
 
     Write-Section "SECURE CHANNEL"
-    $channel = Get-OathSecureChannel -Domain $domain
+    $channel = Get-LodestarSecureChannel -Domain $domain
     $status  = Get-NetlogonStatusInfo -Code $channel.StatusCode
     Write-Info ("Status: {0} ({1}) via {2}" -f $status.Name, $status.Meaning, $(if ($channel.TrustedDc) { $channel.TrustedDc } else { 'no DC' }))
-    Add-OathChannelFinding -Channel $channel -Status $status
+    Add-LodestarChannelFinding -Channel $channel -Status $status
 
     $np = Get-ItemProperty -Path $NetlogonParamsKey -ErrorAction SilentlyContinue
-    if ($np -and $np.DisablePasswordChange -eq 1) { Add-OathFinding -Code 'PasswordChangeDisabled' -Detail "$NetlogonParamsKey\DisablePasswordChange = 1" }
+    if ($np -and $np.DisablePasswordChange -eq 1) { Add-LodestarFinding -Code 'PasswordChangeDisabled' -Detail "$NetlogonParamsKey\DisablePasswordChange = 1" }
 
     return [PSCustomObject]@{
         Context   = $ctx
@@ -531,7 +531,7 @@ function Invoke-OathAudit {
     }
 }
 
-function Get-OathSecureChannel {
+function Get-LodestarSecureChannel {
     # /sc_verify checks the machine password with the DC; it needs elevation.
     # /sc_query only reports the last known state, so it is the fallback.
     param([string]$Domain)
@@ -542,16 +542,16 @@ function Get-OathSecureChannel {
     return $channel
 }
 
-function Add-OathChannelFinding {
+function Add-LodestarChannelFinding {
     param([object]$Channel, [object]$Status)
     switch ($Status.Kind) {
         'Ok'           { }
-        'Connectivity' { Add-OathFinding -Code 'SecureChannelBroken' -Detail "$($Status.Name): $($Status.Meaning)" }
+        'Connectivity' { Add-LodestarFinding -Code 'SecureChannelBroken' -Detail "$($Status.Name): $($Status.Meaning)" }
         'Trust' {
-            if ($Channel.StatusCode -eq 1787) { Add-OathFinding -Code 'ComputerAccountMissing' -Detail "$($Status.Name): $($Status.Meaning)" }
-            else                              { Add-OathFinding -Code 'TrustBroken' -Detail "$($Status.Name): $($Status.Meaning)" }
+            if ($Channel.StatusCode -eq 1787) { Add-LodestarFinding -Code 'ComputerAccountMissing' -Detail "$($Status.Name): $($Status.Meaning)" }
+            else                              { Add-LodestarFinding -Code 'TrustBroken' -Detail "$($Status.Name): $($Status.Meaning)" }
         }
-        default        { Add-OathFinding -Code 'SecureChannelUnknown' -Detail "$($Status.Name): $($Status.Meaning)" }
+        default        { Add-LodestarFinding -Code 'SecureChannelUnknown' -Detail "$($Status.Name): $($Status.Meaning)" }
     }
 }
 
@@ -559,38 +559,38 @@ function Add-OathChannelFinding {
 # REPAIR
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Repair-OathTime {
+function Repair-LodestarTime {
     Write-Section "REPAIR — TIME"
     if ($WhatIf) {
         Write-Warn "[WhatIf] Would set w32time to sync from the domain hierarchy and force a resync."
-        Add-OathAction -Step 'Resync time from the domain' -Status 'WhatIf'
+        Add-LodestarAction -Step 'Resync time from the domain' -Status 'WhatIf'
         return
     }
     $cfg = Invoke-Native -File 'w32tm.exe' -Arguments @('/config', '/syncfromflags:domhier', '/update')
     $rs  = Invoke-Native -File 'w32tm.exe' -Arguments @('/resync', '/force')
     $ok  = ($rs -join ' ') -match '(?i)completed successfully'
     if ($ok) { Write-Ok "Clock resynchronised from the domain hierarchy." } else { Write-Warn "w32tm /resync: $($rs -join ' ')" }
-    Add-OathAction -Step 'Resync time from the domain' -Status $(if ($ok) { 'Done' } else { 'Failed' }) -Detail (@($cfg + $rs) -join ' ')
-    if ($ok) { Add-TKNote -Text 'Resynchronised the clock from the domain hierarchy.' -Category 'Action' -ScriptName 'oath' }
+    Add-LodestarAction -Step 'Resync time from the domain' -Status $(if ($ok) { 'Done' } else { 'Failed' }) -Detail (@($cfg + $rs) -join ' ')
+    if ($ok) { Add-TKNote -Text 'Resynchronised the clock from the domain hierarchy.' -Category 'Action' -ScriptName 'lodestar' }
 }
 
-function Repair-OathSecureChannel {
+function Repair-LodestarSecureChannel {
     param([string]$Domain)
     Write-Section "REPAIR — SECURE CHANNEL"
     if ($WhatIf) {
         Write-Warn "[WhatIf] Would reset the secure channel: nltest /sc_reset:$Domain"
-        Add-OathAction -Step 'Reset secure channel' -Status 'WhatIf' -Detail "nltest /sc_reset:$Domain"
+        Add-LodestarAction -Step 'Reset secure channel' -Status 'WhatIf' -Detail "nltest /sc_reset:$Domain"
         return
     }
     $out    = Invoke-Native -File 'nltest.exe' -Arguments @("/sc_reset:$Domain")
     $parsed = ConvertFrom-NltestSecureChannel -Lines $out
     $ok     = $parsed.StatusCode -eq 0
     if ($ok) { Write-Ok "Secure channel reset to $($parsed.TrustedDc)." } else { Write-Warn "nltest /sc_reset: $($parsed.StatusName)" }
-    Add-OathAction -Step 'Reset secure channel' -Status $(if ($ok) { 'Done' } else { 'Failed' }) -Detail ($out -join ' ')
-    if ($ok) { Add-TKNote -Text "Reset the secure channel to $($parsed.TrustedDc)." -Category 'Action' -ScriptName 'oath' }
+    Add-LodestarAction -Step 'Reset secure channel' -Status $(if ($ok) { 'Done' } else { 'Failed' }) -Detail ($out -join ' ')
+    if ($ok) { Add-TKNote -Text "Reset the secure channel to $($parsed.TrustedDc)." -Category 'Action' -ScriptName 'lodestar' }
 }
 
-function Repair-OathMachinePassword {
+function Repair-LodestarMachinePassword {
     # Only for a rejected machine password. Needs domain credentials, so it is
     # interactive only. Reset-ComputerMachinePassword exists in Windows
     # PowerShell but not PowerShell 7, so under 7 it runs in powershell.exe.
@@ -598,17 +598,17 @@ function Repair-OathMachinePassword {
     Write-Section "REPAIR — MACHINE PASSWORD"
     if ($WhatIf) {
         Write-Warn "[WhatIf] Would reset the computer account password against $Dc with domain credentials."
-        Add-OathAction -Step 'Reset machine password' -Status 'WhatIf' -Detail $Dc
+        Add-LodestarAction -Step 'Reset machine password' -Status 'WhatIf' -Detail $Dc
         return
     }
     if ($Unattended) {
         Write-Warn "Resetting the machine password needs domain credentials -- skipped in unattended mode."
-        Add-OathAction -Step 'Reset machine password' -Status 'Skipped' -Detail 'Needs domain credentials; run interactively.'
+        Add-LodestarAction -Step 'Reset machine password' -Status 'Skipped' -Detail 'Needs domain credentials; run interactively.'
         return
     }
     $ans = Read-Host "  Reset the computer account password against $Dc now? Needs a domain account with rights to reset it. [Y/N]"
     if ($ans -notmatch '^[Yy]') {
-        Add-OathAction -Step 'Reset machine password' -Status 'Skipped' -Detail 'Declined by technician.'
+        Add-LodestarAction -Step 'Reset machine password' -Status 'Skipped' -Detail 'Declined by technician.'
         return
     }
     try {
@@ -620,46 +620,46 @@ function Repair-OathMachinePassword {
             if ($LASTEXITCODE -ne 0) { throw "powershell.exe exited $LASTEXITCODE" }
         }
         Write-Ok "Machine password reset against $Dc."
-        Add-OathAction -Step 'Reset machine password' -Status 'Done' -Detail $Dc
-        Add-TKNote -Text "Reset the computer account password against $Dc." -Category 'Action' -ScriptName 'oath'
+        Add-LodestarAction -Step 'Reset machine password' -Status 'Done' -Detail $Dc
+        Add-TKNote -Text "Reset the computer account password against $Dc." -Category 'Action' -ScriptName 'lodestar'
     } catch {
         Write-Fail "Machine password reset failed: $($_.Exception.Message)"
-        Write-TKError -ScriptName 'oath' -Message "Machine password reset failed: $($_.Exception.Message)" -Category 'Domain Trust'
-        Add-OathAction -Step 'Reset machine password' -Status 'Failed' -Detail $_.Exception.Message
+        Write-TKError -ScriptName 'lodestar' -Message "Machine password reset failed: $($_.Exception.Message)" -Category 'Domain Trust'
+        Add-LodestarAction -Step 'Reset machine password' -Status 'Failed' -Detail $_.Exception.Message
     }
 }
 
-function Invoke-OathRepair {
+function Invoke-LodestarRepair {
     param([object]$Audit)
     $codes = @($Findings | ForEach-Object { $_.Code })
 
-    if ($codes -contains 'ClockSkew' -or $codes -contains 'ClockDrift') { Repair-OathTime }
+    if ($codes -contains 'ClockSkew' -or $codes -contains 'ClockDrift') { Repair-LodestarTime }
 
     if ($codes -contains 'SecureChannelBroken' -or $codes -contains 'TrustBroken' -or $codes -contains 'SecureChannelUnknown') {
-        Repair-OathSecureChannel -Domain $Audit.Domain
+        Repair-LodestarSecureChannel -Domain $Audit.Domain
         if ($codes -contains 'TrustBroken' -and -not $WhatIf) {
             # Re-verify: a stale DC choice can masquerade as a trust failure,
             # and sc_reset alone fixes that without touching the password.
-            $again = Get-OathSecureChannel -Domain $Audit.Domain
+            $again = Get-LodestarSecureChannel -Domain $Audit.Domain
             if ((Get-NetlogonStatusInfo -Code $again.StatusCode).Kind -eq 'Trust') {
                 $dc = if ($Audit.DsGetDc.Dc) { $Audit.DsGetDc.Dc } else { $again.TrustedDc }
-                Repair-OathMachinePassword -Dc $dc
+                Repair-LodestarMachinePassword -Dc $dc
             }
         } elseif ($codes -contains 'TrustBroken') {
-            Repair-OathMachinePassword -Dc $Audit.DsGetDc.Dc
+            Repair-LodestarMachinePassword -Dc $Audit.DsGetDc.Dc
         }
     }
 
     if ($codes -contains 'ComputerAccountMissing') {
-        Write-Warn "The computer account is missing from the domain. Rejoin the machine -- O.A.T.H. does not unjoin or rejoin."
-        Add-OathAction -Step 'Rejoin domain' -Status 'Skipped' -Detail 'Computer account missing; rejoin manually.'
+        Write-Warn "The computer account is missing from the domain. Rejoin the machine -- L.O.D.E.S.T.A.R. does not unjoin or rejoin."
+        Add-LodestarAction -Step 'Rejoin domain' -Status 'Skipped' -Detail 'Computer account missing; rejoin manually.'
     }
     if ($codes -contains 'PublicDnsServer' -or $codes -contains 'DcSrvMissing') {
-        Add-OathAction -Step 'Correct DNS servers' -Status 'Skipped' -Detail 'O.A.T.H. never changes DNS -- point the adapter at the domain DNS servers.'
+        Add-LodestarAction -Step 'Correct DNS servers' -Status 'Skipped' -Detail 'L.O.D.E.S.T.A.R. never changes DNS -- point the adapter at the domain DNS servers.'
     }
     if ($Actions.Count -eq 0) {
-        Write-Ok "Nothing O.A.T.H. can repair automatically."
-        Add-OathAction -Step 'Repair' -Status 'Skipped' -Detail 'No repairable finding.'
+        Write-Ok "Nothing L.O.D.E.S.T.A.R. can repair automatically."
+        Add-LodestarAction -Step 'Repair' -Status 'Skipped' -Detail 'No repairable finding.'
     }
 }
 
@@ -667,7 +667,7 @@ function Invoke-OathRepair {
 # HTML REPORT
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Build-OathReport {
+function Build-LodestarReport {
     param([object]$Audit, [object]$Verdict, [object]$After)
 
     $cfg        = Get-TKConfig
@@ -713,8 +713,8 @@ function Build-OathReport {
     $afterText = if ($After) { "$($After.Name) -- $($After.Meaning)" } else { '' }
 
     $htmlHead = Get-TKHtmlHead `
-        -Title      'O.A.T.H. Domain Trust Report' `
-        -ScriptName 'O.A.T.H.' `
+        -Title      'L.O.D.E.S.T.A.R. Domain Trust Report' `
+        -ScriptName 'L.O.D.E.S.T.A.R.' `
         -Subtitle   "${orgPrefix}Domain Trust & Secure Channel -- $machine" `
         -MetaItems  ([ordered]@{
             'Machine'   = $machine
@@ -781,7 +781,7 @@ function Build-OathReport {
       <tbody>$($aRows.ToString())</tbody></table></div>
   </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'O.A.T.H. v5.1')
+"@ + (Get-TKHtmlFoot -ScriptName 'L.O.D.E.S.T.A.R. v5.1')
     return $html
 }
 
@@ -789,12 +789,12 @@ function Build-OathReport {
 # ORCHESTRATION
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Invoke-OathRun {
+function Invoke-LodestarRun {
     param([string]$Mode)
     $Findings.Clear()
     $Actions.Clear()
 
-    $audit = Invoke-OathAudit
+    $audit = Invoke-LodestarAudit
     Write-Section "FINDINGS"
     if ($Findings.Count -eq 0) { Write-Ok "Secure channel healthy; DC, DNS and time all in order." }
     foreach ($f in $Findings) {
@@ -804,31 +804,31 @@ function Invoke-OathRun {
 
     $after = $null
     if ($Mode -eq 'Repair' -and $audit.Joined) {
-        Invoke-OathRepair -Audit $audit
+        Invoke-LodestarRepair -Audit $audit
         if (-not $WhatIf) {
             Write-Section "VERIFY"
-            $post  = Get-OathSecureChannel -Domain $audit.Domain
+            $post  = Get-LodestarSecureChannel -Domain $audit.Domain
             $after = Get-NetlogonStatusInfo -Code $post.StatusCode
             if ($after.Kind -eq 'Ok') { Write-Ok "Secure channel healthy after repair. Sign out and back in with a domain account to confirm." }
             else                      { Write-Warn "Secure channel still reports $($after.Name): $($after.Meaning)" }
-            Add-TKNote -Text "OATH repair on $($env:COMPUTERNAME): secure channel now $($after.Name)." -Category $(if ($after.Kind -eq 'Ok') { 'Resolution' } else { 'Issue' }) -ScriptName 'oath'
+            Add-TKNote -Text "LODESTAR repair on $($env:COMPUTERNAME): secure channel now $($after.Name)." -Category $(if ($after.Kind -eq 'Ok') { 'Resolution' } else { 'Issue' }) -ScriptName 'lodestar'
         }
     }
 
-    $verdict = Get-OathVerdict -FindingList $Findings.ToArray()
+    $verdict = Get-LodestarVerdict -FindingList $Findings.ToArray()
     Write-Section "VERDICT"
     switch ($verdict.Class) { 'err' { Write-Fail $verdict.Verdict } 'warn' { Write-Warn $verdict.Verdict } default { Write-Ok $verdict.Verdict } }
-    Add-TKNote -Text ("OATH {0} on {1}: verdict {2} ({3} finding(s))." -f $Mode, $env:COMPUTERNAME, $verdict.Verdict, $Findings.Count) -Category 'Info' -ScriptName 'oath'
+    Add-TKNote -Text ("LODESTAR {0} on {1}: verdict {2} ({3} finding(s))." -f $Mode, $env:COMPUTERNAME, $verdict.Verdict, $Findings.Count) -Category 'Info' -ScriptName 'lodestar'
 
     Write-Step "Generating HTML report..."
-    $html    = Build-OathReport -Audit $audit -Verdict $verdict -After $after
-    $outPath = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) ("OATH_{0}.html" -f (Get-Date -Format 'yyyyMMdd_HHmmss'))
+    $html    = Build-LodestarReport -Audit $audit -Verdict $verdict -After $after
+    $outPath = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) ("LODESTAR_{0}.html" -f (Get-Date -Format 'yyyyMMdd_HHmmss'))
     try {
         [System.IO.File]::WriteAllText($outPath, $html, [System.Text.Encoding]::UTF8)
         Show-TKReportResult -Path $outPath -Unattended:$Unattended
     } catch {
         Write-Fail "Could not save report: $($_.Exception.Message)"
-        Write-TKError -ScriptName 'oath' -Message "Report save failed: $($_.Exception.Message)" -Category 'Report'
+        Write-TKError -ScriptName 'lodestar' -Message "Report save failed: $($_.Exception.Message)" -Category 'Report'
     }
 }
 
@@ -837,12 +837,12 @@ function Invoke-OathRun {
 # ─────────────────────────────────────────────────────────────────────────────
 
 if ($Unattended) {
-    Show-OathBanner
-    Invoke-OathRun -Mode $Action
+    Show-LodestarBanner
+    Invoke-LodestarRun -Mode $Action
 } else {
     $choice = ''
     do {
-        Show-OathBanner
+        Show-LodestarBanner
         Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
         Write-Host "  ACTIONS" -ForegroundColor $C.Header
         Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
@@ -856,9 +856,9 @@ if ($Unattended) {
         $choice = (Read-Host).Trim().ToUpper()
 
         switch ($choice) {
-            '1' { Invoke-OathRun -Mode 'Audit' }
-            '2' { Invoke-OathRun -Mode 'Repair' }
-            'Q' { Write-Host ""; Write-Host "  Closing O.A.T.H." -ForegroundColor $C.Header; Write-Host "" }
+            '1' { Invoke-LodestarRun -Mode 'Audit' }
+            '2' { Invoke-LodestarRun -Mode 'Repair' }
+            'Q' { Write-Host ""; Write-Host "  Closing L.O.D.E.S.T.A.R." -ForegroundColor $C.Header; Write-Host "" }
             default {
                 Write-Host ""
                 Write-Host "  [!!] Invalid selection. Enter 1, 2 or Q." -ForegroundColor $C.Warning

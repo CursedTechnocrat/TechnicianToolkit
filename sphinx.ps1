@@ -1,4 +1,4 @@
-﻿# steward.ps1 - S.T.E.W.A.R.D. — Service Tasks for Enterprise Windows Accounts, Resets & Directory
+﻿# sphinx.ps1 - S.P.H.I.N.X. — Service Portal for Help-desk Identity Needs & eXpiry
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -20,7 +20,7 @@
 
 <#
 .SYNOPSIS
-    S.T.E.W.A.R.D. — Service Tasks for Enterprise Windows Accounts, Resets & Directory
+    S.P.H.I.N.X. — Service Portal for Help-desk Identity Needs & eXpiry
     Active Directory & Identity Management Tool for PowerShell 5.1+
 
 .DESCRIPTION
@@ -30,8 +30,8 @@
     If RSAT is not installed, the script will detect this and offer to install it automatically.
 
 .USAGE
-    PS C:\> .\steward.ps1                         # Interactive menu — must be run as Administrator
-    PS C:\> .\steward.ps1 -Unattended -Action StaleReport   # Export stale accounts HTML report silently
+    PS C:\> .\sphinx.ps1                         # Interactive menu — must be run as Administrator
+    PS C:\> .\sphinx.ps1 -Unattended -Action StaleReport   # Export stale accounts HTML report silently
 
 .NOTES
     Version : 5.1
@@ -111,19 +111,19 @@ $C = @{
 # BANNER
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Show-StewardBanner {
+function Show-SphinxBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host @"
 
-  ███████╗████████╗███████╗██╗    ██╗ █████╗ ██████╗ ██████╗
-  ██╔════╝╚══██╔══╝██╔════╝██║    ██║██╔══██╗██╔══██╗██╔══██╗
-  ███████╗   ██║   █████╗  ██║ █╗ ██║███████║██████╔╝██║  ██║
-  ╚════██║   ██║   ██╔══╝  ██║███╗██║██╔══██║██╔══██╗██║  ██║
-  ███████║   ██║   ███████╗╚███╔███╔╝██║  ██║██║  ██║██████╔╝
-  ╚══════╝   ╚═╝   ╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝
+  ███████╗██████╗ ██╗  ██╗██╗███╗   ██╗██╗  ██╗
+  ██╔════╝██╔══██╗██║  ██║██║████╗  ██║╚██╗██╔╝
+  ███████╗██████╔╝███████║██║██╔██╗ ██║ ╚███╔╝
+  ╚════██║██╔═══╝ ██╔══██║██║██║╚██╗██║ ██╔██╗
+  ███████║██║     ██║  ██║██║██║ ╚████║██╔╝ ██╗
+  ╚══════╝╚═╝     ╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝
 
 "@ -ForegroundColor Cyan
-    Write-Host "    S.T.E.W.A.R.D. — Service Tasks for Enterprise Windows Accounts, Resets & Directory" -ForegroundColor Cyan
+    Write-Host "    S.P.H.I.N.X. — Service Portal for Help-desk Identity Needs & eXpiry" -ForegroundColor Cyan
     Write-Host "    Active Directory & Identity Management Tool" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -178,7 +178,7 @@ function Assert-ADModule {
     Write-Host ""
     Write-Host "  The ActiveDirectory PowerShell module is part of RSAT" -ForegroundColor $C.Info
     Write-Host "  (Remote Server Administration Tools). It is required for" -ForegroundColor $C.Info
-    Write-Host "  all S.T.E.W.A.R.D. functions." -ForegroundColor $C.Info
+    Write-Host "  all S.P.H.I.N.X. functions." -ForegroundColor $C.Info
     Write-Host ""
     Write-Host "  RSAT is supported on Windows 10 (1809+) and Windows 11." -ForegroundColor $C.Info
     Write-Host ""
@@ -228,7 +228,7 @@ function Assert-ADModule {
             Write-Host "    Download RSAT from the Microsoft Download Center and run" -ForegroundColor $C.Warning
             Write-Host "    the installer, then enable the AD DS Tools feature." -ForegroundColor $C.Warning
             Write-Host ""
-            Write-Host "  After installation, re-run steward.ps1." -ForegroundColor $C.Info
+            Write-Host "  After installation, re-run sphinx.ps1." -ForegroundColor $C.Info
             Write-Host ""
             Read-Host "  Press Enter to exit"
             return $false
@@ -463,7 +463,7 @@ function Unlock-UserAccount {
         Write-Host "  [+] Account '$($u.SamAccountName)' has been unlocked successfully." -ForegroundColor $C.Success
     } catch {
         Write-Host "  [-] Failed to unlock account: $_" -ForegroundColor $C.Error
-        Write-TKError -ScriptName 'steward' -Message "Unlock-ADAccount failed for '$($u.SamAccountName)': $($_.Exception.Message)" -Category 'AD Unlock'
+        Write-TKError -ScriptName 'sphinx' -Message "Unlock-ADAccount failed for '$($u.SamAccountName)': $($_.Exception.Message)" -Category 'AD Unlock'
     }
 
     Write-Host ""
@@ -522,7 +522,7 @@ function Reset-UserPassword {
     } catch {
         Write-Host "  [-] Password reset failed: $_" -ForegroundColor $C.Error
         Write-Host "  [!!] Ensure the password meets your domain's complexity requirements." -ForegroundColor $C.Warning
-        Write-TKError -ScriptName 'steward' -Message "Password reset failed for '$($user.SamAccountName)': $($_.Exception.Message)" -Category 'AD Password Reset'
+        Write-TKError -ScriptName 'sphinx' -Message "Password reset failed for '$($user.SamAccountName)': $($_.Exception.Message)" -Category 'AD Password Reset'
     }
 
     Write-Host ""
@@ -566,7 +566,7 @@ function Set-AccountState {
                 Write-Host "  [+] Account enabled successfully." -ForegroundColor $C.Success
             } catch {
                 Write-Host "  [-] Failed to enable account: $_" -ForegroundColor $C.Error
-                Write-TKError -ScriptName 'steward' -Message "Enable-ADAccount failed for '$($u.SamAccountName)': $($_.Exception.Message)" -Category 'AD Account Enable'
+                Write-TKError -ScriptName 'sphinx' -Message "Enable-ADAccount failed for '$($u.SamAccountName)': $($_.Exception.Message)" -Category 'AD Account Enable'
             }
         }
         "2" {
@@ -576,7 +576,7 @@ function Set-AccountState {
                 Write-Host "  [+] Account disabled successfully." -ForegroundColor $C.Success
             } catch {
                 Write-Host "  [-] Failed to disable account: $_" -ForegroundColor $C.Error
-                Write-TKError -ScriptName 'steward' -Message "Disable-ADAccount failed for '$($u.SamAccountName)': $($_.Exception.Message)" -Category 'AD Account Disable'
+                Write-TKError -ScriptName 'sphinx' -Message "Disable-ADAccount failed for '$($u.SamAccountName)': $($_.Exception.Message)" -Category 'AD Account Disable'
             }
         }
         default {
@@ -703,7 +703,7 @@ function Manage-GroupMembership {
             } catch {
                 Write-Host "  [-] Failed to add user to group: $_" -ForegroundColor $C.Error
                 Write-Host "  [!!] The user may already be a member of this group." -ForegroundColor $C.Warning
-                Write-TKError -ScriptName 'steward' -Message "Add-ADGroupMember failed ('$($user.SamAccountName)' -> '$($targetGroup.Name)'): $($_.Exception.Message)" -Category 'AD Group Add'
+                Write-TKError -ScriptName 'sphinx' -Message "Add-ADGroupMember failed ('$($user.SamAccountName)' -> '$($targetGroup.Name)'): $($_.Exception.Message)" -Category 'AD Group Add'
             }
         }
         "2" {
@@ -714,7 +714,7 @@ function Manage-GroupMembership {
             } catch {
                 Write-Host "  [-] Failed to remove user from group: $_" -ForegroundColor $C.Error
                 Write-Host "  [!!] The user may not be a member of this group." -ForegroundColor $C.Warning
-                Write-TKError -ScriptName 'steward' -Message "Remove-ADGroupMember failed ('$($user.SamAccountName)' from '$($targetGroup.Name)'): $($_.Exception.Message)" -Category 'AD Group Remove'
+                Write-TKError -ScriptName 'sphinx' -Message "Remove-ADGroupMember failed ('$($user.SamAccountName)' from '$($targetGroup.Name)'): $($_.Exception.Message)" -Category 'AD Group Remove'
             }
         }
         default {
@@ -841,8 +841,8 @@ function Export-StaleReport {
     $orgPrefix = if (-not [string]::IsNullOrWhiteSpace($tkCfg.OrgName)) { "$(EscHtml $tkCfg.OrgName) -- " } else { '' }
 
     $html = (Get-TKHtmlHead `
-        -Title     'S.T.E.W.A.R.D. Stale Accounts Report' `
-        -ScriptName 'S.T.E.W.A.R.D.' `
+        -Title     'S.P.H.I.N.X. Stale Accounts Report' `
+        -ScriptName 'S.P.H.I.N.X.' `
         -Subtitle  "${orgPrefix}Domain: $domain" `
         -MetaItems ([ordered]@{ 'Generated' = $reportTimestamp; 'Stale Threshold' = '90 days' }) `
         -NavItems  @('Stale User Accounts')) + @"
@@ -887,9 +887,9 @@ function Export-StaleReport {
   </table>
 </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'S.T.E.W.A.R.D. v3.6')
+"@ + (Get-TKHtmlFoot -ScriptName 'S.P.H.I.N.X. v3.6')
 
-    $reportFilename = "STEWARD_Stale_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
+    $reportFilename = "SPHINX_Stale_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
     $reportPath     = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) $reportFilename
 
     try {
@@ -1144,8 +1144,8 @@ function Export-PasswordExpiryReport {
     $orgPrefix = if (-not [string]::IsNullOrWhiteSpace($tkCfg.OrgName)) { "$(EscHtml $tkCfg.OrgName) -- " } else { '' }
 
     $html = (Get-TKHtmlHead `
-        -Title     'S.T.E.W.A.R.D. Password Expiry Report' `
-        -ScriptName 'S.T.E.W.A.R.D.' `
+        -Title     'S.P.H.I.N.X. Password Expiry Report' `
+        -ScriptName 'S.P.H.I.N.X.' `
         -Subtitle  "${orgPrefix}Domain: $domain" `
         -MetaItems ([ordered]@{ 'Generated' = $reportTimestamp; 'Threshold' = "$thresholdDays days" }) `
         -NavItems  @('Users with Expiring Passwords')) + @"
@@ -1189,9 +1189,9 @@ function Export-PasswordExpiryReport {
   </table>
 </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'S.T.E.W.A.R.D. v3.6')
+"@ + (Get-TKHtmlFoot -ScriptName 'S.P.H.I.N.X. v3.6')
 
-    $reportFilename = "STEWARD_PwdExpiry_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
+    $reportFilename = "SPHINX_PwdExpiry_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
     $reportPath     = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) $reportFilename
 
     try {
@@ -1209,7 +1209,7 @@ function Export-PasswordExpiryReport {
 # ─────────────────────────────────────────────────────────────────────────────
 
 function Show-Menu {
-    Show-StewardBanner
+    Show-SphinxBanner
 
     # Domain-join warning
     if (-not (Test-DomainJoined)) {
@@ -1257,11 +1257,11 @@ if (-not (Assert-ADModule)) {
 if ($Unattended) {
     switch ($Action) {
         'StaleReport' {
-            Write-Host "[*] S.T.E.W.A.R.D.  -  Running unattended stale accounts report..." -ForegroundColor $C.Progress
+            Write-Host "[*] S.P.H.I.N.X.  -  Running unattended stale accounts report..." -ForegroundColor $C.Progress
             Export-StaleReport
         }
         'PasswordExpiryReport' {
-            Write-Host "[*] S.T.E.W.A.R.D.  -  Running unattended password expiry report..." -ForegroundColor $C.Progress
+            Write-Host "[*] S.P.H.I.N.X.  -  Running unattended password expiry report..." -ForegroundColor $C.Progress
             Export-PasswordExpiryReport
         }
     }
@@ -1300,7 +1300,7 @@ if ($Unattended) {
             "12" { Export-PasswordExpiryReport }
             "Q" {
                 Write-Host ""
-                Write-Host "  Closing S.T.E.W.A.R.D." -ForegroundColor $C.Header
+                Write-Host "  Closing S.P.H.I.N.X." -ForegroundColor $C.Header
                 Write-Host ""
             }
             default {

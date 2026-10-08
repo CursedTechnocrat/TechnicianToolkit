@@ -1,4 +1,4 @@
-﻿# conclave.ps1 - C.O.N.C.L.A.V.E. — Consolidates Organisational Networks, Chats, Licenses, Access, Visibility & Entitlements
+﻿# asterism.ps1 - A.S.T.E.R.I.S.M. — Audits Settings of Teams: Exposure, Roles, Inactivity, Sprawl & Membership
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -20,7 +20,7 @@
 
 <#
 .SYNOPSIS
-    C.O.N.C.L.A.V.E. — Consolidates Organisational Networks, Chats, Licenses, Access, Visibility & Entitlements
+    A.S.T.E.R.I.S.M. — Audits Settings of Teams: Exposure, Roles, Inactivity, Sprawl & Membership
     Microsoft Teams Audit Tool for PowerShell 5.1+
 
 .DESCRIPTION
@@ -28,13 +28,13 @@
     team inventory with visibility and size, orphan teams (no owner or
     all owners disabled), public teams (join without approval), guest
     membership, large teams, and stale teams with no recent activity.
-    Produces a dark-themed HTML report that complements R.E.L.I.Q.U.A.R.Y.
-    (licensing), G.O.L.E.M. (devices), and W.R.A.I.T.H. (identity) by
+    Produces a dark-themed HTML report that complements A.L.M.A.N.A.C.
+    (licensing), O.R.B.I.T. (devices), and E.C.L.I.P.S.E. (identity) by
     covering the collaboration layer.
 
 .USAGE
-    PS C:\> .\conclave.ps1                    # Interactive menu
-    PS C:\> .\conclave.ps1 -Unattended        # Silent: auto-connect + export HTML
+    PS C:\> .\asterism.ps1                    # Interactive menu
+    PS C:\> .\asterism.ps1 -Unattended        # Silent: auto-connect + export HTML
 
 .NOTES
     Version : 5.1
@@ -106,10 +106,10 @@ $GraphScopes = @(
     'Directory.Read.All'
 )
 
-function Show-ConclaveBanner {
+function Show-AsterismBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
-    Write-Host "  C.O.N.C.L.A.V.E. — Consolidates Organisational Networks, Chats, Licenses, Access, Visibility & Entitlements" -ForegroundColor Cyan
+    Write-Host "  A.S.T.E.R.I.S.M. — Audits Settings of Teams: Exposure, Roles, Inactivity, Sprawl & Membership" -ForegroundColor Cyan
     Write-Host "  Microsoft Teams Audit Tool  v3.6" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -146,7 +146,7 @@ function Install-GraphModule {
                 Write-Ok "Microsoft.Graph installed."
             } catch {
                 Write-Fail "Install failed: $_"
-                Write-TKError -ScriptName 'conclave' -Message "Microsoft.Graph install failed: $($_.Exception.Message)" -Category 'Module Install'
+                Write-TKError -ScriptName 'asterism' -Message "Microsoft.Graph install failed: $($_.Exception.Message)" -Category 'Module Install'
                 exit 1
             }
         } else {
@@ -208,7 +208,7 @@ function Invoke-Connect {
         }
     } catch {
         Write-Fail "Authentication failed: $($_.Exception.Message)"
-        Write-TKError -ScriptName 'conclave' -Message "Connect-MgGraph failed: $($_.Exception.Message)" -Category 'Graph Auth'
+        Write-TKError -ScriptName 'asterism' -Message "Connect-MgGraph failed: $($_.Exception.Message)" -Category 'Graph Auth'
         if ($Unattended) { exit 1 }
     }
 
@@ -233,7 +233,7 @@ function Get-TeamsInventory {
             -ErrorAction Stop
     } catch {
         Write-Fail "Failed to list team-backed groups: $_"
-        Write-TKError -ScriptName 'conclave' -Message "Get-MgGroup (team filter) failed: $($_.Exception.Message)" -Category 'Graph Query'
+        Write-TKError -ScriptName 'asterism' -Message "Get-MgGroup (team filter) failed: $($_.Exception.Message)" -Category 'Graph Query'
         return @()
     }
 
@@ -392,8 +392,8 @@ function Build-HtmlReport {
     $staleRows  = _category-rows -Rows $Stale   -Cols 8 -EmptyMessage "No teams have gone unrenewed for $script:StaleRenewalDays+ days."
 
     $htmlHead = Get-TKHtmlHead `
-        -Title      'C.O.N.C.L.A.V.E. Teams Audit Report' `
-        -ScriptName 'C.O.N.C.L.A.V.E.' `
+        -Title      'A.S.T.E.R.I.S.M. Teams Audit Report' `
+        -ScriptName 'A.S.T.E.R.I.S.M.' `
         -Subtitle   "${orgPrefix}Microsoft Teams Estate Audit -- $tenantDisplay" `
         -MetaItems  ([ordered]@{
             'Generated'    = $reportDate
@@ -402,7 +402,7 @@ function Build-HtmlReport {
         }) `
         -NavItems   @('Teams Inventory', 'Orphan Teams', 'Public Teams', 'Guest Members', 'Large Teams', 'Stale Teams')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'C.O.N.C.L.A.V.E. v3.6'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'A.S.T.E.R.I.S.M. v3.6'
 
     $orphClass  = if ($Orphans.Count -gt 0) { 'err' } else { 'ok' }
     $pubClass   = if ($Public.Count  -gt 0) { 'warn' } else { 'ok' }
@@ -463,7 +463,7 @@ function Export-HtmlReport {
     Write-Section "EXPORTING HTML REPORT"
     $html      = Build-HtmlReport -Teams $Teams -Orphans $Orphans -Public $Public -Guests $Guests -Large $Large -Stale $Stale
     $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-    $outPath   = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "CONCLAVE_${timestamp}.html"
+    $outPath   = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "ASTERISM_${timestamp}.html"
 
     try {
         $html | Out-File -FilePath $outPath -Encoding UTF8 -Force
@@ -478,7 +478,7 @@ function Export-HtmlReport {
 # ─────────────────────────────────────────────────────────────────────────────
 
 function Show-Menu {
-    Show-ConclaveBanner
+    Show-AsterismBanner
     $connStatus = if ($script:Connected) { "  Connected as : $($script:ConnectedAs)" } else { "  Not Connected — select option 1 to authenticate" }
     $connColor  = if ($script:Connected) { $C.Success } else { $C.Warning }
     Write-Host ("  " + ("─" * 62)) -ForegroundColor $C.Header
@@ -507,7 +507,7 @@ function Assert-Connected {
 # ENTRY POINT
 # ─────────────────────────────────────────────────────────────────────────────
 
-Show-ConclaveBanner
+Show-AsterismBanner
 Install-GraphModule
 
 if (Test-GraphConnection) {

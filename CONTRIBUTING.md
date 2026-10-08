@@ -84,7 +84,7 @@ CI also runs PSScriptAnalyzer. The tests run without Administrator rights and wi
 Windows-only APIs, so they pass on any machine.
 
 Explain in the pull request what broke and how you hit it. "Fixes the null comparison in
-GARGOYLE that threw when a service had no dependent services" tells a reviewer everything
+VIGIL that threw when a service had no dependent services" tells a reviewer everything
 they need.
 
 ## A note on scope

@@ -1,4 +1,4 @@
-﻿# reliquary.ps1 - R.E.L.I.Q.U.A.R.Y. — Reports, Evaluates Licenses, Inventories, Quotas, Users, Access & Registration Yields
+﻿# almanac.ps1 - A.L.M.A.N.A.C. — Assigned Licenses, Mailboxes, Authentication & Notable Account Counts
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -20,7 +20,7 @@
 
 <#
 .SYNOPSIS
-    R.E.L.I.Q.U.A.R.Y. — Reports, Evaluates Licenses, Inventories, Quotas, Users, Access & Registration Yields
+    A.L.M.A.N.A.C. — Assigned Licenses, Mailboxes, Authentication & Notable Account Counts
     Microsoft 365 License & Mailbox Audit Tool for PowerShell 5.1+
 
 .DESCRIPTION
@@ -31,8 +31,8 @@
     in the console or exported as a combined dark-themed HTML report.
 
 .USAGE
-    PS C:\> .\reliquary.ps1                    # Interactive menu
-    PS C:\> .\reliquary.ps1 -Unattended        # Auto-connect and export full audit report
+    PS C:\> .\almanac.ps1                    # Interactive menu
+    PS C:\> .\almanac.ps1 -Unattended        # Auto-connect and export full audit report
 
 .NOTES
     Version : 5.1
@@ -158,19 +158,19 @@ $SkuNames = @{
 # BANNER
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Show-ReliquaryBanner {
+function Show-AlmanacBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host @"
 
-  ██████╗ ███████╗██╗     ██╗ ██████╗ ██╗   ██╗ █████╗ ██████╗ ██╗   ██╗
-  ██╔══██╗██╔════╝██║     ██║██╔═══██╗██║   ██║██╔══██╗██╔══██╗╚██╗ ██╔╝
-  ██████╔╝█████╗  ██║     ██║██║   ██║██║   ██║███████║██████╔╝ ╚████╔╝
-  ██╔══██╗██╔══╝  ██║     ██║██║▄▄ ██║██║   ██║██╔══██║██╔══██╗  ╚██╔╝
-  ██║  ██║███████╗███████╗██║╚██████╔╝╚██████╔╝██║  ██║██║  ██║   ██║
-  ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝ ╚══▀▀═╝  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝
+   █████╗ ██╗     ███╗   ███╗ █████╗ ███╗   ██╗ █████╗  ██████╗
+  ██╔══██╗██║     ████╗ ████║██╔══██╗████╗  ██║██╔══██╗██╔════╝
+  ███████║██║     ██╔████╔██║███████║██╔██╗ ██║███████║██║
+  ██╔══██║██║     ██║╚██╔╝██║██╔══██║██║╚██╗██║██╔══██║██║
+  ██║  ██║███████╗██║ ╚═╝ ██║██║  ██║██║ ╚████║██║  ██║╚██████╗
+  ╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝ ╚═════╝
 
 "@ -ForegroundColor Cyan
-    Write-Host "  R.E.L.I.Q.U.A.R.Y. — Reports, Evaluates Licenses, Inventories, Quotas, Users, Access & Registration Yields" -ForegroundColor Cyan
+    Write-Host "  A.L.M.A.N.A.C. — Assigned Licenses, Mailboxes, Authentication & Notable Account Counts" -ForegroundColor Cyan
     Write-Host "  Microsoft 365 License & Mailbox Audit Tool  v3.6" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -212,7 +212,7 @@ function Install-GraphModule {
             }
         } else {
             Write-Warn "One or more Microsoft.Graph sub-modules are not installed."
-            Write-Info "The Microsoft.Graph module suite is required for R.E.L.I.Q.U.A.R.Y. to operate."
+            Write-Info "The Microsoft.Graph module suite is required for A.L.M.A.N.A.C. to operate."
             Write-Host ""
             $ans = Read-Host "  Install Microsoft.Graph for current user? [Y/N]"
             if ($ans -match '^[Yy]') {
@@ -574,7 +574,7 @@ function Show-SharedMailboxGuidance {
     Write-Section "SHARED MAILBOX AUDIT"
     Write-Warn "Shared mailbox auditing requires the Exchange Online Management module."
     Write-Host ""
-    Write-Info "R.E.L.I.Q.U.A.R.Y. connects to Microsoft Graph, which does not expose mailbox"
+    Write-Info "A.L.M.A.N.A.C. connects to Microsoft Graph, which does not expose mailbox"
     Write-Info "type details (Shared vs. User) in the same way as Exchange Online."
     Write-Host ""
     Write-Info "To audit shared mailboxes, run the following in a separate session:"
@@ -678,8 +678,8 @@ function Build-HtmlReport {
     $orgPrefix = if (-not [string]::IsNullOrWhiteSpace($tkCfg.OrgName)) { "$(EscHtml $tkCfg.OrgName) -- " } else { '' }
 
     $htmlHead = Get-TKHtmlHead `
-        -Title      'R.E.L.I.Q.U.A.R.Y. Audit Report' `
-        -ScriptName 'R.E.L.I.Q.U.A.R.Y.' `
+        -Title      'A.L.M.A.N.A.C. Audit Report' `
+        -ScriptName 'A.L.M.A.N.A.C.' `
         -Subtitle   "${orgPrefix}Microsoft 365 License &amp; User Security Audit -- $tenantDisplay" `
         -MetaItems  ([ordered]@{
             'Generated'    = $reportDate
@@ -694,7 +694,7 @@ function Build-HtmlReport {
             'Shared Mailbox'
         )
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'R.E.L.I.Q.U.A.R.Y. v3.6'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'A.L.M.A.N.A.C. v3.6'
 
     $html = $htmlHead + @"
 
@@ -826,7 +826,7 @@ function Export-HtmlReport {
 
     $html      = Build-HtmlReport -LicenseData $LicenseData -UnlicensedData $UnlicensedData -InactiveData $InactiveData -NoMfaData $NoMfaData
     $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-    $outPath   = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "RELIQUARY_${timestamp}.html"
+    $outPath   = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "ALMANAC_${timestamp}.html"
 
     try {
         $html | Out-File -FilePath $outPath -Encoding UTF8 -Force
@@ -841,7 +841,7 @@ function Export-HtmlReport {
 # ─────────────────────────────────────────────────────────────────────────────
 
 function Show-Menu {
-    Show-ReliquaryBanner
+    Show-AlmanacBanner
 
     $connStatus = if ($script:Connected) {
         "  Connected as : $($script:ConnectedAs)"
@@ -880,7 +880,7 @@ function Assert-Connected {
 # ENTRY POINT
 # ─────────────────────────────────────────────────────────────────────────────
 
-Show-ReliquaryBanner
+Show-AlmanacBanner
 Install-GraphModule
 
 # Check if already connected (e.g. token still cached from prior session)

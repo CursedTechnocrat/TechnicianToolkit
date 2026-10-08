@@ -1,4 +1,4 @@
-﻿# artifact.ps1 - A.R.T.I.F.A.C.T. — Audits, Reports Trust, Identity, Fingerprints, Authority, Certificates & TLS
+﻿# phoenix.ps1 - P.H.O.E.N.I.X. — Pinpoints Hosts' Outdated & Expiring Notarised Identity X.509s
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -20,7 +20,7 @@
 
 <#
 .SYNOPSIS
-    A.R.T.I.F.A.C.T. — Audits, Reports Trust, Identity, Fingerprints, Authority, Certificates & TLS
+    P.H.O.E.N.I.X. — Pinpoints Hosts' Outdated & Expiring Notarised Identity X.509s
     Certificate Health Monitor for PowerShell 5.1+
 
 .DESCRIPTION
@@ -30,9 +30,9 @@
     Exports a dark-themed HTML report with color-coded expiry indicators.
 
 .USAGE
-    PS C:\> .\artifact.ps1                                          # Interactive menu
-    PS C:\> .\artifact.ps1 -Unattended                              # Full audit (local + HTML report)
-    PS C:\> .\artifact.ps1 -Unattended -Targets "srv1.contoso.com,srv2.contoso.com:8443"
+    PS C:\> .\phoenix.ps1                                          # Interactive menu
+    PS C:\> .\phoenix.ps1 -Unattended                              # Full audit (local + HTML report)
+    PS C:\> .\phoenix.ps1 -Unattended -Targets "srv1.contoso.com,srv2.contoso.com:8443"
 
 .NOTES
     Version : 5.1
@@ -111,19 +111,19 @@ $C = @{
 # BANNER
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Show-ArtifactBanner {
+function Show-PhoenixBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host @"
 
-   █████╗ ██████╗ ████████╗██╗███████╗ █████╗  ██████╗████████╗
-  ██╔══██╗██╔══██╗╚══██╔══╝██║██╔════╝██╔══██╗██╔════╝╚══██╔══╝
-  ███████║██████╔╝   ██║   ██║█████╗  ███████║██║        ██║
-  ██╔══██║██╔══██╗   ██║   ██║██╔══╝  ██╔══██║██║        ██║
-  ██║  ██║██║  ██║   ██║   ██║██║     ██║  ██║╚██████╗   ██║
-  ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝╚═╝     ╚═╝  ╚═╝ ╚═════╝   ╚═╝
+  ██████╗ ██╗  ██╗ ██████╗ ███████╗███╗   ██╗██╗██╗  ██╗
+  ██╔══██╗██║  ██║██╔═══██╗██╔════╝████╗  ██║██║╚██╗██╔╝
+  ██████╔╝███████║██║   ██║█████╗  ██╔██╗ ██║██║ ╚███╔╝
+  ██╔═══╝ ██╔══██║██║   ██║██╔══╝  ██║╚██╗██║██║ ██╔██╗
+  ██║     ██║  ██║╚██████╔╝███████╗██║ ╚████║██║██╔╝ ██╗
+  ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝╚═╝╚═╝  ╚═╝
 
 "@ -ForegroundColor Cyan
-    Write-Host "    A.R.T.I.F.A.C.T. — Audits, Reports Trust, Identity, Fingerprints, Authority, Certificates & TLS" -ForegroundColor Cyan
+    Write-Host "    P.H.O.E.N.I.X. — Pinpoints Hosts' Outdated & Expiring Notarised Identity X.509s" -ForegroundColor Cyan
     Write-Host "    Certificate Health & SSL Expiry Monitor" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -457,7 +457,7 @@ $sslRows
 
     $htmlHead = Get-TKHtmlHead `
         -Title      'Certificate Audit Report' `
-        -ScriptName 'A.R.T.I.F.A.C.T.' `
+        -ScriptName 'P.H.O.E.N.I.X.' `
         -Subtitle    $orgSubtitle `
         -MetaItems  ([ordered]@{
             'Machine'   = $MachineName
@@ -466,7 +466,7 @@ $sslRows
         }) `
         -NavItems   @('Local Certificates', 'SSL/TLS Checks')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'A.R.T.I.F.A.C.T. v3.6'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'P.H.O.E.N.I.X. v3.6'
 
     $html = $htmlHead + @"
 
@@ -525,7 +525,7 @@ function Save-HtmlReport {
         -MachineName     $machineName `
         -ReportTimestamp $reportTimestamp
 
-    $reportFilename = "ARTIFACT_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
+    $reportFilename = "PHOENIX_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
     $reportPath     = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) $reportFilename
 
     try {
@@ -543,7 +543,7 @@ function Save-HtmlReport {
 # ─────────────────────────────────────────────────────────────────────────────
 
 if ($Unattended) {
-    Show-ArtifactBanner
+    Show-PhoenixBanner
 
     $machineName = $env:COMPUTERNAME
     Write-Host "  [*] Unattended mode  -  Machine: $machineName" -ForegroundColor $C.Progress
@@ -583,7 +583,7 @@ if ($Unattended) {
     # Console summary
     Write-Host ""
     Write-Host ("  " + ("=" * 62)) -ForegroundColor $C.Header
-    Write-Host "  A.R.T.I.F.A.C.T. AUDIT SUMMARY" -ForegroundColor $C.Header
+    Write-Host "  P.H.O.E.N.I.X. AUDIT SUMMARY" -ForegroundColor $C.Header
     Write-Host ("  " + ("=" * 62)) -ForegroundColor $C.Header
     Write-Host ""
     Write-Host "  Total Certificates : $($localCerts.Count)" -ForegroundColor $C.Info
@@ -603,7 +603,7 @@ if ($Unattended) {
     }
     Write-Host ""
     Write-Host ("  " + ("=" * 62)) -ForegroundColor $C.Header
-    Write-Host "  A.R.T.I.F.A.C.T. UNATTENDED RUN COMPLETE" -ForegroundColor $C.Header
+    Write-Host "  P.H.O.E.N.I.X. UNATTENDED RUN COMPLETE" -ForegroundColor $C.Header
     Write-Host ("  " + ("=" * 62)) -ForegroundColor $C.Header
     Write-Host ""
 
@@ -616,12 +616,12 @@ if ($Unattended) {
 # INTERACTIVE MENU
 # ─────────────────────────────────────────────────────────────────────────────
 
-Show-ArtifactBanner
+Show-PhoenixBanner
 
 $choice = ''
 
 do {
-    Show-ArtifactBanner
+    Show-PhoenixBanner
 
     Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header
     Write-Host "  MAIN MENU" -ForegroundColor $C.Header
@@ -639,7 +639,7 @@ do {
 
         # ── Option 1: Local cert audit ──────────────────────────────────────
         '1' {
-            Show-ArtifactBanner
+            Show-PhoenixBanner
             Write-Host "  [*] Auditing local certificate stores (My, CA, Root, TrustedPublisher)..." -ForegroundColor $C.Progress
             $localCerts = Get-LocalCertHealth
             Write-Host "  [+] Found $($localCerts.Count) certificate(s)." -ForegroundColor $C.Success
@@ -662,7 +662,7 @@ do {
 
         # ── Option 2: SSL remote checks ─────────────────────────────────────
         '2' {
-            Show-ArtifactBanner
+            Show-PhoenixBanner
             Write-Section "SSL/TLS REMOTE CERTIFICATE CHECK"
 
             Write-Host "  Enter target hosts to check." -ForegroundColor $C.Info
@@ -706,7 +706,7 @@ do {
 
         # ── Option 3: Full audit ────────────────────────────────────────────
         '3' {
-            Show-ArtifactBanner
+            Show-PhoenixBanner
 
             # Local cert audit
             Write-Host "  [*] Auditing local certificate stores..." -ForegroundColor $C.Progress
@@ -754,7 +754,7 @@ do {
         # ── Quit ─────────────────────────────────────────────────────────────
         'Q' {
             Write-Host ""
-            Write-Host "  Closing A.R.T.I.F.A.C.T." -ForegroundColor $C.Header
+            Write-Host "  Closing P.H.O.E.N.I.X." -ForegroundColor $C.Header
             Write-Host ""
         }
 

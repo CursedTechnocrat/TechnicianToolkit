@@ -1,4 +1,4 @@
-﻿# tether.ps1 - T.E.T.H.E.R. — Tests Endpoint Tethering: Hosted Environment Readiness
+﻿# phylactery.ps1 - P.H.Y.L.A.C.T.E.R.Y. — Pre-migration Health of Your Libraries: Accounts, Client, Tethering, Errors, Readiness & Yield
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -20,7 +20,7 @@
 
 <#
 .SYNOPSIS
-    T.E.T.H.E.R. — Tests Endpoint Tethering: Hosted Environment Readiness
+    P.H.Y.L.A.C.T.E.R.Y. — Pre-migration Health of Your Libraries: Accounts, Client, Tethering, Errors, Readiness & Yield
     OneDrive Known-Folder-Move Pre-Migration Validator for PowerShell 5.1+
 
 .DESCRIPTION
@@ -32,8 +32,8 @@
     with a red / yellow / green readiness verdict.
 
 .USAGE
-    PS C:\> .\tether.ps1                    # Interactive run against current user
-    PS C:\> .\tether.ps1 -Unattended        # Silent mode, export HTML and exit
+    PS C:\> .\phylactery.ps1                    # Interactive run against current user
+    PS C:\> .\phylactery.ps1 -Unattended        # Silent mode, export HTML and exit
 
 .NOTES
     Version : 5.1
@@ -93,10 +93,10 @@ $C = @{
     Progress = 'Magenta'
 }
 
-function Show-TetherBanner {
+function Show-PhylacteryBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
-    Write-Host "  T.E.T.H.E.R. — Tests Endpoint Tethering: Hosted Environment Readiness" -ForegroundColor Cyan
+    Write-Host "  P.H.Y.L.A.C.T.E.R.Y. — Pre-migration Health of Your Libraries: Accounts, Client, Tethering, Errors, Readiness & Yield" -ForegroundColor Cyan
     Write-Host "  OneDrive Known-Folder-Move Pre-Migration Validator  v3.6" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -414,8 +414,8 @@ function Build-HtmlReport {
     }
 
     $htmlHead = Get-TKHtmlHead `
-        -Title      'T.E.T.H.E.R. OneDrive Pre-Migration Report' `
-        -ScriptName 'T.E.T.H.E.R.' `
+        -Title      'P.H.Y.L.A.C.T.E.R.Y. OneDrive Pre-Migration Report' `
+        -ScriptName 'P.H.Y.L.A.C.T.E.R.Y.' `
         -Subtitle   "${orgPrefix}OneDrive KFM Readiness -- $machine" `
         -MetaItems  ([ordered]@{
             'Machine'   = $machine
@@ -425,7 +425,7 @@ function Build-HtmlReport {
         }) `
         -NavItems   @('Verdict', 'Client', 'Accounts', 'Known Folders', 'Content Volume', 'Sync Errors')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'T.E.T.H.E.R. v3.6'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'P.H.Y.L.A.C.T.E.R.Y. v3.6'
 
     $html = $htmlHead + @"
 
@@ -567,7 +567,7 @@ function Write-ConsoleSummary {
 # MAIN
 # ─────────────────────────────────────────────────────────────────────────────
 
-Show-TetherBanner
+Show-PhylacteryBanner
 
 $client   = Get-OneDriveClient
 $accounts = Get-OneDriveAccounts
@@ -582,7 +582,7 @@ Write-Host ""
 Write-Step "Generating HTML report..."
 $html = Build-HtmlReport -Client $client -Accounts $accounts -Kfm $kfm -Volume $volume -Errors $errors -Verdict $verdict
 $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-$outPath   = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "TETHER_${timestamp}.html"
+$outPath   = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "PHYLACTERY_${timestamp}.html"
 
 try {
     [System.IO.File]::WriteAllText($outPath, $html, [System.Text.Encoding]::UTF8)

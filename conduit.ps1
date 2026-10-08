@@ -38,8 +38,8 @@
     service, and re-enables any disabled update service. ResetCache additionally
     renames SoftwareDistribution and catroot2 so the client rebuilds them.
 
-    CONDUIT is the precondition check for R.E.S.T.O.R.A.T.I.O.N.: run CONDUIT
-    when the update client cannot reach a service at all, and RESTORATION once
+    CONDUIT is the precondition check for W.H.E.T.S.T.O.N.E.: run CONDUIT
+    when the update client cannot reach a service at all, and WHETSTONE once
     it can, to actually deploy updates.
 
 .USAGE

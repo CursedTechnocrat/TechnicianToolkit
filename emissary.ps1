@@ -41,8 +41,8 @@
     ─────────────────────────────────────────────────────────────────
     A.U.S.P.E.X.   — Diagnostics report (HTML retrieved automatically)
     W.A.R.D.       — Account audit (HTML retrieved automatically)
-    R.E.S.T.O.R.A.T.I.O.N. — Windows Updates (non-interactive)
-    S.I.G.I.L.     — Baseline enforcement (auto-apply all categories)
+    W.H.E.T.S.T.O.N.E. — Windows Updates (non-interactive)
+    B.A.S.I.L.I.S.K.     — Baseline enforcement (auto-apply all categories)
 
 #>
 
@@ -288,13 +288,13 @@ function Invoke-RemoteSigil {
         [string]$ComputerName
     )
 
-    $localScript   = Join-Path $ScriptPath "sigil.ps1"
+    $localScript   = Join-Path $ScriptPath "basilisk.ps1"
     $localModule   = Join-Path $ScriptPath 'TechnicianToolkit.psm1'
     $remoteTempDir = "C:\Temp\EmissaryToolkit"
-    $remoteScript  = "$remoteTempDir\sigil.ps1"
+    $remoteScript  = "$remoteTempDir\basilisk.ps1"
 
     if (-not (Test-Path $localScript)) {
-        Write-Host "  [-] sigil.ps1 not found locally." -ForegroundColor $ColorSchema.Error
+        Write-Host "  [-] basilisk.ps1 not found locally." -ForegroundColor $ColorSchema.Error
         return
     }
 
@@ -310,10 +310,10 @@ function Invoke-RemoteSigil {
             Write-Host "  [!] TechnicianToolkit.psm1 not found locally - the remote tool will try to download it." -ForegroundColor $ColorSchema.Warning
         }
 
-        Write-Host "  [*] Executing S.I.G.I.L. baseline on $ComputerName (applying all categories)..." -ForegroundColor $ColorSchema.Progress
+        Write-Host "  [*] Executing B.A.S.I.L.I.S.K. baseline on $ComputerName (applying all categories)..." -ForegroundColor $ColorSchema.Progress
         Write-Host ""
 
-        # -Categories A selects every baseline category; -Unattended keeps SIGIL off
+        # -Categories A selects every baseline category; -Unattended keeps BASILISK off
         # Read-Host, which a WinRM runspace cannot answer.
         Invoke-Command -Session $Session -ScriptBlock {
             param($sigilScript)
@@ -325,7 +325,7 @@ function Invoke-RemoteSigil {
         # Retrieve log
         $logFiles = Invoke-Command -Session $Session -ScriptBlock {
             param($dir)
-            Get-ChildItem $dir -Filter "SIGIL_*.csv" | Select-Object -ExpandProperty Name
+            Get-ChildItem $dir -Filter "BASILISK_*.csv" | Select-Object -ExpandProperty Name
         } -ArgumentList $remoteTempDir
 
         if ($logFiles) {
@@ -338,7 +338,7 @@ function Invoke-RemoteSigil {
         }
     }
     catch {
-        Write-Host "  [-] Remote S.I.G.I.L. failed: $_" -ForegroundColor $ColorSchema.Error
+        Write-Host "  [-] Remote B.A.S.I.L.I.S.K. failed: $_" -ForegroundColor $ColorSchema.Error
     }
     finally {
         Invoke-Command -Session $Session -ScriptBlock {
@@ -430,8 +430,8 @@ do {
     Write-Host ""
     Write-Host "  [1] Run A.U.S.P.E.X.         — diagnostics & HTML report" -ForegroundColor $ColorSchema.Info
     Write-Host "  [2] Run W.A.R.D.             — account audit & HTML report" -ForegroundColor $ColorSchema.Info
-    Write-Host "  [3] Run R.E.S.T.O.R.A.T.I.O.N. — install Windows Updates" -ForegroundColor $ColorSchema.Info
-    Write-Host "  [4] Run S.I.G.I.L.           — apply security baseline (all categories)" -ForegroundColor $ColorSchema.Info
+    Write-Host "  [3] Run W.H.E.T.S.T.O.N.E. — install Windows Updates" -ForegroundColor $ColorSchema.Info
+    Write-Host "  [4] Run B.A.S.I.L.I.S.K.           — apply security baseline (all categories)" -ForegroundColor $ColorSchema.Info
     Write-Host "  [5] Open interactive PS session" -ForegroundColor $ColorSchema.Info
     Write-Host "  [C] Check WinRM connectivity" -ForegroundColor $ColorSchema.Info
     Write-Host "  [Q] Quit" -ForegroundColor $ColorSchema.Info
@@ -458,14 +458,14 @@ do {
         }
         "3" {
             Write-Host ""
-            Write-Host "  [!!] RESTORATION will install updates on the target machine." -ForegroundColor $ColorSchema.Warning
+            Write-Host "  [!!] WHETSTONE will install updates on the target machine." -ForegroundColor $ColorSchema.Warning
             Write-Host "       It runs without -AutoReboot, so a required reboot is reported, not performed." -ForegroundColor $ColorSchema.Warning
             Write-Host -NoNewline "  Continue? (Y/N): " -ForegroundColor $ColorSchema.Warning
             $confirm = (Read-Host).Trim().ToUpper()
             if ($confirm -eq "Y") {
                 $session = New-RemoteSession -ComputerName $targetMachine -Credential $remoteCred
                 if ($session) {
-                    Invoke-RemoteTool -Session $session -ScriptFile "restoration.ps1" -ComputerName $targetMachine -ToolName "R.E.S.T.O.R.A.T.I.O.N."
+                    Invoke-RemoteTool -Session $session -ScriptFile "whetstone.ps1" -ComputerName $targetMachine -ToolName "W.H.E.T.S.T.O.N.E."
                     Remove-PSSession $session -ErrorAction SilentlyContinue
                 }
             } else {

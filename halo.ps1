@@ -1,4 +1,4 @@
-﻿# rampart.ps1 - R.A.M.P.A.R.T. — Reviews Access Management Policies And Rule Targeting
+﻿# halo.ps1 - H.A.L.O. — Holistic Access-policy Logic Overview
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -20,7 +20,7 @@
 
 <#
 .SYNOPSIS
-    R.A.M.P.A.R.T. — Reviews Access Management Policies And Rule Targeting
+    H.A.L.O. — Holistic Access-policy Logic Overview
     Entra ID Conditional Access Posture Audit Tool for PowerShell 5.1+
 
 .DESCRIPTION
@@ -45,8 +45,8 @@
     and the Policy.Read.All and Directory.Read.All delegated scopes.
 
 .USAGE
-    PS C:\> .\rampart.ps1                    # Interactive: sign in, audit, HTML report
-    PS C:\> .\rampart.ps1 -Unattended        # Silent: sign in, audit, export HTML
+    PS C:\> .\halo.ps1                    # Interactive: sign in, audit, HTML report
+    PS C:\> .\halo.ps1 -Unattended        # Silent: sign in, audit, export HTML
 
 .NOTES
     Version : 5.1
@@ -148,12 +148,12 @@ $TargetKeywords = @('All', 'None', 'GuestsOrExternalUsers')
 # ─────────────────────────────────────────────────────────────────────────────
 # FINDING CATALOG
 #
-# Every condition R.A.M.P.A.R.T. can report, keyed by a stable code. The Pester
+# Every condition H.A.L.O. can report, keyed by a stable code. The Pester
 # suite extracts it by AST lookup and checks it against the codes the script
 # raises.
 # ─────────────────────────────────────────────────────────────────────────────
 
-$RampartFindings = @{
+$HaloFindings = @{
     'NoBaseline' = @{
         Severity = 'Error'
         Title    = 'No Conditional Access policy and security defaults off'
@@ -258,13 +258,13 @@ $RampartFindings = @{
 
 $Findings = [System.Collections.Generic.List[object]]::new()
 
-function Add-RampartFinding {
+function Add-HaloFinding {
     param(
         [Parameter(Mandatory)][string]$Code,
         [string]$Subject = '',
         [string]$Detail = ''
     )
-    $meta = $RampartFindings[$Code]
+    $meta = $HaloFindings[$Code]
     if (-not $meta) { $meta = @{ Severity = 'Warning'; Title = $Code; Summary = ''; Remedy = '' } }
     [void]$Findings.Add([PSCustomObject]@{
         Code = $Code; Severity = $meta.Severity; Title = $meta.Title; Summary = $meta.Summary
@@ -285,19 +285,19 @@ function Get-SeverityClass {
 # BANNER
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Show-RampartBanner {
+function Show-HaloBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host @"
 
-  ██████╗  █████╗ ███╗   ███╗██████╗  █████╗ ██████╗ ████████╗
-  ██╔══██╗██╔══██╗████╗ ████║██╔══██╗██╔══██╗██╔══██╗╚══██╔══╝
-  ██████╔╝███████║██╔████╔██║██████╔╝███████║██████╔╝   ██║
-  ██╔══██╗██╔══██║██║╚██╔╝██║██╔═══╝ ██╔══██║██╔══██╗   ██║
-  ██║  ██║██║  ██║██║ ╚═╝ ██║██║     ██║  ██║██║  ██║   ██║
-  ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝
+  ██╗  ██╗ █████╗ ██╗      ██████╗
+  ██║  ██║██╔══██╗██║     ██╔═══██╗
+  ███████║███████║██║     ██║   ██║
+  ██╔══██║██╔══██║██║     ██║   ██║
+  ██║  ██║██║  ██║███████╗╚██████╔╝
+  ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝ ╚═════╝
 
 "@ -ForegroundColor Cyan
-    Write-Host "    R.A.M.P.A.R.T. — Reviews Access Management Policies And Rule Targeting" -ForegroundColor Cyan
+    Write-Host "    H.A.L.O. — Holistic Access-policy Logic Overview" -ForegroundColor Cyan
     Write-Host "    Entra ID Conditional Access Posture Audit Tool" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -422,7 +422,7 @@ function Test-BroadCidr {
     return $prefix -lt 16
 }
 
-function Get-RampartVerdict {
+function Get-HaloVerdict {
     param([object[]]$FindingList)
     $sev = @($FindingList | ForEach-Object { $_.Severity })
     if ($sev -contains 'Error')   { return [PSCustomObject]@{ Verdict = 'Exposed';  Class = 'err'  } }
@@ -434,7 +434,7 @@ function Get-RampartVerdict {
 # MODULE + CONNECTION
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Install-RampartModule {
+function Install-HaloModule {
     Write-Section "MODULE CHECK"
     $name = 'Microsoft.Graph.Authentication'
     if (Get-Module -ListAvailable -Name $name) {
@@ -452,7 +452,7 @@ function Install-RampartModule {
             Write-Ok "$name installed."
         } catch {
             Write-Fail "Install failed: $($_.Exception.Message)"
-            Write-TKError -ScriptName 'rampart' -Message "$name install failed: $($_.Exception.Message)" -Category 'Module Install'
+            Write-TKError -ScriptName 'halo' -Message "$name install failed: $($_.Exception.Message)" -Category 'Module Install'
             return $false
         }
     }
@@ -460,7 +460,7 @@ function Install-RampartModule {
     catch { Write-Fail "Could not import ${name}: $($_.Exception.Message)"; return $false }
 }
 
-function Connect-RampartGraph {
+function Connect-HaloGraph {
     Write-Section "CONNECT TO MICROSOFT GRAPH"
     try {
         $ctx = Get-MgContext -ErrorAction Stop
@@ -480,7 +480,7 @@ function Connect-RampartGraph {
         return $ctx.Account
     } catch {
         Write-Fail "Connect-MgGraph failed: $($_.Exception.Message)"
-        Write-TKError -ScriptName 'rampart' -Message "Connect-MgGraph failed: $($_.Exception.Message)" -Category 'Graph Auth'
+        Write-TKError -ScriptName 'halo' -Message "Connect-MgGraph failed: $($_.Exception.Message)" -Category 'Graph Auth'
         return $null
     }
 }
@@ -489,7 +489,7 @@ function Connect-RampartGraph {
 # COLLECTORS
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Invoke-RampartGraph {
+function Invoke-HaloGraph {
     # GET with paging. Returns every item of 'value', or the single object for
     # endpoints that are not collections.
     param([string]$Uri, [string]$Label)
@@ -506,14 +506,14 @@ function Invoke-RampartGraph {
             }
         }
     } catch {
-        Add-RampartFinding -Code 'GraphQueryFailed' -Subject $Label -Detail $_.Exception.Message
+        Add-HaloFinding -Code 'GraphQueryFailed' -Subject $Label -Detail $_.Exception.Message
         Write-Warn "$Label query failed: $($_.Exception.Message)"
         return $null
     }
     return , $items.ToArray()
 }
 
-function Resolve-RampartObjects {
+function Resolve-HaloObjects {
     # directoryObjects/getByIds resolves users and groups in one call per 1000
     # IDs. Anything asked for and not returned no longer exists.
     param([string[]]$Ids)
@@ -529,7 +529,7 @@ function Resolve-RampartObjects {
                 $names["$($o['id'])"] = "$label"
             }
         } catch {
-            Add-RampartFinding -Code 'GraphQueryFailed' -Subject 'directoryObjects/getByIds' -Detail $_.Exception.Message
+            Add-HaloFinding -Code 'GraphQueryFailed' -Subject 'directoryObjects/getByIds' -Detail $_.Exception.Message
             return $null
         }
     }
@@ -540,12 +540,12 @@ function Resolve-RampartObjects {
 # ANALYSIS
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Invoke-RampartAudit {
+function Invoke-HaloAudit {
     Write-Section "CONDITIONAL ACCESS"
     Write-Step "Reading policies, named locations and security defaults..."
-    $policies  = Invoke-RampartGraph -Uri 'v1.0/identity/conditionalAccess/policies' -Label 'Conditional Access policies'
-    $locations = Invoke-RampartGraph -Uri 'v1.0/identity/conditionalAccess/namedLocations' -Label 'Named locations'
-    $defaults  = Invoke-RampartGraph -Uri 'v1.0/policies/identitySecurityDefaultsEnforcementPolicy' -Label 'Security defaults'
+    $policies  = Invoke-HaloGraph -Uri 'v1.0/identity/conditionalAccess/policies' -Label 'Conditional Access policies'
+    $locations = Invoke-HaloGraph -Uri 'v1.0/identity/conditionalAccess/namedLocations' -Label 'Named locations'
+    $defaults  = Invoke-HaloGraph -Uri 'v1.0/policies/identitySecurityDefaultsEnforcementPolicy' -Label 'Security defaults'
 
     $policies  = @($policies | Where-Object { $_ })
     $locations = @($locations | Where-Object { $_ })
@@ -560,7 +560,7 @@ function Invoke-RampartAudit {
         $u = $p.conditions.users
         Get-CaList $u.includeUsers; Get-CaList $u.excludeUsers; Get-CaList $u.includeGroups; Get-CaList $u.excludeGroups
     }
-    $names = Resolve-RampartObjects -Ids @($ids)
+    $names = Resolve-HaloObjects -Ids @($ids)
     function _name { param([string]$Id) if ($names -and $names.ContainsKey($Id)) { $names[$Id] } else { $Id } }
 
     # ── Baseline coverage ──
@@ -570,8 +570,8 @@ function Invoke-RampartAudit {
     }
 
     if ($policies.Count -eq 0 -or $enforced.Count -eq 0) {
-        if ($defaultsOn) { Add-RampartFinding -Code 'SecurityDefaultsOnly' -Subject 'Tenant' }
-        else             { Add-RampartFinding -Code 'NoBaseline' -Subject 'Tenant' }
+        if ($defaultsOn) { Add-HaloFinding -Code 'SecurityDefaultsOnly' -Subject 'Tenant' }
+        else             { Add-HaloFinding -Code 'NoBaseline' -Subject 'Tenant' }
     }
 
     $mfaAll = @($enforced | Where-Object { (Test-CaTargetsAllUsers $_) -and (Test-CaTargetsAllApps $_) -and (Test-CaRequiresMfa $_) })
@@ -589,13 +589,13 @@ function Invoke-RampartAudit {
     # Security defaults already enforce MFA and block legacy auth, so with
     # them on (and no CA to replace them) those two baseline gaps are closed.
     if (-not $defaultsOn -or $enforced.Count -gt 0) {
-        if ($mfaAll.Count -eq 0) { Add-RampartFinding -Code 'NoMfaAllUsers' -Subject 'Tenant' }
-        if ($mfaGa.Count  -eq 0) { Add-RampartFinding -Code 'NoMfaAdmins'  -Subject 'Global Administrator' }
-        if ($legacy.Count -eq 0) { Add-RampartFinding -Code 'LegacyAuthNotBlocked' -Subject 'Tenant' }
+        if ($mfaAll.Count -eq 0) { Add-HaloFinding -Code 'NoMfaAllUsers' -Subject 'Tenant' }
+        if ($mfaGa.Count  -eq 0) { Add-HaloFinding -Code 'NoMfaAdmins'  -Subject 'Global Administrator' }
+        if ($legacy.Count -eq 0) { Add-HaloFinding -Code 'LegacyAuthNotBlocked' -Subject 'Tenant' }
     }
     if ($enforced.Count -gt 0) {
-        if ($risk.Count   -eq 0) { Add-RampartFinding -Code 'NoRiskPolicies' -Subject 'Tenant' }
-        if ($device.Count -eq 0) { Add-RampartFinding -Code 'NoDevicePolicy' -Subject 'Tenant' }
+        if ($risk.Count   -eq 0) { Add-HaloFinding -Code 'NoRiskPolicies' -Subject 'Tenant' }
+        if ($device.Count -eq 0) { Add-HaloFinding -Code 'NoDevicePolicy' -Subject 'Tenant' }
     }
 
     if ($mfaGa.Count -gt 0) {
@@ -603,21 +603,21 @@ function Invoke-RampartAudit {
             $role = $_
             @($enforced | Where-Object { (Test-CaRequiresMfa $_) -and (Test-CaCoversRole -Policy $_ -RoleTemplateId $role) }).Count -eq 0
         } | ForEach-Object { $PrivilegedRoleTemplates[$_] })
-        if ($uncovered.Count -gt 0) { Add-RampartFinding -Code 'AdminRolesNotCovered' -Subject "$($uncovered.Count) role(s)" -Detail ($uncovered -join ', ') }
+        if ($uncovered.Count -gt 0) { Add-HaloFinding -Code 'AdminRolesNotCovered' -Subject "$($uncovered.Count) role(s)" -Detail ($uncovered -join ', ') }
     }
 
     # ── Hygiene ──
     foreach ($p in ($policies | Where-Object { "$($_.state)" -eq 'enabledForReportingButNotEnforced' })) {
-        Add-RampartFinding -Code 'ReportOnlyPolicy' -Subject "$($p.displayName)"
+        Add-HaloFinding -Code 'ReportOnlyPolicy' -Subject "$($p.displayName)"
     }
     $disabled = @($policies | Where-Object { "$($_.state)" -eq 'disabled' })
     if ($disabled.Count -gt 0) {
-        Add-RampartFinding -Code 'DisabledPolicy' -Subject "$($disabled.Count) policy(ies)" -Detail (@($disabled | ForEach-Object { $_.displayName }) -join '; ')
+        Add-HaloFinding -Code 'DisabledPolicy' -Subject "$($disabled.Count) policy(ies)" -Detail (@($disabled | ForEach-Object { $_.displayName }) -join '; ')
     }
     foreach ($p in ($enforced | Where-Object { (Test-CaTargetsAllUsers $_) -and ((Test-CaBlocks $_) -or (Test-CaRequiresMfa $_)) })) {
         $ex = @(Get-CaList $p.conditions.users.excludeUsers) + @(Get-CaList $p.conditions.users.excludeGroups)
         if ($ex.Count -gt $ExclusionThreshold) {
-            Add-RampartFinding -Code 'BroadExclusion' -Subject "$($p.displayName)" -Detail ("{0} exclusions: {1}" -f $ex.Count, (@($ex | Select-Object -First 15 | ForEach-Object { _name $_ }) -join ', '))
+            Add-HaloFinding -Code 'BroadExclusion' -Subject "$($p.displayName)" -Detail ("{0} exclusions: {1}" -f $ex.Count, (@($ex | Select-Object -First 15 | ForEach-Object { _name $_ }) -join ', '))
         }
     }
 
@@ -629,21 +629,21 @@ function Invoke-RampartAudit {
                 Where-Object { $_ -notin $TargetKeywords -and -not $names.ContainsKey($_) })
             if ($missing.Count -gt 0) { [void]$stale.Add("$($p.displayName): $($missing -join ', ')") }
         }
-        if ($stale.Count -gt 0) { Add-RampartFinding -Code 'StaleObjectReference' -Subject "$($stale.Count) policy(ies)" -Detail ($stale -join ' | ') }
+        if ($stale.Count -gt 0) { Add-HaloFinding -Code 'StaleObjectReference' -Subject "$($stale.Count) policy(ies)" -Detail ($stale -join ' | ') }
     }
 
     $emergency = Get-CaEmergencyExclusion -Policies $policies
     if ($null -ne $emergency) {
         $who = @(@($emergency.Users | ForEach-Object { "user $(_name $_)" }) + @($emergency.Groups | ForEach-Object { "group $(_name $_)" }))
-        if ($who.Count -eq 0) { Add-RampartFinding -Code 'NoEmergencyAccess' -Subject "$($emergency.GateCount) enforcing all-users policy(ies)" }
-        else                  { Add-RampartFinding -Code 'EmergencyAccessPresent' -Subject "$($who.Count) exclusion(s)" -Detail ($who -join ', ') }
+        if ($who.Count -eq 0) { Add-HaloFinding -Code 'NoEmergencyAccess' -Subject "$($emergency.GateCount) enforcing all-users policy(ies)" }
+        else                  { Add-HaloFinding -Code 'EmergencyAccessPresent' -Subject "$($who.Count) exclusion(s)" -Detail ($who -join ', ') }
     }
 
     $locationRows = foreach ($l in $locations) {
         $ranges = @($l.ipRanges | ForEach-Object { "$($_.cidrAddress)" } | Where-Object { $_ })
         $broad  = @($ranges | Where-Object { Test-BroadCidr $_ })
         if ([bool]$l.isTrusted -and $broad.Count -gt 0) {
-            Add-RampartFinding -Code 'BroadTrustedLocation' -Subject "$($l.displayName)" -Detail ($broad -join ', ')
+            Add-HaloFinding -Code 'BroadTrustedLocation' -Subject "$($l.displayName)" -Detail ($broad -join ', ')
         }
         [PSCustomObject]@{
             Name    = "$($l.displayName)"
@@ -688,7 +688,7 @@ function Invoke-RampartAudit {
 # CONSOLE + HTML REPORT
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Show-RampartFindings {
+function Show-HaloFindings {
     Write-Section "FINDINGS"
     if ($Findings.Count -eq 0) { Write-Ok "Nothing to report."; return }
     $order = @{ 'Error' = 0; 'Warning' = 1; 'Info' = 2 }
@@ -698,7 +698,7 @@ function Show-RampartFindings {
     }
 }
 
-function Build-RampartReport {
+function Build-HaloReport {
     param([object]$Audit, [object]$Verdict, [string]$ConnectedAs)
 
     $cfg        = Get-TKConfig
@@ -719,7 +719,7 @@ function Build-RampartReport {
 
     $cRows = [System.Text.StringBuilder]::new()
     foreach ($c in $Audit.Coverage) {
-        $sev   = $RampartFindings[$c.Missing].Severity
+        $sev   = $HaloFindings[$c.Missing].Severity
         $badge = if ($c.Met) { "<span class='tk-badge-ok'>Met</span>" } else { "<span class='tk-badge-$(Get-SeverityClass $sev)'>Missing</span>" }
         [void]$cRows.Append("<tr><td>$(EscHtml $c.Check)</td><td>$badge</td><td>$(EscHtml $(if ($c.By) { $c.By } else { '-' }))</td></tr>")
     }
@@ -751,8 +751,8 @@ function Build-RampartReport {
     $metCount = @($Audit.Coverage | Where-Object { $_.Met }).Count
 
     $htmlHead = Get-TKHtmlHead `
-        -Title      'R.A.M.P.A.R.T. Conditional Access Posture Report' `
-        -ScriptName 'R.A.M.P.A.R.T.' `
+        -Title      'H.A.L.O. Conditional Access Posture Report' `
+        -ScriptName 'H.A.L.O.' `
         -Subtitle   "${orgPrefix}Conditional Access Posture -- $tenant" `
         -MetaItems  ([ordered]@{
             'Tenant'       = $tenant
@@ -805,7 +805,7 @@ function Build-RampartReport {
       <tbody>$($lRows.ToString())</tbody></table></div>
   </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'R.A.M.P.A.R.T. v5.1')
+"@ + (Get-TKHtmlFoot -ScriptName 'H.A.L.O. v5.1')
 
     return $html
 }
@@ -814,36 +814,36 @@ function Build-RampartReport {
 # MAIN
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Invoke-RampartRun {
+function Invoke-HaloRun {
     $Findings.Clear()
 
-    if (-not (Install-RampartModule)) { if ($Unattended) { exit 1 }; return }
-    $who = Connect-RampartGraph
+    if (-not (Install-HaloModule)) { if ($Unattended) { exit 1 }; return }
+    $who = Connect-HaloGraph
     if (-not $who) { if ($Unattended) { exit 1 }; return }
 
-    $audit = Invoke-RampartAudit
-    Show-RampartFindings
+    $audit = Invoke-HaloAudit
+    Show-HaloFindings
 
-    $verdict = Get-RampartVerdict -FindingList $Findings.ToArray()
+    $verdict = Get-HaloVerdict -FindingList $Findings.ToArray()
     Write-Section "VERDICT"
     switch ($verdict.Class) { 'err' { Write-Fail $verdict.Verdict } 'warn' { Write-Warn $verdict.Verdict } default { Write-Ok $verdict.Verdict } }
 
-    Add-TKNote -Text ("RAMPART Conditional Access audit: verdict {0}; {1} of {2} policies enforced; {3} finding(s)." -f $verdict.Verdict, $audit.Enforced, $audit.PolicyCount, $Findings.Count) -Category 'Info' -ScriptName 'rampart'
+    Add-TKNote -Text ("HALO Conditional Access audit: verdict {0}; {1} of {2} policies enforced; {3} finding(s)." -f $verdict.Verdict, $audit.Enforced, $audit.PolicyCount, $Findings.Count) -Category 'Info' -ScriptName 'halo'
 
     Write-Step "Generating HTML report..."
-    $html    = Build-RampartReport -Audit $audit -Verdict $verdict -ConnectedAs "$who"
-    $outPath = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) ("RAMPART_{0}.html" -f (Get-Date -Format 'yyyyMMdd_HHmmss'))
+    $html    = Build-HaloReport -Audit $audit -Verdict $verdict -ConnectedAs "$who"
+    $outPath = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) ("HALO_{0}.html" -f (Get-Date -Format 'yyyyMMdd_HHmmss'))
     try {
         [System.IO.File]::WriteAllText($outPath, $html, [System.Text.Encoding]::UTF8)
         Show-TKReportResult -Path $outPath -Unattended:$Unattended
     } catch {
         Write-Fail "Could not save report: $($_.Exception.Message)"
-        Write-TKError -ScriptName 'rampart' -Message "Report save failed: $($_.Exception.Message)" -Category 'Report'
+        Write-TKError -ScriptName 'halo' -Message "Report save failed: $($_.Exception.Message)" -Category 'Report'
     }
 }
 
-Show-RampartBanner
-Invoke-RampartRun
+Show-HaloBanner
+Invoke-HaloRun
 
 if (-not $Unattended) { Read-Host "  Press Enter to exit" | Out-Null }
 if ($Transcript) { Stop-TKTranscript }

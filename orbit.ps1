@@ -1,4 +1,4 @@
-﻿# golem.ps1 - G.O.L.E.M. — Governs & Observes Licensed Endpoint Management
+﻿# orbit.ps1 - O.R.B.I.T. — Observes Registered devices, Baselines, Inventory & Timeliness
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -20,7 +20,7 @@
 
 <#
 .SYNOPSIS
-    G.O.L.E.M. — Governs & Observes Licensed Endpoint Management
+    O.R.B.I.T. — Observes Registered devices, Baselines, Inventory & Timeliness
     Microsoft Intune / MDM Compliance Audit Tool for PowerShell 5.1+
 
 .DESCRIPTION
@@ -31,8 +31,8 @@
     summary for each section.
 
 .USAGE
-    PS C:\> .\golem.ps1                  # Interactive menu
-    PS C:\> .\golem.ps1 -Unattended      # Auto-connect and export full audit report
+    PS C:\> .\orbit.ps1                  # Interactive menu
+    PS C:\> .\orbit.ps1 -Unattended      # Auto-connect and export full audit report
 
 .NOTES
     Version : 5.1
@@ -114,19 +114,19 @@ $GraphScopes = @(
 # BANNER
 # ─────────────────────────────────────────────────────────────────────────────
 
-function Show-GolemBanner {
+function Show-OrbitBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host @"
 
-   ██████╗  ██████╗ ██╗     ███████╗███╗   ███╗
-  ██╔════╝ ██╔═══██╗██║     ██╔════╝████╗ ████║
-  ██║  ███╗██║   ██║██║     █████╗  ██╔████╔██║
-  ██║   ██║██║   ██║██║     ██╔══╝  ██║╚██╔╝██║
-  ╚██████╔╝╚██████╔╝███████╗███████╗██║ ╚═╝ ██║
-   ╚═════╝  ╚═════╝ ╚══════╝╚══════╝╚═╝     ╚═╝
+   ██████╗ ██████╗ ██████╗ ██╗████████╗
+  ██╔═══██╗██╔══██╗██╔══██╗██║╚══██╔══╝
+  ██║   ██║██████╔╝██████╔╝██║   ██║
+  ██║   ██║██╔══██╗██╔══██╗██║   ██║
+  ╚██████╔╝██║  ██║██████╔╝██║   ██║
+   ╚═════╝ ╚═╝  ╚═╝╚═════╝ ╚═╝   ╚═╝
 
 "@ -ForegroundColor Cyan
-    Write-Host "  G.O.L.E.M. — Governs & Observes Licensed Endpoint Management" -ForegroundColor Cyan
+    Write-Host "  O.R.B.I.T. — Observes Registered devices, Baselines, Inventory & Timeliness" -ForegroundColor Cyan
     Write-Host "  Microsoft Intune / MDM Compliance Audit Tool  v3.6" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -163,7 +163,7 @@ function Install-GraphModule {
                 Write-Ok "Microsoft.Graph installed."
             } catch {
                 Write-Fail "Install failed: $_"
-                Write-TKError -ScriptName 'golem' -Message "Microsoft.Graph install failed: $($_.Exception.Message)" -Category 'Module Install'
+                Write-TKError -ScriptName 'orbit' -Message "Microsoft.Graph install failed: $($_.Exception.Message)" -Category 'Module Install'
                 exit 1
             }
         } else {
@@ -233,7 +233,7 @@ function Invoke-Connect {
         }
     } catch {
         Write-Fail "Authentication failed: $($_.Exception.Message)"
-        Write-TKError -ScriptName 'golem' -Message "Connect-MgGraph failed: $($_.Exception.Message)" -Category 'Graph Auth'
+        Write-TKError -ScriptName 'orbit' -Message "Connect-MgGraph failed: $($_.Exception.Message)" -Category 'Graph Auth'
         if ($Unattended) { exit 1 }
     }
 
@@ -252,7 +252,7 @@ function Get-DeviceInventory {
         $devices = Get-MgDeviceManagementManagedDevice -All -ErrorAction Stop
     } catch {
         Write-Fail "Failed to retrieve devices: $($_.Exception.Message)"
-        Write-TKError -ScriptName 'golem' -Message "Get-MgDeviceManagementManagedDevice failed: $($_.Exception.Message)" -Category 'Intune Query'
+        Write-TKError -ScriptName 'orbit' -Message "Get-MgDeviceManagementManagedDevice failed: $($_.Exception.Message)" -Category 'Intune Query'
         return @()
     }
 
@@ -491,8 +491,8 @@ function Build-HtmlReport {
     $unknownClass    = if ($unknownCount -gt 0) { 'warn' } else { 'ok' }
 
     $htmlHead = Get-TKHtmlHead `
-        -Title      'G.O.L.E.M. Intune Compliance Report' `
-        -ScriptName 'G.O.L.E.M.' `
+        -Title      'O.R.B.I.T. Intune Compliance Report' `
+        -ScriptName 'O.R.B.I.T.' `
         -Subtitle   "${orgPrefix}Microsoft Intune / MDM Compliance Audit -- $tenantDisplay" `
         -MetaItems  ([ordered]@{
             'Generated'    = $reportDate
@@ -501,7 +501,7 @@ function Build-HtmlReport {
         }) `
         -NavItems   @('Devices', 'Stale Devices', 'Configuration Profiles')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'G.O.L.E.M. v3.6'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'O.R.B.I.T. v3.6'
 
     $html = $htmlHead + @"
 
@@ -573,7 +573,7 @@ function Export-HtmlReport {
 
     $html      = Build-HtmlReport -Devices $Devices -Compliance $Compliance -Stale $Stale -Profiles $Profiles
     $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-    $outPath   = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "GOLEM_${timestamp}.html"
+    $outPath   = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) "ORBIT_${timestamp}.html"
 
     try {
         $html | Out-File -FilePath $outPath -Encoding UTF8 -Force
@@ -588,7 +588,7 @@ function Export-HtmlReport {
 # ─────────────────────────────────────────────────────────────────────────────
 
 function Show-Menu {
-    Show-GolemBanner
+    Show-OrbitBanner
 
     $connStatus = if ($script:Connected) { "  Connected as : $($script:ConnectedAs)" } else { "  Not Connected — select option 1 to authenticate" }
     $connColor  = if ($script:Connected) { $C.Success } else { $C.Warning }
@@ -622,7 +622,7 @@ function Assert-Connected {
 # ENTRY POINT
 # ─────────────────────────────────────────────────────────────────────────────
 
-Show-GolemBanner
+Show-OrbitBanner
 Install-GraphModule
 
 if (Test-GraphConnection) {

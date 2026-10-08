@@ -1,4 +1,4 @@
-﻿# crypt.ps1 - C.R.Y.P.T. — Controls Recovery keYs & Protects Tomes
+﻿# wyrm.ps1 - W.Y.R.M. — Whole-drive encrYption & Recovery Manager
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -20,7 +20,7 @@
 
 <#
 .SYNOPSIS
-    C.R.Y.P.T. — Controls Recovery keYs & Protects Tomes
+    W.Y.R.M. — Whole-drive encrYption & Recovery Manager
     BitLocker Drive Encryption Tool for PowerShell 5.1+
 
 .DESCRIPTION
@@ -38,15 +38,15 @@
     system drive, recovery password + auto-unlock on any other drive.
 
 .USAGE
-    PS C:\> .\crypt.ps1                                           # Must be run as Administrator
-    PS C:\> .\crypt.ps1 -WhatIf                                   # Preview actions without making changes
-    PS C:\> .\crypt.ps1 -Unattended -Action Status                # Show drive status and exit
-    PS C:\> .\crypt.ps1 -Unattended -Action Enable -Drive C       # Encrypt C: (TPM + recovery password)
-    PS C:\> .\crypt.ps1 -Unattended -Action Disable -Drive C      # Decrypt C:
-    PS C:\> .\crypt.ps1 -Unattended -Action Suspend -Drive C      # Suspend BitLocker on C: for one reboot
-    PS C:\> .\crypt.ps1 -Unattended -Action BackupAD -Drive C     # Backup recovery key to AD
-    PS C:\> .\crypt.ps1 -Unattended -Action Export                # Export status + recovery keys to HTML
-    PS C:\> .\crypt.ps1 -Unattended -Action Export -OutputPath D:\Reports
+    PS C:\> .\wyrm.ps1                                           # Must be run as Administrator
+    PS C:\> .\wyrm.ps1 -WhatIf                                   # Preview actions without making changes
+    PS C:\> .\wyrm.ps1 -Unattended -Action Status                # Show drive status and exit
+    PS C:\> .\wyrm.ps1 -Unattended -Action Enable -Drive C       # Encrypt C: (TPM + recovery password)
+    PS C:\> .\wyrm.ps1 -Unattended -Action Disable -Drive C      # Decrypt C:
+    PS C:\> .\wyrm.ps1 -Unattended -Action Suspend -Drive C      # Suspend BitLocker on C: for one reboot
+    PS C:\> .\wyrm.ps1 -Unattended -Action BackupAD -Drive C     # Backup recovery key to AD
+    PS C:\> .\wyrm.ps1 -Unattended -Action Export                # Export status + recovery keys to HTML
+    PS C:\> .\wyrm.ps1 -Unattended -Action Export -OutputPath D:\Reports
 
 .NOTES
     Version : 5.1
@@ -151,14 +151,14 @@ function Invoke-ManageBde {
         if ("$line".Trim()) { Write-Host "      $line" -ForegroundColor $ColorSchema.Info }
     }
     if ($exit -ne 0) {
-        Write-TKError -ScriptName 'crypt' -Message "manage-bde $($Arguments -join ' ') exited $exit" -Category 'BitLocker'
+        Write-TKError -ScriptName 'wyrm' -Message "manage-bde $($Arguments -join ' ') exited $exit" -Category 'BitLocker'
     }
     return ($exit -eq 0)
 }
 
 # Returns one object per lettered volume: MountPoint, Status, Protection,
 # Percent and Protectors (Id / Type / RecoveryPassword).
-function Get-CryptVolume {
+function Get-WyrmVolume {
     param([string]$MountPoint)
 
     $volumes = Get-CimInstance -Namespace $BdeNamespace -ClassName Win32_EncryptableVolume -ErrorAction Stop |
@@ -194,7 +194,7 @@ function Get-CryptVolume {
 # Returns the volume for one drive, or $null after saying why.
 function Get-TargetVolume {
     param([Parameter(Mandatory)][string]$MountPoint)
-    $vol = Get-CryptVolume -MountPoint $MountPoint | Select-Object -First 1
+    $vol = Get-WyrmVolume -MountPoint $MountPoint | Select-Object -First 1
     if (-not $vol) { Write-Fail "Drive $MountPoint was not found, or BitLocker cannot manage it." }
     return $vol
 }
@@ -205,7 +205,7 @@ function Get-TargetVolume {
 
 function Show-DriveStatus {
     Write-Section 'DRIVE ENCRYPTION STATUS'
-    foreach ($vol in Get-CryptVolume) {
+    foreach ($vol in Get-WyrmVolume) {
         $statusColor = switch ($vol.Status) {
             'FullyEncrypted' { $ColorSchema.Success }
             'FullyDecrypted' { $ColorSchema.Warning }
@@ -386,11 +386,11 @@ function Export-EncryptionReport {
         return
     }
 
-    $volumes = @(Get-CryptVolume)
+    $volumes = @(Get-WyrmVolume)
 
     $reportDir = if ($OutputPath) { $OutputPath } else { Resolve-LogDirectory -FallbackPath $PSScriptRoot }
     if (-not (Test-Path $reportDir)) { New-Item -ItemType Directory -Path $reportDir -Force | Out-Null }
-    $reportPath = Join-Path $reportDir "CRYPT_Report_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
+    $reportPath = Join-Path $reportDir "WYRM_Report_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
 
     $cfg      = Get-TKConfig
     $subtitle = if ($cfg.OrgName) { "$($cfg.OrgName) — $env:COMPUTERNAME" } else { $env:COMPUTERNAME }
@@ -407,7 +407,7 @@ function Export-EncryptionReport {
     }
     if (-not $keyRows) { $keyRows = "<tr><td colspan='3'>No recovery passwords on any drive.</td></tr>" }
 
-    $html  = Get-TKHtmlHead -Title 'BitLocker Encryption Report' -ScriptName 'C.R.Y.P.T.' `
+    $html  = Get-TKHtmlHead -Title 'BitLocker Encryption Report' -ScriptName 'W.Y.R.M.' `
                  -Subtitle $subtitle `
                  -MetaItems ([ordered]@{
                      'Generated' = (Get-Date -Format 'yyyy-MM-dd HH:mm')
@@ -436,14 +436,14 @@ function Export-EncryptionReport {
   </div>
 </div>
 "@
-    $html += Get-TKHtmlFoot -ScriptName 'C.R.Y.P.T. v5.1'
+    $html += Get-TKHtmlFoot -ScriptName 'W.Y.R.M. v5.1'
 
     $html | Out-File -FilePath $reportPath -Encoding UTF8
     Show-TKReportResult -Path $reportPath -Unattended:$Unattended
 }
 
 # Runs one action against one drive. Shared by the unattended path and the menu.
-function Invoke-CryptAction {
+function Invoke-WyrmAction {
     param([Parameter(Mandatory)][string]$Name, [string]$MountPoint)
     switch ($Name) {
         'Status'        { Show-DriveStatus }
@@ -467,7 +467,7 @@ $DefaultMount = "$($Drive.ToUpper().TrimEnd(':')):"
 try {
     if ($Unattended) {
         if ($WhatIf) { Write-Host "  [~] DRY RUN - no changes will be made." -ForegroundColor Cyan }
-        Invoke-CryptAction -Name $Action -MountPoint $DefaultMount
+        Invoke-WyrmAction -Name $Action -MountPoint $DefaultMount
     } else {
         $menu = [ordered]@{
             '1' = @('Enable',        'Enable BitLocker')
@@ -484,7 +484,7 @@ try {
         while ($true) {
             Clear-Host
             Write-Host ""
-            Write-Host "  C.R.Y.P.T. — Controls Recovery keYs & Protects Tomes" -ForegroundColor $ColorSchema.Header
+            Write-Host "  W.Y.R.M. — Whole-drive encrYption & Recovery Manager" -ForegroundColor $ColorSchema.Header
             if ($WhatIf) { Write-Host "  [~] DRY RUN - no changes will be made." -ForegroundColor Cyan }
             Show-DriveStatus
 
@@ -503,7 +503,7 @@ try {
             }
             $confirmed = $WhatIf -or ($name -notin $destructive) -or
                          ((Read-Host "  $name BitLocker on $mount? (Y/N)").Trim().ToUpper() -eq 'Y')
-            if ($confirmed) { Invoke-CryptAction -Name $name -MountPoint $mount }
+            if ($confirmed) { Invoke-WyrmAction -Name $name -MountPoint $mount }
 
             Write-Host ""
             Read-Host '  Press Enter to return to the menu' | Out-Null
@@ -512,7 +512,7 @@ try {
 } catch {
     Write-Fail "BitLocker could not be read: $($_.Exception.Message)"
     Write-Info 'BitLocker needs a Pro, Enterprise or Education edition of Windows.'
-    Write-TKError -ScriptName 'crypt' -Message $_.Exception.Message -Category 'BitLocker'
+    Write-TKError -ScriptName 'wyrm' -Message $_.Exception.Message -Category 'BitLocker'
 }
 
 if ($Transcript) { Stop-TKTranscript }

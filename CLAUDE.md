@@ -96,7 +96,7 @@ let the script continue until it hit an undefined function like `Get-TKHtmlHead`
 `Invoke-AdminElevation` re-launches the script as Administrator if not already elevated.
 Scripts that use `Assert-AdminPrivilege` instead will error-exit if not elevated rather
 than auto-relaunching — this is appropriate for scripts called programmatically (REVENANT,
-HEARTH, ARCHIVE).
+HEARTH, EMBALM).
 
 ## Module Exports
 
@@ -164,19 +164,19 @@ repo-wide gates — PowerShell syntax validation and UTF-8 BOM on every script, 
 compliance, param block compliance (`-Unattended`, and `-WhatIf` on the destructive set),
 GRIMOIRE registry integrity, license-header compliance (GPL notice and SPDX tag present and
 correctly positioned in every source file), LICENSE integrity, retired tool names and filename
-prefixes, removed deprecation stubs, no locally redefined shared helpers, and the PALADIN /
+prefixes, removed deprecation stubs, no locally redefined shared helpers, and the GRIFFIN /
 WISP / PORTAL / CONJURE tier-mapper data tables (extracted by AST lookup rather than
 dot-sourcing, since the tools launch their main flow on import). The same AST extraction covers
 the pure helpers of NECROPSY (bugcheck and dump-header parsing), RAVEN (inbox-rule, SPF and
-DMARC scoring), WARD (LAPS policy precedence), PALADIN (platform-protection verdict), RAMPART
-(Conditional Access predicates and emergency-access exclusion), OATH (`nltest` / `w32tm`
-parsers, Netlogon status table) and CATACOMB (rights-mask and SID classification); the
+DMARC scoring), WARD (LAPS policy precedence), GRIFFIN (platform-protection verdict), HALO
+(Conditional Access predicates and emergency-access exclusion), LODESTAR (`nltest` / `w32tm`
+parsers, Netlogon status table) and MINOTAUR (rights-mask and SID classification); the
 root `BeforeAll` provides `Get-ToolAst` / `Get-ToolAssignmentValue` / `Get-ToolFunctionText` for
 that. CARILLON's queue-issue, name and routing-target helpers, TORPOR's process / disk
-usage arithmetic and power-plan parsing, SUTURE's DISM / CBS.log / SFC parsers and
+usage arithmetic and power-plan parsing, SOLDER's DISM / CBS.log / SFC parsers and
 servicing error-code table, and CHALICE's product-family, support-date, channel,
 `dsregcmd` and `cmdkey` parsers, are covered the same way.
-A finding catalog (CONDUIT, SUTURE, NECROPSY, TORPOR, RAVEN, RAMPART, CARILLON, CHALICE, OATH, CATACOMB) is tested against the codes its script
+A finding catalog (CONDUIT, SOLDER, NECROPSY, TORPOR, RAVEN, HALO, CARILLON, CHALICE, LODESTAR, MINOTAUR) is tested against the codes its script
 actually raises, so a new `Add-*Finding -Code` without a catalog entry fails CI.
 
 ### Verifying on Linux / in an agent sandbox
@@ -240,8 +240,8 @@ $ColorSchema = @{
 
 - All interactive tools expose `[switch]$Unattended` — skips prompts, runs defaults.
 - Destructive or state-changing tools also expose `[switch]$WhatIf` — previews actions without
-  executing them. The current set is REVENANT, ARCHIVE, COVENANT, SIGIL, CLEANSE, CRYPT, FORGE,
-  RESTORATION, RUNEPRESS, CONJURE, CONDUIT, SUTURE, OATH, and CHALICE. GRIMOIRE auto-detects and passes `-WhatIf` to any tool that
+  executing them. The current set is REVENANT, EMBALM, COVENANT, BASILISK, CLEANSE, WYRM, FORGE,
+  WHETSTONE, RUNEPRESS, CONJURE, CONDUIT, SOLDER, LODESTAR, and CHALICE. GRIMOIRE auto-detects and passes `-WhatIf` to any tool that
   declares it, and the Pester suite (`'-WhatIf declared on destructive tools'`) enforces the list.
 - Tools that write logs expose `[switch]$Transcript`.
 
@@ -349,21 +349,21 @@ The xUnit suite covers all three plus the extractor. Run it after touching anyth
 
 ## Tool Distinctions
 
-### CONDUIT vs RESTORATION
+### CONDUIT vs WHETSTONE
 
 Both are Windows Update tools; they sit on opposite sides of the connect/deploy divide.
 
 | Question | Reach for |
 |----------|-----------|
 | "Windows Update says it couldn't connect to the update service." | **CONDUIT** (repairs the client's plumbing: WSUS pointer, WinHTTP proxy, blocking policies, time service, update services) |
-| "The client works — go install the updates." | **RESTORATION** (deploys updates via PSWindowsUpdate, handles power settings and reboots) |
+| "The client works — go install the updates." | **WHETSTONE** (deploys updates via PSWindowsUpdate, handles power settings and reboots) |
 
-CONDUIT is RESTORATION's precondition. RESTORATION assumes the update client can reach *a*
+CONDUIT is WHETSTONE's precondition. WHETSTONE assumes the update client can reach *a*
 service and fails opaquely when it cannot; CONDUIT answers why. They compose in that order —
-CONDUIT until its verdict is Healthy, then RESTORATION.
+CONDUIT until its verdict is Healthy, then WHETSTONE.
 
 The split matters for scope: CONDUIT never installs an update and never touches
-`PSWindowsUpdate`, and RESTORATION never edits the WindowsUpdate policy key. Neither tool
+`PSWindowsUpdate`, and WHETSTONE never edits the WindowsUpdate policy key. Neither tool
 should grow into the other's half.
 
 CONDUIT also declines to auto-fix two policy values it reports —
@@ -372,39 +372,39 @@ deliberate administrative decisions often pushed by domain GPO, so silently clea
 would fight Group Policy and mask the real configuration. They are reported with the remedy
 and left to the technician.
 
-### SUTURE — the third Windows Update tool
+### SOLDER — the third Windows Update tool
 
 | Question | Reach for |
 |----------|-----------|
-| "Updates fail with 0x800f081f / 0x80073712, a feature won't install, or system files are damaged." | **SUTURE** (component store and system files: DISM CheckHealth / RestoreHealth, SFC, CBS.log, failure codes decoded) |
+| "Updates fail with 0x800f081f / 0x80073712, a feature won't install, or system files are damaged." | **SOLDER** (component store and system files: DISM CheckHealth / RestoreHealth, SFC, CBS.log, failure codes decoded) |
 
-The three compose as CONDUIT (can the client connect?) → SUTURE (is the store it installs into
-sound?) → RESTORATION (install). SUTURE classes each recent update failure code as *Store* (its
+The three compose as CONDUIT (can the client connect?) → SOLDER (is the store it installs into
+sound?) → WHETSTONE (install). SOLDER classes each recent update failure code as *Store* (its
 own), *Client* (CONDUIT's) or something else, so a technician knows which tool to reach for.
 
-SUTURE never edits the WindowsUpdate policy key, never renames SoftwareDistribution / catroot2
+SOLDER never edits the WindowsUpdate policy key, never renames SoftwareDistribution / catroot2
 (CONDUIT's `ResetCache`), and never runs `DISM /ResetBase` — that one is irreversible, removing
 the ability to uninstall updates, and is left to a deliberate manual decision.
 
-### NECROPSY vs GARGOYLE
+### NECROPSY vs VIGIL
 
 Both read the event log, but for different questions.
 
 | Question | Reach for |
 |----------|-----------|
 | "Why does this machine keep crashing, blue-screening or rebooting?" | **NECROPSY** (bugchecks, Kernel-Power 41, WHEA, TDR, dump files — one incident per unplanned stop) |
-| "Are the services and scheduled tasks healthy, and what errors is the log throwing?" | **GARGOYLE** (service / task state and recent event-log errors in general) |
+| "Are the services and scheduled tasks healthy, and what errors is the log throwing?" | **VIGIL** (service / task state and recent event-log errors in general) |
 
 NECROPSY is read-only and stops at the bugcheck code and parameters. Walking the stack to name
 the faulting driver is a debugger's job (WinDbg `!analyze -v`), and it should not grow a parser
 for that.
 
-### CHALICE vs RELIQUARY vs RAVEN
+### CHALICE vs ALMANAC vs RAVEN
 
 | Question | Reach for |
 |----------|-----------|
 | "Office says Unlicensed Product / keeps asking for my password / Teams won't sign in — on this machine." | **CHALICE** (the Microsoft 365 Apps client: install, activation tokens, cached accounts, WAM, PRT, Teams cache) |
-| "Is this user actually licensed?" | **RELIQUARY** (tenant side) |
+| "Is this user actually licensed?" | **ALMANAC** (tenant side) |
 | "Is the mailbox itself compromised or misconfigured?" | **RAVEN** |
 
 CHALICE is the one tool that deliberately runs **without elevating**: Office's identities, license
@@ -425,66 +425,66 @@ gate function, even in a comment.
 TORPOR lists startup programs for their *cost*, not their safety, and is read-only — it names
 what to stop or upgrade but never ends a process or disables a startup entry.
 
-### RAVEN vs RELIQUARY vs TENDRIL
+### RAVEN vs ALMANAC vs ORRERY
 
 All three touch Exchange Online or Microsoft 365, at different layers.
 
 | Question | Reach for |
 |----------|-----------|
 | "Is anyone's mailbox forwarding out, hiding mail, or otherwise showing signs of compromise? Is SPF / DKIM / DMARC right?" | **RAVEN** (Exchange Online, read-only) |
-| "Who is licensed, who is unlicensed, who has MFA registered?" | **RELIQUARY** (Microsoft Graph) |
-| "What breaks if I delete this group?" — including its Exchange transport rules and delegations | **TENDRIL** |
+| "Who is licensed, who is unlicensed, who has MFA registered?" | **ALMANAC** (Microsoft Graph) |
+| "What breaks if I delete this group?" — including its Exchange transport rules and delegations | **ORRERY** |
 
-### OATH vs LEYLINE vs STEWARD
+### LODESTAR vs LEYLINE vs SPHINX
 
 | Question | Reach for |
 |----------|-----------|
 | "This machine can't reach `<host>`." | **LEYLINE** (general network diagnostics and stack resets) |
-| "The trust relationship with the domain failed" / domain logons fail on one machine | **OATH** (DC discovery, domain DNS, Kerberos time, secure channel; repairs the trust from the client side) |
-| "Reset this user's password / unlock this account." | **STEWARD** (changes the directory) |
+| "The trust relationship with the domain failed" / domain logons fail on one machine | **LODESTAR** (DC discovery, domain DNS, Kerberos time, secure channel; repairs the trust from the client side) |
+| "Reset this user's password / unlock this account." | **SPHINX** (changes the directory) |
 
-OATH repairs from the member machine and never edits Active Directory, never changes DNS
+LODESTAR repairs from the member machine and never edits Active Directory, never changes DNS
 settings, and never unjoins or rejoins — a deleted computer account is reported with the
 rejoin steps. The machine-password reset is interactive only, because it needs domain
 credentials typed by the technician.
 
-### CATACOMB vs HERALD vs WARD
+### MINOTAUR vs ARGUS vs WARD
 
 All three are access reviews; they differ in what is being accessed.
 
 | Question | Reach for |
 |----------|-----------|
-| "Who can get into this file share, and can everyone write to it?" | **CATACOMB** (SMB share + NTFS permissions, HTML + CSV) |
-| "Who holds privilege in the domain?" | **HERALD** |
+| "Who can get into this file share, and can everyone write to it?" | **MINOTAUR** (SMB share + NTFS permissions, HTML + CSV) |
+| "Who holds privilege in the domain?" | **ARGUS** |
 | "Who can administer this machine?" | **WARD** |
 
-### CARILLON vs CONCLAVE
+### CARILLON vs ASTERISM
 
 | Question | Reach for |
 |----------|-----------|
 | "Who answers the Sales line? Why does the main number ring nobody after hours?" | **CARILLON** (Teams Phone call queues, agents by name, auto attendant menus, resource accounts) |
-| "Which teams are orphaned, public, or full of guests?" | **CONCLAVE** (the Teams / M365 group estate) |
+| "Which teams are orphaned, public, or full of guests?" | **ASTERISM** (the Teams / M365 group estate) |
 
 CARILLON is read-only. It reports agent membership and routing but never adds or removes agents
 or edits a queue — changing who takes calls is a Teams admin center task.
 
-### RAMPART vs WRAITH
+### HALO vs ECLIPSE
 
 | Question | Reach for |
 |----------|-----------|
-| "Which identities are risky — guests, stale admins, password-never-expires?" | **WRAITH** |
-| "Do the Conditional Access policies actually enforce MFA and block legacy auth, and is there a break-glass path?" | **RAMPART** |
+| "Which identities are risky — guests, stale admins, password-never-expires?" | **ECLIPSE** |
+| "Do the Conditional Access policies actually enforce MFA and block legacy auth, and is there a break-glass path?" | **HALO** |
 
-### HOARD vs AUGUR
+### FATHOM vs AUGUR
 
 Both tools deal with disk health but cover different layers:
 
 | Tool | Focus |
 |------|-------|
-| **H.O.A.R.D.** | Volume space monitoring — used/free space, low-space alerts, temp cleanup, old profile detection |
+| **F.A.T.H.O.M.** | Volume space monitoring — used/free space, low-space alerts, temp cleanup, old profile detection |
 | **A.U.G.U.R.** | Physical hardware health — SMART status, wear prediction, failure forecasting, bus/media type |
 
-Run HOARD for "is this drive running out of space?"; run AUGUR for "is this drive about to die?".
+Run FATHOM for "is this drive running out of space?"; run AUGUR for "is this drive about to die?".
 
 ### SCRYER vs the single-domain diagnostic tools
 
@@ -493,7 +493,7 @@ S.C.R.Y.E.R. (`scryer.ps1`) is a one-shot consolidated report that rolls five di
 | Question | Reach for |
 |----------|-----------|
 | "Give me one file summarising this machine." | **SCRYER** |
-| Deep dive on any one of: system health, users, free space, disk reliability, services | AUSPEX / WARD / HOARD / AUGUR / GARGOYLE respectively |
+| Deep dive on any one of: system health, users, free space, disk reliability, services | AUSPEX / WARD / FATHOM / AUGUR / VIGIL respectively |
 
 SCRYER's per-section depth is intentionally shallower than the dedicated tools — it samples each domain rather than reproducing the full report.
 
@@ -508,46 +508,46 @@ Both tools produce a rollup HTML that links out to other tool reports — they a
 
 RITUAL produces a record *of an execution* — step status, durations, errors. CODEX produces a record *of a directory* — what reports exist, when, and how big they are. Use RITUAL when you control the run; use CODEX when the reports already exist.
 
-### PALADIN vs SIGIL
+### GRIFFIN vs BASILISK
 
 Both touch Microsoft Defender, but they sit on opposite sides of the audit/enforce divide.
 
 | Question | Reach for |
 |----------|-----------|
-| "Show me the current AV state, signatures, threats, exclusions, and ASR posture — I just want to read it." | **PALADIN** (read-only audit; never writes) |
-| "Bring this machine into line with our security baseline — set the registry, enable the firewall rules, configure audit policy." | **SIGIL** (state-changing enforcement; supports `-WhatIf`) |
+| "Show me the current AV state, signatures, threats, exclusions, and ASR posture — I just want to read it." | **GRIFFIN** (read-only audit; never writes) |
+| "Bring this machine into line with our security baseline — set the registry, enable the firewall rules, configure audit policy." | **BASILISK** (state-changing enforcement; supports `-WhatIf`) |
 
-PALADIN is the diagnostic tool you run to decide whether enforcement is needed; SIGIL is the tool that does the enforcing. They compose: SIGIL hardens the machine, PALADIN later confirms the AV side held.
+GRIFFIN is the diagnostic tool you run to decide whether enforcement is needed; BASILISK is the tool that does the enforcing. They compose: BASILISK hardens the machine, GRIFFIN later confirms the AV side held.
 
-### STEWARD vs HERALD
+### SPHINX vs ARGUS
 
 Both are Active Directory tools; they sit on opposite sides of the act/report divide.
 
 | Question | Reach for |
 |----------|-----------|
-| "Unlock this account / reset this password / add them to a group." | **STEWARD** (interactive AD management — it changes the directory) |
-| "Give the customer a list of every account and what each one can do." | **HERALD** (read-only roster: full name / alias / access level, plus a review CSV) |
-| "What are the password and lockout rules on this domain?" | **HERALD** (reads and scores the default domain policy and any fine-grained policies; SIGIL *sets* local policy but never reports domain policy) |
+| "Unlock this account / reset this password / add them to a group." | **SPHINX** (interactive AD management — it changes the directory) |
+| "Give the customer a list of every account and what each one can do." | **ARGUS** (read-only roster: full name / alias / access level, plus a review CSV) |
+| "What are the password and lockout rules on this domain?" | **ARGUS** (reads and scores the default domain policy and any fine-grained policies; BASILISK *sets* local policy but never reports domain policy) |
 
-STEWARD's reports (stale accounts, password expiry) answer *account hygiene* questions about the
-directory. HERALD answers an *access review* question — who holds privilege, and through which
-groups. HERALD never writes to AD.
+SPHINX's reports (stale accounts, password expiry) answer *account hygiene* questions about the
+directory. ARGUS answers an *access review* question — who holds privilege, and through which
+groups. ARGUS never writes to AD.
 
-Where they overlap on inactivity: STEWARD's stale report is the standalone "who hasn't logged in"
-export; HERALD folds the same signal in as one review flag among several, in the context of the
+Where they overlap on inactivity: SPHINX's stale report is the standalone "who hasn't logged in"
+export; ARGUS folds the same signal in as one review flag among several, in the context of the
 account's access level (an inactive Domain Admin ranks differently from an inactive standard user).
 
-### HERALD vs WARD
+### ARGUS vs WARD
 
 Both produce an account roster with a Role column, at different scopes.
 
 | Question | Reach for |
 |----------|-----------|
 | "Who can administer *this machine*?" | **WARD** (local SAM accounts + local Administrators group, one machine) |
-| "Who can administer *the domain*?" | **HERALD** (AD user objects + privileged domain groups, whole directory) |
+| "Who can administer *the domain*?" | **ARGUS** (AD user objects + privileged domain groups, whole directory) |
 
-WARD runs on any Windows machine, domain-joined or not. HERALD requires a domain and RSAT.
-Neither subsumes the other: a local administrator on a workstation does not appear in HERALD,
+WARD runs on any Windows machine, domain-joined or not. ARGUS requires a domain and RSAT.
+Neither subsumes the other: a local administrator on a workstation does not appear in ARGUS,
 and a Domain Admin does not appear in WARD unless they also hold a local account.
 
 ### WISP vs LANTERN

@@ -33,19 +33,19 @@
 
     Built-in recipes:
       Onboard       -- New machine bring-up:
-                       COVENANT -> SIGIL -> CONJURE -> CRYPT -> AUSPEX -> ARTIFACT
+                       COVENANT -> BASILISK -> CONJURE -> WYRM -> AUSPEX -> PHOENIX
       Retire        -- Pre-reimage / pre-disposal:
-                       TETHER -> EXHUME -> ARCHIVE -> CLEANSE
+                       PHYLACTERY -> EXHUME -> EMBALM -> CLEANSE
       HealthCheck   -- Quarterly machine review:
-                       AUSPEX -> WARD -> HOARD -> AUGUR -> GARGOYLE -> ARTIFACT -> PALADIN
-                       -> NECROPSY -> TORPOR -> SUTURE (audit only)
+                       AUSPEX -> WARD -> FATHOM -> AUGUR -> VIGIL -> PHOENIX -> GRIFFIN
+                       -> NECROPSY -> TORPOR -> SOLDER (audit only)
       SecuritySweep -- Endpoint security posture (read-only):
-                       SIGIL -> TALON -> TOTEM -> PALADIN -> ARTIFACT
+                       BASILISK -> TALON -> TOTEM -> GRIFFIN -> PHOENIX
       NetworkSweep  -- Endpoint network posture (read-only):
-                       LEYLINE -> LANTERN -> WISP -> PORTAL -> OATH
+                       LEYLINE -> LANTERN -> WISP -> PORTAL -> LODESTAR
       TenantSweep   -- Cloud tenant posture (nine reports):
-                       TALISMAN -> RELIQUARY -> GOLEM -> WRAITH -> CONCLAVE -> GROVE
-                       -> RAVEN -> RAMPART -> CARILLON
+                       ZENITH -> ALMANAC -> ORBIT -> ECLIPSE -> ASTERISM -> CUMULUS
+                       -> RAVEN -> HALO -> CARILLON
 
 .USAGE
     PS C:\> .\ritual.ps1                                    # Interactive menu
@@ -143,20 +143,20 @@ $script:BuiltInRecipes = @{
         Description = 'New-machine bring-up: identity, hardening, software, encryption, diagnostics, certificates.'
         Steps       = @(
             @{ Label = 'Machine onboarding';        Tool = 'covenant.ps1';   Args = @('-Unattended'); StopOnError = $true  }
-            @{ Label = 'Security baseline';         Tool = 'sigil.ps1';      Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Security baseline';         Tool = 'basilisk.ps1';      Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Core software install';     Tool = 'conjure.ps1';    Args = @('-Unattended'); StopOnError = $false }
-            @{ Label = 'BitLocker enable';          Tool = 'crypt.ps1';     Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'BitLocker enable';          Tool = 'wyrm.ps1';     Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'System diagnostics';        Tool = 'auspex.ps1';     Args = @('-Unattended'); StopOnError = $false }
-            @{ Label = 'Certificate health';        Tool = 'artifact.ps1';   Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Certificate health';        Tool = 'phoenix.ps1';   Args = @('-Unattended'); StopOnError = $false }
         )
     }
     'Retire' = @{
         Name        = 'Pre-Reimage / Disposal'
         Description = 'Pre-reimage workflow: validate cloud data before local cleanup.'
         Steps       = @(
-            @{ Label = 'OneDrive KFM validator';    Tool = 'tether.ps1';  Args = @('-Unattended'); StopOnError = $true  }
+            @{ Label = 'OneDrive KFM validator';    Tool = 'phylactery.ps1';  Args = @('-Unattended'); StopOnError = $true  }
             @{ Label = 'Outlook PST discovery';     Tool = 'exhume.ps1';  Args = @('-Unattended'); StopOnError = $true  }
-            @{ Label = 'Profile backup (ZIP)';      Tool = 'archive.ps1'; Args = @('-Unattended'); StopOnError = $true  }
+            @{ Label = 'Profile backup (ZIP)';      Tool = 'embalm.ps1'; Args = @('-Unattended'); StopOnError = $true  }
             @{ Label = 'Temp / cache cleanup';      Tool = 'cleanse.ps1'; Args = @('-Unattended'); StopOnError = $false }
         )
     }
@@ -166,25 +166,25 @@ $script:BuiltInRecipes = @{
         Steps       = @(
             @{ Label = 'System diagnostics';        Tool = 'auspex.ps1';    Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Account audit';             Tool = 'ward.ps1';      Args = @('-Unattended'); StopOnError = $false }
-            @{ Label = 'Disk space';                Tool = 'hoard.ps1'; Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Disk space';                Tool = 'fathom.ps1'; Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Disk hardware (SMART)';     Tool = 'augur.ps1';     Args = @('-Unattended'); StopOnError = $false }
-            @{ Label = 'Services & tasks';          Tool = 'gargoyle.ps1';  Args = @('-Unattended'); StopOnError = $false }
-            @{ Label = 'Certificate health';        Tool = 'artifact.ps1';  Args = @('-Unattended'); StopOnError = $false }
-            @{ Label = 'AV / Defender health';      Tool = 'paladin.ps1';   Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Services & tasks';          Tool = 'vigil.ps1';  Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Certificate health';        Tool = 'phoenix.ps1';  Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'AV / Defender health';      Tool = 'griffin.ps1';   Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Crash & reboot history';    Tool = 'necropsy.ps1';  Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Performance triage';        Tool = 'torpor.ps1';    Args = @('-Unattended'); StopOnError = $false }
-            @{ Label = 'Windows servicing health';  Tool = 'suture.ps1';    Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Windows servicing health';  Tool = 'solder.ps1';    Args = @('-Unattended'); StopOnError = $false }
         )
     }
     'SecuritySweep' = @{
         Name        = 'Endpoint Security Posture'
         Description = 'Read-only security posture sweep: baseline, persistence, TPM, AV/Defender, certificates.'
         Steps       = @(
-            @{ Label = 'Security baseline drift';   Tool = 'sigil.ps1';     Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Security baseline drift';   Tool = 'basilisk.ps1';     Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Persistence / autoruns';    Tool = 'talon.ps1';     Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'TPM health';                Tool = 'totem.ps1';     Args = @('-Unattended'); StopOnError = $false }
-            @{ Label = 'AV / Defender health';      Tool = 'paladin.ps1';   Args = @('-Unattended'); StopOnError = $false }
-            @{ Label = 'Certificate health';        Tool = 'artifact.ps1';  Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'AV / Defender health';      Tool = 'griffin.ps1';   Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Certificate health';        Tool = 'phoenix.ps1';  Args = @('-Unattended'); StopOnError = $false }
         )
     }
     'NetworkSweep' = @{
@@ -195,21 +195,21 @@ $script:BuiltInRecipes = @{
             @{ Label = 'LAN discovery';             Tool = 'lantern.ps1';   Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Wi-Fi profile audit';       Tool = 'wisp.ps1';    Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'VPN / Always-On audit';     Tool = 'portal.ps1';    Args = @('-Unattended'); StopOnError = $false }
-            @{ Label = 'Domain trust';              Tool = 'oath.ps1';      Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Domain trust';              Tool = 'lodestar.ps1';      Args = @('-Unattended'); StopOnError = $false }
         )
     }
     'TenantSweep' = @{
         Name        = 'Cloud Tenant Posture'
         Description = 'Full tenant posture in one sign-in sequence: Azure, M365 licensing, Intune, Entra ID hygiene, Teams, SharePoint, Exchange Online, Conditional Access, Teams Phone call queues and auto attendants.'
         Steps       = @(
-            @{ Label = 'Azure assessment';          Tool = 'talisman.ps1';  Args = @('-Unattended'); StopOnError = $false }
-            @{ Label = 'M365 license audit';        Tool = 'reliquary.ps1'; Args = @('-Unattended'); StopOnError = $false }
-            @{ Label = 'Intune / MDM compliance';   Tool = 'golem.ps1';     Args = @('-Unattended'); StopOnError = $false }
-            @{ Label = 'Entra ID identity hygiene'; Tool = 'wraith.ps1';    Args = @('-Unattended'); StopOnError = $false }
-            @{ Label = 'Microsoft Teams audit';     Tool = 'conclave.ps1';  Args = @('-Unattended'); StopOnError = $false }
-            @{ Label = 'SharePoint Online audit';   Tool = 'grove.ps1';     Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Azure assessment';          Tool = 'zenith.ps1';  Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'M365 license audit';        Tool = 'almanac.ps1'; Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Intune / MDM compliance';   Tool = 'orbit.ps1';     Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Entra ID identity hygiene'; Tool = 'eclipse.ps1';    Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Microsoft Teams audit';     Tool = 'asterism.ps1';  Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'SharePoint Online audit';   Tool = 'cumulus.ps1';     Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Exchange Online security';  Tool = 'raven.ps1';     Args = @('-Unattended'); StopOnError = $false }
-            @{ Label = 'Conditional Access posture'; Tool = 'rampart.ps1';  Args = @('-Unattended'); StopOnError = $false }
+            @{ Label = 'Conditional Access posture'; Tool = 'halo.ps1';  Args = @('-Unattended'); StopOnError = $false }
             @{ Label = 'Teams Phone queues & attendants'; Tool = 'carillon.ps1'; Args = @('-Unattended'); StopOnError = $false }
         )
     }
