@@ -8,6 +8,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **RITUAL's `HealthCheck` recipe now ends with TORPOR and SUTURE.** TORPOR adds a 30-second
+  load sample and SUTURE its read-only servicing audit (`-Action` stays at the default `Audit`, so
+  the recipe still changes nothing on the machine).
 - **C.H.A.L.I.C.E. (`chalice.ps1`) — Microsoft 365 Apps client diagnosis and repair.** Registered
   at key 70 under Cloud & Identity (40–49 is full). The suite audited the tenant but had nothing for
   the client-side tickets: "Outlook keeps asking for my password", "Unlicensed Product", "Teams
