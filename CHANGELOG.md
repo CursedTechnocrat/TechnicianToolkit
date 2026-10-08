@@ -21,6 +21,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     `sfc /scannow`, then re-checks the store; `-Cleanup` adds `/StartComponentCleanup`. Stops for a
     pending servicing restart, skips SFC when RestoreHealth fails, never runs `/ResetBase`, never
     edits Windows Update policy or the update cache (CONDUIT's job). Supports `-WhatIf`.
+- **T.O.R.P.O.R. (`torpor.ps1`) — slow-machine triage.** Registered at key 61 under Diagnostics &
+  Reporting. Answers "why is this PC slow?", which nothing in the suite measured: it samples the
+  machine for 30 seconds (`-SampleSeconds 5-300`) while the slowness is happening and reports:
+  - **Load:** CPU average and peak, processor queue length, the `% Performance Limit` counter
+    (power plan, battery saver or thermal throttling), available RAM, commit charge, hard faults,
+    and per-disk busy time, response time, IOPS and throughput.
+  - **Top processes** by CPU, memory and disk I/O, grouped by name, with hints for well-known
+    offenders and the services inside any busy `svchost`.
+  - **Context:** installed RAM, page file, a spinning system disk, system-drive free space,
+    uptime (noting that Fast Startup keeps *Shut down* from resetting it), power plan and power
+    mode, startup programs, boot times and the components Windows blamed for slow boots, and
+    applications that keep hanging.
+
+  Counters come from WMI performance classes, so the tool works on non-English Windows where
+  `Get-Counter` paths are translated; disk response time is computed from raw counters. Verdict
+  Struggling / Strained / Healthy. Read-only.
 - **C.A.R.I.L.L.O.N. (`carillon.ps1`) — Teams Phone call queue and auto attendant audit.** Registered
   at key 49 under Cloud & Identity. Answers "who is in this queue?" by display name rather than
   object ID, and where every call can end up:

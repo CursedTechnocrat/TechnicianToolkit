@@ -172,9 +172,10 @@ DMARC scoring), WARD (LAPS policy precedence), PALADIN (platform-protection verd
 (Conditional Access predicates and emergency-access exclusion), OATH (`nltest` / `w32tm`
 parsers, Netlogon status table) and CATACOMB (rights-mask and SID classification); the
 root `BeforeAll` provides `Get-ToolAst` / `Get-ToolAssignmentValue` / `Get-ToolFunctionText` for
-that. CARILLON's queue-issue, name and routing-target helpers, and SUTURE's DISM / CBS.log /
-SFC parsers and servicing error-code table, are covered the same way.
-A finding catalog (CONDUIT, SUTURE, NECROPSY, RAVEN, RAMPART, CARILLON, OATH, CATACOMB) is tested against the codes its script
+that. CARILLON's queue-issue, name and routing-target helpers, TORPOR's process / disk
+usage arithmetic and power-plan parsing, and SUTURE's DISM / CBS.log / SFC parsers and
+servicing error-code table, are covered the same way.
+A finding catalog (CONDUIT, SUTURE, NECROPSY, TORPOR, RAVEN, RAMPART, CARILLON, OATH, CATACOMB) is tested against the codes its script
 actually raises, so a new `Add-*Finding -Code` without a catalog entry fails CI.
 
 ### Verifying on Linux / in an agent sandbox
@@ -396,6 +397,17 @@ Both read the event log, but for different questions.
 NECROPSY is read-only and stops at the bugcheck code and parameters. Walking the stack to name
 the faulting driver is a debugger's job (WinDbg `!analyze -v`), and it should not grow a parser
 for that.
+
+### TORPOR vs AUSPEX vs TALON
+
+| Question | Reach for |
+|----------|-----------|
+| "Why is this PC slow right now?" | **TORPOR** (samples CPU / memory / disk load and names the processes, limits and boot delays responsible) |
+| "Give me a general health snapshot of this machine." | **AUSPEX** |
+| "Is anything persisting on this machine that shouldn't be?" | **TALON** |
+
+TORPOR lists startup programs for their *cost*, not their safety, and is read-only — it names
+what to stop or upgrade but never ends a process or disables a startup entry.
 
 ### RAVEN vs RELIQUARY vs TENDRIL
 

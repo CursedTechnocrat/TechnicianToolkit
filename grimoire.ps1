@@ -303,6 +303,15 @@ $Tools = @(
         Color       = 'Red'
         Category    = 'Diagnostics & Reporting'
     },
+    [PSCustomObject]@{
+        Key         = '61'
+        Name        = 'T.O.R.P.O.R.'
+        File        = 'torpor.ps1'
+        Version     = '5.1'
+        Description = 'Slow-machine triage  -  CPU, memory and disk load over a sample, top processes by name, CPU limits, boot delays, startup programs, app hangs'
+        Color       = 'Yellow'
+        Category    = 'Diagnostics & Reporting'
+    },
     # ── Security (20–29) ─────────────────────────────────────────────
     [PSCustomObject]@{
         Key         = '20'
