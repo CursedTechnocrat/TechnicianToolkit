@@ -404,6 +404,15 @@ $Tools = @(
         Color       = 'Yellow'
         Category    = 'The Bestiary — Security'
     },
+    [PSCustomObject]@{
+        Key         = '50'
+        Name        = 'G.A.R.M.'
+        File        = 'garm.ps1'
+        Version     = '5.1'
+        Description = 'Account lockout source tracer  -  per-DC state, 4740 / 4771 / 4776, source machine scan'
+        Color       = 'Yellow'
+        Category    = 'The Bestiary — Security'
+    },
     # ── The Crossroads (60–69) — arcane paths & lights ──────────────────────
     [PSCustomObject]@{
         Key         = '60'

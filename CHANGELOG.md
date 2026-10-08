@@ -8,6 +8,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **G.A.R.M. (`garm.ps1`) — Active Directory account lockout source tracer.** Registered at
+  key 50 in The Bestiary. Answers the ticket unlocking never closes: *where are the lockouts
+  coming from?* SPHINX's lockout option only listed the PDC's 4740 events; GARM traces the whole
+  path:
+  - **Per-DC lockout state** (bad-password count and time, lockout time, last logon) — the view
+    LockoutStatus.exe used to give, since `badPwdCount` is not replicated.
+  - **Lockout events (4740)** from the PDC emulator, and **bad-password events** — Kerberos
+    pre-authentication failures (4771) and NTLM validation failures (4776) — from every DC that
+    saw them, each failure code decoded.
+  - **Sources ranked** by lockouts and failures, with IP sources reverse-resolved and grouped with
+    the same machine's name.
+  - **The source machine inspected** over CIM for services and stored-password scheduled tasks
+    running as the account, and for its sessions (`quser`), disconnected RDP included.
+  - Findings for a lockout with no caller computer (ActiveSync, ADFS, NPS / RADIUS, LDAP binds), a
+    DC as the source, a recent password change, a low lockout threshold (fine-grained policy
+    honoured), and an unreadable Security log.
+
+  Without `-Identity`, an unattended run sweeps every lockout in the window, grouped by account.
+  `-Hours` sets the window (default 24). Read-only: it never unlocks or changes anything.
 - **RITUAL's `HealthCheck` recipe now ends with TORPOR and SOLDER.** TORPOR adds a 30-second
   load sample and SOLDER its read-only servicing audit (`-Action` stays at the default `Audit`, so
   the recipe still changes nothing on the machine).
@@ -205,6 +224,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     started decrypting.
 
 ### Fixed
+- **SPHINX's lockout investigation named the DC, not the source.** It read the caller computer
+  from position 4 of event 4740, which is `SubjectUserName` — the DC's own machine account — so
+  every lockout appeared to come from the domain controller. It now reads `TargetDomainName`
+  (position 1), where 4740 actually stores the caller computer.
 - **`C.O.N.J.U.R.E.` could never install a missing winget.** `Test-WingetAvailable` downloaded
   `https://aka.ms/getwinget` to `GetWinget.ps1` and executed it, but that link serves the App
   Installer `.msixbundle`, not a script — so on a machine without winget the fallback always

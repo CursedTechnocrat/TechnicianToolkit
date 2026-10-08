@@ -1860,6 +1860,207 @@ Describe 'LODESTAR domain trust helpers' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# GARM — Security event XML in the shape the DCs log it, the Kerberos / NTLM
+# failure-code tables, and the source grouping that turns three events about one
+# machine (a 4740 caller name, a 4771 IP, a 4776 \\workstation) into one row.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'GARM lockout tracing helpers' {
+    BeforeAll {
+        $ast = Get-ToolAst -FileName 'garm.ps1'
+        $GarmFindings         = Get-ToolAssignmentValue -Ast $ast -VarName 'GarmFindings'
+        $KerberosFailureCodes = Get-ToolAssignmentValue -Ast $ast -VarName 'KerberosFailureCodes'
+        $NtlmStatusCodes      = Get-ToolAssignmentValue -Ast $ast -VarName 'NtlmStatusCodes'
+        foreach ($name in 'ConvertTo-GarmStatusKey', 'Get-GarmStatusInfo', 'ConvertFrom-GarmFileTime', 'Get-GarmNameVariant',
+                          'New-GarmEventXPath', 'ConvertFrom-GarmEventXml', 'ConvertTo-GarmSourceHost', 'ConvertTo-GarmAttempt',
+                          'Get-GarmSourceKey', 'Get-GarmSourceRanking', 'Test-GarmRunAsMatch', 'ConvertFrom-QuserOutput', 'Get-GarmVerdict') {
+            . ([scriptblock]::Create((Get-ToolFunctionText -Ast $ast -FuncName $name)))
+        }
+        $garmSource = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'garm.ps1') -Raw
+
+        $ns = 'http://schemas.microsoft.com/win/2004/08/events/event'
+        $x4740 = "<Event xmlns='$ns'><System><EventID>4740</EventID><TimeCreated SystemTime='2026-10-08T14:03:11.1234567Z'/><Computer>DC01.contoso.com</Computer></System>" +
+                 "<EventData><Data Name='TargetUserName'>jdoe</Data><Data Name='TargetDomainName'>PC-ACCT-07</Data><Data Name='TargetSid'>S-1-5-21-1-2-3-1105</Data>" +
+                 "<Data Name='SubjectUserSid'>S-1-5-18</Data><Data Name='SubjectUserName'>DC01`$</Data><Data Name='SubjectDomainName'>CONTOSO</Data><Data Name='SubjectLogonId'>0x3e7</Data></EventData></Event>"
+        $x4771 = "<Event xmlns='$ns'><System><EventID>4771</EventID><TimeCreated SystemTime='2026-10-08T14:02:59.0000000Z'/><Computer>DC02.contoso.com</Computer></System>" +
+                 "<EventData><Data Name='TargetUserName'>JDoe</Data><Data Name='ServiceName'>krbtgt/CONTOSO</Data><Data Name='Status'>0x18</Data>" +
+                 "<Data Name='IpAddress'>::ffff:10.0.4.27</Data><Data Name='IpPort'>51234</Data><Data Name='CertIssuerName'></Data></EventData></Event>"
+        $x4776 = "<Event xmlns='$ns'><System><EventID>4776</EventID><TimeCreated SystemTime='2026-10-08T14:01:00.0000000Z'/><Computer>DC01.contoso.com</Computer></System>" +
+                 "<EventData><Data Name='PackageName'>MICROSOFT_AUTHENTICATION_PACKAGE_V1_0</Data><Data Name='TargetUserName'>jdoe</Data>" +
+                 "<Data Name='Workstation'>\\pc-acct-07</Data><Data Name='Status'>0xc000006a</Data></EventData></Event>"
+    }
+
+    Context 'finding catalog and code tables' {
+        It 'contains every code the tool raises' {
+            $raised = @([regex]::Matches($garmSource, "Add-GarmFinding\s+-Code\s+'([^']+)'") | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
+            $raised.Count | Should -BeGreaterThan 10
+            foreach ($code in $raised) { $GarmFindings.ContainsKey($code) | Should -BeTrue -Because "garm.ps1 raises '$code'" }
+        }
+        It 'gives every finding a renderable Severity, Title, Summary and Remedy' {
+            foreach ($code in $GarmFindings.Keys) {
+                $GarmFindings[$code].Severity | Should -BeIn @('Error', 'Warning', 'Info')
+                $GarmFindings[$code].Title    | Should -Not -BeNullOrEmpty
+                $GarmFindings[$code].Remedy   | Should -Not -BeNullOrEmpty
+            }
+        }
+        It 'marks exactly the wrong-password codes as counting toward a lockout' {
+            @($KerberosFailureCodes.Keys | Where-Object { $KerberosFailureCodes[$_].BadPassword }) | Should -Be @('0x18')
+            @($NtlmStatusCodes.Keys | Where-Object { $NtlmStatusCodes[$_].BadPassword })      | Should -Be @('0xc000006a')
+        }
+        It 'keys both tables in normalised form' {
+            foreach ($k in @($KerberosFailureCodes.Keys) + @($NtlmStatusCodes.Keys)) { ConvertTo-GarmStatusKey -Status $k | Should -Be $k }
+        }
+    }
+
+    Context 'status codes and FILETIME' {
+        It 'normalises padded and upper-case codes' {
+            ConvertTo-GarmStatusKey -Status '0x00000018' | Should -Be '0x18'
+            ConvertTo-GarmStatusKey -Status '0XC000006A' | Should -Be '0xc000006a'
+            ConvertTo-GarmStatusKey -Status '0x00000000' | Should -Be '0x0'
+        }
+        It 'decodes known codes and falls back for unknown ones' {
+            (Get-GarmStatusInfo -Kind 'Kerberos' -Status '0x18').BadPassword    | Should -BeTrue
+            (Get-GarmStatusInfo -Kind 'NTLM' -Status '0xC0000234').Name         | Should -Be 'STATUS_ACCOUNT_LOCKED_OUT'
+            (Get-GarmStatusInfo -Kind 'NTLM' -Status '0xc00000ff').BadPassword  | Should -BeFalse
+        }
+        It 'treats 0 and the never value as not set' {
+            ConvertFrom-GarmFileTime -Value 0                   | Should -BeNullOrEmpty
+            ConvertFrom-GarmFileTime -Value 9223372036854775807 | Should -BeNullOrEmpty
+            ConvertFrom-GarmFileTime -Value $null               | Should -BeNullOrEmpty
+            (ConvertFrom-GarmFileTime -Value 134046000000000000).Year | Should -Be 2025
+        }
+    }
+
+    Context 'event queries' {
+        It 'filters by ID and window, and by every case variant of the name' {
+            $xp = New-GarmEventXPath -EventId 4771, 4776 -Hours 24 -UserName (Get-GarmNameVariant -SamAccountName 'JDoe' -UserPrincipalName 'jdoe@contoso.com')
+            $xp | Should -Match 'EventID=4771 or EventID=4776'
+            $xp | Should -Match 'timediff\(@SystemTime\) <= 86400000'
+            foreach ($n in 'JDoe', 'jdoe', 'JDOE', 'jdoe@contoso.com', 'JDOE@CONTOSO.COM') { $xp | Should -Match ([regex]::Escape("='$n'")) }
+        }
+        It 'quotes a name holding an apostrophe with double quotes' {
+            New-GarmEventXPath -EventId 4740 -Hours 1 -UserName @("O'Brien") | Should -Match ([regex]::Escape("=`"O'Brien`""))
+        }
+        It 'does not overflow on the longest window' {
+            New-GarmEventXPath -EventId 4740 -Hours 720 | Should -Match '<= 2592000000\]'
+        }
+    }
+
+    Context 'event parsing' {
+        It 'reads the ID, time, DC and data fields' {
+            $e = ConvertFrom-GarmEventXml -Xml $x4740
+            $e.EventId  | Should -Be 4740
+            $e.Computer | Should -Be 'DC01.contoso.com'
+            $e.Time.ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss') | Should -Be '2026-10-08 14:03:11'
+            $e.Data['TargetUserName'] | Should -Be 'jdoe'
+        }
+        It 'takes the 4740 caller from TargetDomainName, not the DC''s own account' {
+            $a = ConvertTo-GarmAttempt -Record (ConvertFrom-GarmEventXml -Xml $x4740)
+            $a.Kind   | Should -Be 'Lockout'
+            $a.Source | Should -Be 'PC-ACCT-07'
+        }
+        It 'strips the IPv4-mapped prefix from 4771 and decodes the code' {
+            $a = ConvertTo-GarmAttempt -Record (ConvertFrom-GarmEventXml -Xml $x4771)
+            $a.Source      | Should -Be '10.0.4.27'
+            $a.StatusName  | Should -Be 'KDC_ERR_PREAUTH_FAILED'
+            $a.BadPassword | Should -BeTrue
+        }
+        It 'strips the leading \\ from the 4776 workstation' {
+            (ConvertTo-GarmAttempt -Record (ConvertFrom-GarmEventXml -Xml $x4776)).Source | Should -Be 'pc-acct-07'
+        }
+        It 'attributes a loopback source to the DC itself' {
+            $e = ConvertFrom-GarmEventXml -Xml ($x4771 -replace '::ffff:10\.0\.4\.27', '::1')
+            (ConvertTo-GarmAttempt -Record $e).Source | Should -Be 'DC02.contoso.com'
+        }
+        It 'maps the empty markers to no source' {
+            ConvertTo-GarmSourceHost -Value '-' | Should -Be ''
+            ConvertTo-GarmSourceHost -Value ''  | Should -Be ''
+        }
+    }
+
+    Context 'source ranking' {
+        It 'groups a machine''s name, FQDN and workstation forms into one source' {
+            $a = @($x4740, $x4771, $x4776 | ForEach-Object { ConvertTo-GarmAttempt -Record (ConvertFrom-GarmEventXml -Xml $_) })
+            $a[1].Source = 'pc-acct-07.contoso.com'   # as the collector leaves it after reverse DNS
+            $r = @(Get-GarmSourceRanking -Attempts $a)
+            $r.Count          | Should -Be 1
+            $r[0].Source      | Should -Be 'PC-ACCT-07'
+            $r[0].Lockouts    | Should -Be 1
+            $r[0].Failures    | Should -Be 2
+            $r[0].BadPasswords | Should -Be 2
+            $r[0].Dcs.Count   | Should -Be 2
+        }
+        It 'ranks by lockouts first and keeps unknown sources as their own row' {
+            $mk = { param($k, $s) [PSCustomObject]@{ Time = (Get-Date); Dc = 'DC01'; Kind = $k; User = 'jdoe'; Source = $s; Status = ''; StatusName = ''; Meaning = ''; BadPassword = ($k -ne 'Lockout') } }
+            $r = @(Get-GarmSourceRanking -Attempts @((& $mk 'NTLM' 'PC1'), (& $mk 'NTLM' 'PC1'), (& $mk 'NTLM' 'PC1'), (& $mk 'Lockout' 'PC2'), (& $mk 'Lockout' '')))
+            $r[0].Key | Should -BeIn @('PC2', '')
+            $r[-1].Source | Should -Be 'PC1'
+            @($r | Where-Object { $_.Source -eq '(unknown)' }).Count | Should -Be 1
+        }
+        It 'keeps an IP address whole rather than splitting on its dots' {
+            Get-GarmSourceKey -Source '10.0.4.27'        | Should -Be '10.0.4.27'
+            Get-GarmSourceKey -Source 'pc01.contoso.com' | Should -Be 'PC01'
+        }
+    }
+
+    Context 'source machine inspection' {
+        It 'matches the domain account in each run-as form' {
+            $m = @{ SamAccountName = 'jdoe'; UserPrincipalName = 'john.doe@contoso.com'; NetBiosDomain = 'CONTOSO'; DnsDomain = 'contoso.com' }
+            Test-GarmRunAsMatch -RunAs 'CONTOSO\jdoe' @m          | Should -BeTrue
+            Test-GarmRunAsMatch -RunAs 'contoso.com\JDOE' @m      | Should -BeTrue
+            Test-GarmRunAsMatch -RunAs 'john.doe@contoso.com' @m  | Should -BeTrue
+            Test-GarmRunAsMatch -RunAs 'jdoe@contoso.com' @m      | Should -BeTrue
+            Test-GarmRunAsMatch -RunAs 'jdoe' @m                  | Should -BeTrue
+        }
+        It 'does not match local, built-in or other-domain accounts' {
+            $m = @{ SamAccountName = 'jdoe'; UserPrincipalName = 'jdoe@contoso.com'; NetBiosDomain = 'CONTOSO'; DnsDomain = 'contoso.com' }
+            Test-GarmRunAsMatch -RunAs '.\jdoe' @m                       | Should -BeFalse
+            Test-GarmRunAsMatch -RunAs 'FABRIKAM\jdoe' @m                | Should -BeFalse
+            Test-GarmRunAsMatch -RunAs 'LocalSystem' @m                  | Should -BeFalse
+            Test-GarmRunAsMatch -RunAs 'NT AUTHORITY\LocalService' @m    | Should -BeFalse
+            Test-GarmRunAsMatch -RunAs '' @m                             | Should -BeFalse
+        }
+        It 'parses quser rows, including a disconnected session with no session name' {
+            $rows = ConvertFrom-QuserOutput -Lines @(
+                ' USERNAME              SESSIONNAME        ID  STATE   IDLE TIME  LOGON TIME',
+                '>jdoe                  console             1  Active      none   10/8/2026 9:00 AM',
+                ' jdoe                                      2  Disc         1:02  10/7/2026 4:12 PM',
+                ' admin                 rdp-tcp#5           3  Active          .  10/8/2026 8:00 AM')
+            $rows.Count    | Should -Be 3
+            $rows[1].Id    | Should -Be 2
+            $rows[1].State | Should -Be 'Disc'
+            $rows[1].Session | Should -Be ''
+            $rows[2].Session | Should -Be 'rdp-tcp#5'
+        }
+        It 'returns nothing for the no-sessions message' {
+            @(ConvertFrom-QuserOutput -Lines @('No User exists for *')).Count | Should -Be 0
+        }
+    }
+
+    Context 'verdict' {
+        It 'puts a found culprit above a traced source above an untraced lockout' {
+            (Get-GarmVerdict -FindingList @([PSCustomObject]@{ Code = 'TaskRunsAsUser'; Severity = 'Error' }, [PSCustomObject]@{ Code = 'StaleCredentialSource'; Severity = 'Warning' })).Verdict | Should -Be 'Culprit found'
+            (Get-GarmVerdict -FindingList @([PSCustomObject]@{ Code = 'StaleCredentialSource'; Severity = 'Warning' })).Verdict | Should -Be 'Source traced'
+            (Get-GarmVerdict -FindingList @([PSCustomObject]@{ Code = 'AccountLockedOut'; Severity = 'Error' })).Verdict       | Should -Be 'Untraced'
+            (Get-GarmVerdict -FindingList @([PSCustomObject]@{ Code = 'AccountNotFound'; Severity = 'Error' })).Verdict        | Should -Be 'Not found'
+            (Get-GarmVerdict -FindingList @()).Verdict | Should -Be 'Quiet'
+        }
+        It 'grades a sweep by severity' {
+            (Get-GarmVerdict -Mode 'Sweep' -FindingList @([PSCustomObject]@{ Code = 'AccountLockedOut'; Severity = 'Error' })).Verdict  | Should -Be 'Accounts locked'
+            (Get-GarmVerdict -Mode 'Sweep' -FindingList @([PSCustomObject]@{ Code = 'EventLogUnreadable'; Severity = 'Warning' })).Verdict | Should -Be 'Unreadable'
+            (Get-GarmVerdict -Mode 'Sweep' -FindingList @()).Verdict | Should -Be 'Quiet'
+        }
+    }
+
+    Context 'SPHINX lockout lookup' {
+        It 'reads the 4740 caller computer from index 1 (TargetDomainName), not index 4' {
+            $sphinx = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'sphinx.ps1') -Raw
+            $sphinx | Should -Match '\$callerMachine\s*=\s*\$evt\.Properties\[1\]\.Value'
+            $sphinx | Should -Not -Match '\$callerMachine\s*=\s*\$evt\.Properties\[4\]'
+        }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # TORPOR — the usage arithmetic that turns two snapshots into per-process and
 # per-disk load, the parsers, and the finding catalog.
 # ─────────────────────────────────────────────────────────────────────────────
