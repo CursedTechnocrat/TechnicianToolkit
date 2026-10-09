@@ -492,8 +492,9 @@ Describe 'TK_DISABLE_DOWNLOAD — every self-fetch path honours it' {
         Where-Object { (Get-Content $_.FullName -Raw) -match 'raw\.githubusercontent\.com' } |
         ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
 
-    It 'finds the self-fetching scripts' {
-        $fetchCases.Count | Should -BeGreaterThan 50
+    # Discovery-scope variables are gone at run time, so the count goes in as data.
+    It 'finds the self-fetching scripts' -ForEach @{ Found = @($fetchCases).Count } {
+        $Found | Should -BeGreaterThan 50
     }
 
     It '<Name> checks TK_DISABLE_DOWNLOAD before each download' -ForEach $fetchCases {
