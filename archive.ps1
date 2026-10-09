@@ -39,6 +39,11 @@
 $NewScript = Join-Path $PSScriptRoot 'embalm.ps1'
 if (-not (Test-Path $NewScript)) {
     $NewScriptUrl = 'https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/embalm.ps1'
+    if ($env:TK_DISABLE_DOWNLOAD -in @('1', 'true')) {
+        Write-Host "  [!!] embalm.ps1 not found, and TK_DISABLE_DOWNLOAD forbids fetching it." -ForegroundColor Red
+        Write-Host "       Deploy embalm.ps1 next to this script from an approved release." -ForegroundColor Yellow
+        exit 1
+    }
     Write-Host "  [*] embalm.ps1 not found - downloading from GitHub..." -ForegroundColor Magenta
     try {
         [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12

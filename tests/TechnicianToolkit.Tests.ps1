@@ -478,6 +478,38 @@ Describe 'Module bootstrap compliance — all tool scripts' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# TK_DISABLE_DOWNLOAD — the switch an MSP sets (machine environment variable,
+# pushed by GPO or RMM) so the toolkit never fetches its own code from GitHub at
+# run time. Under SOC 2 change management, code that pulls the current `main`
+# whenever a file is missing is unreviewed change; with the switch set, only the
+# release the MSP deployed can run. Four paths fetch toolkit code — the module
+# bootstrap, the forwarding stubs, GRIMOIRE's tool launcher and RITUAL's step
+# resolver — and every one must check the switch before it downloads. The test
+# is generic so a fifth path cannot be added without it.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'TK_DISABLE_DOWNLOAD — every self-fetch path honours it' {
+    $fetchCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Filter '*.ps1' -File |
+        Where-Object { (Get-Content $_.FullName -Raw) -match 'raw\.githubusercontent\.com' } |
+        ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
+
+    # Discovery-scope variables are gone at run time, so the count goes in as data.
+    It 'finds the self-fetching scripts' -ForEach @{ Found = @($fetchCases).Count } {
+        $Found | Should -BeGreaterThan 50
+    }
+
+    It '<Name> checks TK_DISABLE_DOWNLOAD before each download' -ForEach $fetchCases {
+        $content   = Get-Content $FullName -Raw
+        $downloads = [regex]::Matches($content, 'Invoke-RestMethod\s+-Uri\s+\$\w+\s+-OutFile')
+        $downloads.Count | Should -BeGreaterThan 0 -Because "$Name names the GitHub raw URL, so it should download from it"
+        foreach ($d in $downloads) {
+            $start  = [Math]::Max(0, $d.Index - 1500)
+            $before = $content.Substring($start, $d.Index - $start)
+            $before | Should -Match '\$env:TK_DISABLE_DOWNLOAD\s+-in\s+@\(''1'',\s*''true''\)' -Because "the download at offset $($d.Index) in $Name must be gated on TK_DISABLE_DOWNLOAD"
+        }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Param block compliance — interactive tool scripts must declare -Unattended
 # Excludes the two launcher-style scripts that don't have sensible defaults
 # for their required inputs (grimoire needs a tool choice; shade needs a
