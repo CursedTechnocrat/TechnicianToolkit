@@ -39,6 +39,11 @@
 $NewScript = Join-Path $PSScriptRoot 'solder.ps1'
 if (-not (Test-Path $NewScript)) {
     $NewScriptUrl = 'https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/solder.ps1'
+    if ($env:TK_DISABLE_DOWNLOAD -in @('1', 'true')) {
+        Write-Host "  [!!] solder.ps1 not found, and TK_DISABLE_DOWNLOAD forbids fetching it." -ForegroundColor Red
+        Write-Host "       Deploy solder.ps1 next to this script from an approved release." -ForegroundColor Yellow
+        exit 1
+    }
     Write-Host "  [*] solder.ps1 not found - downloading from GitHub..." -ForegroundColor Magenta
     try {
         [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
