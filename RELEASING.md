@@ -4,28 +4,40 @@ The build is automated. The release is not, and cannot be — see *Why signing i
 manual* below. This checklist exists so the manual half is not carried in one
 person's head.
 
-**Status for 5.0:** the code-signing certificate is still in validation, so 5.0
-ships **unsigned**. Steps 4 and 5 are skipped, and the release notes have to say
-so. Signing arrives as **5.0.1**: the same binaries, re-released with a signature
-appended and no code change.
+**Status for 6.0:** 6.0.0 is the first release to be **signed**. 5.0.0 shipped
+unsigned while the certificate was in validation, and the signed 5.0.1 it promised
+never went out (nor did 5.1.0, which is folded into 6.0.0). So 6.0.0 is tagged
+first and **published only once it is signed**. Steps 4 and 5 run for the first
+time, and the release waits for them rather than going out unsigned.
+
+**If signing falls through** and 6.0.0 has to ship unsigned, the signed build
+becomes **6.0.1**. It is a patch release because it changes no code. It has to be
+a new version because the signed files have different hashes, and winget cannot
+carry two hashes for one version. Only the three `.csproj` files move, to
+`6.0.1`; the script headers and the GRIMOIRE registry stay at `6.0`. Then tag
+`v6.0.1` and run this checklist again. Follow the *While unsigned* line in step 7
+for the unsigned release.
+
+**From then on, every release is signed.** A release that cannot be signed waits
+for it, rather than shipping unsigned with a promise.
 
 ---
 
 ## Before you tag
 
 - [ ] `main` is green in CI — PSScriptAnalyzer, Pester, and the Desktop app job.
-- [ ] `CHANGELOG.md` has a dated `[5.0.0]` section, not `[Unreleased]`.
+- [ ] `CHANGELOG.md` has a dated section for the release (`[6.0.0]`), not `[Unreleased]`.
 - [ ] Every script header and every GRIMOIRE registry row reads the release
       version. The `Version consistency` Pester gate enforces this, so a
       mismatch fails CI rather than reaching here.
 - [ ] The three `.csproj` files carry the matching three-part version
-      (`5.0.0`).
+      (`6.0.0`).
 
 Then tag and push:
 
 ```powershell
-git tag -a v5.0.0 -m 'Technician Toolkit 5.0.0'
-git push origin v5.0.0
+git tag -a v6.0.0 -m 'Technician Toolkit 6.0.0'
+git push origin v6.0.0
 ```
 
 That fires `release-app.yml`, which builds `win-x64` and `win-arm64` and uploads
@@ -66,13 +78,24 @@ that is the claim the whole port rests on.
 - [ ] The report opens in the browser.
 - [ ] Settings persist across a relaunch.
 
-## 4. Sign — SKIPPED FOR 5.0
+## 4. Sign
 
-> Only once the certificate has cleared validation.
+On a Windows machine with the Windows SDK installed, which provides `signtool`.
 
 - [ ] Start **SimplySign Desktop** and authenticate with the SimplySign mobile
       app. The certificate appears in the Windows certificate store through a
       virtual smart card.
+- [ ] **First time only:** confirm that exactly one code-signing certificate
+      matches the subject `/n` selects. If two match, for example an expired one
+      left behind, `signtool` stops and asks. Pin that certificate with
+      `/sha1 <thumbprint>` instead of `/n`.
+
+```powershell
+Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert |
+    Where-Object Subject -like '*Open Source Developer*' |
+    Format-List Subject, Thumbprint, NotAfter
+```
+
 - [ ] Sign each binary **with timestamping**. Timestamping is not optional: the
       certificate is short-lived, and a timestamped signature stays valid after
       it expires where an un-timestamped one dies with it.
@@ -82,11 +105,15 @@ signtool sign /n "Open Source Developer" /fd SHA256 `
     /tr http://time.certum.pl /td SHA256 TechnicianToolkit.exe
 ```
 
-## 5. Verify the signature — SKIPPED FOR 5.0
+## 5. Verify the signature
 
 - [ ] `signtool verify /pa /v TechnicianToolkit.exe` passes on **both** binaries.
       `signtool` signs and verifies any PE from the same x64 session, so ARM64
       needs no separate arrangement.
+- [ ] The verify output shows a **timestamp**. A signature without one passes
+      today and dies when the certificate expires.
+- [ ] Launch the signed x64 build once. The UAC prompt should name the publisher
+      (`Open Source Developer, John Joseph Bejarana`), not *Unknown publisher*.
 
 ## 6. Re-hash what you are actually shipping
 
@@ -101,16 +128,23 @@ Signing changes the file, so the hashes from step 1 no longer apply.
 
 - [ ] Create the GitHub release against the tag.
 - [ ] Attach both binaries, named so the architecture is unambiguous:
-      `TechnicianToolkit-5.0.0-win-x64.exe`,
-      `TechnicianToolkit-5.0.0-win-arm64.exe`.
+      `TechnicianToolkit-6.0.0-win-x64.exe`,
+      `TechnicianToolkit-6.0.0-win-arm64.exe`.
 - [ ] Paste the `CHANGELOG.md` section for this version.
 - [ ] Include the SHA-256 of both attached files.
-- [ ] **While unsigned**, state it plainly and set the expectation:
+- [ ] **When signed**, say so, and say what the publisher name will look like
+      (see *The publisher name will look like a person* below). A new signature
+      builds SmartScreen reputation over time, so the first downloads can still
+      see a warning. Say that too rather than promising none.
+- [ ] **When signed for the first time**, replace the README's "binaries are not
+      code-signed" callout with the publisher-name explanation.
+- [ ] **While unsigned** (only in the fallback above), state it plainly and set
+      the expectation:
 
-  > These binaries are not code-signed yet — the certificate is in validation.
-  > SmartScreen will warn on first run, and some antivirus products may flag a
-  > single-file executable that unpacks scripts and runs them elevated. Verify
-  > the SHA-256 above against your download. Signed builds will follow in 5.0.1.
+  > These binaries are not code-signed. SmartScreen will warn on first run, and
+  > some antivirus products may flag a single-file executable that unpacks
+  > scripts and runs them elevated. Verify the SHA-256 above against your
+  > download. A signed build will follow as the next patch release.
 
 - [ ] Note that the ARM64 build is untested on hardware, and ask for reports.
 
@@ -120,7 +154,7 @@ Only after the release is published and the files are final, because the
 manifest carries their hashes.
 
 ```powershell
-wingetcreate update CursedTechnocrat.TechnicianToolkit --version 5.0.0 `
+wingetcreate update CursedTechnocrat.TechnicianToolkit --version 6.0.0 `
     --urls <x64-url> <arm64-url> --submit
 ```
 

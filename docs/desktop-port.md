@@ -680,7 +680,8 @@ changed either.
   signing step from the start so it is ready the day the certificate lands; until
   then the release notes and the README say the binaries are unsigned and warn
   that SmartScreen will object. Signing ships as **5.0.1**, a re-release of the
-  same build with a signature appended — no code change.
+  same build with a signature appended — no code change. *(Update: 5.0.1 never
+  shipped. Signing starts with 6.0.0 instead; see `RELEASING.md`.)*
 - **ARM64 verified on hardware.** The build is produced and published, labelled
   untested. Closing it needs someone with an ARM device, which is a request for
   help, not a defect to hide.
