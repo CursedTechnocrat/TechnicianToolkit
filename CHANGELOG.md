@@ -30,10 +30,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   on any block that differs from what it would write or any shared helper redefined outside one.
   EMISSARY no longer copies a module to the remote machine, HEARTH no longer checks for one, and
   the desktop app embeds the helper source only for its settings screen.
-- **Technician notes last for one tool run.** The note buffer used to live in the module, so a
-  technician could call `Export-TKNoteReport` after a tool finished, as long as no other tool had
-  re-imported the module. It now lives in the tool's own scope and ends with it. No tool calls
-  `Export-TKNoteReport` itself yet, so notes recorded with `Add-TKNote` are not exported.
+- **Technician notes are saved automatically at the end of every run.** The note buffer used to
+  live in the module, where notes survived the run only until a technician exported them by hand
+  (and no tool ever did). It now lives in the tool's own scope, and the eleven tools that record
+  notes — CARILLON, CHALICE, CONDUIT, GARM, HALO, LODESTAR, MINOTAUR, NECROPSY, RAVEN, SOLDER,
+  TORPOR — call the new shared helper `Save-TKNoteReport` once at the end of the run, after their
+  menu loop. It writes `<TOOL>_Notes_<timestamp>.html` beside the tool's report (the name CODEX
+  groups under the tool), holding every note the run recorded and a plain-text paste block, and
+  reports rather than throws if the write fails. A new Pester gate fails on any tool that calls
+  `Add-TKNote` without exactly one top-level `Save-TKNoteReport`.
 
 ---
 

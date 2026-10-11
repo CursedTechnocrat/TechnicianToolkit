@@ -341,6 +341,7 @@ Describe 'Shared helper source' {
         @{ fn = 'Get-TKNote' }
         @{ fn = 'Clear-TKNote' }
         @{ fn = 'Export-TKNoteReport' }
+        @{ fn = 'Save-TKNoteReport' }
     ) {
         Get-Command $fn -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
     }
@@ -409,6 +410,40 @@ Describe 'Technician notes' {
             $out = Join-Path $TestDrive 'notes4.html'
             Export-TKNoteReport -Path $out -Ticket 'INC0099'
             (Get-Content $out -Raw) | Should -Match 'INC0099'
+        }
+    }
+
+    # The end-of-run save every note-taking tool calls. Notes die with the run,
+    # so this is the only thing standing between them and being lost.
+    Context 'Save-TKNoteReport' {
+        BeforeAll {
+            $script:NoteDir = Join-Path $TestDrive 'saved-notes'
+            New-Item -ItemType Directory -Path $script:NoteDir -Force | Out-Null
+        }
+
+        It 'writes nothing and returns $null when the run recorded no notes' {
+            Save-TKNoteReport -Prefix 'TEST' -Directory $script:NoteDir 6>$null | Should -BeNullOrEmpty
+            @(Get-ChildItem $script:NoteDir).Count | Should -Be 0
+        }
+        It 'writes <PREFIX>_Notes_<timestamp>.html, the name CODEX groups under the tool' {
+            Add-TKNote -Text 'repaired the thing' -Category Action
+            $out = Save-TKNoteReport -Prefix 'conduit' -Directory $script:NoteDir 6>$null
+            $out | Should -Exist
+            (Split-Path -Leaf $out) | Should -Match '^CONDUIT_Notes_\d{8}_\d{6}\.html$'
+            (Get-Content $out -Raw) | Should -Match 'repaired the thing'
+        }
+        It 'labels the report with the dotted acronym by default' {
+            Add-TKNote -Text 'x'
+            $out = Save-TKNoteReport -Prefix 'TORPOR' -Directory $script:NoteDir 6>$null
+            (Get-Content $out -Raw) | Should -Match ([regex]::Escape('T.O.R.P.O.R.'))
+        }
+        It 'reports a failed write instead of throwing' {
+            Add-TKNote -Text 'x'
+            # A file where the folder should be: no directory can be created or written there.
+            $blocked = Join-Path $TestDrive 'not-a-folder'
+            Set-Content -Path $blocked -Value 'x'
+            { Save-TKNoteReport -Prefix 'TEST' -Directory $blocked 6>$null } | Should -Not -Throw
+            Save-TKNoteReport -Prefix 'TEST' -Directory $blocked 6>$null | Should -BeNullOrEmpty
         }
     }
 }
@@ -502,6 +537,41 @@ Describe 'Shared helper blocks — all tool scripts' {
         foreach ($fn in $script:SharedNames) {
             $outside | Should -Not -Match ('(?m)^\s*function\s+' + [regex]::Escape($fn) + '\b') -Because "$fn belongs in shared/TechnicianToolkit.Shared.ps1, not redefined in $Name"
         }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Technician notes are saved — the note buffer lives only as long as the tool
+# run, so a tool that records notes with Add-TKNote and never saves them loses
+# every one. Each such tool must call Save-TKNoteReport at its top level (after
+# its menu loop, not inside a per-run function, which would write a growing
+# file on every menu pass).
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'Technician notes are saved by every tool that records them' {
+    $noteCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Filter '*.ps1' -File |
+        Where-Object { -not $RenamedToolStubs.Contains($_.Name) } |
+        ForEach-Object {
+            $text = (Get-Content $_.FullName -Raw) -replace "`r`n", "`n"
+            $outside = [regex]::Replace($text, '(?ms)^#region TK-SHARED\b.*?^#endregion TK-SHARED[^\n]*', '')
+            if ($outside -match '\bAdd-TKNote\b') { @{ Name = $_.Name; Code = $outside } }
+        }
+
+    It 'finds the note-taking tools' -ForEach @{ Found = @($noteCases | ForEach-Object { $_.Name }) } {
+        $Found | Should -Contain 'conduit.ps1'
+    }
+
+    It '<Name> saves its notes once, at the top level' -ForEach $noteCases {
+        $ast = [System.Management.Automation.Language.Parser]::ParseInput($Code, [ref]$null, [ref]$null)
+        $saves = @($ast.FindAll({
+            param($n)
+            $n -is [System.Management.Automation.Language.CommandAst] -and $n.GetCommandName() -eq 'Save-TKNoteReport'
+        }, $true))
+        $saves.Count | Should -Be 1 -Because "$Name records notes, so it must save them exactly once"
+        $inFunction = $false
+        for ($p = $saves[0].Parent; $p; $p = $p.Parent) {
+            if ($p -is [System.Management.Automation.Language.FunctionDefinitionAst]) { $inFunction = $true }
+        }
+        $inFunction | Should -BeFalse -Because "a save inside a per-run function writes a new, growing file on every menu pass"
     }
 }
 

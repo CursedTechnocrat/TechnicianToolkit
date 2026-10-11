@@ -102,6 +102,11 @@ regenerates about 40 files), which the sync script absorbs.
 The helpers resolve `config.json` and the fallback error log from `$PSScriptRoot`. Inside a
 generated block that is the tool's own folder, the same folder the module used to sit in.
 
+**Technician notes live only as long as the run.** A tool that calls `Add-TKNote` must call
+`Save-TKNoteReport` exactly once, at its top level, after its menu loop and before the final
+`Stop-TKTranscript`. A save inside the per-run function would write a new, growing file on every
+menu pass. `'Technician notes are saved by every tool that records them'` enforces it.
+
 **Admin gates.** `Invoke-AdminElevation` re-launches the script as Administrator if not already
 elevated. Scripts that use `Assert-AdminPrivilege` instead will error-exit if not elevated rather
 than auto-relaunching — this is appropriate for scripts called programmatically (REVENANT,
@@ -132,6 +137,7 @@ Key functions in `shared/TechnicianToolkit.Shared.ps1` (each tool's block holds 
 | `Add-TKNote` | Record a timestamped technician note (category: Info/Action/Warning/Issue/Resolution) |
 | `Get-TKNote` / `Clear-TKNote` | Read / reset the session note buffer |
 | `Export-TKNoteReport` | Write the session's notes to a ticket-ready HTML report (with a plain-text paste block) |
+| `Save-TKNoteReport` | End-of-run save: writes `<TOOL>_Notes_<timestamp>.html` to the log directory if the run recorded any notes |
 | `EscHtml` | HTML-escape a string for use in report templates |
 | `Get-TKHtmlCss` | Returns the shared `<style>` block — rarely called directly |
 | `Get-TKHtmlHead` | Returns `<!DOCTYPE html>…<div class="tk-main">` with shared CSS, page header, and nav bar |
