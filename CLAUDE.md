@@ -184,11 +184,14 @@ Tests run without Administrator privileges and without Windows-only APIs, so the
 The suite covers: `EscHtml`, `Format-Bytes`, `Get-TKConfig`/`Set-TKConfig`, `Test-IsAdmin`,
 `Write-TKError`, the technician-note helpers, HTML report helpers, and the shared source's
 function set (all dot-sourced from `shared/TechnicianToolkit.Shared.ps1`); plus repo-wide
-gates — PowerShell syntax validation and UTF-8 BOM on every script, shared-helper blocks in sync
-with their source, param block compliance (`-Unattended`, and `-WhatIf` on the destructive set),
+gates — PowerShell syntax validation and UTF-8 BOM on every script; the shared-helper block
+gate (every tool but the forwarding stubs carries exactly one TK-SHARED block, identical to what
+`build/Sync-TKShared.ps1` would write, with no shared helper defined outside it, no reference to
+`TechnicianToolkit.psm1`, and no such file in the repository root); `TK_DISABLE_DOWNLOAD` gating
+on every script that downloads from GitHub raw URLs; param block compliance (`-Unattended`, and `-WhatIf` on the destructive set),
 GRIMOIRE registry integrity, license-header compliance (GPL notice and SPDX tag present and
 correctly positioned in every source file), LICENSE integrity, retired tool names and filename
-prefixes, removed deprecation stubs, the 6.0 renamed-tool forwarding stubs, no locally redefined shared helpers, and the GRIFFIN /
+prefixes, removed deprecation stubs, the 6.0 renamed-tool forwarding stubs, no local `HtmlEncode`, and the GRIFFIN /
 WISP / PORTAL / CONJURE tier-mapper data tables (extracted by AST lookup rather than
 dot-sourcing, since the tools launch their main flow on import). The same AST extraction covers
 the pure helpers of NECROPSY (bugcheck and dump-header parsing), RAVEN (inbox-rule, SPF and
@@ -390,6 +393,9 @@ configs and the app's settings screen) and REVENANT's `-ArchiveZip` parameter.
    #endregion TK-SHARED
    Invoke-AdminElevation -ScriptFile $PSCommandPath
    ```
+   The markers are required: the sync script treats a `.ps1` without them as a forwarding stub
+   and skips it without a word, and only the Pester gate (`'<Name> carries exactly one TK-SHARED
+   block'`) catches the omission. Never paste the helpers in or dot-source the shared source.
    Re-run the sync whenever the tool starts calling another shared helper.
 3. Register the tool in `grimoire.ps1`'s `$Tools` array with the category's full name, the next
    free `Key` in the category's block, and the suite `Version`.
