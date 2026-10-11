@@ -21,20 +21,45 @@ pointing at a line of prose that happened to end in a colon. The error names a
 line number and no file, so it is a genuinely confusing few minutes. Keep the
 directory to the three manifests.
 
-## Do not hand-edit the hashes
+## First submission vs. later releases
 
-Generate the real manifest with `wingetcreate` against the published release
-URLs, as [`RELEASING.md`](../../RELEASING.md) step 8 describes:
+`wingetcreate update` only works on a package that already exists in
+winget-pkgs. Check first:
 
 ```powershell
-wingetcreate update CursedTechnocrat.TechnicianToolkit --version 5.0.0 `
-    --urls <x64-url> <arm64-url> --submit
+winget show CursedTechnocrat.TechnicianToolkit
+```
+
+**Not found — first submission.** Update these three files in a PR (version,
+both URLs and hashes, `ReleaseDate`, `ReleaseNotesUrl`), merge it, then submit
+them as they are:
+
+```powershell
+winget validate --manifest packaging\winget\manifests
+wingetcreate submit packaging\winget\manifests
+```
+
+The hashes then come from step 6 of [`RELEASING.md`](../../RELEASING.md), and
+each must equal GitHub's own digest of the release asset (the release API's
+`digest` field) — check that before submitting.
+
+**Found — every later release.** Let `wingetcreate` do it from the published
+URLs, then copy what it generated back into this folder:
+
+```powershell
+wingetcreate update CursedTechnocrat.TechnicianToolkit --version <version> `
+    --urls <x64-url> <arm64-url> `
+    --release-notes-url https://github.com/CursedTechnocrat/TechnicianToolkit/releases/tag/v<version> `
+    --submit
 ```
 
 `wingetcreate` downloads each URL and computes the hash itself, which removes
 the most common way a submission fails: a hash taken from the wrong copy of the
-file. The `0000…` values checked in here are placeholders and will never
-validate.
+file.
+
+`wingetcreate` is not part of winget itself: `winget install Microsoft.WingetCreate`.
+The first `submit` or `update --submit` asks you to sign in to GitHub in the
+browser, because it opens the pull request on microsoft/winget-pkgs as you.
 
 **The hash must come from the file after signing.** Signing appends to the PE, so
 a hash computed from the unsigned CI artifact will not match what a user
@@ -70,9 +95,9 @@ or that the hashes are right — only a real submission does.
 - `winget validate` passes.
 - Ideally, the package installs on a clean machine from the submitted manifest.
 
-## While the binaries are unsigned
+## Signing
 
-5.0 ships unsigned — the certificate is in validation. winget does not require a
-signature for a portable package, so the submission is valid either way, but
-SmartScreen will still warn when the executable is first run. The README sets
-that expectation; do not treat it as a packaging bug.
+The binaries are signed from 6.0.0 on. winget does not require a signature for
+a portable package, but a new certificate builds SmartScreen reputation over
+time, so the first installs can still see a warning. Do not treat that as a
+packaging bug.

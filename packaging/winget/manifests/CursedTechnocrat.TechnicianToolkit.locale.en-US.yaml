@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 PackageIdentifier: CursedTechnocrat.TechnicianToolkit
-PackageVersion: 5.0.0
+PackageVersion: 6.0.0
 PackageLocale: en-US
 
 Publisher: CursedTechnocrat
@@ -28,7 +28,7 @@ CopyrightUrl: https://github.com/CursedTechnocrat/TechnicianToolkit/blob/main/LI
 ShortDescription: A portable diagnostic and deployment toolkit for Windows technicians.
 
 Description: |-
-  Forty-two field tools for Windows technicians — hardware and disk health,
+  More than fifty field tools for Windows technicians — hardware and disk health,
   account and Active Directory audits, network diagnostics, software deployment,
   security posture, backup and migration — in one portable application that
   installs nothing on the machine it runs on.
@@ -55,7 +55,7 @@ Tags:
   - msp
   - reporting
 
-ReleaseNotesUrl: https://github.com/CursedTechnocrat/TechnicianToolkit/releases/tag/v5.0.0
+ReleaseNotesUrl: https://github.com/CursedTechnocrat/TechnicianToolkit/releases/tag/v6.0.0
 Documentations:
   - DocumentLabel: README
     DocumentUrl: https://github.com/CursedTechnocrat/TechnicianToolkit/blob/main/README.md

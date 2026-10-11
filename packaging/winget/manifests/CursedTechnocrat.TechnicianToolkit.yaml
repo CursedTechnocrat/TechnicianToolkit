@@ -7,7 +7,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 PackageIdentifier: CursedTechnocrat.TechnicianToolkit
-PackageVersion: 5.0.0
+PackageVersion: 6.0.0
 DefaultLocale: en-US
 ManifestType: version
 ManifestVersion: 1.6.0
