@@ -7,6 +7,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- **WARD showed a LAPS badge on an account no policy manages.** With LAPS not configured, the
+  built-in Administrator is only the account LAPS *would* manage, but the report still marked it
+  `LAPS`, implying a rotated password that does not exist. The badge now appears only when a
+  Windows LAPS or legacy LAPS policy is in force.
+- **WARD's report navigation links went nowhere.** The shared header links to `#s01` and `#s02`;
+  WARD's two sections carried descriptive ids instead. They now use the ids the links expect.
+
+### Changed
+- **RELEASING.md records what the first signed release taught.** The `.exe` sits under
+  `publish\<rid>\` in each artifact; `signtool` is found under the Windows SDK rather than on
+  PATH and is run from PowerShell; signing pins the certificate by thumbprint; the verify
+  output's *Hash of file* is not the file's SHA-256; an elevated window suppresses the UAC
+  prompt, so the publisher check is made from Explorer; and a release stays a draft until its
+  binaries and notes are complete. The publisher name is corrected throughout to the
+  certificate's own subject, **Open Source Developer John Bejarana**, here and in the README.
+
 ---
 
 ## [6.0.0] - 2026-10-11

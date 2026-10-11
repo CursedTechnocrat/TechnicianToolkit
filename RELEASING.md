@@ -4,22 +4,18 @@ The build is automated. The release is not, and cannot be — see *Why signing i
 manual* below. This checklist exists so the manual half is not carried in one
 person's head.
 
-**Status for 6.0:** 6.0.0 is the first release to be **signed**. 5.0.0 shipped
-unsigned while the certificate was in validation, and the signed 5.0.1 it promised
-never went out (nor did 5.1.0, which is folded into 6.0.0). So 6.0.0 is tagged
-first and **published only once it is signed**. Steps 4 and 5 run for the first
-time, and the release waits for them rather than going out unsigned.
+**Every release is signed.** 6.0.0 was the first; 5.0.0 shipped unsigned while
+the certificate was in validation. A release is tagged first and **published only
+once it is signed**, and a release that cannot be signed waits for it rather than
+shipping unsigned with a promise.
 
-**If signing falls through** and 6.0.0 has to ship unsigned, the signed build
-becomes **6.0.1**. It is a patch release because it changes no code. It has to be
-a new version because the signed files have different hashes, and winget cannot
-carry two hashes for one version. Only the three `.csproj` files move, to
-`6.0.1`; the script headers and the GRIMOIRE registry stay at `6.0`. Then tag
-`v6.0.1` and run this checklist again. Follow the *While unsigned* line in step 7
-for the unsigned release.
-
-**From then on, every release is signed.** A release that cannot be signed waits
-for it, rather than shipping unsigned with a promise.
+**If signing falls through** and a release has to ship unsigned anyway, the signed
+build becomes the next patch version. It changes no code, but it has to be a new
+version because the signed files have different hashes, and winget cannot carry
+two hashes for one version. Only the three `.csproj` files move; the script
+headers and the GRIMOIRE registry stay where they are. Then tag the patch and run
+this checklist again. Follow the *While unsigned* line in step 7 for the unsigned
+release.
 
 ---
 
@@ -51,11 +47,17 @@ Download both `TechnicianToolkit-<rid>-unsigned` artifacts from the workflow run
 Each contains `TechnicianToolkit.exe` and a `SHA256SUMS.txt` recording what CI
 built.
 
-- [ ] Both artifacts downloaded and unzipped.
+- [ ] Both artifacts downloaded and unzipped, **each into its own folder** —
+      both hold a file named `TechnicianToolkit.exe`. The `.exe` sits two levels
+      down, at `publish\<rid>\TechnicianToolkit.exe`.
 - [ ] The hash of each `.exe` matches its `SHA256SUMS.txt`:
 
 ```powershell
-Get-FileHash .\TechnicianToolkit.exe -Algorithm SHA256
+Expand-Archive .\TechnicianToolkit-win-x64-unsigned.zip   -DestinationPath .\tk-x64
+Expand-Archive .\TechnicianToolkit-win-arm64-unsigned.zip -DestinationPath .\tk-arm64
+Get-ChildItem .\tk-x64, .\tk-arm64 -Recurse -Filter TechnicianToolkit.exe |
+    Get-FileHash -Algorithm SHA256 | Format-Table Hash, Path -AutoSize
+Get-Content .\tk-x64\SHA256SUMS.txt, .\tk-arm64\SHA256SUMS.txt
 ```
 
 ## 2. Check the ARM64 build
@@ -81,14 +83,26 @@ that is the claim the whole port rests on.
 ## 4. Sign
 
 On a Windows machine with the Windows SDK installed, which provides `signtool`.
+Run everything in **PowerShell**, not the Developer Command Prompt, which is
+`cmd` and rejects the pipelines below. `signtool` is usually not on PATH; it lives
+under the SDK's versioned `bin` folder:
+
+```powershell
+$signtool = Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe' |
+    Sort-Object FullName | Select-Object -Last 1 -ExpandProperty FullName
+& $signtool /?
+```
 
 - [ ] Start **SimplySign Desktop** and authenticate with the SimplySign mobile
       app. The certificate appears in the Windows certificate store through a
       virtual smart card.
-- [ ] **First time only:** confirm that exactly one code-signing certificate
-      matches the subject `/n` selects. If two match, for example an expired one
-      left behind, `signtool` stops and asks. Pin that certificate with
-      `/sha1 <thumbprint>` instead of `/n`.
+- [ ] Confirm that exactly one code-signing certificate matches. Sign by
+      thumbprint (`/sha1`) rather than subject (`/n`): if two certificates ever
+      match a subject, for example an expired one left behind, `signtool` stops
+      and asks. The current certificate is
+      `CN=Open Source Developer John Bejarana`, thumbprint
+      `F14F545CB084EDCB18630CA0B520ABC3C46B2516`, valid to 2027-10-11. When it
+      is renewed, the thumbprint changes; update it here.
 
 ```powershell
 Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert |
@@ -101,8 +115,10 @@ Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert |
       it expires where an un-timestamped one dies with it.
 
 ```powershell
-signtool sign /n "Open Source Developer" /fd SHA256 `
-    /tr http://time.certum.pl /td SHA256 TechnicianToolkit.exe
+$x64   = '.\tk-x64\publish\win-x64\TechnicianToolkit.exe'
+$arm64 = '.\tk-arm64\publish\win-arm64\TechnicianToolkit.exe'
+& $signtool sign /sha1 F14F545CB084EDCB18630CA0B520ABC3C46B2516 /fd SHA256 `
+    /tr http://time.certum.pl /td SHA256 $x64 $arm64
 ```
 
 ## 5. Verify the signature
@@ -112,21 +128,38 @@ signtool sign /n "Open Source Developer" /fd SHA256 `
       needs no separate arrangement.
 - [ ] The verify output shows a **timestamp**. A signature without one passes
       today and dies when the certificate expires.
-- [ ] Launch the signed x64 build once. The UAC prompt should name the publisher
-      (`Open Source Developer, John Joseph Bejarana`), not *Unknown publisher*.
+- [ ] The *Hash of file* line in the verify output is the Authenticode digest,
+      which excludes the signature. It is **not** the file's SHA-256; do not put
+      it in the release notes (step 6 computes the right one).
+- [ ] Check what a user will see. The UAC prompt should name the publisher
+      **Open Source Developer John Bejarana**, not *Unknown publisher*. Launch
+      it from **Explorer**: a run from an elevated PowerShell window inherits its
+      elevation and shows no prompt at all. Without launching, the file's
+      **Properties → Digital Signatures** tab shows the same signer name.
 
 ## 6. Re-hash what you are actually shipping
 
 Signing changes the file, so the hashes from step 1 no longer apply.
 
-- [ ] Recompute the SHA-256 of each binary in its final form.
+- [ ] Copy each binary to its release name (renaming does not touch the
+      signature) and recompute the SHA-256 of that final file:
+
+```powershell
+Copy-Item $x64   .\TechnicianToolkit-6.0.0-win-x64.exe
+Copy-Item $arm64 .\TechnicianToolkit-6.0.0-win-arm64.exe
+Get-FileHash .\TechnicianToolkit-6.0.0-win-*.exe -Algorithm SHA256 | Format-Table Hash, Path -AutoSize
+```
+
+- [ ] Both hashes differ from step 1's. One that does not was never signed.
 - [ ] Those are the hashes that go in the release notes and, later, the winget
       manifest. A hash taken from the unsigned artifact will not match a signed
       download.
 
 ## 7. Publish the release
 
-- [ ] Create the GitHub release against the tag.
+- [ ] Create the GitHub release against the tag. Keep it a **draft** until every
+      item below is done: a published release with no binaries, or with
+      placeholder hashes, is what users see in the meantime.
 - [ ] Attach both binaries, named so the architecture is unambiguous:
       `TechnicianToolkit-6.0.0-win-x64.exe`,
       `TechnicianToolkit-6.0.0-win-arm64.exe`.
@@ -147,6 +180,9 @@ Signing changes the file, so the hashes from step 1 no longer apply.
   > download. A signed build will follow as the next patch release.
 
 - [ ] Note that the ARM64 build is untested on hardware, and ask for reports.
+- [ ] After publishing, reload the release page and check it: both binaries are
+      listed under *Assets* (an upload still in progress when you save is
+      dropped), and the notes run to the end rather than stopping part-way.
 
 ## 8. Generate the winget manifest — last
 
@@ -200,7 +236,9 @@ documents on file. That is why the copyright notice in every source file, the
 four `.csproj` files, the winget locale manifest and the README all name
 **John Joseph Bejarana (CursedTechnocrat)** rather than the handle alone.
 
-It is deliberate, and it is the name the certificate subject will carry. Do not
-tidy it back to the pseudonym — the public record and the certificate have to
-agree, and the handle is kept beside the name precisely so the GitHub account
+It is deliberate. The certificate subject itself carries the shorter
+**John Bejarana** (`CN=Open Source Developer John Bejarana`), so that is the name
+the UAC prompt shows and the README and release notes quote. Do not tidy the
+public record back to the pseudonym: it is what tied the certificate to the
+person, and the handle is kept beside the name precisely so the GitHub account
 and the person resolve to each other.

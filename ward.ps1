@@ -738,7 +738,12 @@ function Get-LapsStatus {
         }
     }
 
-    if ($managed) { $managed | Add-Member -NotePropertyName LapsManaged -NotePropertyValue $true -Force }
+    # Mark the account only when a policy actually rotates it. With no policy (or a Disabled one) the
+    # built-in Administrator is just the account LAPS would manage, and a LAPS badge would imply
+    # protection that is not there.
+    if ($managed -and $policy.Mode -notin 'Not configured', 'Disabled') {
+        $managed | Add-Member -NotePropertyName LapsManaged -NotePropertyValue $true -Force
+    }
 
     return [PSCustomObject]@{
         Mode            = $policy.Mode
@@ -870,7 +875,7 @@ function Build-HtmlReport {
 
   $summaryCards
 
-  <div class="tk-section" id="local-user-accounts">
+  <div class="tk-section" id="s01">
     <div class="tk-card">
       <div class="tk-card-header">
         <span class="tk-section-tag">PART 1</span>
@@ -901,7 +906,7 @@ function Build-HtmlReport {
     </div>
   </div>
 
-  <div class="tk-section" id="local-administrator-password-laps">
+  <div class="tk-section" id="s02">
     <div class="tk-card">
       <div class="tk-card-header">
         <span class="tk-section-tag">PART 2</span>
