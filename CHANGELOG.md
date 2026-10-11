@@ -7,42 +7,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-### Added
-- **`TK_DISABLE_DOWNLOAD` — run only the release you deployed.** With this machine environment
-  variable set to `1`, nothing in the toolkit fetches its own code from GitHub at run time: the
-  6.0 forwarding stubs, GRIMOIRE's tool launcher and RITUAL's step resolver all stop with a message naming the missing file instead of downloading it from
-  `main`. Unset, behaviour is unchanged. A new Pester gate fails on any download of a GitHub raw
-  URL that does not check the variable first.
-- **`docs/soc2.md` — running the toolkit inside SOC 2 scope.** For an MSP or IT team whose
-  examination covers the tools its technicians run: change management (verified release,
-  `TK_DISABLE_DOWNLOAD`, optional own-certificate script signing), third-party modules and
-  CONJURE hash pinning, access to the deployed copy and `config.json`, confidentiality of report
-  output, the Teams webhook as a secret, and the evidence the tools produce for change tickets.
-  Ends with a checklist.
-
-### Changed
-- **The shared module is gone — every tool is self-contained.** `TechnicianToolkit.psm1` no longer
-  ships. Its helpers live in `shared/TechnicianToolkit.Shared.ps1`, the single source, and each tool
-  carries a generated `#region TK-SHARED` block holding only the helpers it calls (and the ones
-  those call). Drop one `.ps1` on a machine and it runs with nothing beside it and nothing to
-  download; the module bootstrap and its run-time fetch from `main` are removed from all 53 tools.
-  `build/Sync-TKShared.ps1` writes the blocks (`-Check` reports drift), and a new Pester gate fails
-  on any block that differs from what it would write or any shared helper redefined outside one.
-  EMISSARY no longer copies a module to the remote machine, HEARTH no longer checks for one, and
-  the desktop app embeds the helper source only for its settings screen.
-- **Technician notes are saved automatically at the end of every run.** The note buffer used to
-  live in the module, where notes survived the run only until a technician exported them by hand
-  (and no tool ever did). It now lives in the tool's own scope, and the eleven tools that record
-  notes — CARILLON, CHALICE, CONDUIT, GARM, HALO, LODESTAR, MINOTAUR, NECROPSY, RAVEN, SOLDER,
-  TORPOR — call the new shared helper `Save-TKNoteReport` once at the end of the run, after their
-  menu loop. It writes `<TOOL>_Notes_<timestamp>.html` beside the tool's report (the name CODEX
-  groups under the tool), holding every note the run recorded and a plain-text paste block, and
-  reports rather than throws if the write fails. A new Pester gate fails on any tool that calls
-  `Add-TKNote` without exactly one top-level `Save-TKNoteReport`.
-
 ---
 
-## [6.0.0] - 2026-10-08
+## [6.0.0] - 2026-10-11
 
 The first published release since 5.0.0. The `[5.1.0]` section below was dated but never tagged
 or released as binaries, so anyone upgrading from 5.0.0 gets both sections.
@@ -182,6 +149,17 @@ or released as binaries, so anyone upgrading from 5.0.0 gets both sections.
 
   Writes an HTML report plus a CSV of every access-control entry scanned. `-Path` reviews a folder
   tree instead of the shares. Read-only.
+- **`TK_DISABLE_DOWNLOAD` — run only the release you deployed.** With this machine environment
+  variable set to `1`, nothing in the toolkit fetches its own code from GitHub at run time: the
+  6.0 forwarding stubs, GRIMOIRE's tool launcher and RITUAL's step resolver all stop with a message naming the missing file instead of downloading it from
+  `main`. Unset, behaviour is unchanged. A new Pester gate fails on any download of a GitHub raw
+  URL that does not check the variable first.
+- **`docs/soc2.md` — running the toolkit inside SOC 2 scope.** For an MSP or IT team whose
+  examination covers the tools its technicians run: change management (verified release,
+  `TK_DISABLE_DOWNLOAD`, optional own-certificate script signing), third-party modules and
+  CONJURE hash pinning, access to the deployed copy and `config.json`, confidentiality of report
+  output, the Teams webhook as a secret, and the evidence the tools produce for change tickets.
+  Ends with a checklist.
 
 ### Changed
 - **The suite version moves to 6.0.** Every script header (the tools, GRIMOIRE, HEARTH and the
@@ -191,6 +169,24 @@ or released as binaries, so anyone upgrading from 5.0.0 gets both sections.
   `v3.8.3` / `v1.0` on ARGUS and ORRERY), now read `v6.0` with the rest; the 5.1 bump had only
   moved the tools added for it. The winget manifests stay at `5.0.0` until the 6.0.0 binaries
   are published, since they carry the release files' hashes (`RELEASING.md`, step 8).
+- **The shared module is gone — every tool is self-contained.** `TechnicianToolkit.psm1` no longer
+  ships. Its helpers live in `shared/TechnicianToolkit.Shared.ps1`, the single source, and each tool
+  carries a generated `#region TK-SHARED` block holding only the helpers it calls (and the ones
+  those call). Drop one `.ps1` on a machine and it runs with nothing beside it and nothing to
+  download; the module bootstrap and its run-time fetch from `main` are removed from all 53 tools.
+  `build/Sync-TKShared.ps1` writes the blocks (`-Check` reports drift), and a new Pester gate fails
+  on any block that differs from what it would write or any shared helper redefined outside one.
+  EMISSARY no longer copies a module to the remote machine, HEARTH no longer checks for one, and
+  the desktop app embeds the helper source only for its settings screen.
+- **Technician notes are saved automatically at the end of every run.** The note buffer used to
+  live in the module, where notes survived the run only until a technician exported them by hand
+  (and no tool ever did). It now lives in the tool's own scope, and the eleven tools that record
+  notes — CARILLON, CHALICE, CONDUIT, GARM, HALO, LODESTAR, MINOTAUR, NECROPSY, RAVEN, SOLDER,
+  TORPOR — call the new shared helper `Save-TKNoteReport` once at the end of the run, after their
+  menu loop. It writes `<TOOL>_Notes_<timestamp>.html` beside the tool's report (the name CODEX
+  groups under the tool), holding every note the run recorded and a plain-text paste block, and
+  reports rather than throws if the write fails. A new Pester gate fails on any tool that calls
+  `Add-TKNote` without exactly one top-level `Save-TKNoteReport`.
 - **BREAKING: categories regrouped and themed, and 25 tools renamed.** Each
   category now has a theme its tool names follow, and its registry name carries both:
   **The Workshop — Deployment & Onboarding** (the artificer), **The Observatory — Diagnostics &

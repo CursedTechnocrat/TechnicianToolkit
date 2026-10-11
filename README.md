@@ -38,11 +38,13 @@ It requests **Administrator at launch**, once, because most of what it does need
 it — including read-only tools that do not. That is a deliberate simplification
 for 5.0 and is called out here rather than buried.
 
-> **The 5.0 binaries are not code-signed.** SmartScreen will warn on first run,
-> and some antivirus products may flag a single-file executable that unpacks
-> scripts and runs them elevated — that is structurally what a dropper looks
-> like, and a signature is what normally offsets it. Check the SHA-256 published
-> in the release notes against your download. Signing starts with 6.0.0.
+> **The binaries are code-signed from 6.0.0 on**, with a Certum Open Source Code
+> Signing certificate. The UAC prompt names the publisher as **Open Source
+> Developer, John Joseph Bejarana**: certificates of this type are issued to a
+> natural person rather than an organization, so a developer's name is what you
+> should expect to see. A new signature builds SmartScreen reputation over time,
+> so the first downloads of a release can still see a warning. The SHA-256 of
+> each signed file is in the release notes. The 5.0.0 binaries were not signed.
 
 > **The ARM64 build has never run on real hardware.** It is built and published
 > because withholding it helps nobody, but nothing has verified it beyond
