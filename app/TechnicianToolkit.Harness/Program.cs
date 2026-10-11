@@ -131,8 +131,8 @@ namespace TechnicianToolkit.Harness
             Console.WriteLine("elevated: " + Elevation.IsElevated());
             Console.WriteLine();
 
-            // A throwaway script beside the suite, so it runs by path with the
-            // module next to it exactly as a real tool does.
+            // A throwaway script beside the suite, so it runs by path exactly as
+            // a real tool does, with the shared helpers dot-sourced from beside it.
             string probeScript = Path.Combine(layout.SuiteDirectory, "__probe.ps1");
             File.WriteAllText(probeScript, ProbeScript, new UTF8Encoding(true));
 
@@ -163,10 +163,10 @@ namespace TechnicianToolkit.Harness
 
         /// <summary>
         /// Deliberately touches the two things phase 00 found broken, plus the
-        /// module's own console helpers so the host surface is exercised too.
+        /// suite's own console helpers so the host surface is exercised too.
         /// </summary>
         private const string ProbeScript = @"
-Import-Module (Join-Path $PSScriptRoot 'TechnicianToolkit.psm1') -Force -ErrorAction Stop
+. (Join-Path $PSScriptRoot 'TechnicianToolkit.Shared.ps1')
 
 Write-Section 'Engine probe'
 Write-Info ('PowerShell : ' + $PSVersionTable.PSVersion + ' (' + $PSVersionTable.PSEdition + ')')

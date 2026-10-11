@@ -48,8 +48,14 @@
     <EmbeddedResource Include="..\..\*.ps1">
       <LogicalName>TKScripts.%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="..\..\TechnicianToolkit.psm1">
-      <LogicalName>TKScripts.TechnicianToolkit.psm1</LogicalName>
+    <!--
+      The tools carry their own generated copies of the shared helpers, so none
+      of them needs this file. The settings screen does: ToolkitConfig
+      dot-sources it to call Get-TKConfig / Set-TKConfig, and it has to land at
+      the suite root because those helpers find config.json from $PSScriptRoot.
+    -->
+    <EmbeddedResource Include="..\..\shared\TechnicianToolkit.Shared.ps1">
+      <LogicalName>TKScripts.TechnicianToolkit.Shared.ps1</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\..\config.json">
       <LogicalName>TKScripts.config.json</LogicalName>

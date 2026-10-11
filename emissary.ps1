@@ -55,38 +55,140 @@ param(
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ===========================
-# SHARED MODULE BOOTSTRAP
+# SHARED HELPERS
 # ===========================
-$TKModulePath = Join-Path $PSScriptRoot 'TechnicianToolkit.psm1'
-if (-not (Test-Path $TKModulePath)) {
-    $TKModuleUrl = 'https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/TechnicianToolkit.psm1'
-    if ($env:TK_DISABLE_DOWNLOAD -in @('1', 'true')) {
-        Write-Host "  [!!] Shared module TechnicianToolkit.psm1 not found, and TK_DISABLE_DOWNLOAD forbids fetching it." -ForegroundColor Red
-        Write-Host "       Deploy the module next to this script from an approved release." -ForegroundColor Yellow
-        exit 1
+#region TK-SHARED
+# Generated from shared/TechnicianToolkit.Shared.ps1 by build/Sync-TKShared.ps1. Do not edit
+# this block: edit the source and re-run the script. The Pester suite fails on a stale block.
+
+# Forcing UTF-8 keeps the box-drawing banners intact when a console is attached.
+# When one is not — a GUI host, a WinRM runspace, a scheduled task — the setter
+# throws "The handle is invalid", so this must never be fatal. Every tool runs
+# this as the first line of its generated block.
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
+
+function Write-Warn { param([string]$Msg) Write-Host ("  [!] {0}" -f $Msg) -ForegroundColor Yellow  }
+
+function Get-TKConfig {
+    <#
+    .SYNOPSIS
+        Returns the toolkit configuration as a PSCustomObject.
+        Reads config.json from the tool's own directory; missing keys are filled
+        with empty-string defaults so callers never receive null.
+    #>
+    $configPath = Join-Path $PSScriptRoot 'config.json'
+
+    $defaults = [PSCustomObject]@{
+        OrgName       = ''
+        LogDirectory  = ''
+        TeamsWebhook  = ''
+        Archive       = [PSCustomObject]@{ DefaultDestination   = '' }
+        Revenant      = [PSCustomObject]@{ DefaultDestination   = '' }
+        Covenant      = [PSCustomObject]@{ DefaultTimezone = ''; DefaultLocalAdminUser = '' }
+        # DirectDownloads is an array of { Name; Url; Args; Sha256 } — installers
+        # CONJURE fetches by URL because they have no winget/Chocolatey package.
+        Conjure       = [PSCustomObject]@{ DirectDownloads = @() }
     }
-    Write-Host "  [*] Shared module TechnicianToolkit.psm1 not found - downloading from GitHub..." -ForegroundColor Magenta
+
+    if (-not (Test-Path $configPath)) { return $defaults }
+
     try {
-        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
-        Invoke-RestMethod -Uri $TKModuleUrl -OutFile $TKModulePath -ErrorAction Stop
-        $parseErrors = $null
-        $null = [System.Management.Automation.Language.Parser]::ParseFile($TKModulePath, [ref]$null, [ref]$parseErrors)
-        if ($parseErrors.Count -gt 0) {
-            Remove-Item -Path $TKModulePath -Force -ErrorAction SilentlyContinue
-            Write-Host "  [!!] Downloaded module failed syntax validation - file removed." -ForegroundColor Red
-            Write-Host "       $($parseErrors[0].Message)" -ForegroundColor Red
-            exit 1
+        $raw = Get-Content $configPath -Raw -ErrorAction Stop | ConvertFrom-Json
+
+        # Legacy migration: v2.x used a 'Phantom' section; v3.0 renamed it to 'Revenant'.
+        # Copy any populated 'Phantom' value forward so upgrading users don't lose their default destination.
+        if ($raw.PSObject.Properties['Phantom'] -and
+            $raw.Phantom -is [PSCustomObject] -and
+            -not [string]::IsNullOrWhiteSpace($raw.Phantom.DefaultDestination)) {
+            if ($raw.PSObject.Properties['Revenant'] -isnot [PSCustomObject] -or
+                [string]::IsNullOrWhiteSpace($raw.Revenant.DefaultDestination)) {
+                if (-not $raw.PSObject.Properties['Revenant']) {
+                    $raw | Add-Member -NotePropertyName 'Revenant' -NotePropertyValue ([PSCustomObject]@{ DefaultDestination = '' }) -Force
+                }
+                $raw.Revenant.DefaultDestination = $raw.Phantom.DefaultDestination
+            }
         }
-        Write-Host "  [+] Module downloaded and verified." -ForegroundColor Green
-    } catch {
-        Write-Host "  [!!] Could not download TechnicianToolkit.psm1:" -ForegroundColor Red
-        Write-Host "       $($_.Exception.Message)" -ForegroundColor Red
-        Write-Host "       Place the module manually next to this script from:" -ForegroundColor Yellow
-        Write-Host "       $TKModuleUrl" -ForegroundColor Yellow
+
+        # Ensure top-level keys exist
+        foreach ($key in ($defaults | Get-Member -MemberType NoteProperty).Name) {
+            if ($null -eq $raw.$key) {
+                $raw | Add-Member -NotePropertyName $key -NotePropertyValue $defaults.$key -Force
+            }
+        }
+        # Ensure nested keys exist
+        foreach ($section in @('Archive','Revenant','Covenant','Conjure')) {
+            if ($raw.$section -isnot [PSCustomObject]) {
+                $raw | Add-Member -NotePropertyName $section -NotePropertyValue $defaults.$section -Force
+            } else {
+                foreach ($key in ($defaults.$section | Get-Member -MemberType NoteProperty).Name) {
+                    if ($null -eq $raw.$section.$key) {
+                        # Carry the default's own type: filling an absent array key
+                        # with '' would hand the caller a string to iterate.
+                        $fallback = if ($defaults.$section.$key -is [Array]) { @() } else { '' }
+                        $raw.$section | Add-Member -NotePropertyName $key -NotePropertyValue $fallback -Force
+                    }
+                }
+            }
+        }
+        return $raw
+    }
+    catch { return $defaults }
+}
+
+function Start-TKTranscript {
+    <#
+    .SYNOPSIS
+        Starts a timestamped PowerShell transcript in the configured log directory.
+        Call once near the top of a script when -Transcript is active.
+    #>
+    param([Parameter(Mandatory)][string]$LogRoot)
+    $path = Join-Path $LogRoot "TK_Transcript_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
+    try {
+        Start-Transcript -Path $path -Append -ErrorAction Stop | Out-Null
+        Write-Host "  [*] Transcript: $path" -ForegroundColor Gray
+    }
+    catch {
+        Write-Warn "Could not start transcript: $_"
+    }
+}
+
+function Stop-TKTranscript {
+    <#
+    .SYNOPSIS
+        Stops an active PowerShell transcript started by Start-TKTranscript.
+    #>
+    try { Stop-Transcript -ErrorAction Stop | Out-Null } catch {}
+}
+
+function Resolve-LogDirectory {
+    <#
+    .SYNOPSIS
+        Returns the configured LogDirectory, or the supplied fallback path if
+        LogDirectory is not set. Creates the directory if it does not exist.
+    #>
+    param([Parameter(Mandatory)][string]$FallbackPath)
+
+    $cfg = Get-TKConfig
+    if (-not [string]::IsNullOrWhiteSpace($cfg.LogDirectory)) {
+        if (-not (Test-Path $cfg.LogDirectory)) {
+            $null = New-Item -ItemType Directory -Path $cfg.LogDirectory -Force -ErrorAction SilentlyContinue
+        }
+        return $cfg.LogDirectory
+    }
+    return $FallbackPath
+}
+
+function Test-IsAdmin {
+    ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+function Assert-AdminPrivilege {
+    if (-not (Test-IsAdmin)) {
+        Write-Host "  This script must be run as Administrator." -ForegroundColor Red
         exit 1
     }
 }
-Import-Module $TKModulePath -Force -ErrorAction Stop
+#endregion TK-SHARED
 Assert-AdminPrivilege
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -212,7 +314,6 @@ function Invoke-RemoteTool {
     )
 
     $localScript   = Join-Path $ScriptPath $ScriptFile
-    $localModule   = Join-Path $ScriptPath 'TechnicianToolkit.psm1'
     $remoteTempDir = "C:\Temp\EmissaryToolkit"
     $remoteScript  = "$remoteTempDir\$ScriptFile"
 
@@ -230,16 +331,10 @@ function Invoke-RemoteTool {
             $null = New-Item -Path $dir -ItemType Directory -Force
         } -ArgumentList $remoteTempDir -ErrorAction Stop
 
-        # Copy the tool to the remote machine. The shared module goes with it --
-        # every tool's bootstrap needs TechnicianToolkit.psm1 beside the script, and
-        # a remote endpoint may have no route to GitHub to download it itself.
+        # Copy the tool to the remote machine. It carries its own shared helpers,
+        # so nothing else needs to travel with it.
         Write-Host "  [*] Copying $ScriptFile to $ComputerName..." -ForegroundColor $ColorSchema.Progress
         Copy-Item -Path $localScript -Destination $remoteTempDir -ToSession $Session -ErrorAction Stop
-        if (Test-Path $localModule) {
-            Copy-Item -Path $localModule -Destination $remoteTempDir -ToSession $Session -ErrorAction Stop
-        } else {
-            Write-Host "  [!] TechnicianToolkit.psm1 not found locally - the remote tool will try to download it." -ForegroundColor $ColorSchema.Warning
-        }
 
         # Execute the script remotely
         Write-Host "  [*] Executing $ToolName on $ComputerName..." -ForegroundColor $ColorSchema.Progress
@@ -294,7 +389,6 @@ function Invoke-RemoteSigil {
     )
 
     $localScript   = Join-Path $ScriptPath "basilisk.ps1"
-    $localModule   = Join-Path $ScriptPath 'TechnicianToolkit.psm1'
     $remoteTempDir = "C:\Temp\EmissaryToolkit"
     $remoteScript  = "$remoteTempDir\basilisk.ps1"
 
@@ -309,11 +403,6 @@ function Invoke-RemoteSigil {
         } -ArgumentList $remoteTempDir -ErrorAction Stop
 
         Copy-Item -Path $localScript -Destination $remoteTempDir -ToSession $Session -ErrorAction Stop
-        if (Test-Path $localModule) {
-            Copy-Item -Path $localModule -Destination $remoteTempDir -ToSession $Session -ErrorAction Stop
-        } else {
-            Write-Host "  [!] TechnicianToolkit.psm1 not found locally - the remote tool will try to download it." -ForegroundColor $ColorSchema.Warning
-        }
 
         Write-Host "  [*] Executing B.A.S.I.L.I.S.K. baseline on $ComputerName (applying all categories)..." -ForegroundColor $ColorSchema.Progress
         Write-Host ""

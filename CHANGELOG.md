@@ -10,8 +10,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - **`TK_DISABLE_DOWNLOAD` — run only the release you deployed.** With this machine environment
   variable set to `1`, nothing in the toolkit fetches its own code from GitHub at run time: the
-  module bootstrap in every tool, the 6.0 forwarding stubs, GRIMOIRE's tool launcher and RITUAL's
-  step resolver all stop with a message naming the missing file instead of downloading it from
+  6.0 forwarding stubs, GRIMOIRE's tool launcher and RITUAL's step resolver all stop with a message naming the missing file instead of downloading it from
   `main`. Unset, behaviour is unchanged. A new Pester gate fails on any download of a GitHub raw
   URL that does not check the variable first.
 - **`docs/soc2.md` — running the toolkit inside SOC 2 scope.** For an MSP or IT team whose
@@ -20,6 +19,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   CONJURE hash pinning, access to the deployed copy and `config.json`, confidentiality of report
   output, the Teams webhook as a secret, and the evidence the tools produce for change tickets.
   Ends with a checklist.
+
+### Changed
+- **The shared module is gone — every tool is self-contained.** `TechnicianToolkit.psm1` no longer
+  ships. Its helpers live in `shared/TechnicianToolkit.Shared.ps1`, the single source, and each tool
+  carries a generated `#region TK-SHARED` block holding only the helpers it calls (and the ones
+  those call). Drop one `.ps1` on a machine and it runs with nothing beside it and nothing to
+  download; the module bootstrap and its run-time fetch from `main` are removed from all 53 tools.
+  `build/Sync-TKShared.ps1` writes the blocks (`-Check` reports drift), and a new Pester gate fails
+  on any block that differs from what it would write or any shared helper redefined outside one.
+  EMISSARY no longer copies a module to the remote machine, HEARTH no longer checks for one, and
+  the desktop app embeds the helper source only for its settings screen.
+- **Technician notes last for one tool run.** The note buffer used to live in the module, so a
+  technician could call `Export-TKNoteReport` after a tool finished, as long as no other tool had
+  re-imported the module. It now lives in the tool's own scope and ends with it. No tool calls
+  `Export-TKNoteReport` itself yet, so notes recorded with `Add-TKNote` are not exported.
 
 ---
 

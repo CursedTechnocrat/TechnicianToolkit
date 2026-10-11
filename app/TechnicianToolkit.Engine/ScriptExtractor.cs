@@ -39,7 +39,7 @@ namespace TechnicianToolkit.Engine
         /// </summary>
         public string RootDirectory { get; init; } = string.Empty;
 
-        /// <summary>The extracted suite: 42 tools, the module, config.json, the licence.</summary>
+        /// <summary>The extracted suite: the tools, the shared helpers, config.json, the licence.</summary>
         public string SuiteDirectory { get; init; } = string.Empty;
 
         /// <summary>
@@ -54,7 +54,7 @@ namespace TechnicianToolkit.Engine
     }
 
     /// <summary>
-    /// Every toolkit script, the shared module, config.json and the licence are
+    /// Every toolkit script, the shared helpers, config.json and the licence are
     /// embedded in this assembly. They are written to a working directory before
     /// anything runs.
     ///
@@ -63,9 +63,9 @@ namespace TechnicianToolkit.Engine
     ///
     /// Two properties of this are load-bearing and must not be optimised away:
     ///
-    /// 1. Scripts run BY PATH, never from a string. Every tool bootstrap block
-    ///    depends on $PSScriptRoot and $PSCommandPath resolving to a real
-    ///    location, and on the shared module sitting beside it.
+    /// 1. Scripts run BY PATH, never from a string. Every tool's shared helpers
+    ///    depend on $PSScriptRoot and $PSCommandPath resolving to a real
+    ///    location -- that is how they find config.json and relaunch elevated.
     /// 2. Because the whole suite is present locally, neither the GRIMOIRE hub
     ///    nor any tool ever reaches out to GitHub for a missing file. That is
     ///    the offline guarantee, and it holds exactly as it does today.

@@ -127,7 +127,7 @@ namespace TechnicianToolkit.Engine
             List<ConfigField> fields = Describe().ToList();
 
             string json = Invoke(suiteDirectory, @"
-Import-Module (Join-Path $TkSuite 'TechnicianToolkit.psm1') -Force -ErrorAction Stop
+. (Join-Path $TkSuite 'TechnicianToolkit.Shared.ps1')
 Get-TKConfig | ConvertTo-Json -Depth 6 -Compress
 ");
 
@@ -184,7 +184,7 @@ Get-TKConfig | ConvertTo-Json -Depth 6 -Compress
             }
 
             var script = new System.Text.StringBuilder();
-            script.AppendLine("Import-Module (Join-Path $TkSuite 'TechnicianToolkit.psm1') -Force -ErrorAction Stop");
+            script.AppendLine(". (Join-Path $TkSuite 'TechnicianToolkit.Shared.ps1')");
 
             for (int i = 0; i < list.Count; i++)
             {
@@ -214,10 +214,10 @@ Get-TKConfig | ConvertTo-Json -Depth 6 -Compress
         private static string Invoke(
             string suiteDirectory, string body, IDictionary<string, object?>? parameters = null)
         {
-            string modulePath = Path.Combine(suiteDirectory, "TechnicianToolkit.psm1");
-            if (!File.Exists(modulePath))
+            string helpersPath = Path.Combine(suiteDirectory, "TechnicianToolkit.Shared.ps1");
+            if (!File.Exists(helpersPath))
             {
-                throw new FileNotFoundException("The shared module is not where it was extracted.", modulePath);
+                throw new FileNotFoundException("The shared helpers are not where they were extracted.", helpersPath);
             }
 
             var initialState = InitialSessionState.CreateDefault2();
@@ -233,9 +233,10 @@ Get-TKConfig | ConvertTo-Json -Depth 6 -Compress
             // The suite path is passed as a parameter rather than read from
             // $PSScriptRoot: a script built from a string has no script root, so
             // the automatic variable is null and Join-Path fails with a binding
-            // error that names neither. The module's own $PSScriptRoot still
-            // resolves, because it is imported from a real file on disk, which is
-            // what lets Get-TKConfig find config.json beside it.
+            // error that names neither. The helpers' own $PSScriptRoot still
+            // resolves, because they are dot-sourced from a real file on disk at
+            // the suite root, which is what lets Get-TKConfig find config.json
+            // beside it.
             var arguments = new Dictionary<string, object?>(parameters ?? new Dictionary<string, object?>())
             {
                 ["TkSuite"] = suiteDirectory,
