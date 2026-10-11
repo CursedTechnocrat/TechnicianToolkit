@@ -14,6 +14,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Windows LAPS or legacy LAPS policy is in force.
 - **WARD's report navigation links went nowhere.** The shared header links to `#s01` and `#s02`;
   WARD's two sections carried descriptive ids instead. They now use the ids the links expect.
+- **Badges in most reports rendered as plain coloured text, not pills.** The shared stylesheet
+  gave the pill shape (padding, rounded border, monospace) only to the base `tk-badge` class, and
+  most reports write the colour class alone (`class='tk-badge-ok'`). The colour classes now carry
+  the shape too, in `shared/TechnicianToolkit.Shared.ps1`, and every tool's generated block was
+  re-synced. Markup that already used both classes looks the same as before.
 
 ### Changed
 - **The winget manifests describe 6.0.0.** `packaging/winget/manifests/` moves from 5.0.0 to the
