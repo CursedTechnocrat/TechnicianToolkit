@@ -137,11 +137,13 @@ The toolkit produces evidence your change and incident records can cite:
 |---|---|
 | What a run did, step by step | `-Transcript` on tools that write logs; RITUAL's rollup records each step's status, duration and artifacts |
 | What a change *would* do, before approval | `-WhatIf` on every state-changing tool (REVENANT, EMBALM, COVENANT, BASILISK, CLEANSE, WYRM, FORGE, WHETSTONE, RUNEPRESS, CONJURE, CONDUIT, SOLDER, LODESTAR, CHALICE) |
+| Technician actions and decisions | Every tool that records notes (the repair tools CONDUIT, SOLDER, LODESTAR and CHALICE, and the audit verdicts of the rest) saves `<TOOL>_Notes_<timestamp>.html` at the end of the run: timestamped, categorised, with a plain-text block for the ticket |
 | Tool errors | `Write-TKError` appends to `TK_Errors_<yyyyMM>.jsonl` in `LogDirectory` (host, user, tool, message) and can alert a Teams channel |
 | Point-in-time state | Every audit tool's HTML report; CODEX indexes a directory of them |
 
 A procedure that holds up: run the `-WhatIf` preview and attach it to the change
-ticket, run the change with `-Transcript`, and attach the transcript and report.
+ticket, run the change with `-Transcript`, and attach the transcript, the report and the
+notes file.
 
 Set `LogDirectory`. If it is unset, the error log falls back to the folder the
 tool lives in, which is the deployed copy technicians should not be writing to.

@@ -599,8 +599,7 @@ function Add-TKNote {
         Records a timestamped technician note for the current session.
     .DESCRIPTION
         Notes accumulate in script-scoped state for the life of one tool run.
-        Export them to a ticket-ready HTML report with Export-TKNoteReport
-        before the tool exits.
+        The tool saves them with Save-TKNoteReport at the end of the run.
     .PARAMETER Text        The note text.
     .PARAMETER Category    One of Info, Action, Warning, Issue, Resolution.
     .PARAMETER ScriptName  Optional originating tool name, shown in the report.
@@ -769,6 +768,46 @@ function Export-TKNoteReport {
     }
     Set-Content -Path $Path -Value $html -Encoding UTF8
     return $Path
+}
+
+function Save-TKNoteReport {
+    <#
+    .SYNOPSIS
+        Saves the run's technician notes beside the tool's reports, if it has any.
+    .DESCRIPTION
+        The note buffer lives only as long as the tool run, so every tool that
+        records notes calls this once, at the end of the run, after its menu
+        loop -- one file per run, holding every note the run recorded. Writes
+        <Prefix>_Notes_<yyyyMMdd_HHmmss>.html, the name CODEX groups under the
+        tool. Returns the path, or $null when there were no notes or the write
+        failed; a failure is reported, never thrown, so it cannot end a run that
+        has already done its work.
+    .PARAMETER Prefix      Tool name used for the file label, e.g. 'CONDUIT'.
+    .PARAMETER Directory   Folder to write into -- normally Resolve-LogDirectory.
+    .PARAMETER ScriptName  Header label; defaults to the dotted form of Prefix.
+    .EXAMPLE
+        $null = Save-TKNoteReport -Prefix 'CONDUIT' -Directory (Resolve-LogDirectory -FallbackPath $ScriptPath)
+    #>
+    param(
+        [Parameter(Mandatory)][ValidatePattern('^[A-Za-z]+$')][string]$Prefix,
+        [Parameter(Mandatory)][string]$Directory,
+        [string]$ScriptName = ''
+    )
+
+    if (@($script:TKNotes).Count -eq 0) { return $null }
+    if (-not $ScriptName) { $ScriptName = ($Prefix.ToUpper().ToCharArray() -join '.') + '.' }
+
+    $path = Join-Path $Directory ('{0}_Notes_{1}.html' -f $Prefix.ToUpper(), (Get-Date -Format 'yyyyMMdd_HHmmss'))
+    try {
+        $null = Export-TKNoteReport -Path $path -ScriptName $ScriptName -ErrorAction Stop
+        Write-Ok "Technician notes saved:"
+        Write-Info $path
+        return $path
+    }
+    catch {
+        Write-Warn "Could not save technician notes: $($_.Exception.Message)"
+        return $null
+    }
 }
 
 #endregion

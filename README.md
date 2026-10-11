@@ -1508,6 +1508,8 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 
 All HTML reports and transcripts are saved to the configured `LogDirectory` from `config.json` if set, otherwise to the script's own directory.
 
+The tools that record technician notes — CARILLON, CHALICE, CONDUIT, GARM, HALO, LODESTAR, MINOTAUR, NECROPSY, RAVEN, SOLDER and TORPOR — also write `<TOOL>_Notes_<timestamp>.html` to the same directory when the run ends: every note the run recorded, with a plain-text block ready to paste into a ticket. One file per run, however many menu actions it covered.
+
 | Script | Log Output |
 |--------|------------|
 | **grimoire.ps1** | No log file — hub activity is visible on-screen only |

@@ -571,8 +571,7 @@ function Add-TKNote {
         Records a timestamped technician note for the current session.
     .DESCRIPTION
         Notes accumulate in script-scoped state for the life of one tool run.
-        Export them to a ticket-ready HTML report with Export-TKNoteReport
-        before the tool exits.
+        The tool saves them with Save-TKNoteReport at the end of the run.
     .PARAMETER Text        The note text.
     .PARAMETER Category    One of Info, Action, Warning, Issue, Resolution.
     .PARAMETER ScriptName  Optional originating tool name, shown in the report.
@@ -591,6 +590,180 @@ function Add-TKNote {
         Script    = $ScriptName
         Text      = $Text
     })
+}
+
+function Export-TKNoteReport {
+    <#
+    .SYNOPSIS
+        Writes the session's technician notes to a ticket-ready HTML report.
+    .DESCRIPTION
+        Renders the notes recorded with Add-TKNote into an HTML file built on
+        the shared report template. The report includes a plain-text block
+        sized for pasting straight into a ticketing system's comment field.
+    .PARAMETER Path        Output .html file path.
+    .PARAMETER Title       Report heading.
+    .PARAMETER ScriptName  Acronym label for the report header/footer.
+    .PARAMETER Ticket      Optional ticket / case reference shown in the metadata.
+    .PARAMETER Technician  Name of the technician (defaults to the current user).
+    .PARAMETER Summary     Optional free-text summary shown above the notes.
+    .EXAMPLE
+        Export-TKNoteReport -Path 'C:\Reports\notes.html' -Ticket 'INC012345'
+    #>
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [string]$Title      = 'Technician Notes',
+        [string]$ScriptName = 'T.K.',
+        [string]$Ticket     = '',
+        [string]$Technician = $env:USERNAME,
+        [string]$Summary    = ''
+    )
+
+    $notes     = @($script:TKNotes)
+    $generated = Get-Date -Format 'yyyy-MM-dd HH:mm'
+    $hostName  = $env:COMPUTERNAME
+
+    $badgeClass = @{
+        Info       = 'tk-badge-info'
+        Action     = 'tk-badge-blue'
+        Warning    = 'tk-badge-warn'
+        Issue      = 'tk-badge-err'
+        Resolution = 'tk-badge-ok'
+    }
+
+    $countAction     = @($notes | Where-Object { $_.Category -eq 'Action' }).Count
+    $countIssue      = @($notes | Where-Object { $_.Category -eq 'Issue' }).Count
+    $countResolution = @($notes | Where-Object { $_.Category -eq 'Resolution' }).Count
+
+    $meta = [ordered]@{
+        'Generated'  = $generated
+        'Machine'    = $hostName
+        'Technician' = $Technician
+    }
+    if (-not [string]::IsNullOrWhiteSpace($Ticket)) { $meta['Ticket'] = $Ticket }
+
+    $html = Get-TKHtmlHead -Title $Title -ScriptName $ScriptName -Subtitle $hostName `
+                -MetaItems $meta -NavItems @('Notes', 'Ticket Summary')
+
+    $html += @"
+<div class="tk-summary-row">
+  <div class="tk-summary-card info"><div class="tk-summary-num">$($notes.Count)</div><div class="tk-summary-lbl">Total Notes</div></div>
+  <div class="tk-summary-card"><div class="tk-summary-num">$countAction</div><div class="tk-summary-lbl">Actions</div></div>
+  <div class="tk-summary-card err"><div class="tk-summary-num">$countIssue</div><div class="tk-summary-lbl">Issues</div></div>
+  <div class="tk-summary-card ok"><div class="tk-summary-num">$countResolution</div><div class="tk-summary-lbl">Resolutions</div></div>
+</div>
+"@
+
+    if (-not [string]::IsNullOrWhiteSpace($Summary)) {
+        $html += "<div class=`"tk-info-box`"><div class=`"tk-info-label`">Summary</div>$(EscHtml $Summary)</div>"
+    }
+
+    $rows = ''
+    if ($notes.Count -eq 0) {
+        $rows = "<tr><td colspan='4'>No notes were recorded this session.</td></tr>"
+    }
+    else {
+        foreach ($n in $notes) {
+            $cls = $badgeClass[[string]$n.Category]
+            if (-not $cls) { $cls = 'tk-badge-info' }
+            $src = if ($n.Script) { EscHtml $n.Script } else { '&mdash;' }
+            $rows += "<tr><td class='tk-mono'>$($n.Timestamp.ToString('HH:mm:ss'))</td>" +
+                     "<td><span class='tk-badge $cls'>$(EscHtml ([string]$n.Category))</span></td>" +
+                     "<td>$src</td><td>$(EscHtml $n.Text)</td></tr>"
+        }
+    }
+
+    $html += @"
+<div class="tk-section" id="s01">
+  <div class="tk-section-title"><span class="tk-section-num">01</span> Notes</div>
+  <div class="tk-card">
+    <div class="tk-table-wrap">
+    <table class="tk-table"><thead><tr><th>Time</th><th>Category</th><th>Source</th><th>Note</th></tr></thead>
+    <tbody>$rows</tbody></table>
+    </div>
+  </div>
+</div>
+"@
+
+    # Plain-text block — copy/paste straight into a ticket comment field.
+    $sb = New-Object System.Text.StringBuilder
+    [void]$sb.AppendLine("TECHNICIAN NOTES - $Title")
+    [void]$sb.AppendLine("Machine    : $hostName")
+    [void]$sb.AppendLine("Technician : $Technician")
+    [void]$sb.AppendLine("Generated  : $generated")
+    if (-not [string]::IsNullOrWhiteSpace($Ticket)) { [void]$sb.AppendLine("Ticket     : $Ticket") }
+    if (-not [string]::IsNullOrWhiteSpace($Summary)) {
+        [void]$sb.AppendLine("")
+        [void]$sb.AppendLine("Summary: $Summary")
+    }
+    [void]$sb.AppendLine("")
+    if ($notes.Count -eq 0) {
+        [void]$sb.AppendLine("(no notes recorded)")
+    }
+    else {
+        foreach ($n in $notes) {
+            [void]$sb.AppendLine(("[{0}] [{1,-10}] {2}" -f `
+                $n.Timestamp.ToString('HH:mm:ss'), ([string]$n.Category).ToUpper(), $n.Text))
+        }
+    }
+
+    $html += @"
+<div class="tk-section" id="s02">
+  <div class="tk-section-title"><span class="tk-section-num">02</span> Ticket Summary</div>
+  <div class="tk-section-subtitle">Copy the block below straight into the ticket comment field.</div>
+  <div class="tk-card">
+    <pre class="tk-mono" style="white-space:pre-wrap;display:block;padding:14px;line-height:1.5">$(EscHtml $sb.ToString())</pre>
+  </div>
+</div>
+"@
+
+    $html += Get-TKHtmlFoot -ScriptName $ScriptName
+
+    $dir = Split-Path -Parent $Path
+    if ($dir -and -not (Test-Path $dir)) {
+        $null = New-Item -ItemType Directory -Path $dir -Force -ErrorAction SilentlyContinue
+    }
+    Set-Content -Path $Path -Value $html -Encoding UTF8
+    return $Path
+}
+
+function Save-TKNoteReport {
+    <#
+    .SYNOPSIS
+        Saves the run's technician notes beside the tool's reports, if it has any.
+    .DESCRIPTION
+        The note buffer lives only as long as the tool run, so every tool that
+        records notes calls this once, at the end of the run, after its menu
+        loop -- one file per run, holding every note the run recorded. Writes
+        <Prefix>_Notes_<yyyyMMdd_HHmmss>.html, the name CODEX groups under the
+        tool. Returns the path, or $null when there were no notes or the write
+        failed; a failure is reported, never thrown, so it cannot end a run that
+        has already done its work.
+    .PARAMETER Prefix      Tool name used for the file label, e.g. 'CONDUIT'.
+    .PARAMETER Directory   Folder to write into -- normally Resolve-LogDirectory.
+    .PARAMETER ScriptName  Header label; defaults to the dotted form of Prefix.
+    .EXAMPLE
+        $null = Save-TKNoteReport -Prefix 'CONDUIT' -Directory (Resolve-LogDirectory -FallbackPath $ScriptPath)
+    #>
+    param(
+        [Parameter(Mandatory)][ValidatePattern('^[A-Za-z]+$')][string]$Prefix,
+        [Parameter(Mandatory)][string]$Directory,
+        [string]$ScriptName = ''
+    )
+
+    if (@($script:TKNotes).Count -eq 0) { return $null }
+    if (-not $ScriptName) { $ScriptName = ($Prefix.ToUpper().ToCharArray() -join '.') + '.' }
+
+    $path = Join-Path $Directory ('{0}_Notes_{1}.html' -f $Prefix.ToUpper(), (Get-Date -Format 'yyyyMMdd_HHmmss'))
+    try {
+        $null = Export-TKNoteReport -Path $path -ScriptName $ScriptName -ErrorAction Stop
+        Write-Ok "Technician notes saved:"
+        Write-Info $path
+        return $path
+    }
+    catch {
+        Write-Warn "Could not save technician notes: $($_.Exception.Message)"
+        return $null
+    }
 }
 #endregion TK-SHARED
 Invoke-AdminElevation -ScriptFile $PSCommandPath
@@ -1652,6 +1825,9 @@ if ($Unattended) {
 
     } while ($choice -ne 'Q')
 }
+
+# The note buffer ends with this run, so save it now -- one file per run.
+$null = Save-TKNoteReport -Prefix 'NECROPSY' -Directory (Resolve-LogDirectory -FallbackPath $ScriptPath)
 
 if ($Transcript) { Stop-TKTranscript }
 if ($PSCommandPath -and -not (Test-Path (Join-Path $PSScriptRoot '.git'))) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }
