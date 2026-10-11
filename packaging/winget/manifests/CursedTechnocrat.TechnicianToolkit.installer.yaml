@@ -8,21 +8,21 @@
 # the binary with installer switches it does not have, and the toolkit would
 # launch its window during 'winget install'.
 #
-# THE HASHES BELOW ARE PLACEHOLDERS. They must be the SHA-256 of the files
-# actually attached to the GitHub release, computed AFTER signing -- signing
-# appends to the PE and changes the hash. Generate this file with
-# `wingetcreate update` against the published URLs rather than editing the
-# hashes by hand; see RELEASING.md step 8.
+# The hashes are the SHA-256 of the files attached to the GitHub release,
+# computed AFTER signing -- signing appends to the PE and changes the hash.
+# GitHub's own digest of each release asset must match them. Once the package
+# is in winget-pkgs, generate this file with `wingetcreate update` against the
+# published URLs rather than editing the hashes by hand; see RELEASING.md step 8.
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 PackageIdentifier: CursedTechnocrat.TechnicianToolkit
-PackageVersion: 5.0.0
+PackageVersion: 6.0.0
 
 MinimumOSVersion: 10.0.17763.0
 InstallerType: portable
 UpgradeBehavior: install
-ReleaseDate: 2026-09-01
+ReleaseDate: 2026-10-11
 
 # The command alias winget creates. For a bare portable executable this is the
 # root-level field; PortableCommandAlias belongs to NestedInstallerFiles, which
@@ -36,15 +36,15 @@ InstallModes:
 
 Installers:
   - Architecture: x64
-    InstallerUrl: https://github.com/CursedTechnocrat/TechnicianToolkit/releases/download/v5.0.0/TechnicianToolkit-5.0.0-win-x64.exe
-    InstallerSha256: 0BFD28FACF3DC1D1BCF573CCC7D5851AA0C90DCD244976E8D3B58724303EF746
+    InstallerUrl: https://github.com/CursedTechnocrat/TechnicianToolkit/releases/download/v6.0.0/TechnicianToolkit-6.0.0-win-x64.exe
+    InstallerSha256: 650BA1CAC1B5ECD0F5298BBD53492528191BEABD122A3D3A53AFE0617F6A5365
 
   # Built by CI but not yet run on real ARM hardware. Shipping it is deliberate
   # -- see the ARM64 row in docs/desktop-port.md and the request for a field
   # report in CONTRIBUTING.md.
   - Architecture: arm64
-    InstallerUrl: https://github.com/CursedTechnocrat/TechnicianToolkit/releases/download/v5.0.0/TechnicianToolkit-5.0.0-win-arm64.exe
-    InstallerSha256: 1B86EA819D71F57B12BE3751C93EA1BADFDF4294C9480AC47C9C2CC550B78DE4
+    InstallerUrl: https://github.com/CursedTechnocrat/TechnicianToolkit/releases/download/v6.0.0/TechnicianToolkit-6.0.0-win-arm64.exe
+    InstallerSha256: C8E626DB732F131E9504B90A61D46C8A21051D032507E8F37417A001185EDD28
 
 ManifestType: installer
 ManifestVersion: 1.6.0

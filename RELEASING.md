@@ -189,10 +189,20 @@ Get-FileHash .\TechnicianToolkit-6.0.0-win-*.exe -Algorithm SHA256 | Format-Tabl
 Only after the release is published and the files are final, because the
 manifest carries their hashes.
 
+- [ ] `winget install Microsoft.WingetCreate` if `wingetcreate` is missing.
+- [ ] `winget show CursedTechnocrat.TechnicianToolkit` finds the package? Then:
+
 ```powershell
 wingetcreate update CursedTechnocrat.TechnicianToolkit --version 6.0.0 `
-    --urls <x64-url> <arm64-url> --submit
+    --urls <x64-url> <arm64-url> `
+    --release-notes-url https://github.com/CursedTechnocrat/TechnicianToolkit/releases/tag/v6.0.0 `
+    --submit
 ```
+
+  and copy the generated manifests back into `packaging/winget/manifests/`.
+  If it reports *No package found*, `update` cannot run; the package's first
+  submission is `wingetcreate submit packaging\winget\manifests`, after a PR
+  that brings those files to the release (see the winget README).
 
 - [ ] Manifest validates (`winget validate --manifest packaging/winget/manifests`).
 - [ ] Installs cleanly from the submitted manifest on a clean machine.

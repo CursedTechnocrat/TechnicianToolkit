@@ -16,6 +16,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   WARD's two sections carried descriptive ids instead. They now use the ids the links expect.
 
 ### Changed
+- **The winget manifests describe 6.0.0.** `packaging/winget/manifests/` moves from 5.0.0 to the
+  signed 6.0.0 binaries: version, release date, both download URLs, their post-signing SHA-256
+  (each equal to GitHub's digest of the release asset) and the release-notes link. The package
+  has never been in winget-pkgs, so this is its first submission, made with `wingetcreate submit`
+  from these files; the winget README and RELEASING.md step 8 now say when to `submit` and when
+  to `update`.
 - **RELEASING.md records what the first signed release taught.** The `.exe` sits under
   `publish\<rid>\` in each artifact; `signtool` is found under the Windows SDK rather than on
   PATH and is run from PowerShell; signing pins the certificate by thumbprint; the verify
