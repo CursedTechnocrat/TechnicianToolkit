@@ -40,7 +40,7 @@ for 5.0 and is called out here rather than buried.
 
 > **The binaries are code-signed from 6.0.0 on**, with a Certum Open Source Code
 > Signing certificate. The UAC prompt names the publisher as **Open Source
-> Developer, John Joseph Bejarana**: certificates of this type are issued to a
+> Developer John Bejarana**: certificates of this type are issued to a
 > natural person rather than an organization, so a developer's name is what you
 > should expect to see. A new signature builds SmartScreen reputation over time,
 > so the first downloads of a release can still see a warning. The SHA-256 of
