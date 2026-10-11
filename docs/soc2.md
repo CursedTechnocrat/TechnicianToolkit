@@ -22,21 +22,21 @@ to test against the toolkit.
 
 ## 1. Change management (CC8.1) — run only the release you approved
 
-**The risk.** By default the toolkit fetches its own code from GitHub at run time.
-That makes the single-file "drop one script on a machine" distribution work, but
-it means a run can execute code nobody on your team reviewed. Four paths do it,
-and each downloads from the repository's `main` branch, not from a release:
+**The risk.** Every tool is self-contained: it carries its own copy of the shared
+helpers and fetches nothing to run. But the scripts that launch *other* tools
+fetch a missing one from GitHub at run time, so a run can execute code nobody on
+your team reviewed. Three paths do it, and each downloads from the repository's
+`main` branch, not from a release:
 
 | Path | Fetches |
 |---|---|
-| Every tool's module bootstrap | `TechnicianToolkit.psm1`, when it is not beside the script |
 | GRIMOIRE's tool launcher | A tool script, when it is not beside `grimoire.ps1` |
 | RITUAL's step resolver | A recipe step's tool script, when it is not beside `ritual.ps1` |
 | The 6.0 forwarding stubs (`archive.ps1`, `cipher.ps1`, …) | The renamed tool's script |
 
 **The control.** Set the machine environment variable **`TK_DISABLE_DOWNLOAD=1`**
 on every machine your technicians run the toolkit from, pushed by GPO or your RMM.
-With it set, all four paths refuse to download and exit with a message saying
+With it set, all three paths refuse to download and exit with a message saying
 which file is missing. Only files you deployed can run. The Pester suite checks
 that every fetch path honours the variable, so a new one cannot be added without
 it.
@@ -53,7 +53,7 @@ it.
    `irm … | iex` quick-launch snippet.
 2. **Verify it.** The desktop application is Authenticode-signed from 6.0.0 on.
    Check it with `Get-AuthenticodeSignature` and compare it with the release's
-   `SHA256SUMS.txt`. The loose `.ps1` / `.psm1` files are not signed upstream. If
+   `SHA256SUMS.txt`. The loose `.ps1` files are not signed upstream. If
    your policy needs signed scripts, sign the approved copy with your own
    code-signing certificate (`Set-AuthenticodeSignature`) and enforce
    `AllSigned` execution policy on technician machines.
@@ -61,8 +61,9 @@ it.
    approving an upgrade, and record the approval like any other change.
 4. **Deploy the whole set together** to a location technicians can read but not
    write, such as a share with read-only ACLs for technicians or the desktop
-   application. Every tool needs `TechnicianToolkit.psm1` beside it. With the
-   download switch on, a missing file stops the run instead of fetching it.
+   application. A single tool runs on its own, but GRIMOIRE and RITUAL launch
+   the others from beside themselves; with the download switch on, a missing
+   tool stops the run instead of being fetched.
 5. **Keep current.** Only the latest release gets security fixes (see
    `SECURITY.md`). Watch the repository's releases and security advisories, and
    remove old copies (USB sticks, jump boxes) when you upgrade.
@@ -136,16 +137,14 @@ The toolkit produces evidence your change and incident records can cite:
 |---|---|
 | What a run did, step by step | `-Transcript` on tools that write logs; RITUAL's rollup records each step's status, duration and artifacts |
 | What a change *would* do, before approval | `-WhatIf` on every state-changing tool (REVENANT, EMBALM, COVENANT, BASILISK, CLEANSE, WYRM, FORGE, WHETSTONE, RUNEPRESS, CONJURE, CONDUIT, SOLDER, LODESTAR, CHALICE) |
-| Technician actions and decisions | `Add-TKNote` and `Export-TKNoteReport` give a timestamped, ticket-ready record |
 | Tool errors | `Write-TKError` appends to `TK_Errors_<yyyyMM>.jsonl` in `LogDirectory` (host, user, tool, message) and can alert a Teams channel |
 | Point-in-time state | Every audit tool's HTML report; CODEX indexes a directory of them |
 
 A procedure that holds up: run the `-WhatIf` preview and attach it to the change
-ticket, run the change with `-Transcript`, attach the transcript and report, and
-close the ticket with the note export.
+ticket, run the change with `-Transcript`, and attach the transcript and report.
 
 Set `LogDirectory`. If it is unset, the error log falls back to the folder the
-module lives in, which is the deployed copy technicians should not be writing to.
+tool lives in, which is the deployed copy technicians should not be writing to.
 
 ## Checklist
 

@@ -6,7 +6,7 @@
   SPDX-License-Identifier: GPL-3.0-or-later
 
   The palette is lifted verbatim from the HTML reports the suite already
-  generates (the tk custom properties in TechnicianToolkit.psm1), so the app and
+  generates (the tk custom properties in shared/TechnicianToolkit.Shared.ps1), so the app and
   the artifacts it produces read as one product rather than two.
 
   WPF's stock look is the main risk the plan called out for this phase, so every

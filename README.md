@@ -17,7 +17,7 @@ source — the application drives the scripts, it does not replace them.
 
 | | **The application** | **The scripts** |
 |---|---|---|
-| What it is | One portable `.exe` with a window | 42 `.ps1` files plus the shared module |
+| What it is | One portable `.exe` with a window | Self-contained `.ps1` files, one per tool |
 | Needs on the target machine | Nothing | Windows PowerShell 5.1 (built into Windows) |
 | PowerShell | 7, hosted inside the executable | 5.1, the one already there |
 | Best for | Carrying on a USB stick; walking up to a machine | Remote sessions, scripted runs, dropping a single tool onto a box |
@@ -1081,7 +1081,7 @@ Outlook data-file discovery that inventories every PST (and optionally OST) on t
 ## Requirements
 
 **Running the application:** Windows 10 1809 or later, x64 or ARM64. Nothing else
-— PowerShell, the shared module, and every tool ship inside the executable. The
+— PowerShell and every tool ship inside the executable. The
 per-tool requirements below still apply to what each tool *does* (RSAT for the AD
 tools, a BitLocker-capable edition for WYRM, and so on), but nothing in the
 first four rows is needed.
@@ -1091,7 +1091,6 @@ first four rows is needed.
 | Requirement | Notes |
 |-------------|-------|
 | Windows PowerShell 5.1+ | All scripts |
-| **TechnicianToolkit.psm1 in the same folder** | All scripts — shared module providing logging, HTML, and privilege helpers |
 | Administrator privileges | All scripts (auto-elevation on `grimoire.ps1`) |
 | Internet connectivity | All scripts |
 | Windows Package Manager (winget) | `conjure.ps1` (Chocolatey supported as alternative) |
@@ -1138,7 +1137,7 @@ Verify the SHA-256 against the release notes before running it — see the note 
 ### The scripts
 
 1. Clone or download this repository
-2. Extract **all files** (`.ps1` and `TechnicianToolkit.psm1`) into the same folder — the module must be co-located with the scripts
+2. Extract the `.ps1` files into one folder — each tool is self-contained, but GRIMOIRE and RITUAL launch the others from beside themselves
 3. Open PowerShell as Administrator
 4. Navigate to the toolkit directory
 
@@ -1146,9 +1145,10 @@ Verify the SHA-256 against the release notes before running it — see the note 
 cd C:\Path\To\Toolkit
 ```
 
-Any single tool also bootstraps itself: drop one `.ps1` onto a machine and it
-fetches the shared module from GitHub on first run. See [Quick Launch](#quick-launch)
-for one-liners that do exactly that.
+Any single tool also runs on its own: drop one `.ps1` onto a machine and run it.
+Each carries its own copy of the shared helpers, so there is no module to place
+beside it and nothing to download. See [Quick Launch](#quick-launch) for
+one-liners that do exactly that.
 
 ### Under SOC 2 or a similar control framework
 
@@ -1164,7 +1164,7 @@ report confidentiality, secrets and change-ticket evidence.
 
 Run any script directly from GitHub without cloning — scripts download into whatever directory your shell is currently in. `cd` to your working folder first, then paste the command.
 
-> **Note:** All scripts depend on `TechnicianToolkit.psm1`. The module is downloaded automatically by the GRIMOIRE command below. If running an individual script without GRIMOIRE, download the module first — see the first command in the block.
+> **Note:** Every script is self-contained — there is no shared module to download first. GRIMOIRE fetches any tool you pick that is not already beside it.
 
 ```powershell
 # Example: navigate to your working folder first
@@ -1174,11 +1174,8 @@ cd C:\Technicians\JobSite42\
 ```
 
 ```powershell
-# TechnicianToolkit.psm1 — Shared module (download once per working folder; required by all scripts)
-Set-ExecutionPolicy Bypass -Scope Process -Force; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/TechnicianToolkit.psm1 -OutFile "$(Get-Location)\TechnicianToolkit.psm1"
-
-# G.R.I.M.O.I.R.E. — Hub launcher (recommended starting point; downloads module automatically)
-Set-ExecutionPolicy Bypass -Scope Process -Force; $d="$(Get-Location)"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/TechnicianToolkit.psm1 -OutFile "$d\TechnicianToolkit.psm1"; $f="$d\grimoire.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/grimoire.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
+# G.R.I.M.O.I.R.E. — Hub launcher (recommended starting point; fetches the tools you pick)
+Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\grimoire.ps1"; irm https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/grimoire.ps1 -OutFile $f; [IO.File]::WriteAllText($f,[IO.File]::ReadAllText($f,[Text.Encoding]::UTF8),[Text.UTF8Encoding]::new($true)); & $f
 
 # ── The Workshop — Deployment & Onboarding ───────────────────────────────────
 

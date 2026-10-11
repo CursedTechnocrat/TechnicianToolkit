@@ -58,38 +58,201 @@ param(
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ===========================
-# SHARED MODULE BOOTSTRAP
+# SHARED HELPERS
 # ===========================
-$TKModulePath = Join-Path $PSScriptRoot 'TechnicianToolkit.psm1'
-if (-not (Test-Path $TKModulePath)) {
-    $TKModuleUrl = 'https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/TechnicianToolkit.psm1'
-    if ($env:TK_DISABLE_DOWNLOAD -in @('1', 'true')) {
-        Write-Host "  [!!] Shared module TechnicianToolkit.psm1 not found, and TK_DISABLE_DOWNLOAD forbids fetching it." -ForegroundColor Red
-        Write-Host "       Deploy the module next to this script from an approved release." -ForegroundColor Yellow
-        exit 1
+#region TK-SHARED
+# Generated from shared/TechnicianToolkit.Shared.ps1 by build/Sync-TKShared.ps1. Do not edit
+# this block: edit the source and re-run the script. The Pester suite fails on a stale block.
+
+# Forcing UTF-8 keeps the box-drawing banners intact when a console is attached.
+# When one is not — a GUI host, a WinRM runspace, a scheduled task — the setter
+# throws "The handle is invalid", so this must never be fatal. Every tool runs
+# this as the first line of its generated block.
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
+
+function Write-Warn { param([string]$Msg) Write-Host ("  [!] {0}" -f $Msg) -ForegroundColor Yellow  }
+
+function Write-TKError {
+    <#
+    .SYNOPSIS
+        Logs a structured error to the central toolkit error log and optionally
+        posts to a Teams incoming webhook configured as TeamsWebhook in config.json.
+    .EXAMPLE
+        Write-TKError -ScriptName 'basilisk' -Message $_.Exception.Message -Category 'Registry'
+    #>
+    param(
+        [Parameter(Mandatory)][string]$ScriptName,
+        [Parameter(Mandatory)][string]$Message,
+        [string]$Category = 'General'
+    )
+
+    $entry = [PSCustomObject]@{
+        Timestamp  = (Get-Date -Format 'o')
+        Script     = $ScriptName
+        Category   = $Category
+        Message    = $Message
+        Host       = $env:COMPUTERNAME
+        User       = $env:USERNAME
     }
-    Write-Host "  [*] Shared module TechnicianToolkit.psm1 not found - downloading from GitHub..." -ForegroundColor Magenta
+
+    # Append to monthly JSONL error log in the configured log directory
     try {
-        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
-        Invoke-RestMethod -Uri $TKModuleUrl -OutFile $TKModulePath -ErrorAction Stop
-        $parseErrors = $null
-        $null = [System.Management.Automation.Language.Parser]::ParseFile($TKModulePath, [ref]$null, [ref]$parseErrors)
-        if ($parseErrors.Count -gt 0) {
-            Remove-Item -Path $TKModulePath -Force -ErrorAction SilentlyContinue
-            Write-Host "  [!!] Downloaded module failed syntax validation - file removed." -ForegroundColor Red
-            Write-Host "       $($parseErrors[0].Message)" -ForegroundColor Red
-            exit 1
+        $cfg     = Get-TKConfig
+        $logRoot = if (-not [string]::IsNullOrWhiteSpace($cfg.LogDirectory) -and (Test-Path $cfg.LogDirectory)) {
+            $cfg.LogDirectory
+        } else {
+            $PSScriptRoot
         }
-        Write-Host "  [+] Module downloaded and verified." -ForegroundColor Green
-    } catch {
-        Write-Host "  [!!] Could not download TechnicianToolkit.psm1:" -ForegroundColor Red
-        Write-Host "       $($_.Exception.Message)" -ForegroundColor Red
-        Write-Host "       Place the module manually next to this script from:" -ForegroundColor Yellow
-        Write-Host "       $TKModuleUrl" -ForegroundColor Yellow
+        $logFile = Join-Path $logRoot "TK_Errors_$(Get-Date -Format 'yyyyMM').jsonl"
+        $line    = $entry | ConvertTo-Json -Compress
+        Add-Content -Path $logFile -Value $line -Encoding UTF8 -ErrorAction Stop
+    }
+    catch { <# never throw from a logging helper #> }
+
+    # Optional Teams webhook notification
+    try {
+        $cfg = Get-TKConfig
+        $webhook = $cfg.TeamsWebhook
+        if (-not [string]::IsNullOrWhiteSpace($webhook)) {
+            $card = @{
+                '@type'      = 'MessageCard'
+                '@context'   = 'http://schema.org/extensions'
+                themeColor   = 'FF0000'
+                summary      = "TechnicianToolkit error in $ScriptName"
+                sections     = @(@{
+                    activityTitle    = "TechnicianToolkit - $ScriptName [$Category]"
+                    activitySubtitle = "$($entry.Host) / $($entry.User)  |  $($entry.Timestamp)"
+                    activityText     = $Message
+                })
+            } | ConvertTo-Json -Depth 5
+
+            Invoke-RestMethod -Uri $webhook -Method Post -Body $card `
+                -ContentType 'application/json' -ErrorAction Stop | Out-Null
+        }
+    }
+    catch { <# webhook failures are silent - never interrupt the caller #> }
+}
+
+function Get-TKConfig {
+    <#
+    .SYNOPSIS
+        Returns the toolkit configuration as a PSCustomObject.
+        Reads config.json from the tool's own directory; missing keys are filled
+        with empty-string defaults so callers never receive null.
+    #>
+    $configPath = Join-Path $PSScriptRoot 'config.json'
+
+    $defaults = [PSCustomObject]@{
+        OrgName       = ''
+        LogDirectory  = ''
+        TeamsWebhook  = ''
+        Archive       = [PSCustomObject]@{ DefaultDestination   = '' }
+        Revenant      = [PSCustomObject]@{ DefaultDestination   = '' }
+        Covenant      = [PSCustomObject]@{ DefaultTimezone = ''; DefaultLocalAdminUser = '' }
+        # DirectDownloads is an array of { Name; Url; Args; Sha256 } — installers
+        # CONJURE fetches by URL because they have no winget/Chocolatey package.
+        Conjure       = [PSCustomObject]@{ DirectDownloads = @() }
+    }
+
+    if (-not (Test-Path $configPath)) { return $defaults }
+
+    try {
+        $raw = Get-Content $configPath -Raw -ErrorAction Stop | ConvertFrom-Json
+
+        # Legacy migration: v2.x used a 'Phantom' section; v3.0 renamed it to 'Revenant'.
+        # Copy any populated 'Phantom' value forward so upgrading users don't lose their default destination.
+        if ($raw.PSObject.Properties['Phantom'] -and
+            $raw.Phantom -is [PSCustomObject] -and
+            -not [string]::IsNullOrWhiteSpace($raw.Phantom.DefaultDestination)) {
+            if ($raw.PSObject.Properties['Revenant'] -isnot [PSCustomObject] -or
+                [string]::IsNullOrWhiteSpace($raw.Revenant.DefaultDestination)) {
+                if (-not $raw.PSObject.Properties['Revenant']) {
+                    $raw | Add-Member -NotePropertyName 'Revenant' -NotePropertyValue ([PSCustomObject]@{ DefaultDestination = '' }) -Force
+                }
+                $raw.Revenant.DefaultDestination = $raw.Phantom.DefaultDestination
+            }
+        }
+
+        # Ensure top-level keys exist
+        foreach ($key in ($defaults | Get-Member -MemberType NoteProperty).Name) {
+            if ($null -eq $raw.$key) {
+                $raw | Add-Member -NotePropertyName $key -NotePropertyValue $defaults.$key -Force
+            }
+        }
+        # Ensure nested keys exist
+        foreach ($section in @('Archive','Revenant','Covenant','Conjure')) {
+            if ($raw.$section -isnot [PSCustomObject]) {
+                $raw | Add-Member -NotePropertyName $section -NotePropertyValue $defaults.$section -Force
+            } else {
+                foreach ($key in ($defaults.$section | Get-Member -MemberType NoteProperty).Name) {
+                    if ($null -eq $raw.$section.$key) {
+                        # Carry the default's own type: filling an absent array key
+                        # with '' would hand the caller a string to iterate.
+                        $fallback = if ($defaults.$section.$key -is [Array]) { @() } else { '' }
+                        $raw.$section | Add-Member -NotePropertyName $key -NotePropertyValue $fallback -Force
+                    }
+                }
+            }
+        }
+        return $raw
+    }
+    catch { return $defaults }
+}
+
+function Start-TKTranscript {
+    <#
+    .SYNOPSIS
+        Starts a timestamped PowerShell transcript in the configured log directory.
+        Call once near the top of a script when -Transcript is active.
+    #>
+    param([Parameter(Mandatory)][string]$LogRoot)
+    $path = Join-Path $LogRoot "TK_Transcript_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
+    try {
+        Start-Transcript -Path $path -Append -ErrorAction Stop | Out-Null
+        Write-Host "  [*] Transcript: $path" -ForegroundColor Gray
+    }
+    catch {
+        Write-Warn "Could not start transcript: $_"
+    }
+}
+
+function Stop-TKTranscript {
+    <#
+    .SYNOPSIS
+        Stops an active PowerShell transcript started by Start-TKTranscript.
+    #>
+    try { Stop-Transcript -ErrorAction Stop | Out-Null } catch {}
+}
+
+function Resolve-LogDirectory {
+    <#
+    .SYNOPSIS
+        Returns the configured LogDirectory, or the supplied fallback path if
+        LogDirectory is not set. Creates the directory if it does not exist.
+    #>
+    param([Parameter(Mandatory)][string]$FallbackPath)
+
+    $cfg = Get-TKConfig
+    if (-not [string]::IsNullOrWhiteSpace($cfg.LogDirectory)) {
+        if (-not (Test-Path $cfg.LogDirectory)) {
+            $null = New-Item -ItemType Directory -Path $cfg.LogDirectory -Force -ErrorAction SilentlyContinue
+        }
+        return $cfg.LogDirectory
+    }
+    return $FallbackPath
+}
+
+function Test-IsAdmin {
+    ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+function Assert-AdminPrivilege {
+    if (-not (Test-IsAdmin)) {
+        Write-Host "  This script must be run as Administrator." -ForegroundColor Red
         exit 1
     }
 }
-Import-Module $TKModulePath -Force -ErrorAction Stop
+#endregion TK-SHARED
 Assert-AdminPrivilege
 
 # ─────────────────────────────────────────────────────────────────────────────

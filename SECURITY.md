@@ -48,11 +48,12 @@ assume it is patched.
 - **Report contents.** HTML reports and CSVs are written to the configured log
   directory and routinely attached to tickets. Anything written there that a
   technician would not expect to be sharing counts.
-- **The module bootstrap.** Every tool downloads `TechnicianToolkit.psm1` from
-  GitHub over HTTPS when it is missing. Anything that could cause a tool to fetch,
-  trust, or execute code from somewhere else is in scope. Setting the machine
-  environment variable `TK_DISABLE_DOWNLOAD=1` turns off every path that fetches
-  toolkit code at run time, so only the copy you deployed runs.
+- **Fetching tools on demand.** Each tool is self-contained, but GRIMOIRE, RITUAL
+  and the 6.0 forwarding stubs download a tool script from GitHub over HTTPS when
+  it is missing. Anything that could cause them to fetch, trust, or execute code
+  from somewhere else is in scope. Setting the machine environment variable
+  `TK_DISABLE_DOWNLOAD=1` turns off every such path, so only the copy you
+  deployed runs.
 - **Injection** through parameters — a computer name, path, or account name that
   escapes into a command it should not.
 - **Webhook delivery.** `Write-TKError` can POST to a configured Teams webhook.

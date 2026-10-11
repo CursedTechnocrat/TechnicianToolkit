@@ -1,4 +1,4 @@
-﻿# TechnicianToolkit.Tests.ps1 - Pester tests for the TechnicianToolkit shared module (TechnicianToolkit.psm1).
+﻿# TechnicianToolkit.Tests.ps1 - Pester tests for the TechnicianToolkit shared helpers and tool scripts.
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -21,14 +21,17 @@
 #Requires -Modules Pester
 <#
 .SYNOPSIS
-    Pester tests for the TechnicianToolkit shared module (TechnicianToolkit.psm1).
+    Pester tests for the TechnicianToolkit shared helpers
+    (shared/TechnicianToolkit.Shared.ps1) and the repo-wide gates on the tools.
     Tests cover the pure utility functions that do not require admin rights or
     live Windows APIs, so they can run in CI without elevated privileges.
 #>
 
 BeforeAll {
-    $ModulePath = Join-Path $PSScriptRoot '..\TechnicianToolkit.psm1'
-    Import-Module $ModulePath -Force
+    # The helpers are tested from their single source. Each tool carries a
+    # generated copy of the ones it calls; 'Shared helper blocks' proves the
+    # copies match this file.
+    . (Join-Path (Join-Path (Join-Path $PSScriptRoot '..') 'shared') 'TechnicianToolkit.Shared.ps1')
 
     # Tool helper extraction for the NECROPSY / RAVEN / WARD / GRIFFIN blocks.
     # Each tool launches its main flow on import, so its tables and pure
@@ -306,13 +309,13 @@ Describe 'Write-TKError' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Module exports
+# Shared helper source — every helper the tools draw on is defined there
 # ─────────────────────────────────────────────────────────────────────────────
-Describe 'Module exports' {
+Describe 'Shared helper source' {
     # Pester 5 data binding: -ForEach hashtable keys become variables in the
     # test body. A plain `foreach { It { ... $fn } }` leaks the discovery-time
     # loop variable out of scope by run phase — use -ForEach so $fn resolves.
-    It 'exports <fn>' -ForEach @(
+    It 'defines <fn>' -ForEach @(
         @{ fn = 'Write-Section' }
         @{ fn = 'Write-Step' }
         @{ fn = 'Write-Ok' }
@@ -451,29 +454,54 @@ Describe 'UTF-8 BOM — all scripts' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Module bootstrap compliance — every tool script must use the shared-module
-# bootstrap block so the module is auto-downloaded when missing and imports
-# fail loudly (-ErrorAction Stop) rather than silently partially-executing.
+# Shared helper blocks — there is no shared module. Every tool carries, between
+# '#region TK-SHARED' and '#endregion TK-SHARED', a generated copy of the
+# helpers it calls, so a single .ps1 runs with nothing beside it and nothing to
+# download. build/Sync-TKShared.ps1 writes the blocks from
+# shared/TechnicianToolkit.Shared.ps1; these tests dot-source it and fail on any
+# block that differs from what it would write, so a hand edit to a copy, or a
+# source change nobody synced, cannot reach a release.
 # ─────────────────────────────────────────────────────────────────────────────
-Describe 'Module bootstrap compliance — all tool scripts' {
+Describe 'Shared helper blocks — all tool scripts' {
+    BeforeAll {
+        $repoRoot = Join-Path $PSScriptRoot '..'
+        . (Join-Path (Join-Path $repoRoot 'build') 'Sync-TKShared.ps1')
+        $script:SharedSource = @(Get-TKSharedSource -Path (Join-Path (Join-Path $repoRoot 'shared') 'TechnicianToolkit.Shared.ps1'))
+        $script:SharedNames  = @($script:SharedSource | Where-Object { $_.Name } | ForEach-Object { $_.Name })
+    }
+
     $scriptCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Filter '*.ps1' -File |
         Where-Object { -not $RenamedToolStubs.Contains($_.Name) } |
         ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
 
-    It '<Name> defines $TKModulePath next to $PSScriptRoot' -ForEach $scriptCases {
-        $content = Get-Content $FullName -Raw
-        $content | Should -Match '\$TKModulePath\s*=\s*Join-Path\s+\$PSScriptRoot\s+''TechnicianToolkit\.psm1'''
+    It 'the shared module is gone from the repository root' {
+        Join-Path (Join-Path $PSScriptRoot '..') 'TechnicianToolkit.psm1' | Should -Not -Exist
     }
 
-    It '<Name> imports via $TKModulePath with -ErrorAction Stop' -ForEach $scriptCases {
+    It '<Name> carries exactly one TK-SHARED block' -ForEach $scriptCases {
         $content = Get-Content $FullName -Raw
-        $content | Should -Match 'Import-Module\s+\$TKModulePath\s+-Force\s+-ErrorAction\s+Stop'
+        ([regex]::Matches($content, '(?m)^#region TK-SHARED\b')).Count    | Should -Be 1
+        ([regex]::Matches($content, '(?m)^#endregion TK-SHARED\b')).Count | Should -Be 1
     }
 
-    It '<Name> no longer uses the silent-fail import' -ForEach $scriptCases {
+    It '<Name> has a TK-SHARED block that matches the shared source' -ForEach $scriptCases {
+        $content  = [IO.File]::ReadAllText($FullName)
+        $expected = Update-TKSharedText -Text $content -Source $script:SharedSource
+        $expected -ceq $content | Should -BeTrue -Because "$Name's TK-SHARED block is stale or hand-edited; run build/Sync-TKShared.ps1"
+    }
+
+    It '<Name> no longer imports or downloads the shared module' -ForEach $scriptCases {
         $content = Get-Content $FullName -Raw
-        # The old pattern (quoted path, no -ErrorAction) must be gone.
-        $content | Should -Not -Match 'Import-Module\s+"\$PSScriptRoot\\TechnicianToolkit\.psm1"\s+-Force\s*$'
+        $content | Should -Not -Match 'Import-Module\s+\$TKModulePath'
+        $content | Should -Not -Match 'TechnicianToolkit\.psm1'
+    }
+
+    It '<Name> defines no shared helper outside its TK-SHARED block' -ForEach $scriptCases {
+        $parts = Split-TKSharedText -Text ((Get-Content $FullName -Raw) -replace "`r`n", "`n")
+        $outside = $parts.Before + $parts.After
+        foreach ($fn in $script:SharedNames) {
+            $outside | Should -Not -Match ('(?m)^\s*function\s+' + [regex]::Escape($fn) + '\b') -Because "$fn belongs in shared/TechnicianToolkit.Shared.ps1, not redefined in $Name"
+        }
     }
 }
 
@@ -482,19 +510,20 @@ Describe 'Module bootstrap compliance — all tool scripts' {
 # pushed by GPO or RMM) so the toolkit never fetches its own code from GitHub at
 # run time. Under SOC 2 change management, code that pulls the current `main`
 # whenever a file is missing is unreviewed change; with the switch set, only the
-# release the MSP deployed can run. Four paths fetch toolkit code — the module
-# bootstrap, the forwarding stubs, GRIMOIRE's tool launcher and RITUAL's step
-# resolver — and every one must check the switch before it downloads. The test
-# is generic so a fifth path cannot be added without it.
+# release the MSP deployed can run. Three paths fetch toolkit code — the
+# forwarding stubs, GRIMOIRE's tool launcher and RITUAL's step resolver — and
+# every one must check the switch before it downloads. The test is generic so a
+# fourth path cannot be added without it.
 # ─────────────────────────────────────────────────────────────────────────────
 Describe 'TK_DISABLE_DOWNLOAD — every self-fetch path honours it' {
     $fetchCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Filter '*.ps1' -File |
         Where-Object { (Get-Content $_.FullName -Raw) -match 'raw\.githubusercontent\.com' } |
         ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
 
-    # Discovery-scope variables are gone at run time, so the count goes in as data.
-    It 'finds the self-fetching scripts' -ForEach @{ Found = @($fetchCases).Count } {
-        $Found | Should -BeGreaterThan 50
+    # Discovery-scope variables are gone at run time, so the names go in as data.
+    It 'finds the self-fetching scripts' -ForEach @{ Found = @($fetchCases | ForEach-Object { $_.Name }) } {
+        $Found | Should -Contain 'grimoire.ps1'
+        $Found | Should -Contain 'ritual.ps1'
     }
 
     It '<Name> checks TK_DISABLE_DOWNLOAD before each download' -ForEach $fetchCases {
@@ -758,8 +787,10 @@ Describe 'Renamed-tool forwarding stubs' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Duplicated helpers removed — the local HtmlEncode / Format-Bytes definitions
-# that were consolidated into the shared module must not reappear.
+# Duplicated helpers removed — the local HtmlEncode definitions consolidated
+# into EscHtml must not reappear. (Format-Bytes and the other shared helpers are
+# covered by 'Shared helper blocks': none may be defined outside a tool's
+# generated block.)
 # ─────────────────────────────────────────────────────────────────────────────
 Describe 'No duplicated helper functions' {
     $toolCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Filter '*.ps1' -File |
@@ -768,11 +799,6 @@ Describe 'No duplicated helper functions' {
     It '<Name> does not redefine HtmlEncode locally' -ForEach $toolCases {
         $content = Get-Content $FullName -Raw
         $content | Should -Not -Match '(?m)^\s*function\s+HtmlEncode\b'
-    }
-
-    It '<Name> does not redefine Format-Bytes locally' -ForEach $toolCases {
-        $content = Get-Content $FullName -Raw
-        $content | Should -Not -Match '(?m)^\s*function\s+Format-Bytes\b'
     }
 }
 

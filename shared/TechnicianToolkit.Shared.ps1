@@ -1,4 +1,4 @@
-﻿# TechnicianToolkit.psm1 - Shared helpers for the TechnicianToolkit suite.
+﻿# TechnicianToolkit.Shared.ps1 - Shared helpers for the TechnicianToolkit suite.
 # Part of the Technician Toolkit - https://github.com/CursedTechnocrat/TechnicianToolkit
 #
 # Copyright (C) 2026 John Joseph Bejarana (CursedTechnocrat) and the Technician Toolkit contributors
@@ -23,16 +23,23 @@
 .SYNOPSIS
     Shared helpers for the TechnicianToolkit suite.
 .DESCRIPTION
-    Provides logging, HTML utility, and privilege management functions shared
-    across all TechnicianToolkit scripts. Import at the top of each script:
+    Provides logging, HTML utility, config and privilege management functions
+    shared across all TechnicianToolkit scripts.
 
-        Import-Module "$PSScriptRoot\TechnicianToolkit.psm1" -Force
+    This file is the single source, not something a tool loads at run time.
+    build/Sync-TKShared.ps1 copies into each tool's generated TK-SHARED block
+    the functions that tool calls (and the ones those call), so every .ps1 runs
+    on its own with nothing beside it and nothing to download. Edit here, then
+    run the sync script; the Pester suite fails if any tool's block is stale.
+
+    The functions resolve config.json and the fallback error log from
+    $PSScriptRoot, which inside a generated block is the tool's own folder.
 #>
 
 # Forcing UTF-8 keeps the box-drawing banners intact when a console is attached.
 # When one is not — a GUI host, a WinRM runspace, a scheduled task — the setter
-# throws "The handle is invalid", so this must never be fatal. The module runs
-# this at import time, which means every tool would hit it on its first line.
+# throws "The handle is invalid", so this must never be fatal. Every tool runs
+# this as the first line of its generated block.
 try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
 
 #region -- Logging Helpers ---------------------------------------------------
@@ -415,7 +422,7 @@ function Get-TKConfig {
     <#
     .SYNOPSIS
         Returns the toolkit configuration as a PSCustomObject.
-        Reads config.json from the module directory; missing keys are filled
+        Reads config.json from the tool's own directory; missing keys are filled
         with empty-string defaults so callers never receive null.
     #>
     $configPath = Join-Path $PSScriptRoot 'config.json'
@@ -582,8 +589,8 @@ function Invoke-AdminElevation {
 
 #region -- Technician Notes --------------------------------------------------
 
-# Module-scoped note buffer. Lives for the duration of one imported module
-# instance — i.e. a single tool run. Reset on every Import-Module -Force.
+# Script-scoped note buffer. Lives for the duration of one tool run; the sync
+# script copies it only into tools that use the note functions.
 $script:TKNotes = New-Object System.Collections.ArrayList
 
 function Add-TKNote {
@@ -591,9 +598,9 @@ function Add-TKNote {
     .SYNOPSIS
         Records a timestamped technician note for the current session.
     .DESCRIPTION
-        Notes accumulate in module-scoped state for the life of the imported
-        module (one tool run). Export them to a ticket-ready HTML report with
-        Export-TKNoteReport.
+        Notes accumulate in script-scoped state for the life of one tool run.
+        Export them to a ticket-ready HTML report with Export-TKNoteReport
+        before the tool exits.
     .PARAMETER Text        The note text.
     .PARAMETER Category    One of Info, Action, Warning, Issue, Resolution.
     .PARAMETER ScriptName  Optional originating tool name, shown in the report.
@@ -765,5 +772,3 @@ function Export-TKNoteReport {
 }
 
 #endregion
-
-Export-ModuleMember -Function Write-Section, Write-Step, Write-Ok, Write-Warn, Write-Fail, Write-Info, Show-TKReportResult, EscHtml, Format-Bytes, Get-TKHtmlCss, Get-TKHtmlHead, Get-TKHtmlFoot, Test-IsAdmin, Assert-AdminPrivilege, Invoke-AdminElevation, Get-TKConfig, Set-TKConfig, Resolve-LogDirectory, Start-TKTranscript, Stop-TKTranscript, Write-TKError, Add-TKNote, Get-TKNote, Clear-TKNote, Export-TKNoteReport

@@ -43,7 +43,7 @@ The Pester suite enforces the presence of this header, so a new tool without it 
 |---|---|
 | **Report a bug** | Open an issue. Include the tool name, the Windows build, and the error text. A screenshot of the console output is fine. |
 | **Fix a bug** | Small, focused pull requests are easiest to review and land fastest. |
-| **Add a tool** | Follow *Adding a New Tool* in [CLAUDE.md](CLAUDE.md) — header block, shared-module bootstrap, GRIMOIRE registration, README entry. |
+| **Add a tool** | Follow *Adding a New Tool* in [CLAUDE.md](CLAUDE.md) — header block, the generated shared-helper block, GRIMOIRE registration, README entry. |
 | **Improve the docs** | The README is the front door for technicians who have never seen the toolkit. Clarity fixes are genuinely valuable. |
 | **Report what broke in the field** | Even without a patch. Real-world failure modes are the hardest thing to find from a dev machine. |
 | **Test the ARM64 build** | **Actively wanted.** The `win-arm64` binary is built and published but has never run on a real ARM device — there is none here to test on. If you have a Snapdragon X, Surface Pro, or any Windows-on-ARM machine, running it and saying what happened is one of the most useful things you can contribute. A report that it simply worked is as valuable as a bug. |
@@ -60,10 +60,12 @@ predictable for the person who has to run it under pressure.
 - **PowerShell 5.1 compatible.** Windows PowerShell ships with every Windows install; that is
   the floor. Do not require PowerShell 7.
 - **Every script is self-contained.** A technician must be able to drop one `.ps1` on a machine
-  and have it work. Use the shared-module bootstrap block so the module is fetched if missing.
+  and have it work. Shared helpers reach a tool through its generated `TK-SHARED` block:
+  edit `shared/TechnicianToolkit.Shared.ps1`, then run `build/Sync-TKShared.ps1`. Never edit
+  a block by hand.
 - **Interactive tools expose `-Unattended`.** Anything destructive or state-changing also
   exposes `-WhatIf` and must honour it.
-- **Fail loudly, never silently.** `-ErrorAction Stop` on the module import; handle errors and
+- **Fail loudly, never silently.** Use `-ErrorAction Stop` where a failure must halt the run; handle errors and
   tell the operator what happened.
 - **Read-only tools stay read-only.** If a tool is documented as an audit, it must not write
   system state.

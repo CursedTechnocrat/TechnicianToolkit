@@ -40,12 +40,12 @@ namespace TechnicianToolkit.Engine.Tests
 
             int written = ScriptExtractor.Extract(suite);
 
-            // 42 tools plus the module, config.json and the licence. Asserted as a
+            // The tools plus the shared helpers, config.json and the licence. Asserted as a
             // floor so adding a tool does not fail the test, while a broken glob
             // that embeds only a handful still does.
             Assert.True(written > 40, "expected the full suite, got " + written + " files");
             Assert.True(File.Exists(Path.Combine(suite, "grimoire.ps1")));
-            Assert.True(File.Exists(Path.Combine(suite, "TechnicianToolkit.psm1")));
+            Assert.True(File.Exists(Path.Combine(suite, "TechnicianToolkit.Shared.ps1")));
         }
 
         // The GPL requires every recipient of the program to receive the licence.

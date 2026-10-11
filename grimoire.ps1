@@ -49,38 +49,32 @@ param(
 # ===========================
 
 # ===========================
-# SHARED MODULE BOOTSTRAP
+# SHARED HELPERS
 # ===========================
-$TKModulePath = Join-Path $PSScriptRoot 'TechnicianToolkit.psm1'
-if (-not (Test-Path $TKModulePath)) {
-    $TKModuleUrl = 'https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/TechnicianToolkit.psm1'
-    if ($env:TK_DISABLE_DOWNLOAD -in @('1', 'true')) {
-        Write-Host "  [!!] Shared module TechnicianToolkit.psm1 not found, and TK_DISABLE_DOWNLOAD forbids fetching it." -ForegroundColor Red
-        Write-Host "       Deploy the module next to this script from an approved release." -ForegroundColor Yellow
-        exit 1
-    }
-    Write-Host "  [*] Shared module TechnicianToolkit.psm1 not found - downloading from GitHub..." -ForegroundColor Magenta
-    try {
-        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
-        Invoke-RestMethod -Uri $TKModuleUrl -OutFile $TKModulePath -ErrorAction Stop
-        $parseErrors = $null
-        $null = [System.Management.Automation.Language.Parser]::ParseFile($TKModulePath, [ref]$null, [ref]$parseErrors)
-        if ($parseErrors.Count -gt 0) {
-            Remove-Item -Path $TKModulePath -Force -ErrorAction SilentlyContinue
-            Write-Host "  [!!] Downloaded module failed syntax validation - file removed." -ForegroundColor Red
-            Write-Host "       $($parseErrors[0].Message)" -ForegroundColor Red
-            exit 1
-        }
-        Write-Host "  [+] Module downloaded and verified." -ForegroundColor Green
-    } catch {
-        Write-Host "  [!!] Could not download TechnicianToolkit.psm1:" -ForegroundColor Red
-        Write-Host "       $($_.Exception.Message)" -ForegroundColor Red
-        Write-Host "       Place the module manually next to this script from:" -ForegroundColor Yellow
-        Write-Host "       $TKModuleUrl" -ForegroundColor Yellow
-        exit 1
+#region TK-SHARED
+# Generated from shared/TechnicianToolkit.Shared.ps1 by build/Sync-TKShared.ps1. Do not edit
+# this block: edit the source and re-run the script. The Pester suite fails on a stale block.
+
+# Forcing UTF-8 keeps the box-drawing banners intact when a console is attached.
+# When one is not — a GUI host, a WinRM runspace, a scheduled task — the setter
+# throws "The handle is invalid", so this must never be fatal. Every tool runs
+# this as the first line of its generated block.
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
+
+function Test-IsAdmin {
+    ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+function Invoke-AdminElevation {
+    param([Parameter(Mandatory)][string]$ScriptFile)
+    if (-not (Test-IsAdmin)) {
+        Write-Host "  INFO: Restarting with administrator privileges..." -ForegroundColor Yellow
+        $PSExe = if ($PSVersionTable.PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
+        Start-Process -FilePath $PSExe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptFile`"" -Verb RunAs
+        exit
     }
 }
-Import-Module $TKModulePath -Force -ErrorAction Stop
+#endregion TK-SHARED
 Invoke-AdminElevation -ScriptFile $PSCommandPath
 
 $ScriptPath      = (Get-Location).Path

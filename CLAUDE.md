@@ -3,8 +3,10 @@
 ## Project Overview
 
 A collection of PowerShell 5.1+ scripts for IT technicians. Each script is a self-contained tool
-with a themed acronym name (GRIMOIRE, AUSPEX, REVENANT, etc.). All tools share a common module
-(`TechnicianToolkit.psm1`) that provides logging, privilege checks, HTML helpers, and config I/O.
+with a themed acronym name (GRIMOIRE, AUSPEX, REVENANT, etc.). All tools share one set of helpers
+for logging, privilege checks, HTML reports, and config I/O. Their single source is
+`shared/TechnicianToolkit.Shared.ps1`, and each tool carries a generated copy of the ones it
+calls, so every `.ps1` runs on its own. There is no shared module.
 
 ## Two ways to run the suite
 
@@ -23,7 +25,10 @@ even though the app hosts PowerShell 7.
 
 ```
 TechnicianToolkit/
-├── TechnicianToolkit.psm1   # Shared module — imported by every tool
+├── shared/
+│   └── TechnicianToolkit.Shared.ps1  # Source of the shared helpers — never loaded by a tool
+├── build/
+│   └── Sync-TKShared.ps1    # Writes each tool's generated TK-SHARED block from the source
 ├── grimoire.ps1             # Hub launcher — interactive menu for all tools
 ├── config.json              # Optional runtime config (org name, log dir, webhooks, defaults)
 ├── hearth.ps1               # Setup wizard — writes config.json
@@ -51,68 +56,68 @@ Invoke-Pester -Path .\tests\TechnicianToolkit.Tests.ps1 -Output Detailed
 dotnet test app/TechnicianToolkit.Engine.Tests
 ```
 
-## Architecture: Shared Module Pattern
+## Architecture: Shared Helper Blocks
 
-Every tool script must follow this initialization pattern at the top (after the param block):
+There is no shared module to import. Every tool script carries, right after its param block, a
+generated block holding the shared helpers it calls, followed by its admin check:
 
 ```powershell
 # ===========================
-# SHARED MODULE BOOTSTRAP
+# SHARED HELPERS
 # ===========================
-$TKModulePath = Join-Path $PSScriptRoot 'TechnicianToolkit.psm1'
-if (-not (Test-Path $TKModulePath)) {
-    $TKModuleUrl = 'https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/TechnicianToolkit.psm1'
-    if ($env:TK_DISABLE_DOWNLOAD -in @('1', 'true')) {
-        Write-Host "  [!!] Shared module TechnicianToolkit.psm1 not found, and TK_DISABLE_DOWNLOAD forbids fetching it." -ForegroundColor Red
-        Write-Host "       Deploy the module next to this script from an approved release." -ForegroundColor Yellow
-        exit 1
-    }
-    Write-Host "  [*] Shared module TechnicianToolkit.psm1 not found - downloading from GitHub..." -ForegroundColor Magenta
-    try {
-        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
-        Invoke-RestMethod -Uri $TKModuleUrl -OutFile $TKModulePath -ErrorAction Stop
-        $parseErrors = $null
-        $null = [System.Management.Automation.Language.Parser]::ParseFile($TKModulePath, [ref]$null, [ref]$parseErrors)
-        if ($parseErrors.Count -gt 0) {
-            Remove-Item -Path $TKModulePath -Force -ErrorAction SilentlyContinue
-            Write-Host "  [!!] Downloaded module failed syntax validation - file removed." -ForegroundColor Red
-            Write-Host "       $($parseErrors[0].Message)" -ForegroundColor Red
-            exit 1
-        }
-        Write-Host "  [+] Module downloaded and verified." -ForegroundColor Green
-    } catch {
-        Write-Host "  [!!] Could not download TechnicianToolkit.psm1:" -ForegroundColor Red
-        Write-Host "       $($_.Exception.Message)" -ForegroundColor Red
-        Write-Host "       Place the module manually next to this script from:" -ForegroundColor Yellow
-        Write-Host "       $TKModuleUrl" -ForegroundColor Yellow
-        exit 1
-    }
-}
-Import-Module $TKModulePath -Force -ErrorAction Stop
+#region TK-SHARED
+# Generated from shared/TechnicianToolkit.Shared.ps1 by build/Sync-TKShared.ps1. Do not edit
+# this block: edit the source and re-run the script. The Pester suite fails on a stale block.
+
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
+
+function Write-Section { ... }
+function Get-TKConfig { ... }
+# ...only the helpers this tool calls, plus the ones those call
+#endregion TK-SHARED
 Invoke-AdminElevation -ScriptFile $PSCommandPath
 ```
 
-The bootstrap ensures a single-file distribution works — drop any tool .ps1 on a
-machine and it will pull `TechnicianToolkit.psm1` from GitHub on first run. TLS 1.2
-is forced for older Windows builds. `-ErrorAction Stop` on the final `Import-Module`
-prevents the silent-partial-execution failure mode (where a missing module used to
-let the script continue until it hit an undefined function like `Get-TKHtmlHead`).
+**Never edit a block by hand.** Change `shared/TechnicianToolkit.Shared.ps1`, then run:
 
-The `TK_DISABLE_DOWNLOAD` check is the opt-out for MSPs running the kit under SOC 2:
-with the machine environment variable set, nothing fetches toolkit code at run time,
-so only the release they deployed can run (`docs/soc2.md`). Every path that downloads
-toolkit code (this bootstrap, the forwarding stubs, GRIMOIRE's launcher, RITUAL's step
-resolver) must check it first; `'TK_DISABLE_DOWNLOAD — every self-fetch path honours it'`
-fails on any download of a GitHub raw URL that is not gated.
+```powershell
+./build/Sync-TKShared.ps1          # rewrite every stale block
+./build/Sync-TKShared.ps1 -Check   # list stale blocks; exit 1 if any
+```
 
-`Invoke-AdminElevation` re-launches the script as Administrator if not already elevated.
-Scripts that use `Assert-AdminPrivilege` instead will error-exit if not elevated rather
+The script works out what each tool needs from its AST: every shared function it calls outside
+the block, the closure of what those call, any `$script:` state they read (the note buffer travels
+only with the note functions), and the source's other top-level statements (the console-encoding
+line). It keeps each file's own line endings. The Pester suite (`'Shared helper blocks — all tool
+scripts'`) dot-sources it and fails on any block that differs from what it would write, on a
+shared helper defined outside a block, and on any surviving reference to the old module.
+Calling a new shared helper from a tool therefore needs a sync before CI passes.
+
+Why blocks rather than a module: a single `.ps1` is a valid unit of distribution here, and the
+module made it depend on a second file that a lone script had to download from GitHub's `main`
+at run time — unreviewed code under SOC 2 change management (`docs/soc2.md`). With the helpers
+inside each script, nothing is downloaded to run a tool. The cost is repetition (a CSS change
+regenerates about 40 files), which the sync script absorbs.
+
+The helpers resolve `config.json` and the fallback error log from `$PSScriptRoot`. Inside a
+generated block that is the tool's own folder, the same folder the module used to sit in.
+
+**Admin gates.** `Invoke-AdminElevation` re-launches the script as Administrator if not already
+elevated. Scripts that use `Assert-AdminPrivilege` instead will error-exit if not elevated rather
 than auto-relaunching — this is appropriate for scripts called programmatically (REVENANT,
-HEARTH, EMBALM).
+HEARTH, EMBALM). A block contains a gate's definition only when the tool calls it, which keeps
+the desktop app's substring check (`ToolTraits`) and CHALICE's no-gate rule intact.
 
-## Module Exports
+**`TK_DISABLE_DOWNLOAD`** is the opt-out for MSPs running the kit under SOC 2: with the machine
+environment variable set, nothing fetches toolkit code at run time, so only the release they
+deployed can run (`docs/soc2.md`). Three paths still download a missing *tool* — the forwarding
+stubs, GRIMOIRE's launcher and RITUAL's step resolver — and each must check it first;
+`'TK_DISABLE_DOWNLOAD — every self-fetch path honours it'` fails on any download of a GitHub raw
+URL that is not gated.
 
-Key functions exported by `TechnicianToolkit.psm1`:
+## Shared Helpers
+
+Key functions in `shared/TechnicianToolkit.Shared.ps1` (each tool's block holds the ones it uses):
 
 | Function | Purpose |
 |----------|---------|
@@ -171,9 +176,10 @@ Invoke-Pester -Path .\tests\TechnicianToolkit.Tests.ps1 -Output Detailed
 
 Tests run without Administrator privileges and without Windows-only APIs, so they work in CI.
 The suite covers: `EscHtml`, `Format-Bytes`, `Get-TKConfig`/`Set-TKConfig`, `Test-IsAdmin`,
-`Write-TKError`, the technician-note helpers, HTML report helpers, and module exports; plus
-repo-wide gates — PowerShell syntax validation and UTF-8 BOM on every script, module-bootstrap
-compliance, param block compliance (`-Unattended`, and `-WhatIf` on the destructive set),
+`Write-TKError`, the technician-note helpers, HTML report helpers, and the shared source's
+function set (all dot-sourced from `shared/TechnicianToolkit.Shared.ps1`); plus repo-wide
+gates — PowerShell syntax validation and UTF-8 BOM on every script, shared-helper blocks in sync
+with their source, param block compliance (`-Unattended`, and `-WhatIf` on the destructive set),
 GRIMOIRE registry integrity, license-header compliance (GPL notice and SPDX tag present and
 correctly positioned in every source file), LICENSE integrity, retired tool names and filename
 prefixes, removed deprecation stubs, the 6.0 renamed-tool forwarding stubs, no locally redefined shared helpers, and the GRIFFIN /
@@ -206,24 +212,32 @@ curl -sSL -o pwsh.tar.gz https://github.com/PowerShell/PowerShell/releases/downl
 curl -sSL -o psa.zip    https://github.com/PowerShell/PSScriptAnalyzer/releases/download/1.22.0/PSScriptAnalyzer.1.22.0.nupkg
 ```
 
-Pester cannot be obtained this way. Its GitHub releases carry **source**, and building it needs
-the .NET SDK for its compiled assembly. Note the distinction: PSGallery ships Pester **prebuilt,
-assembly included**, so `Install-Module Pester` is the route that works — it is only unavailable
-when PSGallery itself is blocked. If you can get the gallery allowed through the sandbox's egress
-policy, most of the suite then runs on Linux pwsh; `Describe 'Test-IsAdmin'` still fails there,
-since `[Security.Principal.WindowsPrincipal]` does not exist off Windows. Otherwise the suite
-stays CI-only.
+Pester's GitHub releases carry **source**, and building it needs the .NET SDK for its compiled
+assembly — so not that route. But **nuget.org carries Pester prebuilt, assembly included**, and
+is often reachable when PSGallery is not. The package is a zip whose `tools/` folder is the
+module:
+
+```bash
+curl -sSL -o pester.nupkg https://api.nuget.org/v3-flatcontainer/pester/6.2.0/pester.6.2.0.nupkg
+mkdir -p mods && unzip -qo pester.nupkg -d pester-pkg && cp -r pester-pkg/tools mods/Pester
+# then, in pwsh:  $env:PSModulePath = "$PWD/mods:$env:PSModulePath"; Invoke-Pester ./tests
+```
+
+CI installs the newest Pester from the gallery, so match its major version. The whole suite
+then runs on Linux pwsh; `Describe 'Test-IsAdmin'` still fails there, since
+`[Security.Principal.WindowsPrincipal]` does not exist off Windows.
 
 What *is* reachable offline, and worth running before pushing:
 
 - `Invoke-ScriptAnalyzer -Path . -Recurse -Settings .github/PSScriptAnalyzerSettings.psd1 -ExcludeRule PSAvoidUsingWriteHost`
   (CI fails on `Error` severity only; warnings are advisory).
-- `[System.Management.Automation.Language.Parser]::ParseFile()` over every `.ps1`/`.psm1` — the
+- `[System.Management.Automation.Language.Parser]::ParseFile()` over every `.ps1` — the
   same check the syntax tests make.
 - The repo-wide gates above are all plain string/AST assertions and are cheap to replicate
   directly against the working tree.
-- `Import-Module ./TechnicianToolkit.psm1` works on Linux pwsh, so the pure helpers
+- `. ./shared/TechnicianToolkit.Shared.ps1` works on Linux pwsh, so the pure helpers
   (`EscHtml`, `Format-Bytes`, the HTML builders) can be exercised without Pester.
+- `./build/Sync-TKShared.ps1 -Check` confirms every tool's shared-helper block is current.
 
 Two analyzer rules produce **false positives** throughout this repo — check before "fixing" a
 hit: `PSReviewUnusedParameter` misses parameters used only inside nested function scopes (this
@@ -260,7 +274,7 @@ $ColorSchema = @{
 
 ### License Notice Block
 
-The toolkit is **GPL-3.0-or-later**. Every `.ps1` and `.psm1` opens with the GPL notice
+The toolkit is **GPL-3.0-or-later**. Every `.ps1` opens with the GPL notice
 header, above the comment-based help block:
 
 ```powershell
@@ -362,13 +376,19 @@ configs and the app's settings screen) and REVENANT's `-ArchiveZip` parameter.
 1. Name it from its category's theme (see **Naming**), then copy the GPL notice block and the
    header block from an existing tool; update the filename, acronym, and synopsis. Keep the version at the current suite version. The notice must stay
    above the `<# .SYNOPSIS #>` block.
-2. Add the shared-module bootstrap block (see the initialization pattern above) and the
-   appropriate admin check (`Invoke-AdminElevation` or `Assert-AdminPrivilege`). Copy the
-   block verbatim from an existing tool — the Pester suite enforces the exact shape.
+2. After the param block, add an empty generated block and the appropriate admin check
+   (`Invoke-AdminElevation` or `Assert-AdminPrivilege`), then run `build/Sync-TKShared.ps1`
+   to fill the block with the helpers the tool calls:
+   ```powershell
+   #region TK-SHARED
+   #endregion TK-SHARED
+   Invoke-AdminElevation -ScriptFile $PSCommandPath
+   ```
+   Re-run the sync whenever the tool starts calling another shared helper.
 3. Register the tool in `grimoire.ps1`'s `$Tools` array with the category's full name, the next
    free `Key` in the category's block, and the suite `Version`.
 4. Add the script's filename to the Quick Launch and Usage sections in `README.md`.
-5. The syntax-validation, module-bootstrap, and license-header compliance Pester tests will
+5. The syntax-validation, shared-helper block, and license-header compliance Pester tests will
    cover it automatically.
 6. Nothing needs doing for the desktop application. The `.csproj` glob embeds every root
    `.ps1`, and the app reads `grimoire.ps1` at runtime — so a correctly registered tool
