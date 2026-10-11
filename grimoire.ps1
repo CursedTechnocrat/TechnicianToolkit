@@ -54,6 +54,11 @@ param(
 $TKModulePath = Join-Path $PSScriptRoot 'TechnicianToolkit.psm1'
 if (-not (Test-Path $TKModulePath)) {
     $TKModuleUrl = 'https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/TechnicianToolkit.psm1'
+    if ($env:TK_DISABLE_DOWNLOAD -in @('1', 'true')) {
+        Write-Host "  [!!] Shared module TechnicianToolkit.psm1 not found, and TK_DISABLE_DOWNLOAD forbids fetching it." -ForegroundColor Red
+        Write-Host "       Deploy the module next to this script from an approved release." -ForegroundColor Yellow
+        exit 1
+    }
     Write-Host "  [*] Shared module TechnicianToolkit.psm1 not found - downloading from GitHub..." -ForegroundColor Magenta
     try {
         [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
@@ -706,6 +711,14 @@ function Invoke-Tool {
 
     if (-not (Test-Path $ToolPath)) {
         $DownloadUrl = "$BaseUrl/$($Tool.File)"
+        if ($env:TK_DISABLE_DOWNLOAD -in @('1', 'true')) {
+            Write-Host ""
+            Write-Host "  [!!] $($Tool.File) not found, and TK_DISABLE_DOWNLOAD forbids fetching it." -ForegroundColor $ColorSchema.Error
+            Write-Host "       Deploy it next to grimoire.ps1 from an approved release." -ForegroundColor $ColorSchema.Warning
+            Write-Host ""
+            Pause-ForKey
+            return
+        }
         Write-Host ""
         Write-Host "  Downloading $($Tool.File) from GitHub..." -ForegroundColor $ColorSchema.Accent
         try {

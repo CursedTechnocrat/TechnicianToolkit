@@ -60,6 +60,11 @@ param(
 $TKModulePath = Join-Path $PSScriptRoot 'TechnicianToolkit.psm1'
 if (-not (Test-Path $TKModulePath)) {
     $TKModuleUrl = 'https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/TechnicianToolkit.psm1'
+    if ($env:TK_DISABLE_DOWNLOAD -in @('1', 'true')) {
+        Write-Host "  [!!] Shared module TechnicianToolkit.psm1 not found, and TK_DISABLE_DOWNLOAD forbids fetching it." -ForegroundColor Red
+        Write-Host "       Deploy the module next to this script from an approved release." -ForegroundColor Yellow
+        exit 1
+    }
     Write-Host "  [*] Shared module TechnicianToolkit.psm1 not found - downloading from GitHub..." -ForegroundColor Magenta
     try {
         [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12

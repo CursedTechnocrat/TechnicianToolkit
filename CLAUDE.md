@@ -62,6 +62,11 @@ Every tool script must follow this initialization pattern at the top (after the 
 $TKModulePath = Join-Path $PSScriptRoot 'TechnicianToolkit.psm1'
 if (-not (Test-Path $TKModulePath)) {
     $TKModuleUrl = 'https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main/TechnicianToolkit.psm1'
+    if ($env:TK_DISABLE_DOWNLOAD -in @('1', 'true')) {
+        Write-Host "  [!!] Shared module TechnicianToolkit.psm1 not found, and TK_DISABLE_DOWNLOAD forbids fetching it." -ForegroundColor Red
+        Write-Host "       Deploy the module next to this script from an approved release." -ForegroundColor Yellow
+        exit 1
+    }
     Write-Host "  [*] Shared module TechnicianToolkit.psm1 not found - downloading from GitHub..." -ForegroundColor Magenta
     try {
         [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
@@ -92,6 +97,13 @@ machine and it will pull `TechnicianToolkit.psm1` from GitHub on first run. TLS 
 is forced for older Windows builds. `-ErrorAction Stop` on the final `Import-Module`
 prevents the silent-partial-execution failure mode (where a missing module used to
 let the script continue until it hit an undefined function like `Get-TKHtmlHead`).
+
+The `TK_DISABLE_DOWNLOAD` check is the opt-out for MSPs running the kit under SOC 2:
+with the machine environment variable set, nothing fetches toolkit code at run time,
+so only the release they deployed can run (`docs/soc2.md`). Every path that downloads
+toolkit code (this bootstrap, the forwarding stubs, GRIMOIRE's launcher, RITUAL's step
+resolver) must check it first; `'TK_DISABLE_DOWNLOAD — every self-fetch path honours it'`
+fails on any download of a GitHub raw URL that is not gated.
 
 `Invoke-AdminElevation` re-launches the script as Administrator if not already elevated.
 Scripts that use `Assert-AdminPrivilege` instead will error-exit if not elevated rather

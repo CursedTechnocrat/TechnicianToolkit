@@ -50,7 +50,9 @@ assume it is patched.
   technician would not expect to be sharing counts.
 - **The module bootstrap.** Every tool downloads `TechnicianToolkit.psm1` from
   GitHub over HTTPS when it is missing. Anything that could cause a tool to fetch,
-  trust, or execute code from somewhere else is in scope.
+  trust, or execute code from somewhere else is in scope. Setting the machine
+  environment variable `TK_DISABLE_DOWNLOAD=1` turns off every path that fetches
+  toolkit code at run time, so only the copy you deployed runs.
 - **Injection** through parameters — a computer name, path, or account name that
   escapes into a command it should not.
 - **Webhook delivery.** `Write-TKError` can POST to a configured Teams webhook.
@@ -81,3 +83,6 @@ of the [LICENSE](LICENSE). Practical advice regardless:
   that directory as sensitive, and clear it between sites.
 - Run destructive tools with `-WhatIf` first. Every tool that changes state
   supports it.
+- Running it under SOC 2 or a similar control framework? See
+  [docs/soc2.md](docs/soc2.md) for the settings and procedures an auditor will
+  expect around it.

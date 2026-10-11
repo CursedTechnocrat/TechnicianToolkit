@@ -5,6 +5,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Added
+- **`TK_DISABLE_DOWNLOAD` — run only the release you deployed.** With this machine environment
+  variable set to `1`, nothing in the toolkit fetches its own code from GitHub at run time: the
+  module bootstrap in every tool, the 6.0 forwarding stubs, GRIMOIRE's tool launcher and RITUAL's
+  step resolver all stop with a message naming the missing file instead of downloading it from
+  `main`. Unset, behaviour is unchanged. A new Pester gate fails on any download of a GitHub raw
+  URL that does not check the variable first.
+- **`docs/soc2.md` — running the toolkit inside SOC 2 scope.** For an MSP or IT team whose
+  examination covers the tools its technicians run: change management (verified release,
+  `TK_DISABLE_DOWNLOAD`, optional own-certificate script signing), third-party modules and
+  CONJURE hash pinning, access to the deployed copy and `config.json`, confidentiality of report
+  output, the Teams webhook as a secret, and the evidence the tools produce for change tickets.
+  Ends with a checklist.
+
+---
+
 ## [6.0.0] - 2026-10-08
 
 The first published release since 5.0.0. The `[5.1.0]` section below was dated but never tagged

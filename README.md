@@ -1150,6 +1150,14 @@ Any single tool also bootstraps itself: drop one `.ps1` onto a machine and it
 fetches the shared module from GitHub on first run. See [Quick Launch](#quick-launch)
 for one-liners that do exactly that.
 
+### Under SOC 2 or a similar control framework
+
+Set the machine environment variable `TK_DISABLE_DOWNLOAD=1` and nothing fetches
+toolkit code from GitHub at run time, so only the release you deployed runs.
+[docs/soc2.md](docs/soc2.md) covers that and the rest of what an auditor will
+expect around the toolkit: release verification, access to the deployed copy,
+report confidentiality, secrets and change-ticket evidence.
+
 ---
 
 ## Quick Launch
