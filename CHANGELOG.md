@@ -7,6 +7,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Removed
+- **The Teams webhook.** `Write-TKError` no longer posts errors to a Teams channel; it only appends
+  to the local `TK_Errors_<yyyyMM>.jsonl` log. It was the one path that sent collected data
+  (error text, host and user names) off the machine. The `TeamsWebhook` key is gone from
+  `config.json`, HEARTH's wizard and the app's settings screen; an existing value is ignored.
+
+### Changed
+- **Every output lands where the technician can find and remove it.** WHETSTONE wrote its session
+  transcript to `%TEMP%` unless `-Transcript` was given; it now always writes to the log directory.
+  ZENITH's report defaulted to `%TEMP%\azure-assessment-<timestamp>.html`; it now defaults to
+  `ZENITH_<timestamp>.html` in the log directory, where CODEX indexes it. HEARTH no longer suggests
+  a network share as the log directory.
+
+### Added
+- **Two guardrails in the Pester suite.** `'Nothing leaves the machine — no outbound data paths'`
+  fails on any HTTP POST/PUT/PATCH or request body, mail, upload or webhook in the code.
+  `'Cloud tools are read-only'` takes The Firmament's tools from GRIMOIRE's registry and fails on
+  any Microsoft Graph permission that is not a `Read` one, or any command that could change a
+  tenant; Graph requests must be `GET` or the read-only `getByIds` lookup.
+
 ### Fixed
 - **WARD showed a LAPS badge on an account no policy manages.** With LAPS not configured, the
   built-in Administrator is only the account LAPS *would* manage, but the report still marked it

@@ -364,7 +364,6 @@ function Get-TKConfig {
     $defaults = [PSCustomObject]@{
         OrgName       = ''
         LogDirectory  = ''
-        TeamsWebhook  = ''
         Archive       = [PSCustomObject]@{ DefaultDestination   = '' }
         Revenant      = [PSCustomObject]@{ DefaultDestination   = '' }
         Covenant      = [PSCustomObject]@{ DefaultTimezone = ''; DefaultLocalAdminUser = '' }

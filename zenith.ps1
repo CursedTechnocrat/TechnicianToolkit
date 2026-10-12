@@ -35,7 +35,7 @@
 .USAGE
     PS C:\> .\zenith.ps1
     PS C:\> .\zenith.ps1 -SubscriptionId "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    PS C:\> .\zenith.ps1 -OutputPath "C:\Reports\azure.html" -NoOpen
+    PS C:\> .\zenith.ps1 -OutputPath "C:\Reports\azure.html" -NoOpen   # Default: ZENITH_<timestamp>.html in the log directory
 
 .NOTES
     Version  : 6.0
@@ -49,7 +49,7 @@ param(
     [string]$TenantId        = '',
     [ValidatePattern('^$|^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')]
     [string]$SubscriptionId  = '',
-    [string]$OutputPath      = "$env:TEMP\azure-assessment-$(Get-Date -Format 'yyyyMMdd-HHmmss').html",
+    [string]$OutputPath      = '',
     [switch]$NoOpen,
     [switch]$Transcript
 )
@@ -370,7 +370,6 @@ function Get-TKConfig {
     $defaults = [PSCustomObject]@{
         OrgName       = ''
         LogDirectory  = ''
-        TeamsWebhook  = ''
         Archive       = [PSCustomObject]@{ DefaultDestination   = '' }
         Revenant      = [PSCustomObject]@{ DefaultDestination   = '' }
         Covenant      = [PSCustomObject]@{ DefaultTimezone = ''; DefaultLocalAdminUser = '' }
@@ -1525,6 +1524,12 @@ $html = $htmlHead + @"
 # OUTPUT
 # -----------------------------------------------------------------------------
 
+# Default beside the other reports (LogDirectory, else the script's folder) under
+# the suite's <TOOL>_<timestamp>.html name, so CODEX indexes it and a technician
+# clearing up finds it -- not in %TEMP%.
+if (-not $OutputPath) {
+    $OutputPath = Join-Path (Resolve-LogDirectory -FallbackPath $PSScriptRoot) ("ZENITH_{0}.html" -f (Get-Date -Format 'yyyyMMdd_HHmmss'))
+}
 $html | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
 
 Write-Host ("  " + ("-" * 62)) -ForegroundColor $C.Header

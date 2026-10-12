@@ -92,7 +92,7 @@ controls.
 - Restrict who can **write** to the deployed copy. Anyone who can edit the
   scripts can change what runs elevated on client machines.
 - `config.json` sits beside the scripts and holds settings that matter for
-  control, including `TeamsWebhook`, `LogDirectory` and CONJURE's download list
+  control, including `LogDirectory` and CONJURE's download list
   and hashes. Protect it with the same ACLs as the scripts.
 
 ## 4. Confidentiality of output (C1.1, C1.2)
@@ -120,11 +120,23 @@ Controls to put around them:
 - Send reports over your approved channels (PSA attachment, encrypted share), not
   ad-hoc email.
 
+**Where the data goes.** Nowhere but the log directory. No tool transmits what it
+collects: there is no telemetry, webhook, mail or upload, and the Pester suite fails
+on any code that would add one. Every report, CSV, transcript, notes file and error
+log lands in `LogDirectory` (or beside the script), so clearing that directory
+removes everything the toolkit wrote. Keep `LogDirectory` on the local disk; a
+network path would put client data on that share.
+
+**Cloud tools only read.** The tools in The Firmament (ZENITH, ALMANAC, ORBIT,
+ECLIPSE, ASTERISM, CUMULUS, ORRERY, RAVEN, HALO, CARILLON) request Microsoft Graph
+`Read` permissions only and call no command that changes a tenant; the Pester suite
+enforces both. Exchange, Teams, Azure and SharePoint sign-ins carry whatever the
+signed-in account's role allows, so run these tools under a read-only role — Global
+Reader, Azure Reader, Exchange View-Only Organization Management — and the session
+itself cannot write, whatever the script does.
+
 ## 5. Secrets (CC6.1)
 
-- `TeamsWebhook` is stored in plain text in `config.json`. Anyone holding the URL
-  can post to that channel. Treat it as a secret: restrict the file, and rotate
-  the webhook if the file leaks or a technician leaves.
 - COVENANT takes the local administrator password as a `SecureString`. Supply it
   interactively or from your vault at run time, never in a saved command line or
   script.
@@ -156,7 +168,8 @@ tool lives in, which is the deployed copy technicians should not be writing to.
 - [ ] Scripts signed with your certificate and `AllSigned` enforced (if policy needs it)
 - [ ] Gallery modules pre-installed at approved versions
 - [ ] Every CONJURE `DirectDownloads` entry has a `Sha256`
-- [ ] `config.json` ACL-protected; `TeamsWebhook` treated as a secret
+- [ ] `config.json` ACL-protected
+- [ ] Cloud tools run under a read-only admin role
 - [ ] `LogDirectory` set to a protected location, with a retention rule
 - [ ] WISP `-IncludeKey` use restricted and recorded
 - [ ] `-WhatIf`, transcript and note export attached to change tickets

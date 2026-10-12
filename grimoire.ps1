@@ -172,7 +172,7 @@ $Tools = @(
         Name        = 'H.E.A.R.T.H.'
         File        = 'hearth.ps1'
         Version     = '6.0'
-        Description = 'Toolkit setup wizard  -  org name, log path, Teams webhook, and tool defaults'
+        Description = 'Toolkit setup wizard  -  org name, log path, and tool defaults'
         Color       = 'White'
         Category    = 'The Workshop — Deployment & Onboarding'
     },

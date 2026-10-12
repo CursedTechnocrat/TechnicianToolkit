@@ -56,8 +56,10 @@ assume it is patched.
   deployed runs.
 - **Injection** through parameters — a computer name, path, or account name that
   escapes into a command it should not.
-- **Webhook delivery.** `Write-TKError` can POST to a configured Teams webhook.
-  Leaking the webhook URL, or sending more than the error to it, is in scope.
+- **Data leaving the machine.** The toolkit sends nothing anywhere: output is the
+  terminal or files in the log directory, and the cloud tools only read from the
+  tenant. Any path that transmits collected data off the machine, or a cloud tool
+  that changes a tenant, is in scope.
 
 ## Out of scope
 

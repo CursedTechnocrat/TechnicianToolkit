@@ -317,7 +317,7 @@ Automates Windows Update detection, installation, and reboot handling with minim
 Interactive setup wizard for the Technician Toolkit — configure all settings without hand-editing JSON.
 
 - Step-by-step wizard covers all seven configuration fields with descriptions, hints, and live validation
-- Configures: organization name, log/report directory, Teams webhook URL, EMBALM default destination, REVENANT default destination, COVENANT default timezone and local admin username
+- Configures: organization name, log/report directory, EMBALM default destination, REVENANT default destination, COVENANT default timezone and local admin username
 - Path fields validate on entry — prompts to create missing directories automatically
 - View current configuration with color-coded status: green = configured, yellow = empty or path not found
 - Edit individual fields without re-running the full wizard
@@ -1442,7 +1442,6 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 |-----|-------------|
 | `OrgName` | Organization name shown in HTML report headers |
 | `LogDirectory` | Directory where HTML reports and transcripts are saved |
-| `TeamsWebhook` | Incoming webhook URL for Teams error notifications (used by `Write-TKError`) |
 | `Archive.DefaultDestination` | Default backup path for EMBALM |
 | `Revenant.DefaultDestination` | Default migration destination for REVENANT |
 | `Covenant.DefaultTimezone` | Default Windows timezone ID for COVENANT |
@@ -1510,6 +1509,8 @@ The toolkit uses an optional `config.json` file in the toolkit directory. All sc
 
 All HTML reports and transcripts are saved to the configured `LogDirectory` from `config.json` if set, otherwise to the script's own directory.
 
+**Nothing is sent off the machine.** Every tool's output is the terminal or a file in that directory, which the technician can review and delete. No tool posts, uploads, mails or webhooks data anywhere, and the cloud tools (The Firmament) only read from the tenant; both rules are enforced by the Pester suite.
+
 The tools that record technician notes — CARILLON, CHALICE, CONDUIT, GARM, HALO, LODESTAR, MINOTAUR, NECROPSY, RAVEN, SOLDER and TORPOR — also write `<TOOL>_Notes_<timestamp>.html` to the same directory when the run ends: every note the run recorded, with a plain-text block ready to paste into a ticket. One file per run, however many menu actions it covered.
 
 | Script | Log Output |
@@ -1519,7 +1520,7 @@ The tools that record technician notes — CARILLON, CHALICE, CONDUIT, GARM, HAL
 | **conjure.ps1** | Console — per-package status table printed at completion |
 | **runepress.ps1** | Script directory — `RUNEPRESS_InstallLog_<timestamp>.csv` |
 | **forge.ps1** | Script directory — `FORGE_DriverReport_<timestamp>.csv` |
-| **whetstone.ps1** | `WHETSTONE_<timestamp>.log` — PowerShell transcript of the full session. Default path is `%TEMP%`; with `-Transcript` it is written to the configured log directory instead. |
+| **whetstone.ps1** | Log directory — `WHETSTONE_<timestamp>.log`, a PowerShell transcript of the full session (written on every run) |
 | **hearth.ps1** | Console only — settings persisted to `config.json` |
 | **ritual.ps1** | Log directory — `RITUAL_<timestamp>.html` (rollup report with per-step status, duration, and links to each child report) |
 | **conduit.ps1** | Log directory — `CONDUIT_<timestamp>.html` (findings, policy values, endpoint reachability, service state, and every action taken). `Repair` also writes `CONDUIT_WUPolicy_<timestamp>.reg`, a backup of the WindowsUpdate policy key, to the same directory. |
@@ -1552,7 +1553,7 @@ The tools that record technician notes — CARILLON, CHALICE, CONDUIT, GARM, HAL
 | **wisp.ps1** | Log directory — `WISP_<timestamp>.html` (Wi-Fi profile audit). Per-profile XMLs are exported to a temp folder and deleted after parsing |
 | **portal.ps1** | Log directory — `PORTAL_<timestamp>.html` (VPN / Always-On VPN audit) |
 | **lodestar.ps1** | Log directory — `LODESTAR_<timestamp>.html` (findings, secure channel, DNS, DC ports, clock offset, and every repair action) |
-| **zenith.ps1** | `-OutputPath` (default `%TEMP%`) — `azure-assessment-<timestamp>.html`; auto-opens in browser |
+| **zenith.ps1** | Log directory (or `-OutputPath`) — `ZENITH_<timestamp>.html` (Azure assessment); offers to open it |
 | **almanac.ps1** | Log directory — `ALMANAC_<timestamp>.html` (combined license & mailbox report) |
 | **orbit.ps1** | Log directory — `ORBIT_<timestamp>.html` (Intune / MDM compliance report) |
 | **eclipse.ps1** | Log directory — `ECLIPSE_<timestamp>.html` (Entra ID identity hygiene report) |

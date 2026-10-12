@@ -27,7 +27,8 @@
     Audits and reports on the current state of a Windows machine. Collects
     hardware specs, OS info, network config, uptime, pending Windows Updates,
     installed software, and recent event log errors — then exports a
-    dark-themed HTML report with color-coded indicators to the Desktop.
+    dark-themed HTML report with color-coded indicators to the log directory
+    (config.json LogDirectory, else the script's own folder).
 
 .USAGE
     PS C:\> .\auspex.ps1                    # Must be run as Administrator
@@ -350,7 +351,6 @@ function Get-TKConfig {
     $defaults = [PSCustomObject]@{
         OrgName       = ''
         LogDirectory  = ''
-        TeamsWebhook  = ''
         Archive       = [PSCustomObject]@{ DefaultDestination   = '' }
         Revenant      = [PSCustomObject]@{ DefaultDestination   = '' }
         Covenant      = [PSCustomObject]@{ DefaultTimezone = ''; DefaultLocalAdminUser = '' }

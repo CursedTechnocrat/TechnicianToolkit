@@ -30,7 +30,7 @@ TechnicianToolkit/
 ├── build/
 │   └── Sync-TKShared.ps1    # Writes each tool's generated TK-SHARED block from the source
 ├── grimoire.ps1             # Hub launcher — interactive menu for all tools
-├── config.json              # Optional runtime config (org name, log dir, webhooks, defaults)
+├── config.json              # Optional runtime config (org name, log dir, tool defaults)
 ├── hearth.ps1               # Setup wizard — writes config.json
 ├── <tool>.ps1               # Individual tool scripts
 ├── tests/
@@ -102,6 +102,19 @@ regenerates about 40 files), which the sync script absorbs.
 The helpers resolve `config.json` and the fallback error log from `$PSScriptRoot`. Inside a
 generated block that is the tool's own folder, the same folder the module used to sit in.
 
+**Nothing leaves the machine.** A tool's output is the terminal or a file in the log directory
+that the technician can remove — never `%TEMP%`, the Desktop, or anywhere they would not look
+(temp working files are fine if the tool deletes them). No tool posts, uploads, mails or
+webhooks data; `'Nothing leaves the machine — no outbound data paths'` fails on any HTTP
+POST/PUT/PATCH/body, mail, upload or `webhook` in code. Downloading tools and installers, and
+the cloud tools' read queries, are not data leaving.
+
+**Cloud tools are read-only.** Every tool in The Firmament audits a tenant and never changes it.
+`'Cloud tools are read-only'` reads the category from GRIMOIRE's registry and fails on a Graph
+permission that is not a `Read` one, or on any write-sounding command outside its short
+local-only list (Graph requests must be `GET`, or the `getByIds` lookup). A cloud tool that
+needs to change a tenant does not belong in that category.
+
 **Technician notes live only as long as the run.** A tool that calls `Add-TKNote` must call
 `Save-TKNoteReport` exactly once, at its top level, after its menu loop and before the final
 `Stop-TKTranscript`. A save inside the per-run function would write a new, growing file on every
@@ -133,7 +146,7 @@ Key functions in `shared/TechnicianToolkit.Shared.ps1` (each tool's block holds 
 | `Set-TKConfig` | Write a key/value into `config.json` (section-aware) |
 | `Resolve-LogDirectory` | Return configured log dir or fallback path |
 | `Start-TKTranscript` / `Stop-TKTranscript` | PowerShell transcript wrappers |
-| `Write-TKError` | Log error to file and optionally POST to Teams webhook |
+| `Write-TKError` | Append the error to the local `TK_Errors_<yyyyMM>.jsonl` log |
 | `Add-TKNote` | Record a timestamped technician note (category: Info/Action/Warning/Issue/Resolution) |
 | `Get-TKNote` / `Clear-TKNote` | Read / reset the session note buffer |
 | `Export-TKNoteReport` | Write the session's notes to a ticket-ready HTML report (with a plain-text paste block) |
@@ -326,7 +339,6 @@ holds more than one version.
 {
   "OrgName": "",
   "LogDirectory": "",
-  "TeamsWebhook": "",
   "Archive": { "DefaultDestination": "" },
   "Revenant": { "DefaultDestination": "" },
   "Covenant": { "DefaultTimezone": "", "DefaultLocalAdminUser": "" },

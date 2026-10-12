@@ -1,5 +1,5 @@
 ﻿# ─── Runtime Output ───────────────────────────────────────────────────────────
-# AUSPEX — HTML diagnostic reports (saved to Desktop by default)
+# AUSPEX — HTML diagnostic reports (saved beside the script by default)
 AUSPEX_*.html
 
 # RUNEPRESS — CSV install logs (saved alongside the script)
