@@ -232,6 +232,32 @@ function Resolve-LogDirectory {
 function Test-IsAdmin {
     ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
+
+$script:TKPublisher   = 'Open Source Developer John Bejarana'
+
+function Test-TKScriptSignature {
+    <#
+    .SYNOPSIS
+        $true only when a script carries a valid Authenticode signature from the
+        expected publisher -- the toolkit's own unless -Publisher names another.
+    .DESCRIPTION
+        Valid means the file is unchanged since signing and the certificate
+        chains to a trusted root; the publisher check means it is the expected
+        certificate, matched by its common name so a renewed certificate (new
+        thumbprint, same name) still passes. A quoted name with a comma in it
+        ("Chocolatey Software, Inc.") is read whole. Any error -- including a
+        platform without Get-AuthenticodeSignature -- is a no.
+    #>
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [string]$Publisher = $script:TKPublisher
+    )
+
+    try { $sig = Get-AuthenticodeSignature -FilePath $Path -ErrorAction Stop } catch { return $false }
+    if ($sig.Status -ne 'Valid' -or -not $sig.SignerCertificate) { return $false }
+    $cn = if ($sig.SignerCertificate.Subject -match '(?:^|,)\s*CN=(?:"(?<cn>[^"]+)"|(?<cn>[^,]+))') { $Matches['cn'].Trim() } else { '' }
+    return ($cn -eq $Publisher)
+}
 #endregion TK-SHARED
 
 if ($Transcript) { Start-TKTranscript -LogRoot (Resolve-LogDirectory -FallbackPath $ScriptPath) }
@@ -382,10 +408,23 @@ function Test-ChocolateyAvailable {
 
     Write-Host "[!!] Chocolatey is not installed. Installing now..." -ForegroundColor $Colors.Warning
 
+    # Chocolatey's official one-liner pipes its installer straight into
+    # Invoke-Expression. Run that way nothing is checked and nothing is left to
+    # inspect -- and endpoint protection flags "download a script and run it from
+    # memory" on sight. Instead, save the installer, run it only if Chocolatey
+    # Software signed it, and delete it afterwards.
+    $chocoStage = Join-Path ([IO.Path]::GetTempPath()) ('conjure_choco_' + [Guid]::NewGuid().ToString('N'))
     try {
-        Set-ExecutionPolicy Bypass -Scope Process -Force
         [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-        Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+        $null = New-Item -ItemType Directory -Path $chocoStage -Force -ErrorAction Stop
+        $chocoInstaller = Join-Path $chocoStage 'install.ps1'
+        Invoke-WebRequest -Uri 'https://community.chocolatey.org/install.ps1' -OutFile $chocoInstaller -UseBasicParsing -ErrorAction Stop
+        if (-not (Test-TKScriptSignature -Path $chocoInstaller -Publisher 'Chocolatey Software, Inc.')) {
+            Write-Host "[ERROR] The Chocolatey installer is not signed by Chocolatey Software, Inc. -- not running it." -ForegroundColor $Colors.Error
+            Write-Host "        Install Chocolatey yourself from https://chocolatey.org/install, or use winget." -ForegroundColor $Colors.Warning
+            return $false
+        }
+        & $chocoInstaller
 
         # Refresh PATH so choco is available in this session
         $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
@@ -399,6 +438,9 @@ function Test-ChocolateyAvailable {
     }
     catch {
         Write-Host "[ERROR] Failed to install Chocolatey: $($_.Exception.Message)" -ForegroundColor $Colors.Error
+    }
+    finally {
+        Remove-Item -LiteralPath $chocoStage -Recurse -Force -ErrorAction SilentlyContinue
     }
 
     return $false

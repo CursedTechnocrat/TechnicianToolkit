@@ -137,6 +137,36 @@ $arm64 = '.\tk-arm64\publish\win-arm64\TechnicianToolkit.exe'
       elevation and shows no prompt at all. Without launching, the file's
       **Properties → Digital Signatures** tab shows the same signer name.
 
+## 5b. Sign the scripts
+
+Same machine, same SimplySign session. The release workflow uploads a third
+artifact, `TechnicianToolkit-scripts-unsigned`: every top-level script, the
+licence, `config.json`, and the `shared` and `build` folders the signing script
+needs. Only these release copies are signed — never the repository's, where
+`build/Sync-TKShared.ps1` rewrites files and would break a signature.
+
+Signed scripts are what GRIMOIRE and RITUAL accept: they fetch a missing tool
+from `releases/latest/download/<tool>.ps1` and discard it unrun unless its
+signature is valid and from **Open Source Developer John Bejarana**. A release
+without signed scripts attached leaves those downloads failing (safely), and
+leaves the README's quick-launch commands with nothing to fetch.
+
+- [ ] Download and unzip `TechnicianToolkit-scripts-unsigned`.
+- [ ] Sign, timestamp and verify every script in one go:
+
+```powershell
+Expand-Archive .\TechnicianToolkit-scripts-unsigned.zip -DestinationPath .\scripts-unsigned
+.\scripts-unsigned\build\Sign-TKScripts.ps1 -Source .\scripts-unsigned `
+    -Thumbprint F14F545CB084EDCB18630CA0B520ABC3C46B2516 -SignTool $signtool
+```
+
+- [ ] It ends with *Every script is signed, timestamped and verifies*. It stops,
+      and nothing may be published, if any script fails verification or lacks a
+      timestamp.
+- [ ] It writes the signed scripts to `scripts-unsigned\dist\scripts\` (with
+      `LICENSE`, `config.json` and `SHA256SUMS-scripts.txt`) and
+      `scripts-unsigned\dist\TechnicianToolkit-scripts-<version>.zip`.
+
 ## 6. Re-hash what you are actually shipping
 
 Signing changes the file, so the hashes from step 1 no longer apply.
@@ -163,6 +193,11 @@ Get-FileHash .\TechnicianToolkit-6.0.0-win-*.exe -Algorithm SHA256 | Format-Tabl
 - [ ] Attach both binaries, named so the architecture is unambiguous:
       `TechnicianToolkit-6.0.0-win-x64.exe`,
       `TechnicianToolkit-6.0.0-win-arm64.exe`.
+- [ ] Attach **every signed `.ps1` individually**, under its own name — GRIMOIRE,
+      RITUAL and the README fetch them by name from the latest release — plus
+      `TechnicianToolkit-scripts-<version>.zip` and `SHA256SUMS-scripts.txt`.
+      Dragging the whole `dist\scripts` folder's `.ps1` files into the release
+      page works; so does `gh release upload v6.0.0 .\scripts-unsigned\dist\scripts\*.ps1`.
 - [ ] Paste the `CHANGELOG.md` section for this version.
 - [ ] Include the SHA-256 of both attached files.
 - [ ] **When signed**, say so, and say what the publisher name will look like

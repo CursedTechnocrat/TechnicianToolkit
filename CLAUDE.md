@@ -131,12 +131,22 @@ GRIMOIRE lists the tools a session downloaded and removes them only if the techn
 `'Nothing that reads as malware — no self-delete, no bypassed relaunch'` enforces both rules. A block contains a gate's definition only when the tool calls it, which keeps
 the desktop app's substring check (`ToolTraits`) and CHALICE's no-gate rule intact.
 
-**`TK_DISABLE_DOWNLOAD`** is the opt-out for MSPs running the kit under SOC 2: with the machine
-environment variable set, nothing fetches toolkit code at run time, so only the release they
-deployed can run (`docs/soc2.md`). Three paths still download a missing *tool* — the forwarding
-stubs, GRIMOIRE's launcher and RITUAL's step resolver — and each must check it first;
-`'TK_DISABLE_DOWNLOAD — every self-fetch path honours it'` fails on any download of a GitHub raw
-URL that is not gated.
+**Toolkit downloads are signed and verified.** One function fetches toolkit code:
+`Save-TKVerifiedScript`, which GRIMOIRE's launcher and RITUAL's step resolver call for a tool
+that is not beside them. It downloads the copy attached to the latest release
+(`releases/latest/download/<tool>.ps1`) into a staging folder and keeps it only if
+`Test-TKScriptSignature` passes — a valid Authenticode signature whose common name is the
+toolkit's publisher (`$script:TKPublisher`, `Open Source Developer John Bejarana`; matched by
+name so a renewed certificate still passes). Anything else is deleted unrun.
+**`TK_DISABLE_DOWNLOAD`** (machine environment variable) stops it fetching at all, the opt-out for
+MSPs under SOC 2 (`docs/soc2.md`). `'Toolkit downloads — gated and signature-checked'` fails on a
+tool that fetches toolkit code any other way, and checks the helper's order: switch, download,
+verify, keep.
+
+Only release copies are signed (`build/Sign-TKScripts.ps1`, a step in `RELEASING.md`); the
+repository's copies never are, because a signature breaks the moment a file changes and the sync
+script changes files routinely. So a download works only once a release with signed scripts
+attached exists.
 
 ## Shared Helpers
 
@@ -203,13 +213,14 @@ The suite covers: `EscHtml`, `Format-Bytes`, `Get-TKConfig`/`Set-TKConfig`, `Tes
 `Write-TKError`, the technician-note helpers, HTML report helpers, and the shared source's
 function set (all dot-sourced from `shared/TechnicianToolkit.Shared.ps1`); plus repo-wide
 gates — PowerShell syntax validation and UTF-8 BOM on every script; the shared-helper block
-gate (every tool but the forwarding stubs carries exactly one TK-SHARED block, identical to what
+gate (every tool carries exactly one TK-SHARED block, identical to what
 `build/Sync-TKShared.ps1` would write, with no shared helper defined outside it, no reference to
-`TechnicianToolkit.psm1`, and no such file in the repository root); `TK_DISABLE_DOWNLOAD` gating
-on every script that downloads from GitHub raw URLs; param block compliance (`-Unattended`, and `-WhatIf` on the destructive set),
+`TechnicianToolkit.psm1`, and no such file in the repository root); toolkit downloads only
+through the signature-checked, `TK_DISABLE_DOWNLOAD`-gated helper; nothing leaving the machine;
+cloud tools read-only; no self-delete, bypassed relaunch or `Invoke-Expression`; param block compliance (`-Unattended`, and `-WhatIf` on the destructive set),
 GRIMOIRE registry integrity, license-header compliance (GPL notice and SPDX tag present and
 correctly positioned in every source file), LICENSE integrity, retired tool names and filename
-prefixes, removed deprecation stubs, the 6.0 renamed-tool forwarding stubs, no local `HtmlEncode`, and the GRIFFIN /
+prefixes, removed deprecation stubs and 6.0 forwarding stubs, no local `HtmlEncode`, and the GRIFFIN /
 WISP / PORTAL / CONJURE tier-mapper data tables (extracted by AST lookup rather than
 dot-sourcing, since the tools launch their main flow on import). The same AST extraction covers
 the pure helpers of NECROPSY (bugcheck and dump-header parsing), RAVEN (inbox-rule, SPF and
@@ -390,10 +401,11 @@ Rules for a new name, in order:
    SPECTER, AEGIS, RELIC) and the 25 renamed in 6.0 are listed in the
    `'Legacy tool names must not reappear'` test, in dotted and report-prefix form.
 
-The tools renamed in 6.0 each left a forwarding stub at the old filename (`$RenamedToolStubs` in
-the test file lists them; `'Renamed-tool forwarding stubs'` checks them), and CODEX folds reports
-saved under an old prefix into the new name (`$RenamedToolPrefixes` in `codex.ps1`). A future
-rename follows the same pattern. Two names were deliberately left alone: the `config.json`
+The tools renamed in 6.0 each left a forwarding stub at the old filename for a release; the stubs
+are gone now (each fetched the renamed tool from GitHub when it was missing), and
+`'Renamed-tool forwarding stubs removed'` keeps them gone — `$RenamedToolStubs` in the test file
+lists the old names. CODEX still folds reports saved under an old prefix into the new name
+(`$RenamedToolPrefixes` in `codex.ps1`). A future rename keeps the CODEX mapping but leaves no stub. Two names were deliberately left alone: the `config.json`
 section `Archive` (EMBALM's settings — an ordinary noun, and renaming it would break existing
 configs and the app's settings screen) and REVENANT's `-ArchiveZip` parameter.
 
@@ -410,8 +422,8 @@ configs and the app's settings screen) and REVENANT's `-ArchiveZip` parameter.
    #endregion TK-SHARED
    Invoke-AdminElevation -ScriptFile $PSCommandPath
    ```
-   The markers are required: the sync script treats a `.ps1` without them as a forwarding stub
-   and skips it without a word, and only the Pester gate (`'<Name> carries exactly one TK-SHARED
+   The markers are required: the sync script treats a `.ps1` without them as not a tool and
+   skips it without a word, and only the Pester gate (`'<Name> carries exactly one TK-SHARED
    block'`) catches the omission. Never paste the helpers in or dot-source the shared source.
    Re-run the sync whenever the tool starts calling another shared helper.
 3. Register the tool in `grimoire.ps1`'s `$Tools` array with the category's full name, the next

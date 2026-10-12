@@ -465,16 +465,16 @@ function Invoke-ResetStack {
 
     Write-Host ""
     $steps = @(
-        @{ Cmd = "netsh winsock reset";         Label = "Resetting Winsock..."        },
-        @{ Cmd = "netsh int ip reset";           Label = "Resetting TCP/IP stack..."   },
-        @{ Cmd = "netsh advfirewall reset";      Label = "Resetting firewall rules..."  },
-        @{ Cmd = "ipconfig /flushdns";           Label = "Flushing DNS cache..."       }
+        @{ Cmd = { netsh winsock reset };        Label = "Resetting Winsock..."        },
+        @{ Cmd = { netsh int ip reset };          Label = "Resetting TCP/IP stack..."   },
+        @{ Cmd = { netsh advfirewall reset };     Label = "Resetting firewall rules..."  },
+        @{ Cmd = { ipconfig /flushdns };          Label = "Flushing DNS cache..."       }
     )
 
     foreach ($step in $steps) {
         Write-Host ("  [*] {0}" -f $step.Label) -ForegroundColor $C.Progress
         try {
-            Invoke-Expression $step.Cmd 2>&1 | Out-Null
+            & $step.Cmd 2>&1 | Out-Null
             Write-Host "      Done." -ForegroundColor $C.Success
         } catch {
             Write-Host ("      Failed: {0}" -f $_) -ForegroundColor $C.Error

@@ -90,6 +90,8 @@ function Write-Section {
     Write-Host ""
 }
 
+function Write-Step { param([string]$Msg) Write-Host ("  [*] {0}" -f $Msg) -ForegroundColor Magenta }
+
 function Write-Ok   { param([string]$Msg) Write-Host ("  [+] {0}" -f $Msg) -ForegroundColor Green   }
 
 function Write-Warn { param([string]$Msg) Write-Host ("  [!] {0}" -f $Msg) -ForegroundColor Yellow  }
@@ -543,6 +545,87 @@ function Invoke-AdminElevation {
         exit 1
     }
 }
+
+# The one place the toolkit fetches its own code. GRIMOIRE and RITUAL call
+# Save-TKVerifiedScript for a tool that is not beside them; it downloads the
+# copy attached to the latest GitHub release and keeps it only if it carries a
+# valid Authenticode signature from the toolkit's publisher. Anything else is
+# deleted before it can run, so what runs is exactly what was released.
+$script:TKReleaseBase = 'https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download'
+
+$script:TKPublisher   = 'Open Source Developer John Bejarana'
+
+function Test-TKScriptSignature {
+    <#
+    .SYNOPSIS
+        $true only when a script carries a valid Authenticode signature from the
+        expected publisher -- the toolkit's own unless -Publisher names another.
+    .DESCRIPTION
+        Valid means the file is unchanged since signing and the certificate
+        chains to a trusted root; the publisher check means it is the expected
+        certificate, matched by its common name so a renewed certificate (new
+        thumbprint, same name) still passes. A quoted name with a comma in it
+        ("Chocolatey Software, Inc.") is read whole. Any error -- including a
+        platform without Get-AuthenticodeSignature -- is a no.
+    #>
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [string]$Publisher = $script:TKPublisher
+    )
+
+    try { $sig = Get-AuthenticodeSignature -FilePath $Path -ErrorAction Stop } catch { return $false }
+    if ($sig.Status -ne 'Valid' -or -not $sig.SignerCertificate) { return $false }
+    $cn = if ($sig.SignerCertificate.Subject -match '(?:^|,)\s*CN=(?:"(?<cn>[^"]+)"|(?<cn>[^,]+))') { $Matches['cn'].Trim() } else { '' }
+    return ($cn -eq $Publisher)
+}
+
+function Save-TKVerifiedScript {
+    <#
+    .SYNOPSIS
+        Downloads a toolkit script from the latest release into a folder, and
+        keeps it only if its signature verifies. Returns the path, or $null.
+    .DESCRIPTION
+        Honours TK_DISABLE_DOWNLOAD. The file lands in a staging folder under its
+        own name -- Windows picks the signature checker by extension, so it must
+        stay a .ps1 -- and moves to its real place only after the check passes.
+        A file that fails is deleted unrun.
+    #>
+    param(
+        [Parameter(Mandatory)][ValidatePattern('^[A-Za-z0-9_-]+\.ps1$')][string]$Name,
+        [Parameter(Mandatory)][string]$Directory
+    )
+
+    if ($env:TK_DISABLE_DOWNLOAD -in @('1', 'true')) {
+        Write-Fail "$Name is not beside this script, and TK_DISABLE_DOWNLOAD forbids fetching it."
+        Write-Info "Deploy it next to this script from an approved release."
+        return $null
+    }
+
+    $staging = Join-Path $Directory ('.tk-download-' + [guid]::NewGuid().ToString('N'))
+    $file    = Join-Path $staging $Name
+    Write-Step "$Name is not beside this script - downloading the signed copy from the latest release..."
+    try {
+        $null = New-Item -ItemType Directory -Path $staging -Force -ErrorAction Stop
+        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+        Invoke-RestMethod -Uri "$script:TKReleaseBase/$Name" -OutFile $file -ErrorAction Stop
+
+        if (-not (Test-TKScriptSignature -Path $file)) {
+            Write-Fail "$Name is not signed by $script:TKPublisher - discarded without running it."
+            return $null
+        }
+        $target = Join-Path $Directory $Name
+        Move-Item -LiteralPath $file -Destination $target -Force -ErrorAction Stop
+        Write-Ok "Downloaded $Name (signature verified: $script:TKPublisher)."
+        return $target
+    }
+    catch {
+        Write-Fail "Could not download ${Name}: $($_.Exception.Message)"
+        return $null
+    }
+    finally {
+        Remove-Item -LiteralPath $staging -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
 #endregion TK-SHARED
 Invoke-AdminElevation -ScriptFile $PSCommandPath
 
@@ -704,45 +787,17 @@ function Resolve-Recipe {
 # TOOL RESOLUTION
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Base URL for fetching toolkit scripts on demand. RITUAL orchestrates other
-# tool scripts, so the single-file distribution promise (drop one .ps1 and let
-# it self-provision from GitHub) only holds if RITUAL can pull the scripts its
-# recipe references. Each tool carries its own shared helpers, so the script is
-# all that needs fetching.
-$script:TKRawBase = 'https://raw.githubusercontent.com/CursedTechnocrat/TechnicianToolkit/main'
-
 # Return a usable path to the requested tool script. If it isn't co-located
-# with RITUAL, download it from GitHub (validating its syntax before it runs)
-# so a lone ritual.ps1 can still run a full recipe. Returns
-# $null if the tool is neither present nor downloadable.
+# with RITUAL, fetch the signed copy from the latest release, so a lone
+# ritual.ps1 can still run a full recipe -- but only a copy signed by the
+# toolkit's publisher is kept (Save-TKVerifiedScript). Returns $null if the tool
+# is neither present nor verifiably downloadable.
 function Resolve-ToolFile {
     param([string]$ToolName)
 
     $local = Join-Path $ScriptPath $ToolName
     if (Test-Path $local) { return $local }
-
-    $url = "$script:TKRawBase/$ToolName"
-    if ($env:TK_DISABLE_DOWNLOAD -in @('1', 'true')) {
-        Write-Fail "Tool '$ToolName' not found locally, and TK_DISABLE_DOWNLOAD forbids fetching it."
-        return $null
-    }
-    Write-Info "Tool '$ToolName' not found locally - downloading from GitHub..."
-    try {
-        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
-        Invoke-RestMethod -Uri $url -OutFile $local -ErrorAction Stop
-        $parseErrors = $null
-        $null = [System.Management.Automation.Language.Parser]::ParseFile($local, [ref]$null, [ref]$parseErrors)
-        if ($parseErrors.Count -gt 0) {
-            Remove-Item -Path $local -Force -ErrorAction SilentlyContinue
-            Write-Fail "Downloaded '$ToolName' failed syntax validation - file removed."
-            return $null
-        }
-        Write-Ok "Downloaded $ToolName."
-        return $local
-    } catch {
-        Write-Fail "Could not download '$ToolName': $($_.Exception.Message)"
-        return $null
-    }
+    return Save-TKVerifiedScript -Name $ToolName -Directory $ScriptPath
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
