@@ -7,6 +7,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- **Quick Launch one-liners failed on Windows PowerShell 5.1** with *"The request was aborted:
+  The connection was closed unexpectedly."* PowerShell 5.1 on .NET Framework can still default
+  to TLS 1.0/1.1, which GitHub refuses. Every README one-liner now enables TLS 1.2 for the
+  session before `irm`, as the toolkit's own download helpers already did.
+
 ### Removed
 - **The 6.0 forwarding stubs.** The 25 old filenames (`archive.ps1`, `cipher.ps1`, …) are gone.
   They were kept "for a release or two", and each one downloaded the renamed tool from GitHub's

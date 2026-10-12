@@ -1177,175 +1177,175 @@ cd C:\Technicians\JobSite42\
 
 ```powershell
 # G.R.I.M.O.I.R.E. — Hub launcher (recommended starting point; fetches the tools you pick)
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\grimoire.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/grimoire.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\grimoire.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/grimoire.ps1 -OutFile $f; & $f
 
 # ── The Workshop — Deployment & Onboarding ───────────────────────────────────
 
 # C.O.V.E.N.A.N.T. — Machine onboarding & Entra ID domain join
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\covenant.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/covenant.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\covenant.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/covenant.ps1 -OutFile $f; & $f
 
 # C.O.N.J.U.R.E. — Software deployment via winget or Chocolatey
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\conjure.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/conjure.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\conjure.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/conjure.ps1 -OutFile $f; & $f
 
 # R.U.N.E.P.R.E.S.S. — Printer driver installation and configuration
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\runepress.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/runepress.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\runepress.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/runepress.ps1 -OutFile $f; & $f
 
 # F.O.R.G.E. — Driver detection & installation
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\forge.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/forge.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\forge.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/forge.ps1 -OutFile $f; & $f
 
 # W.H.E.T.S.T.O.N.E. — Windows Update management
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\whetstone.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/whetstone.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\whetstone.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/whetstone.ps1 -OutFile $f; & $f
 
 # H.E.A.R.T.H. — Toolkit setup wizard
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\hearth.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/hearth.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\hearth.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/hearth.ps1 -OutFile $f; & $f
 
 # R.I.T.U.A.L. — Workflow orchestrator (runs recipes of other tools)
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\ritual.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/ritual.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\ritual.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/ritual.ps1 -OutFile $f; & $f
 
 # C.O.N.D.U.I.T. — Windows Update connectivity diagnosis & repair
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\conduit.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/conduit.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\conduit.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/conduit.ps1 -OutFile $f; & $f
 
 # S.O.L.D.E.R. — Windows servicing (component store & SFC) repair
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\solder.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/solder.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\solder.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/solder.ps1 -OutFile $f; & $f
 
 # C.L.E.A.N.S.E. — Disk cleanup (temp, update cache, browser caches, Recycle Bin)
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\cleanse.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/cleanse.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\cleanse.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/cleanse.ps1 -OutFile $f; & $f
 
 # A.N.V.I.L. — BIOS / UEFI / firmware audit
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\anvil.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/anvil.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\anvil.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/anvil.ps1 -OutFile $f; & $f
 
 # C.H.A.L.I.C.E. — Microsoft 365 Apps client diagnosis & repair (run as the affected user)
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\chalice.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/chalice.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\chalice.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/chalice.ps1 -OutFile $f; & $f
 
 # ── The Observatory — Diagnostics & Reporting ────────────────────────────────
 
 # A.U.S.P.E.X. — System diagnostics and HTML report
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\auspex.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/auspex.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\auspex.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/auspex.ps1 -OutFile $f; & $f
 
 # S.C.R.Y.E.R. — Unified diagnostic HTML report
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\scryer.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/scryer.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\scryer.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/scryer.ps1 -OutFile $f; & $f
 
 # A.U.G.U.R. — Physical disk health & SMART status
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\augur.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/augur.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\augur.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/augur.ps1 -OutFile $f; & $f
 
 # F.A.T.H.O.M. — Disk & storage health monitor
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\fathom.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/fathom.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\fathom.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/fathom.ps1 -OutFile $f; & $f
 
 # V.I.G.I.L. — Service, task & event log monitor
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\vigil.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/vigil.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\vigil.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/vigil.ps1 -OutFile $f; & $f
 
 # H.O.U.R.G.L.A.S.S. — Laptop battery health audit
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\hourglass.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/hourglass.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\hourglass.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/hourglass.ps1 -OutFile $f; & $f
 
 # N.E.C.R.O.P.S.Y. — Crash & unexpected-reboot analysis
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\necropsy.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/necropsy.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\necropsy.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/necropsy.ps1 -OutFile $f; & $f
 
 # T.O.R.P.O.R. — Slow-machine triage
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\torpor.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/torpor.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\torpor.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/torpor.ps1 -OutFile $f; & $f
 
 # C.O.D.E.X. — Toolkit report index (rolls up existing HTML reports)
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\codex.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/codex.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\codex.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/codex.ps1 -OutFile $f; & $f
 
 # ── The Bestiary — Security ──────────────────────────────────────────────────
 
 # W.Y.R.M. — BitLocker encryption management
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\wyrm.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/wyrm.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\wyrm.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/wyrm.ps1 -OutFile $f; & $f
 
 # B.A.S.I.L.I.S.K. — Security baseline enforcement
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\basilisk.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/basilisk.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\basilisk.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/basilisk.ps1 -OutFile $f; & $f
 
 # S.P.H.I.N.X. — Active Directory management
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\sphinx.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/sphinx.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\sphinx.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/sphinx.ps1 -OutFile $f; & $f
 
 # P.H.O.E.N.I.X. — Certificate health monitor
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\phoenix.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/phoenix.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\phoenix.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/phoenix.ps1 -OutFile $f; & $f
 
 # T.A.L.O.N. — Persistence / autoruns audit
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\talon.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/talon.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\talon.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/talon.ps1 -OutFile $f; & $f
 
 # T.O.T.E.M. — TPM health audit
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\totem.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/totem.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\totem.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/totem.ps1 -OutFile $f; & $f
 
 # G.R.I.F.F.I.N. — AV / Defender health audit
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\griffin.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/griffin.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\griffin.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/griffin.ps1 -OutFile $f; & $f
 
 # A.R.G.U.S. — AD account roster & access levels
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\argus.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/argus.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\argus.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/argus.ps1 -OutFile $f; & $f
 
 # M.I.N.O.T.A.U.R. — File share & NTFS permissions review
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\minotaur.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/minotaur.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\minotaur.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/minotaur.ps1 -OutFile $f; & $f
 
 # W.A.R.D. — Local user account audit
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\ward.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/ward.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\ward.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/ward.ps1 -OutFile $f; & $f
 
 # G.A.R.M. — Account lockout source tracer
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\garm.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/garm.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\garm.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/garm.ps1 -OutFile $f; & $f
 
 # ── The Crossroads — Network & Remote ────────────────────────────────────────
 
 # L.E.Y.L.I.N.E. — Network diagnostics & remediation
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\leyline.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/leyline.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\leyline.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/leyline.ps1 -OutFile $f; & $f
 
 # E.M.I.S.S.A.R.Y. — Remote execution via WinRM
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\emissary.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/emissary.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\emissary.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/emissary.ps1 -OutFile $f; & $f
 
 # L.A.N.T.E.R.N. — Network discovery & asset inventory
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\lantern.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/lantern.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\lantern.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/lantern.ps1 -OutFile $f; & $f
 
 # W.I.S.P. — Wi-Fi profile audit
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\wisp.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/wisp.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\wisp.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/wisp.ps1 -OutFile $f; & $f
 
 # P.O.R.T.A.L. — VPN / Always-On VPN audit
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\portal.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/portal.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\portal.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/portal.ps1 -OutFile $f; & $f
 
 # L.O.D.E.S.T.A.R. — Domain trust & secure channel diagnosis and repair
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\lodestar.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/lodestar.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\lodestar.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/lodestar.ps1 -OutFile $f; & $f
 
 # ── The Firmament — Cloud & Identity ─────────────────────────────────────────
 
 # Z.E.N.I.T.H. — Azure environment assessment
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\zenith.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/zenith.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\zenith.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/zenith.ps1 -OutFile $f; & $f
 
 # A.L.M.A.N.A.C. — Microsoft 365 license & mailbox audit
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\almanac.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/almanac.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\almanac.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/almanac.ps1 -OutFile $f; & $f
 
 # O.R.B.I.T. — Intune / MDM compliance audit
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\orbit.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/orbit.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\orbit.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/orbit.ps1 -OutFile $f; & $f
 
 # E.C.L.I.P.S.E. — Entra ID identity hygiene audit
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\eclipse.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/eclipse.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\eclipse.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/eclipse.ps1 -OutFile $f; & $f
 
 # A.S.T.E.R.I.S.M. — Microsoft Teams audit
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\asterism.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/asterism.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\asterism.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/asterism.ps1 -OutFile $f; & $f
 
 # C.U.M.U.L.U.S. — SharePoint Online audit
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\cumulus.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/cumulus.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\cumulus.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/cumulus.ps1 -OutFile $f; & $f
 
 # O.R.R.E.R.Y. — Entra ID group dependency audit
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\orrery.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/orrery.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\orrery.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/orrery.ps1 -OutFile $f; & $f
 
 # R.A.V.E.N. — Exchange Online mailbox security audit
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\raven.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/raven.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\raven.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/raven.ps1 -OutFile $f; & $f
 
 # H.A.L.O. — Entra ID Conditional Access posture
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\halo.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/halo.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\halo.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/halo.ps1 -OutFile $f; & $f
 
 # C.A.R.I.L.L.O.N. — Teams Phone call queue & auto attendant audit
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\carillon.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/carillon.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\carillon.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/carillon.ps1 -OutFile $f; & $f
 
 # ── The Necropolis — Data & Migration ────────────────────────────────────────
 
 # R.E.V.E.N.A.N.T. — Profile migration
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\revenant.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/revenant.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\revenant.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/revenant.ps1 -OutFile $f; & $f
 
 # E.M.B.A.L.M. — Pre-reimaging profile backup
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\embalm.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/embalm.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\embalm.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/embalm.ps1 -OutFile $f; & $f
 
 # P.H.Y.L.A.C.T.E.R.Y. — OneDrive Known-Folder-Move pre-migration validator
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\phylactery.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/phylactery.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\phylactery.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/phylactery.ps1 -OutFile $f; & $f
 
 # E.X.H.U.M.E. — Outlook PST / OST discovery
-Set-ExecutionPolicy Bypass -Scope Process -Force; $f="$(Get-Location)\exhume.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/exhume.ps1 -OutFile $f; & $f
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; $f="$(Get-Location)\exhume.ps1"; irm https://github.com/CursedTechnocrat/TechnicianToolkit/releases/latest/download/exhume.ps1 -OutFile $f; & $f
 ```
 
 > All scripts require an Administrator PowerShell session. The `-Scope Process` flag limits the execution policy bypass to the current session only — it does not permanently change system policy.
