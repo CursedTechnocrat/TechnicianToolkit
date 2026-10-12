@@ -144,8 +144,10 @@ function Show-TKReportResult {
 function Write-TKError {
     <#
     .SYNOPSIS
-        Logs a structured error to the central toolkit error log and optionally
-        posts to a Teams incoming webhook configured as TeamsWebhook in config.json.
+        Appends a structured error to the toolkit's local error log,
+        TK_Errors_<yyyyMM>.jsonl in the log directory. Nothing is sent off the
+        machine: the toolkit keeps everything in the terminal or in files the
+        technician can remove.
     .EXAMPLE
         Write-TKError -ScriptName 'basilisk' -Message $_.Exception.Message -Category 'Registry'
     #>
@@ -177,29 +179,6 @@ function Write-TKError {
         Add-Content -Path $logFile -Value $line -Encoding UTF8 -ErrorAction Stop
     }
     catch { <# never throw from a logging helper #> }
-
-    # Optional Teams webhook notification
-    try {
-        $cfg = Get-TKConfig
-        $webhook = $cfg.TeamsWebhook
-        if (-not [string]::IsNullOrWhiteSpace($webhook)) {
-            $card = @{
-                '@type'      = 'MessageCard'
-                '@context'   = 'http://schema.org/extensions'
-                themeColor   = 'FF0000'
-                summary      = "TechnicianToolkit error in $ScriptName"
-                sections     = @(@{
-                    activityTitle    = "TechnicianToolkit - $ScriptName [$Category]"
-                    activitySubtitle = "$($entry.Host) / $($entry.User)  |  $($entry.Timestamp)"
-                    activityText     = $Message
-                })
-            } | ConvertTo-Json -Depth 5
-
-            Invoke-RestMethod -Uri $webhook -Method Post -Body $card `
-                -ContentType 'application/json' -ErrorAction Stop | Out-Null
-        }
-    }
-    catch { <# webhook failures are silent - never interrupt the caller #> }
 }
 
 function EscHtml {
@@ -443,7 +422,6 @@ function Get-TKConfig {
     $defaults = [PSCustomObject]@{
         OrgName       = ''
         LogDirectory  = ''
-        TeamsWebhook  = ''
         Archive       = [PSCustomObject]@{ DefaultDestination   = '' }
         Revenant      = [PSCustomObject]@{ DefaultDestination   = '' }
         Covenant      = [PSCustomObject]@{ DefaultTimezone = ''; DefaultLocalAdminUser = '' }
@@ -545,12 +523,24 @@ function Test-IsAdmin {
 }
 
 function Invoke-AdminElevation {
+    <#
+    .SYNOPSIS
+        Stops the tool, with instructions, when the session is not elevated.
+    .DESCRIPTION
+        This used to relaunch the script elevated with the execution policy
+        switched off. A script that re-launches itself as Administrator that
+        way is exactly what malware does, and endpoint protection treats it
+        so -- and the relaunch dropped every parameter the technician had
+        passed. Elevation is now the technician's
+        own, visible act: open PowerShell with "Run as administrator", then run
+        the tool. The name is kept because the tools call it and the desktop
+        app reads it as one of the two admin gates.
+    #>
     param([Parameter(Mandatory)][string]$ScriptFile)
     if (-not (Test-IsAdmin)) {
-        Write-Host "  INFO: Restarting with administrator privileges..." -ForegroundColor Yellow
-        $PSExe = if ($PSVersionTable.PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
-        Start-Process -FilePath $PSExe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptFile`"" -Verb RunAs
-        exit
+        Write-Host "  $(Split-Path -Leaf $ScriptFile) needs Administrator rights." -ForegroundColor Yellow
+        Write-Host "  Open PowerShell with 'Run as administrator' and run it again." -ForegroundColor Yellow
+        exit 1
     }
 }
 #endregion TK-SHARED
@@ -1092,7 +1082,6 @@ if ($Unattended -or $Recipe -or $RecipeFile) {
     }
     $ok = Invoke-Recipe -RecipeData $chosen
     if ($Transcript) { Stop-TKTranscript }
-    if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }
     exit $(if ($ok) { 0 } else { 1 })
 }
 
@@ -1126,4 +1115,3 @@ do {
 } while ($true)
 
 if ($Transcript) { Stop-TKTranscript }
-if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

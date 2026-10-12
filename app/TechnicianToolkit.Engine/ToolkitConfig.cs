@@ -82,12 +82,6 @@ namespace TechnicianToolkit.Engine
             },
             new ConfigField
             {
-                Key = "TeamsWebhook",
-                Label = "Teams webhook",
-                Description = "Optional. Tools that can post a summary will use it.",
-            },
-            new ConfigField
-            {
                 Key = "DefaultDestination",
                 Section = "Archive",
                 Label = "EMBALM destination",

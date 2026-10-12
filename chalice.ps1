@@ -153,8 +153,10 @@ function Show-TKReportResult {
 function Write-TKError {
     <#
     .SYNOPSIS
-        Logs a structured error to the central toolkit error log and optionally
-        posts to a Teams incoming webhook configured as TeamsWebhook in config.json.
+        Appends a structured error to the toolkit's local error log,
+        TK_Errors_<yyyyMM>.jsonl in the log directory. Nothing is sent off the
+        machine: the toolkit keeps everything in the terminal or in files the
+        technician can remove.
     .EXAMPLE
         Write-TKError -ScriptName 'basilisk' -Message $_.Exception.Message -Category 'Registry'
     #>
@@ -186,29 +188,6 @@ function Write-TKError {
         Add-Content -Path $logFile -Value $line -Encoding UTF8 -ErrorAction Stop
     }
     catch { <# never throw from a logging helper #> }
-
-    # Optional Teams webhook notification
-    try {
-        $cfg = Get-TKConfig
-        $webhook = $cfg.TeamsWebhook
-        if (-not [string]::IsNullOrWhiteSpace($webhook)) {
-            $card = @{
-                '@type'      = 'MessageCard'
-                '@context'   = 'http://schema.org/extensions'
-                themeColor   = 'FF0000'
-                summary      = "TechnicianToolkit error in $ScriptName"
-                sections     = @(@{
-                    activityTitle    = "TechnicianToolkit - $ScriptName [$Category]"
-                    activitySubtitle = "$($entry.Host) / $($entry.User)  |  $($entry.Timestamp)"
-                    activityText     = $Message
-                })
-            } | ConvertTo-Json -Depth 5
-
-            Invoke-RestMethod -Uri $webhook -Method Post -Body $card `
-                -ContentType 'application/json' -ErrorAction Stop | Out-Null
-        }
-    }
-    catch { <# webhook failures are silent - never interrupt the caller #> }
 }
 
 function EscHtml {
@@ -467,7 +446,6 @@ function Get-TKConfig {
     $defaults = [PSCustomObject]@{
         OrgName       = ''
         LogDirectory  = ''
-        TeamsWebhook  = ''
         Archive       = [PSCustomObject]@{ DefaultDestination   = '' }
         Revenant      = [PSCustomObject]@{ DefaultDestination   = '' }
         Covenant      = [PSCustomObject]@{ DefaultTimezone = ''; DefaultLocalAdminUser = '' }
@@ -1885,4 +1863,3 @@ if ($Unattended) {
 $null = Save-TKNoteReport -Prefix 'CHALICE' -Directory (Resolve-LogDirectory -FallbackPath $ScriptPath)
 
 if ($Transcript) { Stop-TKTranscript }
-if ($PSCommandPath -and -not (Test-Path (Join-Path $PSScriptRoot '.git'))) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

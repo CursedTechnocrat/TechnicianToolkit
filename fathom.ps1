@@ -375,7 +375,6 @@ function Get-TKConfig {
     $defaults = [PSCustomObject]@{
         OrgName       = ''
         LogDirectory  = ''
-        TeamsWebhook  = ''
         Archive       = [PSCustomObject]@{ DefaultDestination   = '' }
         Revenant      = [PSCustomObject]@{ DefaultDestination   = '' }
         Covenant      = [PSCustomObject]@{ DefaultTimezone = ''; DefaultLocalAdminUser = '' }
@@ -1211,8 +1210,6 @@ do {
     }
 } while ($choice.ToUpper() -ne 'Q')
 
-# Self-removal
 if ($Transcript) { Stop-TKTranscript }
-Remove-Item $PSCommandPath -Force -ErrorAction SilentlyContinue
 
 #endregion

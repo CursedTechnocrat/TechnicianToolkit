@@ -7,6 +7,37 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Removed
+- **Self-delete.** 52 tools deleted their own `.ps1` when they finished, to keep a host tidy after
+  a quick-launch run — and 47 of them did it even inside a git checkout. A script that deletes
+  itself after running reads as covering tracks, to a reviewer and to endpoint protection alike.
+  The scripts now stay where the technician put them. GRIMOIRE no longer silently deletes the
+  tools a session downloaded: it lists them on exit and removes them only if asked.
+- **The elevated relaunch.** `Invoke-AdminElevation` re-launched a non-elevated tool as
+  Administrator with `-ExecutionPolicy Bypass`, which is malware's signature move and also dropped
+  every parameter the technician had passed. It now stops with the tool's name and how to start
+  it elevated. Open PowerShell with **Run as administrator** first; the desktop app is unaffected,
+  since its manifest already requests elevation.
+- A Pester gate, `'Nothing that reads as malware'`, fails on any self-delete or bypassed relaunch.
+- **The Teams webhook.** `Write-TKError` no longer posts errors to a Teams channel; it only appends
+  to the local `TK_Errors_<yyyyMM>.jsonl` log. It was the one path that sent collected data
+  (error text, host and user names) off the machine. The `TeamsWebhook` key is gone from
+  `config.json`, HEARTH's wizard and the app's settings screen; an existing value is ignored.
+
+### Changed
+- **Every output lands where the technician can find and remove it.** WHETSTONE wrote its session
+  transcript to `%TEMP%` unless `-Transcript` was given; it now always writes to the log directory.
+  ZENITH's report defaulted to `%TEMP%\azure-assessment-<timestamp>.html`; it now defaults to
+  `ZENITH_<timestamp>.html` in the log directory, where CODEX indexes it. HEARTH no longer suggests
+  a network share as the log directory.
+
+### Added
+- **Two guardrails in the Pester suite.** `'Nothing leaves the machine — no outbound data paths'`
+  fails on any HTTP POST/PUT/PATCH or request body, mail, upload or webhook in the code.
+  `'Cloud tools are read-only'` takes The Firmament's tools from GRIMOIRE's registry and fails on
+  any Microsoft Graph permission that is not a `Read` one, or any command that could change a
+  tenant; Graph requests must be `GET` or the read-only `getByIds` lookup.
+
 ### Fixed
 - **WARD showed a LAPS badge on an account no policy manages.** With LAPS not configured, the
   built-in Administrator is only the account LAPS *would* manage, but the report still marked it

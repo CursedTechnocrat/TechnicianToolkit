@@ -66,12 +66,24 @@ function Test-IsAdmin {
 }
 
 function Invoke-AdminElevation {
+    <#
+    .SYNOPSIS
+        Stops the tool, with instructions, when the session is not elevated.
+    .DESCRIPTION
+        This used to relaunch the script elevated with the execution policy
+        switched off. A script that re-launches itself as Administrator that
+        way is exactly what malware does, and endpoint protection treats it
+        so -- and the relaunch dropped every parameter the technician had
+        passed. Elevation is now the technician's
+        own, visible act: open PowerShell with "Run as administrator", then run
+        the tool. The name is kept because the tools call it and the desktop
+        app reads it as one of the two admin gates.
+    #>
     param([Parameter(Mandatory)][string]$ScriptFile)
     if (-not (Test-IsAdmin)) {
-        Write-Host "  INFO: Restarting with administrator privileges..." -ForegroundColor Yellow
-        $PSExe = if ($PSVersionTable.PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
-        Start-Process -FilePath $PSExe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptFile`"" -Verb RunAs
-        exit
+        Write-Host "  $(Split-Path -Leaf $ScriptFile) needs Administrator rights." -ForegroundColor Yellow
+        Write-Host "  Open PowerShell with 'Run as administrator' and run it again." -ForegroundColor Yellow
+        exit 1
     }
 }
 #endregion TK-SHARED
@@ -172,7 +184,7 @@ $Tools = @(
         Name        = 'H.E.A.R.T.H.'
         File        = 'hearth.ps1'
         Version     = '6.0'
-        Description = 'Toolkit setup wizard  -  org name, log path, Teams webhook, and tool defaults'
+        Description = 'Toolkit setup wizard  -  org name, log path, and tool defaults'
         Color       = 'White'
         Category    = 'The Workshop — Deployment & Onboarding'
     },
@@ -972,17 +984,21 @@ Write-Host ""
 # CLEANUP
 # ===========================
 
-foreach ($f in $DownloadedFiles) {
-    Remove-Item -Path $f -Force -ErrorAction SilentlyContinue
-}
-
-# Self-delete grimoire.ps1 after a one-shot bootstrapped session so the host
-# stays clean when run from `irm … | iex`-style quick-launch snippets.
-# Skip the self-delete when the script lives inside a git checkout — that's a
-# clone, not a throwaway download, and silently removing it would lose work.
-if ($PSCommandPath) {
-    $isRepoCheckout = Test-Path (Join-Path $PSScriptRoot '.git')
-    if (-not $isRepoCheckout) {
-        Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue
+# Nothing is deleted behind the technician's back. Tools this session fetched
+# are listed and removed only if the technician says so; grimoire.ps1 itself is
+# never removed. A script that downloads code, runs it and then deletes it
+# silently is what malware does, and endpoint protection reads it that way.
+if ($DownloadedFiles.Count -gt 0) {
+    Write-Host "  This session downloaded:" -ForegroundColor $ColorSchema.Info
+    foreach ($f in $DownloadedFiles) { Write-Host "    $f" -ForegroundColor $ColorSchema.Info }
+    Write-Host -NoNewline "  Remove them now? (y/N) " -ForegroundColor $ColorSchema.Header
+    if ((Read-Host) -match '^(y|yes)$') {
+        foreach ($f in $DownloadedFiles) {
+            Remove-Item -LiteralPath $f -Force -ErrorAction SilentlyContinue
+            Write-Host "  [-] Removed $f" -ForegroundColor $ColorSchema.Info
+        }
+    } else {
+        Write-Host "  Kept. Delete them yourself when you are done." -ForegroundColor $ColorSchema.Info
     }
+    Write-Host ""
 }

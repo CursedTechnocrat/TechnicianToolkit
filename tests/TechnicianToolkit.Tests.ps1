@@ -246,8 +246,8 @@ Describe 'Get-TKConfig' {
         It 'has LogDirectory property' {
             $cfg.PSObject.Properties.Name | Should -Contain 'LogDirectory'
         }
-        It 'has TeamsWebhook property' {
-            $cfg.PSObject.Properties.Name | Should -Contain 'TeamsWebhook'
+        It 'has no TeamsWebhook property (the webhook was removed: nothing leaves the machine)' {
+            $cfg.PSObject.Properties.Name | Should -Not -Contain 'TeamsWebhook'
         }
         It 'has Archive section' {
             $cfg.Archive | Should -Not -BeNullOrEmpty
@@ -302,8 +302,8 @@ Describe 'Write-TKError' {
             Should -Not -Throw
     }
 
-    It 'does not throw with a blank Teams webhook' {
-        { Write-TKError -ScriptName 'test' -Message 'webhook test' } |
+    It 'does not throw with a long message' {
+        { Write-TKError -ScriptName 'test' -Message ('x' * 4000) } |
             Should -Not -Throw
     }
 }
@@ -572,6 +572,170 @@ Describe 'Technician notes are saved by every tool that records them' {
             if ($p -is [System.Management.Automation.Language.FunctionDefinitionAst]) { $inFunction = $true }
         }
         $inFunction | Should -BeFalse -Because "a save inside a per-run function writes a new, growing file on every menu pass"
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Nothing leaves the machine — the toolkit's output goes to the terminal or to
+# files in the log directory that the technician can remove. No tool posts,
+# uploads, mails or webhooks data anywhere. (Downloads of tools and installers,
+# and the read-only queries the cloud tools make, are not sending data out.)
+# The Teams webhook that Write-TKError used to call was removed for this; the
+# gate stops any outbound path from coming back. Comments are ignored, and
+# backtick line continuations are joined so a split command is still seen.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'Nothing leaves the machine — no outbound data paths' {
+    BeforeAll {
+        $script:OutboundPatterns = [ordered]@{
+            'Send-MailMessage / System.Net.Mail' = '\bSend-MailMessage\b|\bSystem\.Net\.Mail\b|\bSmtpClient\b'
+            'WebClient / HttpClient upload'      = '\.Upload(File|String|Data|Values)(Async)?\s*\(|\bHttpClient\b'
+            'HTTP POST / PUT / PATCH'            = '\bInvoke-(RestMethod|WebRequest)\b[^\n]*-Method\s+[''"]?(Post|Put|Patch|Delete)\b'
+            'HTTP request body'                  = '\bInvoke-(RestMethod|WebRequest)\b[^\n]*\s-Body\b'
+            'webhook'                            = '(?i)webhook'
+        }
+    }
+
+    $root = Join-Path $PSScriptRoot '..'
+    $codeCases = @(Get-ChildItem -Path $root -Filter '*.ps1' -File) +
+                 @(Get-ChildItem -Path (Join-Path $root 'shared'), (Join-Path $root 'build') -Filter '*.ps1' -File) |
+        ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
+
+    It '<Name> has no code that sends data off the machine' -ForEach $codeCases {
+        $tokens = $null; $errors = $null
+        $text = [IO.File]::ReadAllText($FullName)
+        $null = [System.Management.Automation.Language.Parser]::ParseInput($text, [ref]$tokens, [ref]$errors)
+        $code = [System.Text.StringBuilder]::new($text)
+        foreach ($t in $tokens | Where-Object { $_.Kind -eq 'Comment' }) {
+            $code.Remove($t.Extent.StartOffset, $t.Extent.EndOffset - $t.Extent.StartOffset).Insert($t.Extent.StartOffset, (' ' * ($t.Extent.EndOffset - $t.Extent.StartOffset))) | Out-Null
+        }
+        $flat = $code.ToString() -replace '`\r?\n', ' '
+        foreach ($pattern in $script:OutboundPatterns.Keys) {
+            $flat | Should -Not -Match $script:OutboundPatterns[$pattern] -Because "$Name must not send data anywhere ($pattern)"
+        }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Nothing that reads as malware — two behaviours endpoint protection flags in a
+# script, and that the toolkit used to have. No script deletes itself when it
+# finishes (52 did, to keep the host tidy; it reads as covering tracks, and 47 of
+# them did it even inside a git checkout). No script relaunches itself elevated
+# with the execution policy bypassed (Invoke-AdminElevation did; it now stops
+# with instructions, and elevating is the technician's own act). GRIMOIRE still
+# offers to remove the tools it downloaded, but asks first.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'Nothing that reads as malware — no self-delete, no bypassed relaunch' {
+    BeforeAll {
+        function Get-CodeWithoutComments {
+            param([string]$Path)
+            $tokens = $null
+            $text = [IO.File]::ReadAllText($Path)
+            $null = [System.Management.Automation.Language.Parser]::ParseInput($text, [ref]$tokens, [ref]$null)
+            $sb = [System.Text.StringBuilder]::new($text)
+            foreach ($t in $tokens | Where-Object { $_.Kind -eq 'Comment' }) {
+                $n = $t.Extent.EndOffset - $t.Extent.StartOffset
+                $sb.Remove($t.Extent.StartOffset, $n).Insert($t.Extent.StartOffset, (' ' * $n)) | Out-Null
+            }
+            $sb.ToString() -replace '`\r?\n', ' '
+        }
+    }
+
+    $root = Join-Path $PSScriptRoot '..'
+    $codeCases = @(Get-ChildItem -Path $root -Filter '*.ps1' -File) +
+                 @(Get-ChildItem -Path (Join-Path $root 'shared'), (Join-Path $root 'build') -Filter '*.ps1' -File) |
+        ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
+
+    It '<Name> never deletes its own script file' -ForEach $codeCases {
+        Get-CodeWithoutComments -Path $FullName |
+            Should -Not -Match '\bRemove-Item\b[^\n]*\$(PSCommandPath|MyInvocation)\b' -Because "$Name must not delete itself; the technician removes the toolkit when they choose"
+    }
+
+    It '<Name> never relaunches a script with the execution policy bypassed' -ForEach $codeCases {
+        Get-CodeWithoutComments -Path $FullName |
+            Should -Not -Match '\bStart-Process\b[^\n]*-ExecutionPolicy\s+Bypass' -Because "$Name must not re-launch PowerShell with the policy switched off; elevation is the technician's own act"
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Cloud tools are read-only — every tool in The Firmament (taken from GRIMOIRE's
+# registry, so a new one is covered the day it is registered) audits a tenant
+# and never changes it. Two checks: every Microsoft Graph permission it asks for
+# is a Read permission, and every command it runs that sounds like a write is
+# one of the local, known-harmless ones below. Exchange, Teams, Azure and PnP
+# sign-ins carry whatever the technician's role allows, so the script's own
+# calls are what has to stay read-only; this is what holds them to it.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'Cloud tools are read-only' {
+    BeforeAll {
+        $script:WriteVerbs = 'New','Set','Remove','Update','Add','Grant','Revoke','Enable','Disable','Register',
+            'Unregister','Clear','Reset','Move','Rename','Restore','Sync','Start','Stop','Restart','Publish',
+            'Approve','Deny','Block','Unblock','Install','Uninstall','Invoke','Send','Submit','Suspend','Resume',
+            'Import','Export','Save','Copy','Lock','Unlock','Edit','Push','Merge','Join','Initialize','Complete','Confirm'
+        # Write-sounding commands that act only on this machine: console and
+        # streams, the tool's own report files, module installs, and choosing
+        # which subscription or vault the session reads from.
+        $script:LocalOnly = 'Clear-Host','Export-Csv','Import-Module','Install-Module','Join-Path','New-Object',
+            'Remove-Item','Start-Sleep','Set-AzContext','Set-AzRecoveryServicesVaultContext'
+    }
+
+    $grimoireText = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'grimoire.ps1') -Raw
+    $cloudCases = foreach ($entry in [regex]::Matches($grimoireText, '(?s)\[PSCustomObject\]@\{(?<body>.*?)\n    \}')) {
+        $body = $entry.Groups['body'].Value
+        if ($body -notmatch "Category\s*=\s*'The Firmament") { continue }
+        if ($body -match "File\s*=\s*'(?<file>[^']+)'") {
+            @{ Name = $Matches['file']; FullName = (Join-Path (Join-Path $PSScriptRoot '..') $Matches['file']) }
+        }
+    }
+
+    It 'finds the cloud tools in the registry' -ForEach @{ Found = @($cloudCases | ForEach-Object { $_.Name }) } {
+        $Found | Should -Contain 'halo.ps1'
+        $Found.Count | Should -BeGreaterOrEqual 10
+    }
+
+    It '<Name> asks Microsoft Graph for Read permissions only' -ForEach $cloudCases {
+        $ast = [System.Management.Automation.Language.Parser]::ParseFile($FullName, [ref]$null, [ref]$null)
+        $assign = $ast.FindAll({
+            param($n)
+            $n -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+            $n.Left -is [System.Management.Automation.Language.VariableExpressionAst] -and
+            $n.Left.VariablePath.UserPath -eq 'GraphScopes'
+        }, $true)
+        foreach ($a in $assign) {
+            $scopes = $a.Right.FindAll({ param($n) $n -is [System.Management.Automation.Language.StringConstantExpressionAst] }, $true) |
+                ForEach-Object { $_.Value }
+            foreach ($scope in $scopes) {
+                $scope | Should -Match '\.Read(Basic)?(\.|$)' -Because "$Name requests '$scope'; a cloud tool may only read"
+                $scope | Should -Not -Match 'ReadWrite|Write' -Because "$Name requests '$scope'; a cloud tool may only read"
+            }
+        }
+    }
+
+    It '<Name> runs no command that changes the tenant' -ForEach $cloudCases {
+        # The tool's own code: its generated TK-SHARED block holds the shared
+        # helpers, which write only local files and are held to that by the
+        # 'Nothing leaves the machine' gate.
+        $text = ([IO.File]::ReadAllText($FullName)) -replace "`r`n", "`n"
+        $full = [System.Management.Automation.Language.Parser]::ParseInput($text, [ref]$null, [ref]$null)
+        $defined = @($full.FindAll({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true) | ForEach-Object { $_.Name })
+        $own = [regex]::Replace($text, '(?ms)^#region TK-SHARED\b.*?^#endregion TK-SHARED[^\n]*', '')
+        $ast = [System.Management.Automation.Language.Parser]::ParseInput($own, [ref]$null, [ref]$null)
+        $commands = $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.CommandAst] }, $true)
+        foreach ($cmd in $commands) {
+            $cmdName = $cmd.GetCommandName()
+            if (-not $cmdName -or $cmdName -notmatch '^(?<verb>\w+)-') { continue }
+            $verb = $Matches['verb']
+            if ($verb -notin $script:WriteVerbs -or $cmdName -in $defined -or $cmdName -in $script:LocalOnly) { continue }
+
+            if ($cmdName -eq 'Invoke-MgGraphRequest') {
+                # GET reads; the one POST allowed is getByIds, which resolves object IDs to names.
+                $call = $cmd.Extent.Text
+                $isRead = $call -match '-Method\s+[''"]?GET\b' -or
+                          ($call -match '-Method\s+[''"]?POST\b' -and $call -match 'directoryObjects/getByIds')
+                $isRead | Should -BeTrue -Because "$Name sends a Graph request that is not a read: $call"
+                continue
+            }
+            $cmdName | Should -BeNullOrEmpty -Because "$Name calls $cmdName, which could change the tenant; cloud tools are read-only (add it to LocalOnly only if it acts on this machine alone)"
+        }
     }
 }
 

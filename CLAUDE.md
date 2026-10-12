@@ -30,7 +30,7 @@ TechnicianToolkit/
 ├── build/
 │   └── Sync-TKShared.ps1    # Writes each tool's generated TK-SHARED block from the source
 ├── grimoire.ps1             # Hub launcher — interactive menu for all tools
-├── config.json              # Optional runtime config (org name, log dir, webhooks, defaults)
+├── config.json              # Optional runtime config (org name, log dir, tool defaults)
 ├── hearth.ps1               # Setup wizard — writes config.json
 ├── <tool>.ps1               # Individual tool scripts
 ├── tests/
@@ -102,15 +102,33 @@ regenerates about 40 files), which the sync script absorbs.
 The helpers resolve `config.json` and the fallback error log from `$PSScriptRoot`. Inside a
 generated block that is the tool's own folder, the same folder the module used to sit in.
 
+**Nothing leaves the machine.** A tool's output is the terminal or a file in the log directory
+that the technician can remove — never `%TEMP%`, the Desktop, or anywhere they would not look
+(temp working files are fine if the tool deletes them). No tool posts, uploads, mails or
+webhooks data; `'Nothing leaves the machine — no outbound data paths'` fails on any HTTP
+POST/PUT/PATCH/body, mail, upload or `webhook` in code. Downloading tools and installers, and
+the cloud tools' read queries, are not data leaving.
+
+**Cloud tools are read-only.** Every tool in The Firmament audits a tenant and never changes it.
+`'Cloud tools are read-only'` reads the category from GRIMOIRE's registry and fails on a Graph
+permission that is not a `Read` one, or on any write-sounding command outside its short
+local-only list (Graph requests must be `GET`, or the `getByIds` lookup). A cloud tool that
+needs to change a tenant does not belong in that category.
+
 **Technician notes live only as long as the run.** A tool that calls `Add-TKNote` must call
 `Save-TKNoteReport` exactly once, at its top level, after its menu loop and before the final
 `Stop-TKTranscript`. A save inside the per-run function would write a new, growing file on every
 menu pass. `'Technician notes are saved by every tool that records them'` enforces it.
 
-**Admin gates.** `Invoke-AdminElevation` re-launches the script as Administrator if not already
-elevated. Scripts that use `Assert-AdminPrivilege` instead will error-exit if not elevated rather
-than auto-relaunching — this is appropriate for scripts called programmatically (REVENANT,
-HEARTH, EMBALM). A block contains a gate's definition only when the tool calls it, which keeps
+**Admin gates.** Both stop a non-elevated run instead of relaunching it: `Invoke-AdminElevation`
+prints which tool needs Administrator and how to start it elevated, and `Assert-AdminPrivilege`
+errors out. Neither ever re-launches the script — a script that relaunches itself elevated with
+`-ExecutionPolicy Bypass` is what malware does. Elevation is the technician's own act (or the
+desktop app's, whose manifest requests it).
+
+**No self-delete.** No script deletes its own file when it finishes; it reads as covering tracks.
+GRIMOIRE lists the tools a session downloaded and removes them only if the technician says yes.
+`'Nothing that reads as malware — no self-delete, no bypassed relaunch'` enforces both rules. A block contains a gate's definition only when the tool calls it, which keeps
 the desktop app's substring check (`ToolTraits`) and CHALICE's no-gate rule intact.
 
 **`TK_DISABLE_DOWNLOAD`** is the opt-out for MSPs running the kit under SOC 2: with the machine
@@ -126,14 +144,14 @@ Key functions in `shared/TechnicianToolkit.Shared.ps1` (each tool's block holds 
 
 | Function | Purpose |
 |----------|---------|
-| `Invoke-AdminElevation` | Re-launch as admin if needed (for hub-launched tools) |
+| `Invoke-AdminElevation` | Stop with instructions to run elevated if the session is not (most tools) |
 | `Assert-AdminPrivilege` | Error-exit if not admin (for directly-called tools) |
 | `Test-IsAdmin` | Returns `[bool]` |
 | `Get-TKConfig` | Read `config.json`; returns object with defaults if file missing |
 | `Set-TKConfig` | Write a key/value into `config.json` (section-aware) |
 | `Resolve-LogDirectory` | Return configured log dir or fallback path |
 | `Start-TKTranscript` / `Stop-TKTranscript` | PowerShell transcript wrappers |
-| `Write-TKError` | Log error to file and optionally POST to Teams webhook |
+| `Write-TKError` | Append the error to the local `TK_Errors_<yyyyMM>.jsonl` log |
 | `Add-TKNote` | Record a timestamped technician note (category: Info/Action/Warning/Issue/Resolution) |
 | `Get-TKNote` / `Clear-TKNote` | Read / reset the session note buffer |
 | `Export-TKNoteReport` | Write the session's notes to a ticket-ready HTML report (with a plain-text paste block) |
@@ -326,7 +344,6 @@ holds more than one version.
 {
   "OrgName": "",
   "LogDirectory": "",
-  "TeamsWebhook": "",
   "Archive": { "DefaultDestination": "" },
   "Revenant": { "DefaultDestination": "" },
   "Covenant": { "DefaultTimezone": "", "DefaultLocalAdminUser": "" },

@@ -75,7 +75,6 @@ function Get-TKConfig {
     $defaults = [PSCustomObject]@{
         OrgName       = ''
         LogDirectory  = ''
-        TeamsWebhook  = ''
         Archive       = [PSCustomObject]@{ DefaultDestination   = '' }
         Revenant      = [PSCustomObject]@{ DefaultDestination   = '' }
         Covenant      = [PSCustomObject]@{ DefaultTimezone = ''; DefaultLocalAdminUser = '' }
@@ -256,16 +255,8 @@ $Fields = @(
         Key         = 'LogDirectory'
         Section     = ''
         Description = 'Where HTML reports and transcripts are saved'
-        Hint        = 'C:\TKLogs or \\server\share\logs'
+        Hint        = 'C:\TKLogs'
         IsPath      = $true
-    },
-    [PSCustomObject]@{
-        DisplayName = 'Teams Webhook URL'
-        Key         = 'TeamsWebhook'
-        Section     = ''
-        Description = 'Teams incoming webhook URL for error notifications'
-        Hint        = 'https://outlook.office.com/webhook/...'
-        IsPath      = $false
     },
     [PSCustomObject]@{
         DisplayName = 'EMBALM Default Destination'
@@ -762,4 +753,3 @@ if ($Unattended) {
 # ─────────────────────────────────────────────────────────────────────────────
 
 if ($Transcript) { Stop-TKTranscript }
-if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }
