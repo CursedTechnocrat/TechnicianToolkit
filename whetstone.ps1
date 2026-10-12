@@ -577,4 +577,3 @@ Write-Host ""
 if ($transcriptPath) {
     try { Stop-Transcript } catch {}
 }
-if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

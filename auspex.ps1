@@ -1536,4 +1536,3 @@ Write-Host "  SCRIPT EXECUTION COMPLETED" -ForegroundColor $ColorSchema.Header
 Write-Host "================================================" -ForegroundColor $ColorSchema.Header
 Write-Host ""
 if ($Transcript) { Stop-TKTranscript }
-if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

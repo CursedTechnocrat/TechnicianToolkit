@@ -1307,7 +1307,6 @@ if ($Unattended) {
     Write-Host ""
     Write-Host "  [+] V.I.G.I.L. unattended run complete." -ForegroundColor $C.Success
     Write-Host ""
-    if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }
     exit 0
 }
 
@@ -1488,4 +1487,3 @@ do {
 } while ($choice -ne 'Q')
 
 if ($Transcript) { Stop-TKTranscript }
-if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

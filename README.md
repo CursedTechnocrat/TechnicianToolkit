@@ -224,7 +224,7 @@ Twenty-five tools were renamed so each category's names follow its theme, and so
 
 The central hub for the Technician Toolkit. Presents a categorized, interactive menu to launch any tool without navigating the file system. After a tool completes, control returns to the GRIMOIRE menu automatically.
 
-- Auto-elevates to Administrator on first launch if not already elevated
+- Requires Administrator: start it from PowerShell opened with **Run as administrator** (it stops with instructions otherwise, rather than relaunching itself)
 - Validates that each script file exists before attempting to launch it
 - Downloads missing scripts from GitHub automatically on first use
 - Returns to the hub menu after each tool finishes or errors out
@@ -344,7 +344,7 @@ Workflow orchestrator. Runs an ordered sequence of toolkit scripts as a single n
 - Default behaviour: abort on first failure. Pass `-ContinueOnError` to run every step regardless, unless the step's own `StopOnError = $true` overrides
 - Interactive menu lists every built-in recipe with its step summary; `-Recipe` or `-RecipeFile` triggers a headless run and exits with `0` on full success, `1` on any failure
 - Rollup HTML saved as `RITUAL_<timestamp>.html` with summary cards (outcome, total / succeeded / failed / skipped / duration) and step-by-step results
-- Auto-elevates to Administrator (inherits the requirements of the tools it orchestrates)
+- Requires an elevated PowerShell (inherits the requirements of the tools it orchestrates)
 
 ---
 
@@ -392,7 +392,7 @@ BIOS / UEFI / firmware audit that answers the technician's question "is this mac
 - Windows Update driver / firmware scan via PSWindowsUpdate (installed on demand); lists every pending update with KB ID, size, and severity
 - Readiness verdict: red / yellow / green based on firmware type, Secure Boot state, BIOS age (≥ 2 years flagged), vendor tooling presence, and WU backlog
 - Dark-themed HTML report with OrgName prefix and six summary cards
-- Auto-elevates and telemeters WU failures via `Write-TKError`
+- Requires an elevated PowerShell; logs WU failures locally via `Write-TKError`
 
 ---
 
@@ -505,7 +505,7 @@ Laptop battery health audit. Surfaces the three numbers that matter for a retire
 - **Verdict**: HEALTHY / REPLACEMENT SOON / REPLACE NOW / DATA INCOMPLETE / NO BATTERY (explicit desktop/VM case).
 - **Dark HTML report** with six summary cards (verdict, battery count, best/worst health, max cycles, thresholds reference) and a full per-battery detail table with Wh values and colour-coded badges.
 - **`powercfg /batteryreport` enrichment**: also runs `powercfg /batteryreport /xml` and parses the result to surface data the live `ROOT\WMI` classes do not expose — per-battery serial number and manufacture date, full-charge capacity history (degradation trend over the lifetime of the machine), Windows runtime estimates at both current full charge and original design capacity (so the technician can quote the runtime lost to wear), and aggregated AC vs DC time totals across the runtime history. The full Microsoft-formatted HTML is saved alongside `HOURGLASS_*.html` and linked from the new section.
-- Auto-elevates; read-only.
+- Requires an elevated PowerShell; read-only.
 
 ---
 
@@ -648,7 +648,7 @@ Sweeps the standard Windows persistence surfaces and inventories every entry so 
 - Per-entry enrichment: resolves the binary path (handles quoted and unquoted command lines with environment-variable expansion), runs `Get-AuthenticodeSignature`, and flags Microsoft-signed entries distinctly from third-party signed
 - Dark-themed HTML report with six summary cards (total / MS-signed / 3rd-party / unsigned / missing-targets) and one detail table per surface
 - Nav bar auto-generated from the categories found so large machines paginate naturally
-- Auto-elevates; read-only audit with no state changes
+- Requires an elevated PowerShell; read-only audit with no state changes
 
 ---
 
@@ -662,7 +662,7 @@ TPM health audit gating the four questions that matter for modern Windows manage
 - **Attestation / Endorsement Key** via `Get-TpmEndorsementKeyInfo`: surfaces EK presence and manufacturer-certificate count — required for Windows Autopilot pre-provisioning and attested boot
 - **Red / yellow / green verdict** with specific remediation hints (enable in firmware, provision, clear-and-reprovision, vendor BIOS update for dTPM->fTPM, etc.)
 - Dark-themed HTML report with six summary cards including readiness, spec, BitLocker-volumes-depending-on-TPM, and EK presence
-- Auto-elevates; read-only audit
+- Requires an elevated PowerShell; read-only audit
 
 ---
 
@@ -684,7 +684,7 @@ Antivirus and Microsoft Defender health audit. Answers the four questions that d
 - **Platform protection**: virtualization-based security, memory integrity (HVCI), Credential Guard (Enterprise / Education / Server editions), LSA protection (`RunAsPPL`, confirmed against the Wininit boot event), the vulnerable driver blocklist, and Smart App Control. Scored with a verdict of its own — Hardened / Partial / Not hardened — that does not change the AV verdict, so older hardware without HVCI still reads correctly on the AV side
 - **Red / yellow / green verdict** with explicit remediation hints. `Write-TKError` telemetry fires on `Get-MpComputerStatus` failure and on each unresolved high / severe threat
 - Dark-themed HTML report with seven summary cards (posture, real-time, tamper, signature age, threats, AM mode, platform protection)
-- Auto-elevates; read-only audit
+- Requires an elevated PowerShell; read-only audit
 
 ---
 
@@ -722,7 +722,7 @@ File share and NTFS permissions review — answers "who has access to this share
 - **Direct user grants** (access given to a person instead of a group), **orphaned SIDs** left by deleted accounts, **Deny** entries, and folders the elevated session still could not read
 - `-Path <folder>` reviews one folder tree instead of the shares
 - HTML report plus `MINOTAUR_<timestamp>.csv` holding every access-control entry scanned (share, folder, identity, kind, level, allow/deny, inherited) — ready for a customer access review
-- Auto-elevates
+- Requires an elevated PowerShell
 
 > **MINOTAUR vs ARGUS vs WARD:** all three are access reviews, at different scopes — MINOTAUR for file shares, ARGUS for Active Directory, WARD for one machine's local accounts.
 
@@ -825,7 +825,7 @@ Wi-Fi profile audit. Answers "what wireless networks does this machine know, and
 - **Red / yellow / green verdict**: red on open auto-connect, WEP, deprecated cipher; yellow on TKIP, autoSwitch, hidden+auto, MAC randomization off, > 25 saved profiles
 - Privacy posture banner in the HTML report makes it explicit whether keys were rendered in cleartext
 - Dark-themed HTML report with six summary cards
-- Auto-elevates; read-only audit; temp folder is wiped after parsing
+- Requires an elevated PowerShell; read-only audit; temp folder is wiped after parsing
 
 ---
 
@@ -841,7 +841,7 @@ VPN and Always-On VPN audit. Answers "what tunnels can leave this machine, are t
 - **Red / yellow / green verdict**: red on PAP authentication or NoEncryption (Write-TKError telemetry fires for both -- credentials in cleartext / traffic in cleartext are immediate findings); yellow on CHAP, Optional encryption, split-tunnel without matching NRPT, multiple competing third-party VPN vendors
 - Special-case `NONE CONFIGURED` posture statement when zero built-in VPNs and zero third-party clients are detected -- not a finding, just an inventory result
 - Dark-themed HTML report with six summary cards and six detail sections
-- Auto-elevates; read-only audit
+- Requires an elevated PowerShell; read-only audit
 
 ---
 
@@ -1093,7 +1093,7 @@ first four rows is needed.
 | Requirement | Notes |
 |-------------|-------|
 | Windows PowerShell 5.1+ | All scripts |
-| Administrator privileges | All scripts (auto-elevation on `grimoire.ps1`) |
+| Administrator privileges | All scripts except `chalice.ps1` — run them from PowerShell opened with **Run as administrator**; a tool started without it stops with instructions |
 | Internet connectivity | All scripts |
 | Windows Package Manager (winget) | `conjure.ps1` (Chocolatey supported as alternative) |
 | PSWindowsUpdate module | `whetstone.ps1`, `forge.ps1` (auto-installed if missing) |
@@ -1166,7 +1166,7 @@ report confidentiality, secrets and change-ticket evidence.
 
 Run any script directly from GitHub without cloning — scripts download into whatever directory your shell is currently in. `cd` to your working folder first, then paste the command.
 
-> **Note:** Every script is self-contained — there is no shared module to download first. GRIMOIRE fetches any tool you pick that is not already beside it.
+> **Note:** Every script is self-contained — there is no shared module to download first. GRIMOIRE fetches any tool you pick that is not already beside it. Open PowerShell with **Run as administrator** first: the tools no longer relaunch themselves elevated. Nothing deletes itself either — the scripts stay in your working folder until you remove them (GRIMOIRE offers to remove the tools it downloaded when you quit).
 
 ```powershell
 # Example: navigate to your working folder first

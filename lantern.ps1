@@ -1011,4 +1011,3 @@ if ($Unattended) {
 }
 
 if ($Transcript) { Stop-TKTranscript }
-if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

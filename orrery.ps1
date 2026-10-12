@@ -1912,4 +1912,3 @@ Write-Ok "Audit complete. $totalHits dependency hit(s) recorded."
 Write-Host ""
 
 if ($Transcript) { Stop-TKTranscript }
-if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

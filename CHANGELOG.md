@@ -8,6 +8,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Removed
+- **Self-delete.** 52 tools deleted their own `.ps1` when they finished, to keep a host tidy after
+  a quick-launch run — and 47 of them did it even inside a git checkout. A script that deletes
+  itself after running reads as covering tracks, to a reviewer and to endpoint protection alike.
+  The scripts now stay where the technician put them. GRIMOIRE no longer silently deletes the
+  tools a session downloaded: it lists them on exit and removes them only if asked.
+- **The elevated relaunch.** `Invoke-AdminElevation` re-launched a non-elevated tool as
+  Administrator with `-ExecutionPolicy Bypass`, which is malware's signature move and also dropped
+  every parameter the technician had passed. It now stops with the tool's name and how to start
+  it elevated. Open PowerShell with **Run as administrator** first; the desktop app is unaffected,
+  since its manifest already requests elevation.
+- A Pester gate, `'Nothing that reads as malware'`, fails on any self-delete or bypassed relaunch.
 - **The Teams webhook.** `Write-TKError` no longer posts errors to a Teams channel; it only appends
   to the local `TK_Errors_<yyyyMM>.jsonl` log. It was the one path that sent collected data
   (error text, host and user names) off the machine. The `TeamsWebhook` key is gone from

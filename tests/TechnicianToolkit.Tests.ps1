@@ -616,6 +616,47 @@ Describe 'Nothing leaves the machine — no outbound data paths' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Nothing that reads as malware — two behaviours endpoint protection flags in a
+# script, and that the toolkit used to have. No script deletes itself when it
+# finishes (52 did, to keep the host tidy; it reads as covering tracks, and 47 of
+# them did it even inside a git checkout). No script relaunches itself elevated
+# with the execution policy bypassed (Invoke-AdminElevation did; it now stops
+# with instructions, and elevating is the technician's own act). GRIMOIRE still
+# offers to remove the tools it downloaded, but asks first.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'Nothing that reads as malware — no self-delete, no bypassed relaunch' {
+    BeforeAll {
+        function Get-CodeWithoutComments {
+            param([string]$Path)
+            $tokens = $null
+            $text = [IO.File]::ReadAllText($Path)
+            $null = [System.Management.Automation.Language.Parser]::ParseInput($text, [ref]$tokens, [ref]$null)
+            $sb = [System.Text.StringBuilder]::new($text)
+            foreach ($t in $tokens | Where-Object { $_.Kind -eq 'Comment' }) {
+                $n = $t.Extent.EndOffset - $t.Extent.StartOffset
+                $sb.Remove($t.Extent.StartOffset, $n).Insert($t.Extent.StartOffset, (' ' * $n)) | Out-Null
+            }
+            $sb.ToString() -replace '`\r?\n', ' '
+        }
+    }
+
+    $root = Join-Path $PSScriptRoot '..'
+    $codeCases = @(Get-ChildItem -Path $root -Filter '*.ps1' -File) +
+                 @(Get-ChildItem -Path (Join-Path $root 'shared'), (Join-Path $root 'build') -Filter '*.ps1' -File) |
+        ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
+
+    It '<Name> never deletes its own script file' -ForEach $codeCases {
+        Get-CodeWithoutComments -Path $FullName |
+            Should -Not -Match '\bRemove-Item\b[^\n]*\$(PSCommandPath|MyInvocation)\b' -Because "$Name must not delete itself; the technician removes the toolkit when they choose"
+    }
+
+    It '<Name> never relaunches a script with the execution policy bypassed' -ForEach $codeCases {
+        Get-CodeWithoutComments -Path $FullName |
+            Should -Not -Match '\bStart-Process\b[^\n]*-ExecutionPolicy\s+Bypass' -Because "$Name must not re-launch PowerShell with the policy switched off; elevation is the technician's own act"
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Cloud tools are read-only — every tool in The Firmament (taken from GRIMOIRE's
 # registry, so a new one is covered the day it is registered) audits a tenant
 # and never changes it. Two checks: every Microsoft Graph permission it asks for

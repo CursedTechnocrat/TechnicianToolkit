@@ -85,7 +85,8 @@ controls.
 
 ## 3. Logical access (CC6.1, CC6.3)
 
-- Most tools need Administrator and relaunch elevated. CHALICE deliberately runs
+- Most tools need Administrator and stop, with instructions, when they are not
+  started elevated; none relaunches itself. CHALICE deliberately runs
   as the signed-in user. Elevation belongs to the technician's admin account, so
   your existing privileged-access controls apply. The toolkit adds no accounts,
   no service and no listener.

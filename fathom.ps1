@@ -1210,8 +1210,6 @@ do {
     }
 } while ($choice.ToUpper() -ne 'Q')
 
-# Self-removal
 if ($Transcript) { Stop-TKTranscript }
-Remove-Item $PSCommandPath -Force -ErrorAction SilentlyContinue
 
 #endregion

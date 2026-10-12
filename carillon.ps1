@@ -1834,4 +1834,3 @@ $null = Save-TKNoteReport -Prefix 'CARILLON' -Directory (Resolve-LogDirectory -F
 
 if (-not $Unattended) { Read-Host "  Press Enter to exit" | Out-Null }
 if ($Transcript) { Stop-TKTranscript }
-if ($PSCommandPath -and -not (Test-Path (Join-Path $PSScriptRoot '.git'))) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

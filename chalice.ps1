@@ -1863,4 +1863,3 @@ if ($Unattended) {
 $null = Save-TKNoteReport -Prefix 'CHALICE' -Directory (Resolve-LogDirectory -FallbackPath $ScriptPath)
 
 if ($Transcript) { Stop-TKTranscript }
-if ($PSCommandPath -and -not (Test-Path (Join-Path $PSScriptRoot '.git'))) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

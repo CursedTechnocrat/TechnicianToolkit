@@ -537,12 +537,24 @@ function Test-IsAdmin {
 }
 
 function Invoke-AdminElevation {
+    <#
+    .SYNOPSIS
+        Stops the tool, with instructions, when the session is not elevated.
+    .DESCRIPTION
+        This used to relaunch the script elevated with the execution policy
+        switched off. A script that re-launches itself as Administrator that
+        way is exactly what malware does, and endpoint protection treats it
+        so -- and the relaunch dropped every parameter the technician had
+        passed. Elevation is now the technician's
+        own, visible act: open PowerShell with "Run as administrator", then run
+        the tool. The name is kept because the tools call it and the desktop
+        app reads it as one of the two admin gates.
+    #>
     param([Parameter(Mandatory)][string]$ScriptFile)
     if (-not (Test-IsAdmin)) {
-        Write-Host "  INFO: Restarting with administrator privileges..." -ForegroundColor Yellow
-        $PSExe = if ($PSVersionTable.PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' }
-        Start-Process -FilePath $PSExe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptFile`"" -Verb RunAs
-        exit
+        Write-Host "  $(Split-Path -Leaf $ScriptFile) needs Administrator rights." -ForegroundColor Yellow
+        Write-Host "  Open PowerShell with 'Run as administrator' and run it again." -ForegroundColor Yellow
+        exit 1
     }
 }
 
@@ -2042,4 +2054,3 @@ if ($Unattended) {
 $null = Save-TKNoteReport -Prefix 'TORPOR' -Directory (Resolve-LogDirectory -FallbackPath $ScriptPath)
 
 if ($Transcript) { Stop-TKTranscript }
-if ($PSCommandPath -and -not (Test-Path (Join-Path $PSScriptRoot '.git'))) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

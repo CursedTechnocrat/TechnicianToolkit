@@ -999,7 +999,6 @@ if ($Unattended) {
     Write-Host ""
 
     if ($Transcript) { Stop-TKTranscript }
-    if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }
     exit 0
 }
 
@@ -1159,4 +1158,3 @@ do {
 } while ($choice -ne 'Q')
 
 if ($Transcript) { Stop-TKTranscript }
-if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

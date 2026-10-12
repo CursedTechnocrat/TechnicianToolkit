@@ -2079,4 +2079,3 @@ Write-Host ""
 
 if (-not $Unattended) { Read-Host "  Press Enter to exit" }
 if ($Transcript) { Stop-TKTranscript }
-if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }

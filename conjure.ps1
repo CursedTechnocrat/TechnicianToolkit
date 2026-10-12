@@ -1326,4 +1326,3 @@ Write-Host "[OK] C.O.N.J.U.R.E. Script completed!" -ForegroundColor $Colors.Succ
 Write-Host ""
 if (-not $Unattended) { Read-Host "Press Enter to exit" }
 if ($Transcript) { Stop-TKTranscript }
-if ($PSCommandPath) { Remove-Item -Path $PSCommandPath -Force -ErrorAction SilentlyContinue }
