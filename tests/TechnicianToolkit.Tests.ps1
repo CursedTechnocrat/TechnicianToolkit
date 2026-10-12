@@ -74,12 +74,12 @@ BeforeAll {
 # during Pester's discovery phase, before any BeforeAll body executes.
 $NonSourceDir = '{0}(\.git|\.claude){0}' -f [regex]::Escape([string][IO.Path]::DirectorySeparatorChar)
 
-# Forwarding stubs left at the old filenames of the tools renamed in 6.0
-# (old -> new). They carry no tool logic -- no param() block, so `@args` passes
-# every argument through untouched -- so they are exempt from the tool-shape
-# gates below; the 'Renamed-tool forwarding stubs' block checks them instead.
-# Defined at file scope because the -ForEach case lists are built during
-# discovery.
+# The old filenames of the tools renamed in 6.0 (old -> new). 6.0 left a
+# forwarding stub at each; they were removed once they had served their
+# release, because each one downloaded the renamed tool from GitHub when it was
+# missing -- 25 of the toolkit's 27 download paths. 'Renamed-tool forwarding
+# stubs removed' checks none comes back. Defined at file scope because the
+# -ForEach case lists are built during discovery.
 $RenamedToolStubs = [ordered]@{
     'restoration.ps1' = 'whetstone.ps1'
     'suture.ps1'      = 'solder.ps1'
@@ -616,13 +616,15 @@ Describe 'Nothing leaves the machine — no outbound data paths' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Nothing that reads as malware — two behaviours endpoint protection flags in a
-# script, and that the toolkit used to have. No script deletes itself when it
+# Nothing that reads as malware — behaviours endpoint protection flags in a
+# script, all of which the toolkit used to have. No script deletes itself when it
 # finishes (52 did, to keep the host tidy; it reads as covering tracks, and 47 of
 # them did it even inside a git checkout). No script relaunches itself elevated
 # with the execution policy bypassed (Invoke-AdminElevation did; it now stops
-# with instructions, and elevating is the technician's own act). GRIMOIRE still
-# offers to remove the tools it downloaded, but asks first.
+# with instructions, and elevating is the technician's own act). Nothing runs
+# text through Invoke-Expression (CONJURE piped Chocolatey's installer into it;
+# it now saves the installer and runs it only if Chocolatey signed it). GRIMOIRE
+# still offers to remove the tools it downloaded, but asks first.
 # ─────────────────────────────────────────────────────────────────────────────
 Describe 'Nothing that reads as malware — no self-delete, no bypassed relaunch' {
     BeforeAll {
@@ -648,6 +650,11 @@ Describe 'Nothing that reads as malware — no self-delete, no bypassed relaunch
     It '<Name> never deletes its own script file' -ForEach $codeCases {
         Get-CodeWithoutComments -Path $FullName |
             Should -Not -Match '\bRemove-Item\b[^\n]*\$(PSCommandPath|MyInvocation)\b' -Because "$Name must not delete itself; the technician removes the toolkit when they choose"
+    }
+
+    It '<Name> never runs code from a string with Invoke-Expression' -ForEach $codeCases {
+        Get-CodeWithoutComments -Path $FullName |
+            Should -Not -Match '\b(Invoke-Expression|iex)\b' -Because "$Name must run code it can show, not text it evaluates; 'download and Invoke-Expression' is the classic dropper"
     }
 
     It '<Name> never relaunches a script with the execution policy bypassed' -ForEach $codeCases {
@@ -740,34 +747,77 @@ Describe 'Cloud tools are read-only' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# TK_DISABLE_DOWNLOAD — the switch an MSP sets (machine environment variable,
-# pushed by GPO or RMM) so the toolkit never fetches its own code from GitHub at
-# run time. Under SOC 2 change management, code that pulls the current `main`
-# whenever a file is missing is unreviewed change; with the switch set, only the
-# release the MSP deployed can run. Three paths fetch toolkit code — the
-# forwarding stubs, GRIMOIRE's tool launcher and RITUAL's step resolver — and
-# every one must check the switch before it downloads. The test is generic so a
-# fourth path cannot be added without it.
+# Toolkit downloads — gated and signature-checked. One function fetches toolkit
+# code: Save-TKVerifiedScript in the shared helpers, which GRIMOIRE and RITUAL
+# call for a tool that is not beside them. It honours TK_DISABLE_DOWNLOAD (the
+# switch an MSP sets so nothing is fetched at all), downloads the copy attached
+# to the latest release, and keeps it only when its Authenticode signature is
+# valid and from the toolkit's publisher. No tool may fetch toolkit code any
+# other way, so "what runs is what was released" holds for every path.
 # ─────────────────────────────────────────────────────────────────────────────
-Describe 'TK_DISABLE_DOWNLOAD — every self-fetch path honours it' {
-    $fetchCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Filter '*.ps1' -File |
-        Where-Object { (Get-Content $_.FullName -Raw) -match 'raw\.githubusercontent\.com' } |
-        ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
-
-    # Discovery-scope variables are gone at run time, so the names go in as data.
-    It 'finds the self-fetching scripts' -ForEach @{ Found = @($fetchCases | ForEach-Object { $_.Name }) } {
-        $Found | Should -Contain 'grimoire.ps1'
-        $Found | Should -Contain 'ritual.ps1'
+Describe 'Toolkit downloads — gated and signature-checked' {
+    BeforeAll {
+        $script:VerifiedSource = Get-Content (Join-Path (Join-Path (Join-Path $PSScriptRoot '..') 'shared') 'TechnicianToolkit.Shared.ps1') -Raw
     }
 
-    It '<Name> checks TK_DISABLE_DOWNLOAD before each download' -ForEach $fetchCases {
-        $content   = Get-Content $FullName -Raw
-        $downloads = [regex]::Matches($content, 'Invoke-RestMethod\s+-Uri\s+\$\w+\s+-OutFile')
-        $downloads.Count | Should -BeGreaterThan 0 -Because "$Name names the GitHub raw URL, so it should download from it"
-        foreach ($d in $downloads) {
-            $start  = [Math]::Max(0, $d.Index - 1500)
-            $before = $content.Substring($start, $d.Index - $start)
-            $before | Should -Match '\$env:TK_DISABLE_DOWNLOAD\s+-in\s+@\(''1'',\s*''true''\)' -Because "the download at offset $($d.Index) in $Name must be gated on TK_DISABLE_DOWNLOAD"
+    $toolCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Filter '*.ps1' -File |
+        ForEach-Object { @{ Name = $_.Name; FullName = $_.FullName } }
+
+    It '<Name> fetches no toolkit code of its own' -ForEach $toolCases {
+        $text = (Get-Content $FullName -Raw) -replace "`r`n", "`n"
+        $own  = [regex]::Replace($text, '(?ms)^#region TK-SHARED\b.*?^#endregion TK-SHARED[^\n]*', '')
+        $own | Should -Not -Match 'raw\.githubusercontent\.com|/releases/(latest/)?download' -Because "$Name must fetch toolkit scripts only through Save-TKVerifiedScript"
+        $own | Should -Not -Match '\bInvoke-RestMethod\b[^\n]*-OutFile' -Because "$Name must fetch toolkit scripts only through Save-TKVerifiedScript"
+    }
+
+    It 'Save-TKVerifiedScript checks the switch, then downloads, then verifies, then keeps' {
+        $fn = [regex]::Match($script:VerifiedSource, '(?ms)^function Save-TKVerifiedScript \{.*?^\}').Value
+        $fn | Should -Not -BeNullOrEmpty
+        $switch   = $fn.IndexOf('$env:TK_DISABLE_DOWNLOAD')
+        $download = $fn.IndexOf('Invoke-RestMethod')
+        $verify   = $fn.IndexOf('Test-TKScriptSignature')
+        $keep     = $fn.IndexOf('Move-Item')
+        $switch   | Should -BeGreaterThan -1
+        $download | Should -BeGreaterThan $switch
+        $verify   | Should -BeGreaterThan $download
+        $keep     | Should -BeGreaterThan $verify
+    }
+
+    Context 'behaviour' {
+        BeforeEach {
+            $script:Dir = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
+            New-Item -ItemType Directory -Path $script:Dir -Force | Out-Null
+            $script:SavedSwitch = $env:TK_DISABLE_DOWNLOAD
+            $env:TK_DISABLE_DOWNLOAD = $null
+        }
+        AfterEach { $env:TK_DISABLE_DOWNLOAD = $script:SavedSwitch }
+
+        It 'an unsigned script fails the signature check' {
+            $f = Join-Path $script:Dir 'unsigned.ps1'
+            Set-Content -Path $f -Value 'Write-Output 1'
+            Test-TKScriptSignature -Path $f | Should -BeFalse
+        }
+
+        It 'downloads nothing when TK_DISABLE_DOWNLOAD is set' {
+            $env:TK_DISABLE_DOWNLOAD = '1'
+            Mock Invoke-RestMethod { throw 'must not be called' }
+            Save-TKVerifiedScript -Name 'fathom.ps1' -Directory $script:Dir 6>$null | Should -BeNullOrEmpty
+            Should -Invoke Invoke-RestMethod -Times 0 -Exactly
+        }
+
+        It 'discards a download whose signature does not verify, leaving nothing behind' {
+            Mock Invoke-RestMethod { Set-Content -Path $OutFile -Value 'Write-Output "not ours"' }
+            Save-TKVerifiedScript -Name 'fathom.ps1' -Directory $script:Dir 6>$null | Should -BeNullOrEmpty
+            @(Get-ChildItem -Path $script:Dir -Force).Count | Should -Be 0
+        }
+
+        It 'keeps a download whose signature verifies, under its own name' {
+            Mock Invoke-RestMethod { Set-Content -Path $OutFile -Value 'Write-Output "ours"' }
+            Mock Test-TKScriptSignature { $true }
+            $out = Save-TKVerifiedScript -Name 'fathom.ps1' -Directory $script:Dir 6>$null
+            $out | Should -Be (Join-Path $script:Dir 'fathom.ps1')
+            $out | Should -Exist
+            @(Get-ChildItem -Path $script:Dir -Force).Count | Should -Be 1
         }
     }
 }
@@ -984,14 +1034,12 @@ Describe 'Deprecation stubs removed' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Renamed-tool forwarding stubs — 6.0 renamed 25 tools and left a stub at each
-# old filename so pinned runbooks, custom RITUAL recipes and bookmarked
-# quick-launch URLs keep working for a release or two. A stub must forward to
-# the right file, the file it names must be a registered tool, and the old name
-# must not be registered itself -- otherwise the stub shadows or points at
-# nothing.
+# Renamed-tool forwarding stubs removed — 6.0 left a stub at each old filename
+# for a release or two. They are gone: each one fetched the renamed tool from
+# GitHub when it was missing, and an old name must not quietly come back as a
+# file, nor be registered in GRIMOIRE.
 # ─────────────────────────────────────────────────────────────────────────────
-Describe 'Renamed-tool forwarding stubs' {
+Describe 'Renamed-tool forwarding stubs removed' {
     BeforeAll {
         $script:StubRegistry = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'grimoire.ps1') -Raw
     }
@@ -1000,20 +1048,8 @@ Describe 'Renamed-tool forwarding stubs' {
         @{ Old = $old; New = $RenamedToolStubs[$old]; FullName = (Join-Path (Join-Path $PSScriptRoot '..') $old) }
     }
 
-    It '<Old> forwards every argument to <New>' -ForEach $stubCases {
-        $FullName | Should -Exist
-        $content = Get-Content $FullName -Raw
-        $content | Should -Match ([regex]::Escape("Join-Path `$PSScriptRoot '$New'"))
-        $content | Should -Match '&\s+\$NewScript\s+@args'
-        $content | Should -Match 'Write-Warning'
-    }
-
-    It '<Old> declares no param() block, so @args carries named parameters through' -ForEach $stubCases {
-        $ast = [System.Management.Automation.Language.Parser]::ParseFile($FullName, [ref]$null, [ref]$null)
-        $ast.ParamBlock | Should -BeNullOrEmpty
-    }
-
-    It '<New> exists and is registered, and <Old> is not' -ForEach $stubCases {
+    It '<Old> is gone, and <New> is the registered tool' -ForEach $stubCases {
+        $FullName | Should -Not -Exist
         Join-Path (Join-Path $PSScriptRoot '..') $New | Should -Exist
         $script:StubRegistry | Should -Match ("File\s*=\s*'" + [regex]::Escape($New) + "'")
         $script:StubRegistry | Should -Not -Match ("File\s*=\s*'" + [regex]::Escape($Old) + "'")

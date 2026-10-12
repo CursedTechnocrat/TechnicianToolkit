@@ -22,24 +22,21 @@ to test against the toolkit.
 
 ## 1. Change management (CC8.1) — run only the release you approved
 
-**The risk.** Every tool is self-contained: it carries its own copy of the shared
-helpers and fetches nothing to run. But the scripts that launch *other* tools
-fetch a missing one from GitHub at run time, so a run can execute code nobody on
-your team reviewed. Three paths do it, and each downloads from the repository's
-`main` branch, not from a release:
-
-| Path | Fetches |
-|---|---|
-| GRIMOIRE's tool launcher | A tool script, when it is not beside `grimoire.ps1` |
-| RITUAL's step resolver | A recipe step's tool script, when it is not beside `ritual.ps1` |
-| The 6.0 forwarding stubs (`archive.ps1`, `cipher.ps1`, …) | The renamed tool's script |
+**The risk, and what already limits it.** Every tool is self-contained: it
+carries its own copy of the shared helpers and fetches nothing to run. Only the
+two scripts that launch *other* tools — GRIMOIRE's launcher and RITUAL's step
+resolver — fetch a missing tool, and both do it through one function that
+downloads the copy attached to the latest release and keeps it only if its
+Authenticode signature is valid and from the toolkit's publisher (**Open Source
+Developer John Bejarana**). An unsigned or tampered file is deleted unrun, and the
+Pester suite fails on any tool that fetches toolkit code another way. That
+guarantees *authenticity* — the file is what was released — but not *your
+approval*: "latest" can be a release you have not reviewed yet.
 
 **The control.** Set the machine environment variable **`TK_DISABLE_DOWNLOAD=1`**
 on every machine your technicians run the toolkit from, pushed by GPO or your RMM.
-With it set, all three paths refuse to download and exit with a message saying
-which file is missing. Only files you deployed can run. The Pester suite checks
-that every fetch path honours the variable, so a new one cannot be added without
-it.
+With it set, nothing is fetched: a missing tool stops the run with a message
+naming the file. Only files you deployed can run.
 
 ```powershell
 # Machine-wide; new processes pick it up
@@ -53,10 +50,13 @@ it.
    `irm … | iex` quick-launch snippet.
 2. **Verify it.** The desktop application is Authenticode-signed from 6.0.0 on.
    Check it with `Get-AuthenticodeSignature` and compare it with the release's
-   `SHA256SUMS.txt`. The loose `.ps1` files are not signed upstream. If
-   your policy needs signed scripts, sign the approved copy with your own
-   code-signing certificate (`Set-AuthenticodeSignature`) and enforce
-   `AllSigned` execution policy on technician machines.
+   `SHA256SUMS.txt`. The release's scripts are signed by the same publisher
+   (from the first release after this change): check any one with
+   `Get-AuthenticodeSignature`, and the scripts zip against
+   `SHA256SUMS-scripts.txt`. Signed scripts let you enforce `AllSigned`
+   execution policy, or allow-list the publisher in WDAC / AppLocker, on
+   technician machines — the strongest control here. (The repository's own
+   copies are never signed; deploy from the release.)
 3. **Review the change.** Read the release's `CHANGELOG.md` section before
    approving an upgrade, and record the approval like any other change.
 4. **Deploy the whole set together** to a location technicians can read but not

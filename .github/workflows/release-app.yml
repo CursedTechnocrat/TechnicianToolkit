@@ -114,10 +114,39 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  # The scripts are signed on the same machine and in the same session as the
+  # binaries. This packages exactly what the tag holds, for build/Sign-TKScripts.ps1
+  # to sign: every top-level script, the licence, config.json, and the shared
+  # helpers and build folder the signing script itself needs.
+  scripts:
+    name: Package the scripts for signing
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Collect the scripts
+        shell: bash
+        run: |
+          mkdir -p scripts-unsigned
+          cp ./*.ps1 LICENSE config.json scripts-unsigned/
+          cp -r shared build scripts-unsigned/
+          ls scripts-unsigned | wc -l
+
+      - name: Upload the unsigned scripts
+        uses: actions/upload-artifact@v4
+        with:
+          name: TechnicianToolkit-scripts-unsigned
+          path: scripts-unsigned/
+          if-no-files-found: error
+          retention-days: 30
+
   next-steps:
     name: What happens now
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, scripts]
 
     steps:
       - name: Print the manual checklist
@@ -132,12 +161,15 @@ jobs:
 
           Follow **RELEASING.md**:
 
-          1. Download both `TechnicianToolkit-*-unsigned` artifacts.
-          2. Sign and timestamp each one, if the certificate is available.
+          1. Download both `TechnicianToolkit-*-unsigned` artifacts, and
+             `TechnicianToolkit-scripts-unsigned`.
+          2. Sign and timestamp each binary.
           3. `signtool verify /pa /v` both binaries.
-          4. Create the release and attach them, with the SHA-256 of the files
-             you are actually attaching.
-          5. Generate the winget manifest against those hashes, last.
+          4. Sign the scripts with `build/Sign-TKScripts.ps1` (it verifies them).
+          5. Create the release and attach the binaries, every signed `.ps1`,
+             the scripts zip and the checksum files, with the SHA-256 of the
+             files you are actually attaching.
+          6. Generate the winget manifest against those hashes, last.
 
           Until the certificate clears validation, skip 2 and 3 and say plainly in
           the release notes that the binaries are unsigned and SmartScreen will

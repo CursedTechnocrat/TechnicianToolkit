@@ -8,6 +8,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Removed
+- **The 6.0 forwarding stubs.** The 25 old filenames (`archive.ps1`, `cipher.ps1`, …) are gone.
+  They were kept "for a release or two", and each one downloaded the renamed tool from GitHub's
+  `main` when it was missing — 25 of the toolkit's 27 download paths. Update anything that still
+  calls an old name; CODEX still files old-prefix reports under the new tool.
+
 - **Self-delete.** 52 tools deleted their own `.ps1` when they finished, to keep a host tidy after
   a quick-launch run — and 47 of them did it even inside a git checkout. A script that deletes
   itself after running reads as covering tracks, to a reviewer and to endpoint protection alike.
@@ -18,13 +23,34 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   every parameter the technician had passed. It now stops with the tool's name and how to start
   it elevated. Open PowerShell with **Run as administrator** first; the desktop app is unaffected,
   since its manifest already requests elevation.
-- A Pester gate, `'Nothing that reads as malware'`, fails on any self-delete or bypassed relaunch.
+- A Pester gate, `'Nothing that reads as malware'`, fails on any self-delete, bypassed relaunch or
+  `Invoke-Expression`; `'Toolkit downloads — gated and signature-checked'` fails on any tool that
+  fetches toolkit code other than through `Save-TKVerifiedScript`, and tests the helper with the
+  download mocked (switch honoured, a bad signature leaves nothing behind).
 - **The Teams webhook.** `Write-TKError` no longer posts errors to a Teams channel; it only appends
   to the local `TK_Errors_<yyyyMM>.jsonl` log. It was the one path that sent collected data
   (error text, host and user names) off the machine. The `TeamsWebhook` key is gone from
   `config.json`, HEARTH's wizard and the app's settings screen; an existing value is ignored.
 
 ### Changed
+- **Toolkit downloads are signed and verified.** GRIMOIRE and RITUAL no longer fetch a missing tool
+  from GitHub's `main`. Both call one new shared helper, `Save-TKVerifiedScript`, which downloads
+  the copy attached to the **latest release** and keeps it only if `Test-TKScriptSignature` passes:
+  a valid Authenticode signature whose signer is **Open Source Developer John Bejarana**. Anything
+  else is deleted unrun. `TK_DISABLE_DOWNLOAD` still turns fetching off entirely. The README's
+  quick-launch commands fetch from the latest release too, and no longer re-save the file (which
+  would break its signature). Downloads work once a release with signed scripts attached exists.
+- **Release scripts are code-signed.** `build/Sign-TKScripts.ps1` signs, timestamps and verifies
+  the release copies of every script and writes `SHA256SUMS-scripts.txt` and a scripts zip; the
+  release workflow uploads a `TechnicianToolkit-scripts-unsigned` artifact for it, and
+  `RELEASING.md` gains a "Sign the scripts" step. The repository's own copies are never signed.
+  Signed release scripts let an MSP enforce `AllSigned` or allow-list the publisher in WDAC /
+  AppLocker.
+- **No code runs from a string.** CONJURE installed Chocolatey by piping its installer into
+  `Invoke-Expression`; it now saves the installer, runs it only if Chocolatey Software, Inc.
+  signed it, and deletes it. LEYLINE's stack reset ran four fixed commands through
+  `Invoke-Expression`; they are script blocks now.
+
 - **Every output lands where the technician can find and remove it.** WHETSTONE wrote its session
   transcript to `%TEMP%` unless `-Transcript` was given; it now always writes to the log directory.
   ZENITH's report defaulted to `%TEMP%\azure-assessment-<timestamp>.html`; it now defaults to

@@ -48,11 +48,12 @@ assume it is patched.
 - **Report contents.** HTML reports and CSVs are written to the configured log
   directory and routinely attached to tickets. Anything written there that a
   technician would not expect to be sharing counts.
-- **Fetching tools on demand.** Each tool is self-contained, but GRIMOIRE, RITUAL
-  and the 6.0 forwarding stubs download a tool script from GitHub over HTTPS when
-  it is missing. Anything that could cause them to fetch, trust, or execute code
-  from somewhere else is in scope. Setting the machine environment variable
-  `TK_DISABLE_DOWNLOAD=1` turns off every such path, so only the copy you
+- **Fetching tools on demand.** Each tool is self-contained, but GRIMOIRE and
+  RITUAL download a missing tool script from the latest release, and keep it only
+  if its Authenticode signature is valid and from the toolkit's publisher. Anything
+  that could get them to keep, trust, or run a file that did not pass that check —
+  or to fetch from anywhere else — is in scope. Setting the machine environment
+  variable `TK_DISABLE_DOWNLOAD=1` turns fetching off entirely, so only the copy you
   deployed runs.
 - **Injection** through parameters — a computer name, path, or account name that
   escapes into a command it should not.
