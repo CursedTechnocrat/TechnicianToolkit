@@ -38,9 +38,30 @@
 
 .USAGE
     PS C:\> .\conjure.ps1                 # Interactive mode — Must be run as Administrator
-    PS C:\> .\conjure.ps1 -Unattended     # Unattended mode — Required packages only, no prompts
-    PS C:\> .\conjure.ps1 -DirectUrl 'https://vendor.example/agent.msi'
+    PS C:\> .\conjure.ps1 -Unattended     # Unattended — the six standard packages, no prompts
+    PS C:\> .\conjure.ps1 -Chrome -Office -AdobeReader -Unattended   # Exactly these, nothing else
+    PS C:\> .\conjure.ps1 -WingetIds 'Notepad++.Notepad++, VideoLAN.VLC' -Unattended
+    PS C:\> .\conjure.ps1 -DirectUrl 'https://vendor.example/agent.msi, https://vendor.example/tool.exe'
     PS C:\> .\conjure.ps1 -Unattended -WhatIf   # Preview everything; install nothing
+
+.PARAMETER Chrome
+    Install Google Chrome. Any of the six package switches, -WingetIds or
+    -DirectUrl switches CONJURE to "exactly what was picked": it installs those
+    and nothing else, with winget, and asks no package questions.
+.PARAMETER Teams
+    Install Microsoft Teams.
+.PARAMETER Office
+    Install Microsoft 365 Apps (Office).
+.PARAMETER SevenZip
+    Install 7-Zip.
+.PARAMETER AdobeReader
+    Install Adobe Acrobat Reader (the free edition).
+.PARAMETER Zoom
+    Install Zoom.
+.PARAMETER WingetIds
+    Extra winget package IDs, comma-separated (e.g. Notepad++.Notepad++, VideoLAN.VLC).
+.PARAMETER DirectUrl
+    HTTPS installer URLs for software with no winget package, comma-separated.
 
 .NOTES
     Version : 6.1
@@ -48,7 +69,18 @@
 #>
 
 param(
+    # The standard packages, one checkbox each in the desktop app.
+    [switch]$Chrome,
+    [switch]$Teams,
+    [switch]$Office,
+    [switch]$SevenZip,
+    [switch]$AdobeReader,
+    [switch]$Zoom,
+
+    # Anything else: comma-separated winget IDs and HTTPS installer URLs.
+    [string[]]$WingetIds,
     [string[]]$DirectUrl,
+
     [switch]$Unattended,
     [switch]$Transcript,
     [switch]$WhatIf
@@ -286,8 +318,19 @@ $OptionalCatalog = @(
 # (see Select-AdobeEdition) and the chosen package is appended to the required list.
 # Chocolatey's community repo has no Acrobat Pro package, so the Pro entry's Choco
 # slot intentionally falls back to Reader (Select-AdobeEdition prints a note for it).
-$AdobeReader = [PSCustomObject]@{ Name = 'Adobe Acrobat Reader'; Winget = 'Adobe.Acrobat.Reader.64-bit'; Choco = 'adobereader' }
-$AdobePro    = [PSCustomObject]@{ Name = 'Adobe Acrobat Pro';    Winget = 'Adobe.Acrobat.Pro';           Choco = 'adobereader' }
+$AdobeReaderEntry = [PSCustomObject]@{ Name = 'Adobe Acrobat Reader'; Winget = 'Adobe.Acrobat.Reader.64-bit'; Choco = 'adobereader' }
+$AdobeProEntry    = [PSCustomObject]@{ Name = 'Adobe Acrobat Pro';    Winget = 'Adobe.Acrobat.Pro';           Choco = 'adobereader' }
+
+# The six standard packages behind the -Chrome ... -Zoom switches (and the
+# desktop app's checkboxes), switch name -> catalog entry.
+$PickableCatalog = [ordered]@{
+    Chrome      = $RequiredCatalog | Where-Object Name -eq 'Google Chrome'
+    Teams       = $RequiredCatalog | Where-Object Name -eq 'Microsoft Teams'
+    Office      = $RequiredCatalog | Where-Object Name -eq 'Microsoft 365'
+    SevenZip    = $RequiredCatalog | Where-Object Name -eq '7-Zip'
+    AdobeReader = $AdobeReaderEntry
+    Zoom        = $RequiredCatalog | Where-Object Name -eq 'Zoom'
+}
 
 $PackageManager = "winget"
 
@@ -295,6 +338,27 @@ $PackageManager = "winget"
 function Get-PackageId {
     param([Parameter(Mandatory)][PSObject]$Entry)
     if ($script:PackageManager -eq "chocolatey") { return $Entry.Choco } else { return $Entry.Winget }
+}
+
+# Splits -WingetIds / -DirectUrl into single items. Either can arrive as an
+# array (from the command line) or as one comma-separated string (the desktop
+# app's text box), so both are flattened, trimmed and de-duplicated.
+function ConvertTo-ConjureList {
+    param([string[]]$Value)
+    $seen = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($part in @($Value) -split ',') {
+        $item = "$part".Trim()
+        if ($item -and $seen.Add($item)) { $item }
+    }
+}
+
+# A winget package ID is letters, digits and . + _ - (Publisher.Name,
+# Notepad++.Notepad++, or a Microsoft Store ID such as 9NBLGGH4NNS1). Anything
+# else -- a leading dash, spaces, quotes -- is refused before winget sees it, so
+# a typo cannot become an extra winget option.
+function Test-WingetPackageId {
+    param([string]$Id)
+    return ($Id -match '^[A-Za-z0-9][A-Za-z0-9.+_-]*$')
 }
 
 # ===========================
@@ -1053,18 +1117,18 @@ function Select-AdobeEdition {
                 Write-Host "[!!] Chocolatey's community repo has no Adobe Acrobat Pro package." -ForegroundColor $Colors.Warning
                 Write-Host "     Installing Adobe Acrobat Reader instead. If the user holds an Acrobat Pro" -ForegroundColor $Colors.Warning
                 Write-Host "     license, have them sign in to Reader and run the in-app upgrade to activate Pro." -ForegroundColor $Colors.Warning
-                return (Get-PackageId -Entry $script:AdobeReader)
+                return (Get-PackageId -Entry $script:AdobeReaderEntry)
             }
             Write-Host "[OK] Selected: Adobe Acrobat Pro" -ForegroundColor $Colors.Success
-            return (Get-PackageId -Entry $script:AdobePro)
+            return (Get-PackageId -Entry $script:AdobeProEntry)
         }
         "1" {
             Write-Host "[OK] Selected: Adobe Acrobat Reader" -ForegroundColor $Colors.Success
-            return (Get-PackageId -Entry $script:AdobeReader)
+            return (Get-PackageId -Entry $script:AdobeReaderEntry)
         }
         default {
             Write-Host "[!!] Invalid choice. Defaulting to Adobe Acrobat Reader" -ForegroundColor $Colors.Warning
-            return (Get-PackageId -Entry $script:AdobeReader)
+            return (Get-PackageId -Entry $script:AdobeReaderEntry)
         }
     }
 }
@@ -1217,17 +1281,39 @@ function Show-InstallationSummary {
 
 if (-not $Unattended) { Show-Banner }
 
+# What was picked up front: any of the six package switches, -WingetIds or
+# -DirectUrl. Picking anything means "install exactly this" -- with winget, no
+# package questions, nothing from the standard list that was not ticked. With
+# nothing picked, CONJURE behaves as it always has (unattended installs the six).
+$PickedNames  = @(foreach ($name in $PickableCatalog.Keys) { if ($PSBoundParameters.ContainsKey($name) -and $PSBoundParameters[$name]) { $name } })
+$PickedWinget = @(ConvertTo-ConjureList -Value $WingetIds)
+$PickedUrls   = @(ConvertTo-ConjureList -Value $DirectUrl)
+$PickMode     = ($PickedNames.Count + $PickedWinget.Count + $PickedUrls.Count) -gt 0
+
+$badIds = @($PickedWinget | Where-Object { -not (Test-WingetPackageId -Id $_) })
+if ($badIds.Count -gt 0) {
+    Write-Host "[ERROR] Not a winget package ID: $($badIds -join ', ')" -ForegroundColor $Colors.Error
+    Write-Host "        IDs look like Publisher.Name (e.g. Notepad++.Notepad++); find one with  winget search <name>" -ForegroundColor $Colors.Warning
+    if (-not $Unattended) { Read-Host "Press Enter to exit" }
+    exit 1
+}
+
 # ---------------------------------------------------------------------------
 # PHASE 1 — OPERATOR INPUT (front-loaded)
 # All prompts are gathered here so the long-running install/upgrade work in
 # PHASE 2 can run start-to-finish without anyone babysitting the machine.
 # ---------------------------------------------------------------------------
 
-# Select package manager
-if (-not $Unattended) { Select-PackageManager }
+# Select package manager. A pick is winget's: the IDs are winget IDs.
+if (-not $Unattended -and -not $PickMode) { Select-PackageManager }
 
 # Choose operation
-if ($Unattended) {
+if ($PickMode) {
+    $pickedSummary = @($PickedNames | ForEach-Object { $PickableCatalog[$_].Name }) + $PickedWinget + $PickedUrls
+    Write-Host "[*] Installing what was picked: $($pickedSummary -join ', ')" -ForegroundColor $Colors.Info
+    $operation = "1"
+}
+elseif ($Unattended) {
     Write-Host "[*] Unattended mode: installing required packages only" -ForegroundColor $Colors.Info
     $operation = "1"
 }
@@ -1257,12 +1343,17 @@ $ActiveOptional = @($OptionalCatalog | ForEach-Object { Get-PackageId -Entry $_ 
 $optionalList = New-Object System.Collections.ArrayList
 $customList   = New-Object System.Collections.ArrayList
 
-if ($doInstall) {
+if ($doInstall -and $PickMode) {
+    # Exactly what was picked: the ticked standard packages, then any extra IDs.
+    $ActiveRequired = @($PickedNames | ForEach-Object { Get-PackageId -Entry $PickableCatalog[$_] })
+    foreach ($id in $PickedWinget) { [void]$customList.Add($id) }
+}
+elseif ($doInstall) {
     Write-Host "[OK] Selected: Install Mode" -ForegroundColor $Colors.Success
 
     # Adobe Acrobat edition (Reader or Pro) — appended to the required list
     if ($Unattended) {
-        $AdobePackage = Get-PackageId -Entry $AdobeReader
+        $AdobePackage = Get-PackageId -Entry $AdobeReaderEntry
     }
     else {
         $AdobePackage = Select-AdobeEdition
@@ -1287,8 +1378,7 @@ if ($doInstall) {
         Write-Host "[OK] Direct download from config.json: $($entry.Name)" -ForegroundColor $Colors.Success
     }
 
-    foreach ($url in @($DirectUrl)) {
-        if ([string]::IsNullOrWhiteSpace($url)) { continue }
+    foreach ($url in $PickedUrls) {
         $entry = New-DirectDownloadEntry -Url $url
         if ($entry) {
             [void]$directList.Add($entry)
@@ -1296,7 +1386,7 @@ if ($doInstall) {
         }
     }
 
-    if (-not $Unattended) {
+    if (-not $Unattended -and -not $PickMode) {
         foreach ($entry in (Read-DirectDownload)) { [void]$directList.Add($entry) }
     }
 }
@@ -1337,8 +1427,10 @@ if (-not $mgrAvailable) {
 }
 
 if ($doInstall) {
-    # Install required software
-    Install-Software -SoftwareList $ActiveRequired -Type "Required"
+    # Install required (or, when picked, the ticked standard) software
+    if ($ActiveRequired.Count -gt 0) {
+        Install-Software -SoftwareList $ActiveRequired -Type $(if ($PickMode) { "Selected" } else { "Required" })
+    }
 
     # Install any optional software selected up front
     if ($optionalList.Count -gt 0) {

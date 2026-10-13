@@ -152,10 +152,18 @@ without signed scripts attached leaves those downloads failing (safely), and
 leaves the README's quick-launch commands with nothing to fetch.
 
 - [ ] Download and unzip `TechnicianToolkit-scripts-unsigned`.
+- [ ] **Unblock the unzipped files.** A zip downloaded through a browser carries
+      the *Mark of the Web*, and every file extracted from it inherits it. Under
+      the usual `RemoteSigned` execution policy Windows then refuses to run the
+      still-unsigned `Sign-TKScripts.ps1` (*"is not digitally signed... cannot be
+      loaded"*). These are files you just downloaded from your own CI run, so
+      clearing the mark is safe. Do it before signing — the signed copies are
+      new files and do not need it.
 - [ ] Sign, timestamp and verify every script in one go:
 
 ```powershell
 Expand-Archive .\TechnicianToolkit-scripts-unsigned.zip -DestinationPath .\scripts-unsigned
+Get-ChildItem .\scripts-unsigned -Recurse -File | Unblock-File
 .\scripts-unsigned\build\Sign-TKScripts.ps1 -Source .\scripts-unsigned `
     -Thumbprint F14F545CB084EDCB18630CA0B520ABC3C46B2516 -SignTool $signtool
 ```

@@ -72,6 +72,14 @@ and only if its signature verifies. See `docs/soc2.md` for running the toolkit i
   a network share as the log directory.
 
 ### Added
+- **CONJURE: pick exactly what to install.** The six standard packages are now switches —
+  `-Chrome`, `-Teams`, `-Office`, `-SevenZip`, `-AdobeReader` (free edition) and `-Zoom` — which the
+  desktop app shows as checkboxes, plus `-WingetIds` for comma-separated winget package IDs. Picking
+  anything (a switch, `-WingetIds` or `-DirectUrl`) installs exactly that, with winget and no package
+  questions; with nothing picked an unattended run still installs all six. `-DirectUrl` now accepts
+  comma-separated URLs as well as an array. Malformed IDs (a leading dash, spaces, quotes) stop the
+  run before anything installs. Note: `-DirectUrl` on its own now installs only those URLs, where
+  before an unattended run also installed the standard set.
 - **Two guardrails in the Pester suite.** `'Nothing leaves the machine — no outbound data paths'`
   fails on any HTTP POST/PUT/PATCH or request body, mail, upload or webhook in the code.
   `'Cloud tools are read-only'` takes The Firmament's tools from GRIMOIRE's registry and fails on

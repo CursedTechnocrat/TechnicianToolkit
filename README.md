@@ -254,6 +254,7 @@ Guides a technician through the full setup of a new Windows machine.
 
 Manages software deployment using the Windows Package Manager (winget) or Chocolatey.
 
+- **Pick exactly what to install** — the six standard packages are switches: `-Chrome`, `-Teams`, `-Office`, `-SevenZip`, `-AdobeReader` (the free edition) and `-Zoom`, which the desktop app shows as checkboxes. Anything else goes in `-WingetIds` (comma-separated winget IDs, e.g. `Notepad++.Notepad++, VideoLAN.VLC`) or `-DirectUrl` (comma-separated HTTPS installer URLs). Picking anything installs those and nothing else, with winget and no package questions; with nothing picked, an unattended run installs all six. An ID that is not a well-formed winget ID — a leading dash, spaces, quotes — stops the run before anything installs, so a typo can never become a winget option
 - Supports both winget and Chocolatey package managers (user selectable at runtime)
 - Installs required and optional software packages defined at the top of the script
 - **All operator prompts are front-loaded** — package manager, operation, Adobe edition, optional-software selection, and any custom package IDs are gathered up front, then the install/upgrade work runs start-to-finish with no further input (no babysitting the machine)
