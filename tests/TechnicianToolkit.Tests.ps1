@@ -1057,6 +1057,77 @@ Describe 'Renamed-tool forwarding stubs removed' {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# CONJURE package picker — the six standard packages are switches (checkboxes in
+# the desktop app, which builds its form from the param() block), and anything
+# else arrives as comma-separated winget IDs or installer URLs. The helpers are
+# pulled out of the AST, since the script launches its main flow on import.
+# ─────────────────────────────────────────────────────────────────────────────
+Describe 'CONJURE package picker' {
+    BeforeAll {
+        $script:ConjureAst = Get-ToolAst -FileName 'conjure.ps1'
+        . ([scriptblock]::Create((Get-ToolFunctionText -Ast $script:ConjureAst -FuncName 'ConvertTo-ConjureList')))
+        . ([scriptblock]::Create((Get-ToolFunctionText -Ast $script:ConjureAst -FuncName 'Test-WingetPackageId')))
+        $script:ConjureParams = @{}
+        foreach ($p in $script:ConjureAst.ParamBlock.Parameters) { $script:ConjureParams[$p.Name.VariablePath.UserPath] = $p.StaticType.Name }
+    }
+
+    It 'declares -<Name> as a switch, so the app renders a checkbox' -ForEach @(
+        @{ Name = 'Chrome' }; @{ Name = 'Teams' }; @{ Name = 'Office' }
+        @{ Name = 'SevenZip' }; @{ Name = 'AdobeReader' }; @{ Name = 'Zoom' }
+    ) {
+        $script:ConjureParams[$Name] | Should -Be 'SwitchParameter'
+    }
+
+    It 'declares -<Name> as text, so the app renders a text box' -ForEach @(
+        @{ Name = 'WingetIds' }; @{ Name = 'DirectUrl' }
+    ) {
+        $script:ConjureParams[$Name] | Should -Be 'String[]'
+    }
+
+    It 'maps each switch to its standard package' {
+        $assignments = $script:ConjureAst.FindAll({
+            param($n)
+            $n -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+            $n.Left -is [System.Management.Automation.Language.VariableExpressionAst] -and
+            $n.Left.VariablePath.UserPath -in 'RequiredCatalog', 'AdobeReaderEntry', 'PickableCatalog'
+        }, $false) | ForEach-Object { $_.Extent.Text }
+        $catalog = & ([scriptblock]::Create(($assignments -join "`n") + "`n`$PickableCatalog"))
+        $ids = @{}; foreach ($k in $catalog.Keys) { $ids[$k] = $catalog[$k].Winget }
+        $ids['Chrome']      | Should -Be 'Google.Chrome'
+        $ids['Teams']       | Should -Be 'Microsoft.Teams'
+        $ids['Office']      | Should -Be 'Microsoft.Office'
+        $ids['SevenZip']    | Should -Be '7zip.7zip'
+        $ids['AdobeReader'] | Should -Be 'Adobe.Acrobat.Reader.64-bit'
+        $ids['Zoom']        | Should -Be 'Zoom.Zoom'
+    }
+
+    It 'splits a comma-separated string, trims, drops blanks and duplicates' {
+        @(ConvertTo-ConjureList -Value 'Notepad++.Notepad++, VideoLAN.VLC,, notepad++.notepad++ ') |
+            Should -Be @('Notepad++.Notepad++', 'VideoLAN.VLC')
+    }
+
+    It 'flattens an array whose items themselves hold commas' {
+        @(ConvertTo-ConjureList -Value @('a.b, c.d', 'e.f')) | Should -Be @('a.b', 'c.d', 'e.f')
+    }
+
+    It 'returns nothing for no input' {
+        @(ConvertTo-ConjureList -Value $null).Count | Should -Be 0
+    }
+
+    It 'accepts the winget ID <Id>' -ForEach @(
+        @{ Id = 'Google.Chrome' }; @{ Id = 'Notepad++.Notepad++' }; @{ Id = '9NBLGGH4NNS1' }; @{ Id = 'Adobe.Acrobat.Reader.64-bit' }
+    ) {
+        Test-WingetPackageId -Id $Id | Should -BeTrue
+    }
+
+    It 'refuses <Id>, so it can never reach winget as an option' -ForEach @(
+        @{ Id = '--source' }; @{ Id = '-h' }; @{ Id = 'two words' }; @{ Id = '"quoted"' }; @{ Id = '' }
+    ) {
+        Test-WingetPackageId -Id $Id | Should -BeFalse
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Duplicated helpers removed — the local HtmlEncode definitions consolidated
 # into EscHtml must not reappear. (Format-Bytes and the other shared helpers are
 # covered by 'Shared helper blocks': none may be defined outside a tool's
