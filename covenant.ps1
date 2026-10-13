@@ -40,7 +40,7 @@
     PS C:\> .\covenant.ps1 -Unattended -DomainJoinType "AD" -ADDomain "corp.contoso.com" -ADOUPath "OU=Workstations,DC=corp,DC=contoso,DC=com"
 
 .NOTES
-    Version : 6.0
+    Version : 6.1
 
 #>
 

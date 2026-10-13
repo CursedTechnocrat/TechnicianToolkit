@@ -35,7 +35,7 @@
     PS C:\> .\phoenix.ps1 -Unattended -Targets "srv1.contoso.com,srv2.contoso.com:8443"
 
 .NOTES
-    Version : 6.0
+    Version : 6.1
 
 #>
 
@@ -857,7 +857,7 @@ $sslRows
         }) `
         -NavItems   @('Local Certificates', 'SSL/TLS Checks')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'P.H.O.E.N.I.X. v6.0'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'P.H.O.E.N.I.X. v6.1'
 
     $html = $htmlHead + @"
 

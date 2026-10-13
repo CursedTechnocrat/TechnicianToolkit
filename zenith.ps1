@@ -38,7 +38,7 @@
     PS C:\> .\zenith.ps1 -OutputPath "C:\Reports\azure.html" -NoOpen   # Default: ZENITH_<timestamp>.html in the log directory
 
 .NOTES
-    Version  : 6.0
+    Version  : 6.1
     All required Az modules are installed automatically on first run.
 
 #>
@@ -498,7 +498,7 @@ Write-Host @"
 
 "@ -ForegroundColor Cyan
 Write-Host "  Z.E.N.I.T.H.  -  Zone-wide Evaluation of Networks, Identity, Tenancy & Hardening" -ForegroundColor Cyan
-Write-Host "  Azure Subscription Assessment & Report Generator  v6.0" -ForegroundColor Cyan
+Write-Host "  Azure Subscription Assessment & Report Generator  v6.1" -ForegroundColor Cyan
 Write-Host ""
 
 # -----------------------------------------------------------------------------
@@ -1440,7 +1440,7 @@ $htmlHead = Get-TKHtmlHead `
         'Recommendations'
     )
 
-$htmlFoot = Get-TKHtmlFoot -ScriptName 'Z.E.N.I.T.H. v6.0'
+$htmlFoot = Get-TKHtmlFoot -ScriptName 'Z.E.N.I.T.H. v6.1'
 
 $html = $htmlHead + @"
 

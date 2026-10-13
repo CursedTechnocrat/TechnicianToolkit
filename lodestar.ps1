@@ -53,7 +53,7 @@
     PS C:\> .\lodestar.ps1 -Action Repair -WhatIf        # Preview the repairs only
 
 .NOTES
-    Version : 6.0
+    Version : 6.1
 
 #>
 
@@ -1436,7 +1436,7 @@ function Build-LodestarReport {
       <tbody>$($aRows.ToString())</tbody></table></div>
   </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'L.O.D.E.S.T.A.R. v6.0')
+"@ + (Get-TKHtmlFoot -ScriptName 'L.O.D.E.S.T.A.R. v6.1')
     return $html
 }
 
