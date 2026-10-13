@@ -46,12 +46,12 @@ naming the file. Only files you deployed can run.
 **The procedure.**
 
 1. **Get a release, not a branch.** Download a tagged release from the GitHub
-   Releases page. Never deploy a copy of `main`, a copy someone emailed, or the
-   `irm … | iex` quick-launch snippet.
+   Releases page. Never deploy a copy of `main`, a copy someone emailed, or a script
+   fetched with the README's quick-launch one-liner.
 2. **Verify it.** The desktop application is Authenticode-signed from 6.0.0 on.
    Check it with `Get-AuthenticodeSignature` and compare it with the release's
    `SHA256SUMS.txt`. The release's scripts are signed by the same publisher
-   (from the first release after this change): check any one with
+   from 6.1.0 on: check any one with
    `Get-AuthenticodeSignature`, and the scripts zip against
    `SHA256SUMS-scripts.txt`. Signed scripts let you enforce `AllSigned`
    execution policy, or allow-list the publisher in WDAC / AppLocker, on
