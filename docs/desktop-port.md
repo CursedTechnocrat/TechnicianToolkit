@@ -31,7 +31,7 @@ and they remain the engine — the application drives them, it does not replace 
 | Shape | WPF desktop application on .NET 8 |
 | Engine | PowerShell 7 hosted in-process via `Microsoft.PowerShell.SDK` |
 | Prototype launcher | **Removed** — `launcher/` is superseded by the app |
-| Distribution | Portable single `.exe`, plus a winget package |
+| Distribution | Portable single `.exe`, attached to each GitHub release. A winget package was planned and dropped after 6.0.0: the app is carried on a USB stick, not installed |
 | Signing | **Certum Open Source Code Signing** on SimplySign — validation in progress; 5.0 ships unsigned, signing follows in a minor release |
 | Architectures | `win-x64` **and** `win-arm64`, both built in CI. **ARM64 is untested on real hardware — help wanted** |
 | Versioning | Everything to **5.0** |
@@ -717,7 +717,8 @@ release notes about what a user is getting.
   working standalone. The app is a second way to run the suite, not a replacement.
 - **An in-app report viewer.** WebView2 means another runtime dependency on a tool
   that prizes having none. Reports open in the default browser; revisit later.
-- **MSI or MSIX packaging.** Portable plus winget covers the field-technician case.
+- **MSI, MSIX or winget packaging.** The portable `.exe` from the release page covers the
+  field-technician case; a winget listing was built for 6.0.0 and withdrawn as unneeded.
   Worth adding if managed deployment is ever asked for.
 
 ---

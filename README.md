@@ -21,7 +21,7 @@ source — the application drives the scripts, it does not replace them.
 | Needs on the target machine | Nothing | Windows PowerShell 5.1 (built into Windows) |
 | PowerShell | 7, hosted inside the executable | 5.1, the one already there |
 | Best for | Carrying on a USB stick; walking up to a machine | Remote sessions, scripted runs, dropping a single tool onto a box |
-| Install | `winget install CursedTechnocrat.TechnicianToolkit`, or download from [Releases](https://github.com/CursedTechnocrat/TechnicianToolkit/releases) | Clone the repo, or fetch one script — see [Quick Launch](#quick-launch) |
+| Install | Download from [Releases](https://github.com/CursedTechnocrat/TechnicianToolkit/releases) — nothing to install | Clone the repo, or fetch one script — see [Quick Launch](#quick-launch) |
 
 Neither is deprecated. The scripts remain the primary documented path and stay
 independently runnable; if you only need one tool on one machine, a single `.ps1`
@@ -1123,11 +1123,7 @@ first four rows is needed.
 
 ### The application
 
-```powershell
-winget install CursedTechnocrat.TechnicianToolkit
-```
-
-Or download `TechnicianToolkit.exe` for your architecture from
+Download `TechnicianToolkit.exe` for your architecture from
 [Releases](https://github.com/CursedTechnocrat/TechnicianToolkit/releases) and
 run it. There is no installer and nothing to uninstall — it writes its working
 files into a `TechnicianToolkit` folder beside itself, or under
