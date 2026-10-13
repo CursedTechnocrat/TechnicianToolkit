@@ -11,8 +11,9 @@ shipping unsigned with a promise.
 
 **If signing falls through** and a release has to ship unsigned anyway, the signed
 build becomes the next patch version. It changes no code, but it has to be a new
-version because the signed files have different hashes, and winget cannot carry
-two hashes for one version. Only the three `.csproj` files move; the script
+version because the signed files have different hashes, and a published version's
+files must never change under people who already downloaded and verified them.
+Only the three `.csproj` files move; the script
 headers and the GRIMOIRE registry stay where they are. Then tag the patch and run
 this checklist again. Follow the *While unsigned* line in step 7 for the unsigned
 release.
@@ -189,9 +190,8 @@ Get-FileHash .\TechnicianToolkit-6.0.0-win-*.exe -Algorithm SHA256 | Format-Tabl
 ```
 
 - [ ] Both hashes differ from step 1's. One that does not was never signed.
-- [ ] Those are the hashes that go in the release notes and, later, the winget
-      manifest. A hash taken from the unsigned artifact will not match a signed
-      download.
+- [ ] Those are the hashes that go in the release notes. A hash taken from the
+      unsigned artifact will not match a signed download.
 
 ## 7. Publish the release
 
@@ -227,32 +227,6 @@ Get-FileHash .\TechnicianToolkit-6.0.0-win-*.exe -Algorithm SHA256 | Format-Tabl
       listed under *Assets* (an upload still in progress when you save is
       dropped), and the notes run to the end rather than stopping part-way.
 
-## 8. Generate the winget manifest — last
-
-Only after the release is published and the files are final, because the
-manifest carries their hashes.
-
-- [ ] `winget install Microsoft.WingetCreate` if `wingetcreate` is missing.
-- [ ] `winget show CursedTechnocrat.TechnicianToolkit` finds the package? Then:
-
-```powershell
-wingetcreate update CursedTechnocrat.TechnicianToolkit --version 6.0.0 `
-    --urls <x64-url> <arm64-url> `
-    --release-notes-url https://github.com/CursedTechnocrat/TechnicianToolkit/releases/tag/v6.0.0 `
-    --submit
-```
-
-  and copy the generated manifests back into `packaging/winget/manifests/`.
-  If it reports *No package found*, `update` cannot run; the package's first
-  submission is `wingetcreate submit packaging\winget\manifests`, after a PR
-  that brings those files to the release (see the winget README).
-
-- [ ] Manifest validates (`winget validate --manifest packaging/winget/manifests`).
-- [ ] Installs cleanly from the submitted manifest on a clean machine.
-
-See [`packaging/winget/README.md`](packaging/winget/README.md) for the manifest
-layout and the fields that are easy to get wrong.
-
 ---
 
 ## Why signing is manual
@@ -286,7 +260,7 @@ so explain it in the README rather than treating it as a problem to hide.
 Certum's validation asks for a GitHub repository, website or similar where the
 applicant's full name is publicly readable, so it can be tied to the identity
 documents on file. That is why the copyright notice in every source file, the
-four `.csproj` files, the winget locale manifest and the README all name
+four `.csproj` files and the README all name
 **John Joseph Bejarana (CursedTechnocrat)** rather than the handle alone.
 
 It is deliberate. The certificate subject itself carries the shorter

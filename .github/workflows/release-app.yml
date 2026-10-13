@@ -169,7 +169,6 @@ jobs:
           5. Create the release and attach the binaries, every signed `.ps1`,
              the scripts zip and the checksum files, with the SHA-256 of the
              files you are actually attaching.
-          6. Generate the winget manifest against those hashes, last.
 
           Until the certificate clears validation, skip 2 and 3 and say plainly in
           the release notes that the binaries are unsigned and SmartScreen will

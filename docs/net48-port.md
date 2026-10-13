@@ -29,8 +29,7 @@ still has one unpaid item blocking a shipping feature.
 .NET Framework is serviced by Windows Update and supported for the life of the
 OS. This is why framework-dependent .NET 8 was never an option: the Desktop
 Runtime is a prerequisite download on every clean machine, which breaks the
-promise the winget listing makes twice — *installs nothing on the machine it
-runs on*.
+promise the release page makes — *installs nothing on the machine it runs on*.
 
 ---
 
@@ -235,12 +234,6 @@ DLLs; there is no `PublishSingleFile`. Costura.Fody (with `FodyWeavers.xml`)
 folds them in and is the option that works reliably with WPF; ILRepack/ILMerge
 fight BAML and XAML resource URIs and should be avoided here.
 
-**winget** — `InstallerType: portable` and `PackageIdentifier` are unchanged.
-The two architecture entries collapse to one. Decide between
-`Architecture: neutral` (accurate for AnyCPU, verify winget validation accepts
-it) and `x64` (safe, still runs on ARM64). One new `InstallerSha256`, one new
-`InstallerUrl`.
-
 **Local build note** — SDK-style net48 projects build only on Windows, with the
 .NET Framework targeting pack. `windows-latest` has it. The Linux/sandbox
 verification guidance in `CLAUDE.md` is unaffected, since `net8.0-windows` +
@@ -309,11 +302,11 @@ manual pass over the four run outcomes (`Succeeded`, `CompletedWithErrors`,
 
 ### Phase D — Packaging, CI, docs · 1–2 days
 
-Workflows, winget manifests, README, `docs/desktop-port.md` amended to record
+Workflows, README, `docs/desktop-port.md` amended to record
 that the PS7 debt is retired rather than paid.
 
-**Exit criteria:** a tagged build produces one signed-shaped artifact, and
-`winget install` from a local manifest works.
+**Exit criteria:** a tagged build produces one signed-shaped artifact that runs
+from a USB stick on a clean machine.
 
 ### Phase E — The COVENANT dividend · separate change
 

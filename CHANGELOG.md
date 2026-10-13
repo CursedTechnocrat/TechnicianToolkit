@@ -100,12 +100,11 @@ and only if its signature verifies. See `docs/soc2.md` for running the toolkit i
   re-synced. Markup that already used both classes looks the same as before.
 
 ### Changed
-- **The winget manifests describe 6.0.0.** `packaging/winget/manifests/` moves from 5.0.0 to the
-  signed 6.0.0 binaries: version, release date, both download URLs, their post-signing SHA-256
-  (each equal to GitHub's digest of the release asset) and the release-notes link. The package
-  has never been in winget-pkgs, so this is its first submission, made with `wingetcreate submit`
-  from these files; the winget README and RELEASING.md step 8 now say when to `submit` and when
-  to `update`.
+- **The winget package is withdrawn.** The application is a portable `.exe` carried on a USB
+  stick, not something installed, so a winget listing added a release step for no real gain. The
+  first submission (microsoft/winget-pkgs#450803) is closed unmerged, `packaging/winget/` is
+  removed, and the README, RELEASING.md (step 8), the release workflow's checklist and the port
+  docs no longer mention it. Download the `.exe` from the GitHub release, as before.
 - **RELEASING.md records what the first signed release taught.** The `.exe` sits under
   `publish\<rid>\` in each artifact; `signtool` is found under the Windows SDK rather than on
   PATH and is run from PowerShell; signing pins the certificate by thumbprint; the verify

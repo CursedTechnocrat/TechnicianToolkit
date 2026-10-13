@@ -42,7 +42,6 @@ TechnicianToolkit/
 │   ├── TechnicianToolkit.Harness/      # Console front end; the CI gate runs this
 │   ├── TechnicianToolkit.App/          # The WPF window
 │   └── spike/                          # Phase 00 proof of concept, kept for reference
-├── packaging/winget/        # winget manifest source
 ├── RELEASING.md             # The manual half of a release, including signing
 └── docs/desktop-port.md     # The port's plan, decisions and open risks
 ```
