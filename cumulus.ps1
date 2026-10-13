@@ -37,7 +37,7 @@
     PS C:\> .\cumulus.ps1 -Unattended        # Silent: auto-connect + export HTML
 
 .NOTES
-    Version : 6.0
+    Version : 6.1
 
 #>
 
@@ -547,7 +547,7 @@ function Show-CumulusBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
     Write-Host "  C.U.M.U.L.U.S. — Catalogs Usage, Members, Unowned, Links, Untouched & Shared sites" -ForegroundColor Cyan
-    Write-Host "  SharePoint Online Site Inventory Tool  v6.0" -ForegroundColor Cyan
+    Write-Host "  SharePoint Online Site Inventory Tool  v6.1" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -855,7 +855,7 @@ function Build-HtmlReport {
         }) `
         -NavItems   @('Sharing Policy', 'Site Inventory', 'Large Sites', 'External Sharing', 'Ownerless Sites', 'Stale Sites')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'C.U.M.U.L.U.S. v6.0'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'C.U.M.U.L.U.S. v6.1'
 
     $largeClass     = if ($Large.Count -gt 0)     { 'warn' } else { 'ok' }
     $sharedClass    = if ($Shared.Count -gt 0)    { 'warn' } else { 'ok' }

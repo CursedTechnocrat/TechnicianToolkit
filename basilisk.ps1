@@ -39,7 +39,7 @@
     PS C:\> .\basilisk.ps1 -Unattended -WhatIf               # Preview unattended run without applying
 
 .NOTES
-    Version : 6.0
+    Version : 6.1
 
 #>
 

@@ -5,7 +5,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [Unreleased]
+## [6.1.0] - 2026-10-13
+
+A trust release. Every tool now runs on its own with nothing to download (the shared module is
+gone), nothing the toolkit collects leaves the machine, the cloud tools are proven read-only, and
+the behaviours that made a security reviewer — or endpoint protection — read the toolkit as
+malware are removed: no self-delete, no relaunching itself elevated with the execution policy
+bypassed, no `Invoke-Expression`, and no unverified downloads. This is also the first release whose
+scripts are code-signed; GRIMOIRE and RITUAL fetch a missing tool only from a release like this one,
+and only if its signature verifies. See `docs/soc2.md` for running the toolkit inside SOC 2 scope.
 
 ### Fixed
 - **Quick Launch one-liners failed on Windows PowerShell 5.1** with *"The request was aborted:

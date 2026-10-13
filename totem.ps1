@@ -37,7 +37,7 @@
     PS C:\> .\totem.ps1 -Unattended        # Silent: export HTML and exit
 
 .NOTES
-    Version : 6.0
+    Version : 6.1
 
 #>
 
@@ -509,7 +509,7 @@ function Show-TotemBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
     Write-Host "  T.O.T.E.M. — Trusted Observer of Transparent Execution Modules" -ForegroundColor Cyan
-    Write-Host "  TPM Health Audit Tool  v6.0" -ForegroundColor Cyan
+    Write-Host "  TPM Health Audit Tool  v6.1" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -758,7 +758,7 @@ function Build-HtmlReport {
         }) `
         -NavItems   @('Verdict', 'TPM Status', 'BitLocker Dependency', 'Attestation')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'T.O.T.E.M. v6.0'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'T.O.T.E.M. v6.1'
 
     $collectorErrCell = if ($Tpm.CollectorError) {
         "<tr><th>Collector Error</th><td><span class='tk-badge-err'>$(EscHtml $Tpm.CollectorError)</span></td></tr>"
