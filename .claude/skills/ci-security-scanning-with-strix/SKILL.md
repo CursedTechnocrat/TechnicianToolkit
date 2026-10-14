@@ -41,7 +41,7 @@ jobs:
           fetch-depth: 0   # required for diff-scope resolution
 
       - name: Install Strix
-        run: curl -sSL https://strix.ai/install | bash
+        run: pipx install strix-agent==1.7.0
 
       - name: Run Security Scan
         env:
@@ -88,7 +88,7 @@ Strix writes SARIF 2.1.0 to `strix_runs/<run>/findings.sarif`:
 Any pipeline works the same way — install, set the two env vars, run headless:
 
 ```bash
-curl -sSL https://strix.ai/install | bash
+pipx install strix-agent==1.7.0
 # Resolve the PR's base branch robustly (use your CI's base-branch variable if it
 # has one, for example GitHub Actions: origin/${{ github.base_ref }}). Avoid piping the
 # git lookup into another command — a failed lookup would otherwise be masked.
@@ -125,7 +125,7 @@ No workflow file, no Docker, no LLM key. Three ways to use it:
      env:
        STRIX_API_TOKEN: ${{ secrets.STRIX_API_TOKEN }}
      run: |
-       curl -sSL https://strix.ai/install | bash
+       pipx install strix-agent==1.7.0
        strix cloud pr-reviews start \
          --provider github \
          --installation-id "${{ vars.STRIX_INSTALLATION_ID }}" \
