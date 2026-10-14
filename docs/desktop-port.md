@@ -28,7 +28,7 @@ and they remain the engine — the application drives them, it does not replace 
 
 | Decision | Choice |
 |----------|--------|
-| Shape | WPF desktop application on .NET 8 |
+| Shape | WPF desktop application on .NET 10 (moved from .NET 8 after 6.1.0, ahead of its end of support) |
 | Engine | PowerShell 7 hosted in-process via `Microsoft.PowerShell.SDK` |
 | Prototype launcher | **Removed** — `launcher/` is superseded by the app |
 | Distribution | Portable single `.exe`, attached to each GitHub release. A winget package was planned and dropped after 6.0.0: the app is carried on a USB stick, not installed |
@@ -65,7 +65,7 @@ the app.
 
 ## Architecture
 
-### WPF on .NET 8, not WinUI 3 or Avalonia
+### WPF on .NET 10, not WinUI 3 or Avalonia
 
 The toolkit is Windows-only by nature — WMI, the registry, Defender, `netsh`.
 Cross-platform buys nothing. WPF publishes cleanly as self-contained single-file;
@@ -102,7 +102,7 @@ hinted at by the error you get without it):
    the host constructor, so no script-level `try/catch` can reach it.
 2. **Re-link PowerShell's built-in modules to `Modules\**`.** The SDK ships
    CimCmdlets, Utility, Management, Security, Diagnostics and WSMan as *content*
-   under `contentFiles/any/any/runtimes/win/lib/net8.0/Modules/`. Assemblies
+   under `contentFiles/any/any/runtimes/win/lib/net10.0/Modules/`. Assemblies
    flatten into the bundle root but content keeps its RID-relative path, so the
    modules extract somewhere PowerShell never looks and every built-in cmdlet
    fails to resolve — `Get-CimInstance` included, which 35 sites depend on. See

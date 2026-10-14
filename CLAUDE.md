@@ -35,7 +35,7 @@ TechnicianToolkit/
 ├── <tool>.ps1               # Individual tool scripts
 ├── tests/
 │   └── TechnicianToolkit.Tests.ps1   # Pester 5 test suite — guards the scripts
-├── app/                     # The desktop application (.NET 8, WPF)
+├── app/                     # The desktop application (.NET 10, WPF)
 │   ├── TechnicianToolkit.Engine/       # Headless: embeds the suite, hosts PS7,
 │   │                                   #   AST readers, runner
 │   ├── TechnicianToolkit.Engine.Tests/ # xUnit — guards the C# that reads the scripts

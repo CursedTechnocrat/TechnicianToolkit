@@ -86,11 +86,11 @@ Security, Diagnostics, WSMan, PSDiagnostics) as **content** files under a
 RID-relative path:
 
 ```
-contentFiles/any/any/runtimes/win/lib/net8.0/Modules/**
+contentFiles/any/any/runtimes/win/lib/net10.0/Modules/**
 ```
 
 Assemblies get flattened into the bundle root, but content keeps its relative
-path — so the modules extract to `runtimes\win\lib\net8.0\Modules\` while
+path — so the modules extract to `runtimes\win\lib\net10.0\Modules\` while
 PowerShell only ever looks in `$PSHOME\Modules\`. Every built-in cmdlet fails to
 resolve, `Get-CimInstance` included, which 35 sites across the suite depend on.
 

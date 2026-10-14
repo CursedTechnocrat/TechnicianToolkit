@@ -19,7 +19,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -51,7 +51,7 @@
   <ItemGroup>
     <!-- GeneratePathProperty exposes $(PkgMicrosoft_PowerShell_SDK), which the
          module-remap target below needs. -->
-    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.4.6" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.6.7" GeneratePathProperty="true" />
   </ItemGroup>
 
   <!--
@@ -59,9 +59,9 @@
 
     The SDK ships PowerShell's built-in modules (CimCmdlets, Utility,
     Management, Security, Diagnostics, WSMan) as *content* files under a
-    RID-relative path: contentFiles/any/any/runtimes/win/lib/net8.0/Modules.
+    RID-relative path: contentFiles/any/any/runtimes/win/lib/net10.0/Modules.
     Assemblies get flattened into the bundle root, but content keeps its
-    relative path — so the modules extract to runtimes\win\lib\net8.0\Modules
+    relative path — so the modules extract to runtimes\win\lib\net10.0\Modules
     while PowerShell only ever looks in $PSHOME\Modules. Every built-in cmdlet
     then fails to resolve, including Get-CimInstance, which 35 sites depend on.
 
@@ -71,7 +71,7 @@
   -->
   <Target Name="RemapPowerShellModules" BeforeTargets="AssignTargetPaths">
     <ItemGroup>
-      <_PSBuiltInModule Include="$(PkgMicrosoft_PowerShell_SDK)\contentFiles\any\any\runtimes\win\lib\net8.0\Modules\**\*" />
+      <_PSBuiltInModule Include="$(PkgMicrosoft_PowerShell_SDK)\contentFiles\any\any\runtimes\win\lib\net10.0\Modules\**\*" />
       <Content Include="@(_PSBuiltInModule)">
         <Link>Modules\%(RecursiveDir)%(Filename)%(Extension)</Link>
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -85,8 +85,8 @@
     <ItemGroup>
       <ResolvedFileToPublish
         Remove="@(ResolvedFileToPublish)"
-        Condition="$([System.String]::Copy('%(ResolvedFileToPublish.RelativePath)').Replace('/', '\').Contains('runtimes\unix\lib\net8.0\Modules\')) OR
-                   $([System.String]::Copy('%(ResolvedFileToPublish.RelativePath)').Replace('/', '\').Contains('runtimes\win\lib\net8.0\Modules\'))" />
+        Condition="$([System.String]::Copy('%(ResolvedFileToPublish.RelativePath)').Replace('/', '\').Contains('runtimes\unix\lib\net10.0\Modules\')) OR
+                   $([System.String]::Copy('%(ResolvedFileToPublish.RelativePath)').Replace('/', '\').Contains('runtimes\win\lib\net10.0\Modules\'))" />
     </ItemGroup>
   </Target>
 

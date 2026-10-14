@@ -236,7 +236,7 @@ fight BAML and XAML resource URIs and should be avoided here.
 
 **Local build note** — SDK-style net48 projects build only on Windows, with the
 .NET Framework targeting pack. `windows-latest` has it. The Linux/sandbox
-verification guidance in `CLAUDE.md` is unaffected, since `net8.0-windows` +
+verification guidance in `CLAUDE.md` is unaffected, since `net10.0-windows` +
 `UseWPF` could not be built off Windows either.
 
 ---

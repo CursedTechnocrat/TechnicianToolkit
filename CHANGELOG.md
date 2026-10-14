@@ -5,6 +5,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Changed
+- **The desktop app moves to .NET 10 and PowerShell 7.6.** .NET 8, and PowerShell 7.4 built on
+  it, both reach end of support on 10 November 2026; a self-contained build on them would keep
+  shipping a runtime that no longer receives security fixes. Every project now targets
+  `net10.0-windows` (supported to November 2028) and hosts `Microsoft.PowerShell.SDK` 7.6.7, the
+  current LTS line. The built-in-module remap follows the SDK's new content path
+  (`runtimes/win/lib/net10.0/Modules`); without that change the bundle would publish without
+  CimCmdlets and the other built-in modules. CI and the release workflow install the .NET 10
+  SDK. The scripts are unaffected — they still target Windows PowerShell 5.1.
+
+---
+
 ## [6.1.0] - 2026-10-13
 
 A trust release. Every tool now runs on its own with nothing to download (the shared module is
