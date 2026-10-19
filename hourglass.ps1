@@ -47,7 +47,7 @@
     PS C:\> .\hourglass.ps1 -Unattended        # Silent: export HTML and exit
 
 .NOTES
-    Version : 6.1
+    Version : 6.2
 
 #>
 
@@ -519,7 +519,7 @@ function Show-HourglassBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
     Write-Host "  H.O.U.R.G.L.A.S.S. — Health Of Unit's Rechargeable Gauge: Life, Ageing, State & Service" -ForegroundColor Cyan
-    Write-Host "  Laptop Battery Health Audit Tool  v6.1" -ForegroundColor Cyan
+    Write-Host "  Laptop Battery Health Audit Tool  v6.2" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -958,7 +958,7 @@ function Build-HtmlReport {
         }) `
         -NavItems   @('Verdict', 'Batteries', 'powercfg Report')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'H.O.U.R.G.L.A.S.S. v6.1'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'H.O.U.R.G.L.A.S.S. v6.2'
 
     $bestCard  = if ($null -ne $bestHealth)  { "$bestHealth%"  } else { 'n/a' }
     $worstCard = if ($null -ne $worstHealth) { "$worstHealth%" } else { 'n/a' }

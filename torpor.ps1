@@ -54,7 +54,7 @@
     PS C:\> .\torpor.ps1 -Unattended -SampleSeconds 120   # Longer sample for intermittent slowness
 
 .NOTES
-    Version : 6.1
+    Version : 6.2
 
 #>
 
@@ -1969,7 +1969,7 @@ function Build-TorporReport {
     </div></div>
   </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'T.O.R.P.O.R. v6.1')
+"@ + (Get-TKHtmlFoot -ScriptName 'T.O.R.P.O.R. v6.2')
     return $html
 }
 

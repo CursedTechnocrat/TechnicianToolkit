@@ -37,7 +37,7 @@
     PS C:\> .\exhume.ps1 -ScanDrives C:,D: -IncludeOst  # Custom drive list and include .ost
 
 .NOTES
-    Version : 6.1
+    Version : 6.2
 
 #>
 
@@ -499,7 +499,7 @@ function Show-ExhumeBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
     Write-Host "  E.X.H.U.M.E. — Enumerates, eXposes & Hunts Unmigrated Mail Entries" -ForegroundColor Cyan
-    Write-Host "  Outlook PST / OST Discovery Tool  v6.1" -ForegroundColor Cyan
+    Write-Host "  Outlook PST / OST Discovery Tool  v6.2" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -811,7 +811,7 @@ function Build-HtmlReport {
         }) `
         -NavItems   @('Verdict', 'Outlook Profiles', 'Data Files')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'E.X.H.U.M.E. v6.1'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'E.X.H.U.M.E. v6.2'
 
     $totalSize = Format-Bytes $Verdict.TotalPstBytes
 

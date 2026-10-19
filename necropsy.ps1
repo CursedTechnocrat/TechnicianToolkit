@@ -48,7 +48,7 @@
     PS C:\> .\necropsy.ps1 -Unattended -Days 90   # Look back 90 days instead
 
 .NOTES
-    Version : 6.1
+    Version : 6.2
 
 #>
 
@@ -1623,7 +1623,7 @@ function Build-NecropsyReport {
         }) `
         -NavItems   @('Findings', 'Next Steps', 'Incidents', 'Timeline', 'Dump Files', 'Hardware Errors', 'Configuration')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'N.E.C.R.O.P.S.Y. v6.1'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'N.E.C.R.O.P.S.Y. v6.2'
 
     $html = $htmlHead + @"
 

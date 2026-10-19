@@ -5,7 +5,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [Unreleased]
+## [6.2.0] - 2026-10-19
+
+A runtime release for the desktop application. .NET 8 reaches end of support in November 2026, so
+the app moves to .NET 10 and the PowerShell 7.6 line built on it. The tool scripts do not change
+in behaviour; their version moves with the suite.
 
 ### Changed
 - **The desktop application now targets .NET 10** (was .NET 8, whose support ends in November
@@ -15,6 +19,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   The tool scripts are unchanged and still run standalone under Windows PowerShell 5.1.
 - `System.Security.Cryptography.Pkcs` and `System.Security.Cryptography.Xml` are pinned to 10.0.13
   in the Engine. PowerShell SDK 7.6.7 brings in 10.0.10, which has published advisories.
+- **The winget package is withdrawn.** The application is a portable `.exe` carried on a USB
+  stick, not something installed, so a winget listing added a release step for no real gain. The
+  first submission (microsoft/winget-pkgs#450803) is closed unmerged, `packaging/winget/` is
+  removed, and the README, RELEASING.md (step 8), the release workflow's checklist and the port
+  docs no longer mention it. Download the `.exe` from the GitHub release, as before.
 
 ### Fixed
 - **CI's asInvoker window render was running the elevated build.** `-p:Elevate=false` swaps the
@@ -121,11 +130,6 @@ and only if its signature verifies. See `docs/soc2.md` for running the toolkit i
   re-synced. Markup that already used both classes looks the same as before.
 
 ### Changed
-- **The winget package is withdrawn.** The application is a portable `.exe` carried on a USB
-  stick, not something installed, so a winget listing added a release step for no real gain. The
-  first submission (microsoft/winget-pkgs#450803) is closed unmerged, `packaging/winget/` is
-  removed, and the README, RELEASING.md (step 8), the release workflow's checklist and the port
-  docs no longer mention it. Download the `.exe` from the GitHub release, as before.
 - **RELEASING.md records what the first signed release taught.** The `.exe` sits under
   `publish\<rid>\` in each artifact; `signtool` is found under the Windows SDK rather than on
   PATH and is run from PowerShell; signing pins the certificate by thumbprint; the verify

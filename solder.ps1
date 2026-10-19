@@ -60,7 +60,7 @@
     PS C:\> .\solder.ps1 -Action Repair -WhatIf             # Preview the repairs only
 
 .NOTES
-    Version : 6.1
+    Version : 6.2
 
 #>
 
@@ -1686,7 +1686,7 @@ function Build-SolderReport {
       <tbody>$($aRows.ToString())</tbody></table></div>
   </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'S.O.L.D.E.R. v6.1')
+"@ + (Get-TKHtmlFoot -ScriptName 'S.O.L.D.E.R. v6.2')
     return $html
 }
 

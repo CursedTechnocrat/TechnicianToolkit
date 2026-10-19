@@ -64,7 +64,7 @@
     HTTPS installer URLs for software with no winget package, comma-separated.
 
 .NOTES
-    Version : 6.1
+    Version : 6.2
 
 #>
 

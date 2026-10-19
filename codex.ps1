@@ -46,7 +46,7 @@
     PS C:\> .\codex.ps1 -Unattended             # Silent: write rollup and exit
 
 .NOTES
-    Version : 6.1
+    Version : 6.2
 
 #>
 
@@ -536,7 +536,7 @@ function Show-CodexBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
     Write-Host "  C.O.D.E.X. — Compiles Output Documents into an EXhibit" -ForegroundColor Cyan
-    Write-Host "  Toolkit Report Index Builder  v6.1" -ForegroundColor Cyan
+    Write-Host "  Toolkit Report Index Builder  v6.2" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -743,7 +743,7 @@ function Build-CodexHtml {
         }) `
         -NavItems   $navItems
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'C.O.D.E.X. v6.1'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'C.O.D.E.X. v6.2'
 
     $html = $htmlHead + @"
 

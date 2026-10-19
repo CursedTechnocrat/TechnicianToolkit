@@ -41,7 +41,7 @@
     PS C:\> .\wisp.ps1 -IncludeKey        # Render cleartext PSKs in the report (technician-managed audit only)
 
 .NOTES
-    Version : 6.1
+    Version : 6.2
 
 #>
 
@@ -554,7 +554,7 @@ function Show-WispBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
     Write-Host "  W.I.S.P. -- Wireless Inventory & Security Profiler" -ForegroundColor Yellow
-    Write-Host "  Wi-Fi Profile Audit  v6.1" -ForegroundColor Yellow
+    Write-Host "  Wi-Fi Profile Audit  v6.2" -ForegroundColor Yellow
     if ($IncludeKey) {
         Write-Host "  *** Key material WILL be rendered in cleartext (-IncludeKey) ***" -ForegroundColor Magenta
     }
@@ -992,7 +992,7 @@ function Build-WispReport {
         }) `
         -NavItems   @('Verdict', 'Adapters', 'Saved Profiles', 'Open / Weak', 'Auto-connect')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'W.I.S.P. v6.1'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'W.I.S.P. v6.2'
 
     $keyNoteBadge = if ($IncludeKey) {
         "<span class='tk-badge-warn'>Key material rendered in cleartext (-IncludeKey)</span>"

@@ -38,7 +38,7 @@
     PS C:\> .\eclipse.ps1 -Unattended        # Silent mode — auto-connect and export HTML
 
 .NOTES
-    Version : 6.1
+    Version : 6.2
 
 #>
 
@@ -534,7 +534,7 @@ function Show-EclipseBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
     Write-Host "  E.C.L.I.P.S.E. — Entra Credentials: Lapsed, Idle, Privileged, Stale & External" -ForegroundColor Cyan
-    Write-Host "  Entra ID Identity Hygiene Audit Tool  v6.1" -ForegroundColor Cyan
+    Write-Host "  Entra ID Identity Hygiene Audit Tool  v6.2" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -1012,7 +1012,7 @@ function Build-HtmlReport {
         }) `
         -NavItems   @('Guests', 'Privileged Roles', 'Password Never Expires', 'Stale Admins', 'Disabled but Licensed')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'E.C.L.I.P.S.E. v6.1'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'E.C.L.I.P.S.E. v6.2'
 
     $html = $htmlHead + @"
 
