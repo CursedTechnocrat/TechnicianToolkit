@@ -5,6 +5,27 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Changed
+- **The desktop application now targets .NET 10** (was .NET 8, whose support ends in November
+  2026), and hosts **PowerShell 7.6.7** (was 7.4.6), the PowerShell line built on .NET 10. The SDK's
+  built-in modules moved to `runtimes/win/lib/net10.0/Modules`, and the single-file remap targets
+  in the App and Harness projects follow them. Building from source now needs the .NET 10 SDK.
+  The tool scripts are unchanged and still run standalone under Windows PowerShell 5.1.
+- `System.Security.Cryptography.Pkcs` and `System.Security.Cryptography.Xml` are pinned to 10.0.13
+  in the Engine. PowerShell SDK 7.6.7 brings in 10.0.10, which has published advisories.
+
+### Fixed
+- **CI's asInvoker window render was running the elevated build.** `-p:Elevate=false` swaps the
+  application manifest, but the compile's up-to-date check compares timestamps, so a publish after
+  `dotnet build` reused the `requireAdministrator` executable. GitHub runners are administrators
+  with UAC off, so the step passed anyway. The manifest choice is now a compile input.
+- **The desktop app's header read 5.0.** The version was a literal in the window's XAML; it now
+  comes from the assembly version, which moves with the suite.
+
+---
+
 ## [6.1.0] - 2026-10-13
 
 A trust release. Every tool now runs on its own with nothing to download (the shared module is

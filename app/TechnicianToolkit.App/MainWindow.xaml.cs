@@ -102,6 +102,14 @@ namespace TechnicianToolkit.App
         {
             InitializeComponent();
 
+            // From <Version> in the .csproj, which moves with the suite at a
+            // release; a literal in the XAML was left reading 5.0 through 6.x.
+            Version? version = typeof(MainWindow).Assembly.GetName().Version;
+            if (version != null)
+            {
+                VersionText.Text = version.ToString(2);
+            }
+
             OutputList.ItemsSource = _lines;
             _lines.CollectionChanged += (_, _) =>
             {
