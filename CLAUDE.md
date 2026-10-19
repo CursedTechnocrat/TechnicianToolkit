@@ -35,7 +35,7 @@ TechnicianToolkit/
 ├── <tool>.ps1               # Individual tool scripts
 ├── tests/
 │   └── TechnicianToolkit.Tests.ps1   # Pester 5 test suite — guards the scripts
-├── app/                     # The desktop application (.NET 8, WPF)
+├── app/                     # The desktop application (.NET 10, WPF)
 │   ├── TechnicianToolkit.Engine/       # Headless: embeds the suite, hosts PS7,
 │   │                                   #   AST readers, runner
 │   ├── TechnicianToolkit.Engine.Tests/ # xUnit — guards the C# that reads the scripts
@@ -245,7 +245,7 @@ instead:
 
 ```bash
 # PowerShell 7 (tarball) and PSScriptAnalyzer (nupkg is a zip; extract onto PSModulePath)
-curl -sSL -o pwsh.tar.gz https://github.com/PowerShell/PowerShell/releases/download/v7.4.6/powershell-7.4.6-linux-x64.tar.gz
+curl -sSL -o pwsh.tar.gz https://github.com/PowerShell/PowerShell/releases/download/v7.6.7/powershell-7.6.7-linux-x64.tar.gz
 curl -sSL -o psa.zip    https://github.com/PowerShell/PSScriptAnalyzer/releases/download/1.22.0/PSScriptAnalyzer.1.22.0.nupkg
 ```
 

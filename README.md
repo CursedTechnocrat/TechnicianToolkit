@@ -53,7 +53,7 @@ for 5.0 and is called out here rather than buried.
 > is one of the most useful things you can contribute — a report that it simply
 > worked is as valuable as a bug.
 
-Building it yourself needs the .NET 8 SDK:
+Building it yourself needs the .NET 10 SDK:
 
 ```powershell
 dotnet publish app/TechnicianToolkit.App -c Release -r win-x64 -o publish

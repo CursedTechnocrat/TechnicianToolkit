@@ -109,6 +109,8 @@ It should be documented in the README rather than discovered in the field.
 and no upgrade treadmill. Note the counterpoint: **.NET 8 LTS support ends
 10 November 2026**, so staying put is not a no-op — it means moving to .NET 10
 instead. Verify the date against Microsoft's current policy page before quoting it.
+*Update:* that move has been made — the app now targets .NET 10 and hosts
+PowerShell 7.6, so the treadmill this paragraph describes has turned once.
 
 **Cloud module drift is the real long-term risk.** See *Risks*.
 
