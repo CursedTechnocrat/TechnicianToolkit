@@ -47,7 +47,7 @@
     PS C:\> .\minotaur.ps1 -Path 'D:\Data'         # Review one folder tree instead of the shares
 
 .NOTES
-    Version : 6.1
+    Version : 6.2
 
 #>
 
@@ -1283,7 +1283,7 @@ function Build-MinotaurReport {
       <div class="tk-info-box"><span class="tk-info-label">Full detail</span> Every access-control entry scanned is in <span class="tk-mono">$(EscHtml $CsvName)</span> next to this report.</div></div>
   </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'M.I.N.O.T.A.U.R. v6.1')
+"@ + (Get-TKHtmlFoot -ScriptName 'M.I.N.O.T.A.U.R. v6.2')
     return $html
 }
 

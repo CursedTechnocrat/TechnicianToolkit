@@ -49,7 +49,7 @@
     PS C:\> .\griffin.ps1 -SignatureMaxAgeDays 3   # Tighter signature-age threshold (default 7)
 
 .NOTES
-    Version : 6.1
+    Version : 6.2
 
 #>
 
@@ -565,7 +565,7 @@ function Show-GriffinBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
     Write-Host "  G.R.I.F.F.I.N. -- Gauges Real-time protection, Inspects Findings, Freshness, Intrusions & Notifications" -ForegroundColor Magenta
-    Write-Host "  AV / Microsoft Defender Health Audit  v6.1" -ForegroundColor Magenta
+    Write-Host "  AV / Microsoft Defender Health Audit  v6.2" -ForegroundColor Magenta
     Write-Host ""
 }
 
@@ -1352,7 +1352,7 @@ function Build-GriffinReport {
         }) `
         -NavItems   @('Verdict', 'Defender Core', 'Platform Protection', 'Cloud & Sample', 'Signatures', 'Scans', 'Threats', 'Detections', 'Exclusions', 'ASR Rules', 'Third-Party AV', 'Services', 'Events')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'G.R.I.F.F.I.N. v6.1'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'G.R.I.F.F.I.N. v6.2'
 
     $html = $htmlHead + @"
 

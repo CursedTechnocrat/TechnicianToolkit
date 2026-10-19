@@ -55,7 +55,7 @@
     PS C:\> .\raven.ps1 -Unattended -DnsOnly -Domain contoso.com, fabrikam.com   # SPF / DKIM / DMARC only, no sign-in
 
 .NOTES
-    Version : 6.1
+    Version : 6.2
 
 #>
 
@@ -1658,7 +1658,7 @@ function Build-RavenReport {
         -MetaItems  $meta `
         -NavItems   $nav
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'R.A.V.E.N. v6.1'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'R.A.V.E.N. v6.2'
 
     $mbCards = ''
     if (-not $Audit.DnsOnly) {

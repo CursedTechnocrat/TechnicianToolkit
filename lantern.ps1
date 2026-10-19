@@ -35,7 +35,7 @@
     PS C:\> .\lantern.ps1 -Unattended -Action Sweep # Run sweep and export HTML silently
 
 .NOTES
-    Version : 6.1
+    Version : 6.2
 
 #>
 
@@ -899,7 +899,7 @@ $tableRows
   </table>
 </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'L.A.N.T.E.R.N. v6.1')
+"@ + (Get-TKHtmlFoot -ScriptName 'L.A.N.T.E.R.N. v6.2')
 
     try {
         [System.IO.File]::WriteAllText($reportPath, $htmlReport, [System.Text.Encoding]::UTF8)
