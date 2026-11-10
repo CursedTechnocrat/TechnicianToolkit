@@ -25,7 +25,9 @@
 
 .DESCRIPTION
     Audits and reports on the current state of a Windows machine. Collects
-    hardware specs, OS info, network config, uptime, pending Windows Updates,
+    hardware specs (including each installed memory module's slot, size, type
+    such as DDR4 / DDR5, speed and part number, and the free slots), OS info,
+    network config, uptime, pending Windows Updates,
     installed software, and recent event log errors — then exports a
     dark-themed HTML report with color-coded indicators to the log directory
     (config.json LogDirectory, else the script's own folder).
@@ -481,6 +483,185 @@ function Show-AuspexBanner {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# MEMORY MODULE HELPERS  (pure — no CIM calls; covered by the Pester suite)
+# ─────────────────────────────────────────────────────────────────────────────
+
+function ConvertTo-AuspexMemoryType {
+    <#
+    .SYNOPSIS
+        Names a memory module's generation (DDR4, DDR5, LPDDR5 ...).
+    .DESCRIPTION
+        Win32_PhysicalMemory carries two type fields. SMBIOSMemoryType is the
+        SMBIOS Type 17 value and the only one that knows DDR4 and later.
+        MemoryType is the older WMI enumeration; Windows leaves it 0 on modern
+        hardware, so it is read only when SMBIOSMemoryType says nothing useful.
+        The two use different numbering — 24 is DDR3 in both, but 26 is DDR4
+        only in SMBIOS — so each is looked up in its own table.
+    #>
+    param($SmbiosMemoryType, $MemoryType)
+
+    $smbios = @{
+        3 = 'DRAM'; 15 = 'SDRAM'; 17 = 'RDRAM'; 18 = 'DDR'; 19 = 'DDR2'; 20 = 'DDR2 FB-DIMM'
+        24 = 'DDR3'; 25 = 'FBD2'; 26 = 'DDR4'; 27 = 'LPDDR'; 28 = 'LPDDR2'; 29 = 'LPDDR3'
+        30 = 'LPDDR4'; 31 = 'Logical non-volatile'; 32 = 'HBM'; 33 = 'HBM2'; 34 = 'DDR5'
+        35 = 'LPDDR5'; 36 = 'HBM3'
+    }
+    $wmi = @{
+        2 = 'DRAM'; 17 = 'SDRAM'; 19 = 'RDRAM'; 20 = 'DDR'; 21 = 'DDR2'; 22 = 'DDR2 FB-DIMM'
+        24 = 'DDR3'; 25 = 'FBD2'; 26 = 'DDR4'
+    }
+
+    $s = 0; $m = 0
+    if ($null -ne $SmbiosMemoryType) { [void][int]::TryParse("$SmbiosMemoryType", [ref]$s) }
+    if ($null -ne $MemoryType)       { [void][int]::TryParse("$MemoryType",       [ref]$m) }
+
+    if ($smbios.ContainsKey($s)) { return $smbios[$s] }
+    if ($wmi.ContainsKey($m))    { return $wmi[$m] }
+    # 1 = Other, 2 = Unknown in SMBIOS; hypervisors commonly report Other.
+    return 'Unknown'
+}
+
+function ConvertTo-AuspexMemoryFormFactor {
+    param($FormFactor)
+    $map = @{
+        6 = 'Proprietary'; 7 = 'SIMM'; 8 = 'DIMM'; 11 = 'RIMM'; 12 = 'SODIMM'; 13 = 'SRIMM'
+        14 = 'SMD'; 21 = 'BGA (soldered)'; 22 = 'FPBGA (soldered)'; 23 = 'LGA'
+    }
+    $f = 0
+    if ($null -ne $FormFactor) { [void][int]::TryParse("$FormFactor", [ref]$f) }
+    if ($map.ContainsKey($f)) { return $map[$f] }
+    return 'Unknown'
+}
+
+function ConvertTo-AuspexMemoryVendor {
+    <#
+    .SYNOPSIS
+        Turns a JEDEC manufacturer code into a name; passes a name through.
+    .DESCRIPTION
+        Many BIOSes put the raw JEDEC ID ("80CE", "00CE", "CE00000000000000")
+        in Win32_PhysicalMemory.Manufacturer rather than a name. Only the
+        commonest module makers are mapped; anything else is shown as given.
+    #>
+    param([string]$Manufacturer)
+    $v = "$Manufacturer".Trim()
+    if (-not $v) { return '' }
+    $codes = [ordered]@{
+        'CE' = 'Samsung'; 'AD' = 'SK Hynix'; '2C' = 'Micron'; '98' = 'Kingston'; '9B' = 'Crucial'
+    }
+    if ($v -match '^(?i)[0-9a-f]{4}$') {
+        foreach ($k in $codes.Keys) {
+            if ($v.Substring(2, 2) -ieq $k -or $v.Substring(0, 2) -ieq $k) { return $codes[$k] }
+        }
+        return $v
+    }
+    if ($v -match '^(?i)([0-9a-f]{2})0{6,}$') {
+        $k = $Matches[1].ToUpper()
+        if ($codes.Contains($k)) { return $codes[$k] }
+    }
+    return $v
+}
+
+function Get-AuspexMemorySummary {
+    <#
+    .SYNOPSIS
+        Builds the per-module table and a one-line summary from raw CIM rows.
+    .PARAMETER Modules
+        Win32_PhysicalMemory instances (or objects with the same properties).
+    .PARAMETER Arrays
+        Win32_PhysicalMemoryArray instances. Only system-memory arrays (Use 3)
+        count toward slots and maximum capacity; an array with no Use is kept.
+    #>
+    param([object[]]$Modules = @(), [object[]]$Arrays = @())
+
+    $rows = [System.Collections.Generic.List[object]]::new()
+    foreach ($m in @($Modules | Where-Object { $_ })) {
+        $capGB   = if ($m.Capacity) { [math]::Round([double]$m.Capacity / 1GB, 1) } else { 0 }
+        $rated   = 0; [void][int]::TryParse("$($m.Speed)", [ref]$rated)
+        $running = 0; [void][int]::TryParse("$($m.ConfiguredClockSpeed)", [ref]$running)
+        $slot    = "$($m.DeviceLocator)".Trim()
+        if (-not $slot) { $slot = "$($m.BankLabel)".Trim() }
+        $rows.Add([PSCustomObject]@{
+            Slot         = $slot
+            SizeGB       = $capGB
+            Type         = ConvertTo-AuspexMemoryType -SmbiosMemoryType $m.SMBIOSMemoryType -MemoryType $m.MemoryType
+            FormFactor   = ConvertTo-AuspexMemoryFormFactor -FormFactor $m.FormFactor
+            RatedMTs     = $rated
+            RunningMTs   = $running
+            Manufacturer = ConvertTo-AuspexMemoryVendor -Manufacturer $m.Manufacturer
+            PartNumber   = "$($m.PartNumber)".Trim()
+        })
+    }
+
+    $sysArrays = @($Arrays | Where-Object { $_ -and ($null -eq $_.Use -or [int]$_.Use -eq 3) })
+    $slotsTotal = 0
+    $maxKB      = [double]0
+    foreach ($a in $sysArrays) {
+        if ($a.MemoryDevices) { $slotsTotal += [int]$a.MemoryDevices }
+        # MaxCapacityEx (KB, uint64) supersedes MaxCapacity (KB, uint32), which
+        # tops out at 4 TB and reads 0x80000000 on boards that use the Ex field.
+        $kb = if ($a.MaxCapacityEx) { [double]$a.MaxCapacityEx } elseif ($a.MaxCapacity) { [double]$a.MaxCapacity } else { 0 }
+        $maxKB += $kb
+    }
+    $maxGB = if ($maxKB -gt 0) { [math]::Round($maxKB / 1MB, 0) } else { 0 }
+
+    $types   = @($rows | ForEach-Object { $_.Type } | Where-Object { $_ -ne 'Unknown' } | Select-Object -Unique)
+    $typeStr = if ($types.Count -gt 0) { $types -join ' + ' } else { 'Unknown' }
+    $totalGB = [math]::Round((($rows | Measure-Object -Property SizeGB -Sum).Sum) + 0, 1)
+
+    $speeds  = @($rows | ForEach-Object { if ($_.RunningMTs -gt 0) { $_.RunningMTs } else { $_.RatedMTs } } | Where-Object { $_ -gt 0 })
+    $speed   = if ($speeds.Count -gt 0) { ($speeds | Measure-Object -Minimum).Minimum } else { 0 }
+
+    $sizeGroups = @($rows | Group-Object -Property SizeGB | Sort-Object { [double]$_.Name } -Descending |
+        ForEach-Object { '{0} × {1} GB' -f $_.Count, $_.Name })
+
+    $notes = [System.Collections.Generic.List[string]]::new()
+    if ($types.Count -gt 1) { $notes.Add("Mixed memory types installed: $typeStr.") }
+    $slow = @($rows | Where-Object { $_.RunningMTs -gt 0 -and $_.RatedMTs -gt 0 -and $_.RunningMTs -lt $_.RatedMTs })
+    if ($slow.Count -gt 0) {
+        $notes.Add(("{0} module(s) running below rated speed (e.g. {1} at {2} of {3} MT/s) - normal with mixed modules or a CPU memory limit; check the XMP/EXPO profile otherwise." -f
+            $slow.Count, $slow[0].Slot, $slow[0].RunningMTs, $slow[0].RatedMTs))
+    }
+    if (@($rows | ForEach-Object { $_.SizeGB } | Select-Object -Unique).Count -gt 1) {
+        $notes.Add('Modules are different sizes, which can drop part of memory out of dual-channel mode.')
+    }
+
+    $slotsUsed = $rows.Count
+    $summary = if ($slotsUsed -eq 0) { '' } else {
+        $s = "$totalGB GB $typeStr"
+        if ($speed -gt 0) { $s += " @ $speed MT/s" }
+        $s += ' (' + ($sizeGroups -join ', ') + ')'
+        $s
+    }
+
+    $upgrade = ''
+    if ($slotsTotal -gt 0) {
+        $upgrade = "$slotsUsed of $slotsTotal slot(s) used"
+        if ($maxGB -gt 0) { $upgrade += ", board maximum $maxGB GB" }
+    }
+
+    return [PSCustomObject]@{
+        Modules    = $rows
+        TotalGB    = $totalGB
+        Type       = $typeStr
+        SpeedMTs   = $speed
+        SlotsUsed  = $slotsUsed
+        SlotsTotal = $slotsTotal
+        MaxGB      = $maxGB
+        Summary    = $summary
+        Upgrade    = $upgrade
+        Notes      = $notes
+    }
+}
+
+function Get-AuspexEventFirstLine {
+    # Get-WinEvent leaves Message null when a provider's resource DLL is
+    # missing; a bare .Split() on it used to abort the whole event step.
+    param($Message)
+    if ([string]::IsNullOrWhiteSpace("$Message")) { return '(no message text - provider resource missing)' }
+    return ("$Message" -split '\r?\n', 2)[0].Trim()
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # SCRIPT PATH RESOLUTION
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -550,17 +731,42 @@ Write-Host "[1/10] Collecting Hardware Info..." -ForegroundColor $ColorSchema.Pr
 try {
     $cs        = Get-CimInstance -ClassName Win32_ComputerSystem
     $bios      = Get-CimInstance -ClassName Win32_BIOS
-    $cpu       = Get-CimInstance -ClassName Win32_Processor
+    # One Win32_Processor row per socket: a two-socket server returns two.
+    $cpus      = @(Get-CimInstance -ClassName Win32_Processor)
+    $cpuNames  = @($cpus | ForEach-Object { "$($_.Name)".Trim() } | Select-Object -Unique)
+    $cpuName   = if ($cpus.Count -gt 1 -and $cpuNames.Count -eq 1) { "$($cpus.Count) × $($cpuNames[0])" } else { $cpuNames -join ' + ' }
+    $cpuCores  = [int](($cpus | Measure-Object -Property NumberOfCores -Sum).Sum)
+    $cpuThreads = [int](($cpus | Measure-Object -Property NumberOfLogicalProcessors -Sum).Sum)
     $ramBytes  = ($cs.TotalPhysicalMemory)
     $ramGB     = [math]::Round($ramBytes / 1GB, 2)
     $disks     = Get-CimInstance -ClassName Win32_LogicalDisk -Filter "DriveType=3"
 
+    # Installed modules. Kept apart from the rest so a firmware that hides the
+    # SMBIOS memory tables (some VMs) costs only this table, not the step.
+    $memory = $null
+    try {
+        $memModules = @(Get-CimInstance -ClassName Win32_PhysicalMemory -ErrorAction Stop)
+        $memArrays  = @(Get-CimInstance -ClassName Win32_PhysicalMemoryArray -ErrorAction SilentlyContinue)
+        $memory     = Get-AuspexMemorySummary -Modules $memModules -Arrays $memArrays
+    } catch {
+        Write-Host "    [!] Memory module details unavailable: $($_.Exception.Message)" -ForegroundColor $ColorSchema.Warning
+    }
+
     Write-Host "    Manufacturer : $($cs.Manufacturer)" -ForegroundColor $ColorSchema.Info
     Write-Host "    Model        : $($cs.Model)" -ForegroundColor $ColorSchema.Info
     Write-Host "    Serial       : $($bios.SerialNumber)" -ForegroundColor $ColorSchema.Info
-    Write-Host "    CPU          : $($cpu.Name)" -ForegroundColor $ColorSchema.Info
-    Write-Host "    Cores/Threads: $($cpu.NumberOfCores) cores / $($cpu.NumberOfLogicalProcessors) threads" -ForegroundColor $ColorSchema.Info
+    Write-Host "    CPU          : $cpuName" -ForegroundColor $ColorSchema.Info
+    Write-Host "    Cores/Threads: $cpuCores cores / $cpuThreads threads" -ForegroundColor $ColorSchema.Info
     Write-Host "    RAM          : $ramGB GB" -ForegroundColor $ColorSchema.Info
+    if ($memory -and $memory.Summary) {
+        Write-Host "    Memory       : $($memory.Summary)" -ForegroundColor $ColorSchema.Info
+        if ($memory.Upgrade) { Write-Host "    Slots        : $($memory.Upgrade)" -ForegroundColor $ColorSchema.Info }
+        foreach ($mod in $memory.Modules) {
+            $speedText = if ($mod.RunningMTs -gt 0) { "$($mod.RunningMTs) MT/s" } elseif ($mod.RatedMTs -gt 0) { "$($mod.RatedMTs) MT/s" } else { '' }
+            Write-Host ("      {0,-14} {1,6} GB  {2,-7} {3,-9} {4}  {5} {6}" -f $mod.Slot, $mod.SizeGB, $mod.Type, $speedText, $mod.FormFactor, $mod.Manufacturer, $mod.PartNumber).TrimEnd() -ForegroundColor $ColorSchema.Info
+        }
+        foreach ($note in $memory.Notes) { Write-Host "    [i] $note" -ForegroundColor $ColorSchema.Info }
+    }
 
     $diskSummary = [System.Collections.Generic.List[object]]::new()
     foreach ($disk in $disks) {
@@ -586,10 +792,11 @@ try {
         Manufacturer = $cs.Manufacturer
         Model        = $cs.Model
         Serial       = $bios.SerialNumber
-        CPU          = $cpu.Name
-        Cores        = $cpu.NumberOfCores
-        Threads      = $cpu.NumberOfLogicalProcessors
+        CPU          = $cpuName
+        Cores        = $cpuCores
+        Threads      = $cpuThreads
         RAMGB        = $ramGB
+        Memory       = $memory
         Disks        = $diskSummary
     }
 
@@ -965,7 +1172,7 @@ try {
         Write-Host "    [!!] $($events.Count) error/critical event(s) found in the last 24 hours" -ForegroundColor $ColorSchema.Warning
         $events | Select-Object -First 10 | ForEach-Object {
             $lvl = if ($_.Level -eq 1) { "CRITICAL" } else { "ERROR" }
-            Write-Host "      [$lvl] $(Get-Date $_.TimeCreated -Format 'HH:mm:ss') | $($_.ProviderName) — $($_.Message.Split([Environment]::NewLine)[0])" -ForegroundColor $ColorSchema.Warning
+            Write-Host "      [$lvl] $(Get-Date $_.TimeCreated -Format 'HH:mm:ss') | $($_.ProviderName) — $(Get-AuspexEventFirstLine $_.Message)" -ForegroundColor $ColorSchema.Warning
         }
         if ($events.Count -gt 10) {
             Write-Host "      ... and $($events.Count - 10) more (see full report)" -ForegroundColor $ColorSchema.Info
@@ -977,7 +1184,7 @@ try {
                 Level    = if ($_.Level -eq 1) { "Critical" } else { "Error" }
                 Source   = $_.ProviderName
                 Log      = $_.LogName
-                Message  = $_.Message.Split([Environment]::NewLine)[0]
+                Message  = Get-AuspexEventFirstLine $_.Message
                 EventID  = $_.Id
             }
         }
@@ -1172,7 +1379,7 @@ foreach ($d in $reportData['Hardware'].Disks) {
     $diskRows += @"
         <tr>
             <td>$($d.Drive)</td>
-            <td>$($d.Label)</td>
+            <td>$(EscHtml $d.Label)</td>
             <td>$($d.TotalGB) GB</td>
             <td>$($d.UsedGB) GB</td>
             <td>$($d.FreeGB) GB</td>
@@ -1184,6 +1391,36 @@ foreach ($d in $reportData['Hardware'].Disks) {
             </td>
         </tr>
 "@
+}
+
+# Memory module rows for hardware section
+$memHtml = ""
+$mem = $reportData['Hardware'].Memory
+if ($mem -and $mem.Modules.Count -gt 0) {
+    $memRows = ""
+    foreach ($m in $mem.Modules) {
+        $speedCell = if ($m.RunningMTs -gt 0 -and $m.RatedMTs -gt 0 -and $m.RunningMTs -lt $m.RatedMTs) {
+            "<span class='tk-badge-info'>$($m.RunningMTs)</span> of $($m.RatedMTs) MT/s"
+        } elseif ($m.RunningMTs -gt 0) { "$($m.RunningMTs) MT/s" } elseif ($m.RatedMTs -gt 0) { "$($m.RatedMTs) MT/s" } else { '&mdash;' }
+        $memRows += "<tr><td>$(EscHtml $m.Slot)</td><td>$($m.SizeGB) GB</td><td>$(EscHtml $m.Type)</td><td>$(EscHtml $m.FormFactor)</td>"
+        $memRows += "<td>$speedCell</td><td>$(EscHtml $m.Manufacturer)</td><td class='tk-mono'>$(EscHtml $m.PartNumber)</td></tr>"
+    }
+    $memNotes = ""
+    foreach ($n in $mem.Notes) { $memNotes += "<div class='tk-info-box' style='margin-top:8px;'><span class='tk-badge-info'>Note</span> $(EscHtml $n)</div>" }
+    $memSlots = if ($mem.Upgrade) { " &middot; $(EscHtml $mem.Upgrade)" } else { '' }
+    $memHtml = @"
+        <p class="tk-section-subtitle" style="margin:20px 0 10px;">Memory Modules &mdash; $(EscHtml $mem.Summary)$memSlots</p>
+        <table class="tk-table">
+          <thead><tr><th>Slot</th><th>Size</th><th>Type</th><th>Form Factor</th><th>Speed</th><th>Manufacturer</th><th>Part Number</th></tr></thead>
+          <tbody>$memRows</tbody>
+        </table>
+        $memNotes
+"@
+}
+$ramText = "$($reportData['Hardware'].RAMGB) GB"
+if ($mem -and $mem.Type -and $mem.Type -ne 'Unknown') {
+    $ramText += " $($mem.Type)"
+    if ($mem.SpeedMTs -gt 0) { $ramText += " @ $($mem.SpeedMTs) MT/s" }
 }
 
 # Network rows
@@ -1281,20 +1518,21 @@ $htmlReport = (Get-TKHtmlHead `
       <div style="padding:20px;">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
           <div class="tk-info-box">
-            <div><span class="tk-info-label">Manufacturer</span> $($hw.Manufacturer)</div>
-            <div><span class="tk-info-label">Model</span> $($hw.Model)</div>
-            <div><span class="tk-info-label">Serial Number</span> $($hw.Serial)</div>
+            <div><span class="tk-info-label">Manufacturer</span> $(EscHtml $hw.Manufacturer)</div>
+            <div><span class="tk-info-label">Model</span> $(EscHtml $hw.Model)</div>
+            <div><span class="tk-info-label">Serial Number</span> $(EscHtml $hw.Serial)</div>
           </div>
           <div class="tk-info-box">
-            <div><span class="tk-info-label">CPU</span> $($hw.CPU)</div>
+            <div><span class="tk-info-label">CPU</span> $(EscHtml $hw.CPU)</div>
             <div><span class="tk-info-label">Cores / Threads</span> $($hw.Cores) / $($hw.Threads)</div>
-            <div><span class="tk-info-label">RAM</span> $($hw.RAMGB) GB</div>
+            <div><span class="tk-info-label">RAM</span> $(EscHtml $ramText)</div>
           </div>
         </div>
         <table class="tk-table">
           <thead><tr><th>Drive</th><th>Label</th><th>Total</th><th>Used</th><th>Free</th><th>Usage</th></tr></thead>
           <tbody>$diskRows</tbody>
         </table>
+$memHtml
       </div>
     </div>
   </div>
@@ -1484,7 +1722,7 @@ Write-Host "================================================" -ForegroundColor $
 Write-Host ""
 Write-Host "  Machine    : $env:COMPUTERNAME" -ForegroundColor $ColorSchema.Info
 Write-Host "  OS         : $($reportData['OS'].Caption)" -ForegroundColor $ColorSchema.Info
-Write-Host "  RAM        : $($reportData['Hardware'].RAMGB) GB" -ForegroundColor $ColorSchema.Info
+Write-Host "  RAM        : $ramText" -ForegroundColor $ColorSchema.Info
 Write-Host "  Uptime     : $($reportData['Health'].Uptime)" -ForegroundColor $ColorSchema.Info
 
 $physDiskCount  = $reportData['Storage'].PhysicalDisks.Count
