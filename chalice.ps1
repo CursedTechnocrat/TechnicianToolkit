@@ -63,7 +63,7 @@
     PS C:\> .\chalice.ps1 -Action ResetTeams -WhatIf      # Preview the Teams cache reset
 
 .NOTES
-    Version : 6.2
+    Version : 6.3
 
 #>
 
@@ -1775,7 +1775,7 @@ function Build-ChaliceReport {
       <tbody>$($aRows.ToString())</tbody></table></div>
   </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'C.H.A.L.I.C.E. v6.2')
+"@ + (Get-TKHtmlFoot -ScriptName 'C.H.A.L.I.C.E. v6.3')
     return $html
 }
 

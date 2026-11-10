@@ -34,7 +34,7 @@
     PS C:\> .\sphinx.ps1 -Unattended -Action StaleReport   # Export stale accounts HTML report silently
 
 .NOTES
-    Version : 6.2
+    Version : 6.3
 
 #>
 
@@ -1327,7 +1327,7 @@ function Export-StaleReport {
   </table>
 </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'S.P.H.I.N.X. v6.2')
+"@ + (Get-TKHtmlFoot -ScriptName 'S.P.H.I.N.X. v6.3')
 
     $reportFilename = "SPHINX_Stale_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
     $reportPath     = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) $reportFilename
@@ -1634,7 +1634,7 @@ function Export-PasswordExpiryReport {
   </table>
 </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'S.P.H.I.N.X. v6.2')
+"@ + (Get-TKHtmlFoot -ScriptName 'S.P.H.I.N.X. v6.3')
 
     $reportFilename = "SPHINX_PwdExpiry_$(Get-Date -Format 'yyyyMMdd_HHmmss').html"
     $reportPath     = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) $reportFilename

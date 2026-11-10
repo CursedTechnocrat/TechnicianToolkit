@@ -63,7 +63,7 @@
     PS C:\> .\carillon.ps1 -Unattended         # Silent: sign in, audit, export
 
 .NOTES
-    Version : 6.2
+    Version : 6.3
 
 #>
 
@@ -1767,7 +1767,7 @@ function Build-CarillonReport {
       <tbody>$($rRows.ToString())</tbody></table></div>
   </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'C.A.R.I.L.L.O.N. v6.2')
+"@ + (Get-TKHtmlFoot -ScriptName 'C.A.R.I.L.L.O.N. v6.3')
 
     return $html
 }

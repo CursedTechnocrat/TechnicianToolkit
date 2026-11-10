@@ -37,7 +37,7 @@
     PS C:\> .\auspex.ps1 -Unattended        # Silent mode — no prompts, no banner
 
 .NOTES
-    Version : 6.2
+    Version : 6.3
 
 #>
 
@@ -1711,7 +1711,7 @@ $memHtml
     </div>
   </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'A.U.S.P.E.X. v6.2')
+"@ + (Get-TKHtmlFoot -ScriptName 'A.U.S.P.E.X. v6.3')
 
 try {
     $htmlReport | Out-File -FilePath $reportPath -Encoding UTF8 -Force
