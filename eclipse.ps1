@@ -498,6 +498,30 @@ function Resolve-LogDirectory {
     }
     return $FallbackPath
 }
+
+function Get-TKLastSignIn {
+    <#
+    .SYNOPSIS
+        The latest sign-in of any kind from a Graph signInActivity, or $null.
+    .DESCRIPTION
+        lastSignInDateTime counts interactive sign-ins only. An account that only
+        refreshes tokens (mobile Outlook, Teams on a phone, a service account) can
+        go months without one while in daily use, so it read as inactive. This
+        takes the latest of the interactive, non-interactive and last-successful
+        timestamps.
+    #>
+    param($Activity)
+    if ($null -eq $Activity) { return $null }
+    $latest = $null
+    foreach ($name in 'LastSignInDateTime', 'LastNonInteractiveSignInDateTime', 'LastSuccessfulSignInDateTime') {
+        $raw = $Activity.$name
+        if ($null -eq $raw -or "$raw" -eq '') { continue }
+        try { $t = [datetime]$raw } catch { continue }
+        if ($t -eq [datetime]::MinValue -or $t.Year -lt 2000) { continue }
+        if ($null -eq $latest -or $t -gt $latest) { $latest = $t }
+    }
+    return $latest
+}
 #endregion TK-SHARED
 
 if ($PSScriptRoot) {
@@ -677,8 +701,8 @@ function Get-GuestAudit {
     $rows = foreach ($g in $guests) {
         $lastSignIn   = $null
         $daysInactive = $null
-        if ($g.SignInActivity -and $g.SignInActivity.LastSignInDateTime) {
-            $lastSignIn   = [datetime]$g.SignInActivity.LastSignInDateTime
+        $lastSignIn = Get-TKLastSignIn -Activity $g.SignInActivity
+        if ($lastSignIn) {
             $daysInactive = [math]::Round(($now - $lastSignIn).TotalDays, 0)
         }
 
@@ -847,8 +871,8 @@ function Get-StaleAdminAudit {
 
         $lastSignIn   = $null
         $daysInactive = $null
-        if ($u.SignInActivity -and $u.SignInActivity.LastSignInDateTime) {
-            $lastSignIn   = [datetime]$u.SignInActivity.LastSignInDateTime
+        $lastSignIn = Get-TKLastSignIn -Activity $u.SignInActivity
+        if ($lastSignIn) {
             $daysInactive = [math]::Round(($now - $lastSignIn).TotalDays, 0)
         }
 

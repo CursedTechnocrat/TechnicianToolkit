@@ -331,16 +331,46 @@ function Get-OneDriveBusinessPath {
         Where-Object { $_.Name -like 'OneDrive*' } |
         Select-Object -First 1
 
-    return if ($match) { $match.FullName } else { $null }
+    if ($match) { return $match.FullName }
+    return $null
 }
 
 function Test-KnownFolderMove {
+    <#
+    Known Folder Move redirects Desktop / Documents into the OneDrive folder.
+    The old check compared <Profile>\Desktop with the OneDrive path, which can
+    never match, so the duplicate warning never fired. For the signed-in user
+    the redirected location is read from User Shell Folders; for any other
+    profile (whose registry hive is not loaded) KFM is inferred when OneDrive
+    holds a Desktop or Documents folder and the profile's own copy has no files.
+    #>
     param([string]$ProfileRoot)
-    $desktop   = Join-Path $ProfileRoot 'Desktop'
-    $documents = Join-Path $ProfileRoot 'Documents'
-    $oneDrive  = Get-OneDriveBusinessPath -ProfileRoot $ProfileRoot
+    $oneDrive = Get-OneDriveBusinessPath -ProfileRoot $ProfileRoot
     if (-not $oneDrive) { return $false }
-    return ($desktop -like "$oneDrive*") -or ($documents -like "$oneDrive*")
+    $oneDrive = $oneDrive.TrimEnd('\')
+
+    if ($ProfileRoot -ieq $env:USERPROFILE) {
+        $usf = Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders' -ErrorAction SilentlyContinue
+        if ($usf) {
+            foreach ($name in 'Desktop', 'Personal') {
+                $raw = "$($usf.$name)"
+                if (-not $raw) { continue }
+                $path = [Environment]::ExpandEnvironmentVariables($raw).TrimEnd('\')
+                if ($path -like "$oneDrive\*" -or $path -ieq $oneDrive) { return $true }
+            }
+            return $false
+        }
+    }
+
+    foreach ($name in 'Desktop', 'Documents') {
+        $inOneDrive = Join-Path $oneDrive $name
+        if (-not (Test-Path -LiteralPath $inOneDrive -PathType Container)) { continue }
+        $local = Join-Path $ProfileRoot $name
+        $localFiles = @(Get-ChildItem -LiteralPath $local -File -Recurse -Force -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -ne 'desktop.ini' } | Select-Object -First 1)
+        if ($localFiles.Count -eq 0) { return $true }
+    }
+    return $false
 }
 
 function Get-FolderSizeMB {

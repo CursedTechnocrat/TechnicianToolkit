@@ -669,20 +669,32 @@ function Get-DefenderState {
         IsTamperProtected              = [bool]$s.IsTamperProtected
         AntivirusSignatureVersion      = $s.AntivirusSignatureVersion
         AntivirusSignatureLastUpdated  = $s.AntivirusSignatureLastUpdated
-        AntivirusSignatureAge          = $s.AntivirusSignatureAge
+        AntivirusSignatureAge          = ConvertTo-GriffinAge $s.AntivirusSignatureAge
         AntispywareSignatureVersion    = $s.AntispywareSignatureVersion
         AntispywareSignatureLastUpdated= $s.AntispywareSignatureLastUpdated
-        AntispywareSignatureAge        = $s.AntispywareSignatureAge
+        AntispywareSignatureAge        = ConvertTo-GriffinAge $s.AntispywareSignatureAge
         NISSignatureVersion            = $s.NISSignatureVersion
         NISSignatureLastUpdated        = $s.NISSignatureLastUpdated
-        NISSignatureAge                = $s.NISSignatureAge
+        NISSignatureAge                = ConvertTo-GriffinAge $s.NISSignatureAge
         QuickScanStartTime             = $s.QuickScanStartTime
         QuickScanEndTime               = $s.QuickScanEndTime
-        QuickScanAge                   = $s.QuickScanAge
+        QuickScanAge                   = ConvertTo-GriffinAge $s.QuickScanAge
         FullScanStartTime              = $s.FullScanStartTime
         FullScanEndTime                = $s.FullScanEndTime
-        FullScanAge                    = $s.FullScanAge
+        FullScanAge                    = ConvertTo-GriffinAge $s.FullScanAge
     }
+}
+
+function ConvertTo-GriffinAge {
+    # Get-MpComputerStatus reports a scan or update that never happened as
+    # UInt32.MaxValue (4294967295), which read as "4294967295 day(s) ago".
+    # Anything beyond a century is that sentinel; it becomes $null ("never").
+    param($Days)
+    if ($null -eq $Days) { return $null }
+    $d = 0.0
+    if (-not [double]::TryParse("$Days", [ref]$d)) { return $null }
+    if ($d -lt 0 -or $d -gt 36500) { return $null }
+    return [int64]$d
 }
 
 function Get-DefenderPreference {
@@ -1049,6 +1061,8 @@ function Get-GriffinVerdict {
     if (-not $State.NISEnabled)                        { $warns.Add('Network Inspection (NIS) is off.') }
     if ($null -ne $State.QuickScanAge -and $State.QuickScanAge -gt 7) {
         $warns.Add("Last quick scan was $($State.QuickScanAge) day(s) ago.")
+    } elseif ($null -eq $State.QuickScanAge) {
+        $warns.Add('No quick scan recorded on this machine.')
     }
     if ($null -ne $State.FullScanAge -and $State.FullScanAge -gt 30) {
         $warns.Add("Last full scan was $($State.FullScanAge) day(s) ago.")
@@ -1187,7 +1201,7 @@ function Build-GriffinReport {
 
     # Signature age cell helper
     function _ageBadge { param($age, $maxOk, $maxWarn)
-        if ($null -eq $age) { return "<span class='tk-badge-warn'>Unknown</span>" }
+        if ($null -eq $age) { return "<span class='tk-badge-warn'>Never / unknown</span>" }
         if ($age -le $maxOk)   { return "<span class='tk-badge-ok'>$age day(s)</span>" }
         if ($age -le $maxWarn) { return "<span class='tk-badge-warn'>$age day(s)</span>" }
         return "<span class='tk-badge-err'>$age day(s)</span>"
@@ -1334,7 +1348,8 @@ function Build-GriffinReport {
     # Summary cards
     $rtClass = if ($State.RealTimeProtectionEnabled) { 'ok' } else { 'err' }
     $tpClass = if ($State.IsTamperProtected -or $State.TamperProtected) { 'ok' } else { 'err' }
-    $sigClass = if ($State.AntivirusSignatureAge -le $SignatureMaxAgeDays) { 'ok' }
+    $sigClass = if ($null -eq $State.AntivirusSignatureAge) { 'warn' }
+                elseif ($State.AntivirusSignatureAge -le $SignatureMaxAgeDays) { 'ok' }
                 elseif ($State.AntivirusSignatureAge -le ($SignatureMaxAgeDays * 2)) { 'warn' }
                 else { 'err' }
     $threatClass = if ($Threats.UnresolvedHigh -gt 0) { 'err' } elseif ($Threats.Threats.Count -gt 0) { 'warn' } else { 'ok' }

@@ -284,6 +284,17 @@ function Remove-FolderContents {
                         Measure-Object -Property Length -Sum -ErrorAction SilentlyContinue).Sum
                 } else { $item.Length }
                 Remove-Item -Path $item.FullName -Recurse -Force -ErrorAction SilentlyContinue
+                # Count only what actually went: locked files stay behind, and a
+                # folder may be partly emptied.
+                if (Test-Path -LiteralPath $item.FullName) {
+                    if ($item.PSIsContainer) {
+                        $left = (Get-ChildItem -LiteralPath $item.FullName -Recurse -Force -File -ErrorAction SilentlyContinue |
+                            Measure-Object -Property Length -Sum -ErrorAction SilentlyContinue).Sum
+                        $size = [math]::Max(0, [double]$size - [double]$left)
+                    } else {
+                        $size = 0
+                    }
+                }
                 $freed += $size
             } catch {}
         }
@@ -356,14 +367,15 @@ $sysTempSize     = Get-FolderSize -Paths $sysTempPaths
 $wuCacheSize     = Get-FolderSize -Paths $wuCachePaths
 $browserCacheSize = Get-FolderSize -Paths $browserCachePaths
 
-$recycleBinSize = 0
-try {
-    $shell = New-Object -ComObject Shell.Application
-    $bin   = $shell.Namespace(0xA)
-    if ($bin) {
-        $recycleBinSize = ($bin.Items() | ForEach-Object { $_.Size } | Measure-Object -Sum).Sum
-    }
-} catch {}
+function Get-RecycleBinSize {
+    try {
+        $shell = New-Object -ComObject Shell.Application
+        $bin   = $shell.Namespace(0xA)
+        if ($bin) { return [double](($bin.Items() | ForEach-Object { $_.Size } | Measure-Object -Sum).Sum) }
+    } catch {}
+    return 0
+}
+$recycleBinSize = Get-RecycleBinSize
 
 Write-Host ""
 Write-Host "  Cleanup categories:" -ForegroundColor $ColorSchema.Header
@@ -399,8 +411,10 @@ function Run-Category {
         return
     }
     Write-Host "  [*] Cleaning $Label..." -ForegroundColor $ColorSchema.Progress
-    $freed = & $Action
-    $totalFreed += $freed
+    $freed = [double](& $Action | Select-Object -Last 1)
+    # Script scope: a plain += inside this function only changed a local copy,
+    # so the summary always read "Total Space Freed : 0 B".
+    $script:totalFreed += $freed
     Write-Host ("  [+] {0} — freed {1}" -f $Label, (Format-Bytes $freed)) -ForegroundColor $ColorSchema.Success
 }
 
@@ -417,6 +431,12 @@ Run-Category -ShouldRun ($runAll -or $selections -contains '3') -Label "Windows 
     $wuSvc = Get-Service -Name wuauserv -ErrorAction SilentlyContinue
     $wasRunning = $wuSvc -and $wuSvc.Status -eq 'Running'
     if ($wasRunning) { Stop-Service -Name wuauserv -Force -ErrorAction SilentlyContinue }
+    if ((Get-Service -Name wuauserv -ErrorAction SilentlyContinue).Status -eq 'Running') {
+        # Clearing the download cache under a running service corrupts in-flight downloads.
+        Write-Host "  [!] Windows Update service would not stop; its cache was left alone." -ForegroundColor $ColorSchema.Warning
+        0
+        return
+    }
     $freed = Remove-FolderContents -Paths $wuCachePaths -Label "WU Cache"
     if ($wasRunning) { Start-Service -Name wuauserv -ErrorAction SilentlyContinue }
     $freed
@@ -427,7 +447,7 @@ Run-Category -ShouldRun ($runAll -or $selections -contains '4') -Label "Recycle 
     try {
         Clear-RecycleBin -Force -ErrorAction SilentlyContinue
     } catch {}
-    $before
+    [math]::Max(0, $before - (Get-RecycleBinSize))
 }
 
 Run-Category -ShouldRun ($runAll -or $selections -contains '5') -Label "Browser Caches" -Action {

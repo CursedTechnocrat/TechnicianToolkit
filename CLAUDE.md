@@ -165,6 +165,8 @@ Key functions in `shared/TechnicianToolkit.Shared.ps1` (each tool's block holds 
 | `Get-TKNote` / `Clear-TKNote` | Read / reset the session note buffer |
 | `Export-TKNoteReport` | Write the session's notes to a ticket-ready HTML report (with a plain-text paste block) |
 | `Save-TKNoteReport` | End-of-run save: writes `<TOOL>_Notes_<timestamp>.html` to the log directory if the run recorded any notes |
+| `Select-TKLanIPv4Address` / `Get-TKDefaultRouteInterfaceOrder` | Pick the LAN address — the interface carrying the default route (LANTERN, LEYLINE) |
+| `Get-TKLastSignIn` | Latest interactive, non-interactive or successful sign-in from a Graph `signInActivity` (ALMANAC, ECLIPSE) |
 | `EscHtml` | HTML-escape a string for use in report templates |
 | `Get-TKHtmlCss` | Returns the shared `<style>` block — rarely called directly |
 | `Get-TKHtmlHead` | Returns `<!DOCTYPE html>…<div class="tk-main">` with shared CSS, page header, and nav bar |

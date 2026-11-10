@@ -1142,7 +1142,7 @@ if ($IncludeExchange -and $ExoAvailable) {
     # Send-as / send-on-behalf delegations to the group (only mail-enabled groups).
     if ($IsMailEnabled) {
         try {
-            $recipients = @(Get-RecipientPermission -Trustee $GroupSmtp -ErrorAction SilentlyContinue)
+            $recipients = @(Get-RecipientPermission -Trustee $GroupSmtp -ResultSize Unlimited -ErrorAction SilentlyContinue)
             foreach ($p in $recipients) {
                 $EXOSendAsHits.Add([PSCustomObject]@{
                     Identity = $p.Identity

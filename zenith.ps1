@@ -793,9 +793,15 @@ Write-Step "Azure Policy compliance..."
 $nonCompliantPolicies = @()
 $totalPolicyStates    = 0
 try {
-    $nonCompliantPolicies = @(Get-AzPolicyState -Filter "complianceState eq 'NonCompliant'" -Top 500 -ErrorAction Stop |
-        Select-Object PolicyDefinitionName, ResourceId, PolicyAssignmentName -Unique)
+    # The cap is applied before de-duplication; when it is hit the count is a
+    # floor, not a total, and the report says so (it used to stop silently at 500).
+    $policyCap = 5000
+    $rawStates = @(Get-AzPolicyState -Filter "complianceState eq 'NonCompliant'" -Top $policyCap -ErrorAction Stop)
+    $nonCompliantPolicies = @($rawStates | Select-Object PolicyDefinitionName, ResourceId, PolicyAssignmentName -Unique)
     $totalPolicyStates = $nonCompliantPolicies.Count
+    if ($rawStates.Count -ge $policyCap) {
+        Write-Warn "Policy results reached the $policyCap-record cap; the non-compliant count below is a minimum."
+    }
 } catch {
     Write-Warn "Policy compliance data unavailable (requires Az.PolicyInsights and Reader+ access)"
 }

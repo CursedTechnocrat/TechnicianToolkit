@@ -720,19 +720,19 @@ function Get-EventErrors {
     if ($script:RemoteTarget) {
         $target = $script:RemoteTarget
         $sysErrors = try {
-            Get-WinEvent -FilterHashtable @{ LogName = 'System'; Level = 2; StartTime = $since } -MaxEvents 50 -ComputerName $target -ErrorAction Stop
+            Get-WinEvent -FilterHashtable @{ LogName = 'System'; Level = 1, 2; StartTime = $since } -MaxEvents 50 -ComputerName $target -ErrorAction Stop
         } catch { @() }
 
         $appErrors = try {
-            Get-WinEvent -FilterHashtable @{ LogName = 'Application'; Level = 2; StartTime = $since } -MaxEvents 50 -ComputerName $target -ErrorAction Stop
+            Get-WinEvent -FilterHashtable @{ LogName = 'Application'; Level = 1, 2; StartTime = $since } -MaxEvents 50 -ComputerName $target -ErrorAction Stop
         } catch { @() }
     } else {
         $sysErrors = try {
-            Get-WinEvent -FilterHashtable @{ LogName = 'System'; Level = 2; StartTime = $since } -MaxEvents 50 -ErrorAction Stop
+            Get-WinEvent -FilterHashtable @{ LogName = 'System'; Level = 1, 2; StartTime = $since } -MaxEvents 50 -ErrorAction Stop
         } catch { @() }
 
         $appErrors = try {
-            Get-WinEvent -FilterHashtable @{ LogName = 'Application'; Level = 2; StartTime = $since } -MaxEvents 50 -ErrorAction Stop
+            Get-WinEvent -FilterHashtable @{ LogName = 'Application'; Level = 1, 2; StartTime = $since } -MaxEvents 50 -ErrorAction Stop
         } catch { @() }
     }
 

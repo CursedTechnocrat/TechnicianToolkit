@@ -573,19 +573,32 @@ function Show-AnvilBanner {
 # SECTION 1 — SYSTEM IDENTITY + BIOS
 # ─────────────────────────────────────────────────────────────────────────────
 
+function ConvertTo-AnvilBiosDate {
+    # Get-CimInstance already returns Win32_BIOS.ReleaseDate as a [datetime];
+    # only the old Get-WmiObject gave the DMTF string ("20171115000000.000000+000").
+    # Converting the [datetime] as DMTF threw, which left every BIOS date unknown.
+    param($Value)
+    if ($null -eq $Value) { return $null }
+    if ($Value -is [datetime]) { return $Value }
+    $text = "$Value".Trim()
+    if (-not $text) { return $null }
+    $parsed = [datetime]::MinValue
+    if ($text -match '^\d{14}\.') {
+        # DMTF: the date is the first eight digits; the time and UTC offset are not needed.
+        if ([datetime]::TryParseExact($text.Substring(0, 8), 'yyyyMMdd', [Globalization.CultureInfo]::InvariantCulture,
+                [Globalization.DateTimeStyles]::None, [ref]$parsed)) { return $parsed }
+        return $null
+    }
+    if ([datetime]::TryParse($text, [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::None, [ref]$parsed)) { return $parsed }
+    return $null
+}
+
 function Get-SystemInfo {
     $cs   = Get-CimInstance -ClassName Win32_ComputerSystem       -ErrorAction SilentlyContinue
     $bios = Get-CimInstance -ClassName Win32_BIOS                 -ErrorAction SilentlyContinue
     $sys  = Get-CimInstance -ClassName Win32_ComputerSystemProduct -ErrorAction SilentlyContinue
 
-    $releaseDate = $null
-    if ($bios -and $bios.ReleaseDate) {
-        try {
-            $releaseDate = [Management.ManagementDateTimeConverter]::ToDateTime($bios.ReleaseDate)
-        } catch {
-            # Date parse failures happen on some virtualised BIOSes; leave $null.
-        }
-    }
+    $releaseDate = if ($bios) { ConvertTo-AnvilBiosDate -Value $bios.ReleaseDate } else { $null }
 
     $biosAgeDays = if ($releaseDate) { [math]::Round(((Get-Date) - $releaseDate).TotalDays, 0) } else { $null }
 
@@ -621,11 +634,13 @@ function Get-SystemInfo {
 function Get-UefiPosture {
     $bootMode = 'Unknown'
     try {
-        # PartitionStyle GPT on the system disk is a decent proxy for UEFI boot.
-        $sys = Get-Disk -Number ([int](Get-CimInstance -ClassName Win32_OperatingSystem).SystemDevice.Replace('\\.\PHYSICALDRIVE','')) -ErrorAction SilentlyContinue
-        if (-not $sys) { $sys = Get-Disk | Where-Object { $_.IsSystem } | Select-Object -First 1 }
+        # PartitionStyle GPT on the boot disk is a decent proxy for UEFI boot. The
+        # disk is found by its IsBoot / IsSystem flags: Win32_OperatingSystem's
+        # SystemDevice is a volume path (\Device\HarddiskVolumeN), not a drive
+        # number, so parsing a number out of it always threw.
+        $sys = Get-Disk -ErrorAction Stop | Where-Object { $_.IsBoot -or $_.IsSystem } | Select-Object -First 1
         if ($sys) {
-            $bootMode = if ($sys.PartitionStyle -eq 'GPT') { 'UEFI' } else { 'Legacy/BIOS' }
+            $bootMode = if ("$($sys.PartitionStyle)" -eq 'GPT') { 'UEFI' } else { 'Legacy/BIOS' }
         }
     } catch {
         # Fall through to $bootMode = 'Unknown'.
@@ -653,6 +668,10 @@ function Get-UefiPosture {
         # Confirm-SecureBootUEFI requires UEFI firmware; on legacy BIOS it throws.
         $secureBoot = $null
     }
+
+    # The firmware type Windows records is authoritative; the disk is a fallback.
+    if ($firmwareType -eq 'UEFI') { $bootMode = 'UEFI' }
+    elseif ($firmwareType -eq 'BIOS (legacy)') { $bootMode = 'Legacy/BIOS' }
 
     return [PSCustomObject]@{
         BootMode         = $bootMode

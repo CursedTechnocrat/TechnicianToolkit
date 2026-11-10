@@ -74,6 +74,65 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   device with itself. It also re-queried every device for every driver; the status is now read
   once. The device audit no longer dumps raw `Win32_PnPEntity` objects after its formatted list,
   and RUNEPRESS no longer prints a stray `True`.
+- **EMBALM and REVENANT never found OneDrive by folder scan.** `return if (...)` is not valid
+  PowerShell (it looks for a command named `if`), so whenever the profile was not the signed-in
+  technician's, OneDrive detection threw and item 12 was skipped. REVENANT then passed the
+  wildcard `OneDrive - *` to robocopy, which cannot take one.
+- **The Known Folder Move warning in EMBALM and REVENANT never fired.** It compared
+  `<profile>\Desktop` with the OneDrive path, which can never match. It now reads the redirected
+  location from User Shell Folders for the signed-in user. For any other profile, it infers Known
+  Folder Move when OneDrive holds a Desktop or Documents folder and the profile's own copy is empty.
+- **PHYLACTERY reported every folder as redirected** on machines without OneDrive for Business:
+  with `%OneDriveCommercial%` unset, `-like "$env:OneDriveCommercial*"` is `-like "*"`. Its
+  "safe to hand over" verdict could be wrong as a result.
+- **REVENANT** now logs a robocopy fatal error (exit 16) as Failed, not Partial.
+- **CLEANSE always reported "Total Space Freed : 0 B"**: the total was only added to inside a
+  function. Space is also now counted only for files that were actually deleted (locked files
+  used to count), the Recycle Bin figure is measured after emptying, and the Windows Update cache
+  is left alone if the update service will not stop.
+- **FATHOM** counted locked temp files as freed and could clear the Windows Update cache with the
+  service still running. Its old-profile list used the profile folder's own timestamp, which
+  rarely changes while the profile is in use, so active profiles were listed as removal
+  candidates. It now uses the later of `Win32_UserProfile.LastUseTime` and `NTUSER.DAT`, and
+  never lists a loaded profile.
+- **ANVIL never read the BIOS date**, so the *BIOS is N years old* warning never fired:
+  `Get-CimInstance` already returns a `[datetime]`, and converting it as a DMTF string threw. It
+  also always reported boot mode "Unknown". It now trusts the firmware type Windows records, and
+  falls back to the partition style of the boot disk.
+- **AUGUR showed Serial and Firmware as N/A on every disk** (a string key looked up against a
+  UInt32 one), and could credit one disk's SMART failure prediction to another. SMART results
+  are now matched by the disk's PNP device ID, and a Warning disk is coloured yellow, not red.
+- **VIGIL collected only Error events, never Critical ones**, so Kernel-Power 41 unexpected
+  shutdowns did not appear.
+- **AUSPEX reported "1 unprotected"** when a third-party antivirus had put Defender into passive
+  mode. Passive Defender is now shown as Passive, the real-time state of third-party products is
+  read from `productState`, and the badge goes red only when nothing is protecting the machine.
+- **GRIFFIN showed a scan that never ran as "4294967295 day(s) ago"**, Defender's never-run
+  marker. Such scans and signature ages now read as never, and a missing quick scan is flagged.
+- **LEYLINE's ping sweep never sent a ping.** `Test-Connection -TimeoutSeconds -AsJob` fails on
+  both Windows PowerShell 5.1 (no `-TimeoutSeconds`) and PowerShell 7 (no `-AsJob`). It now uses
+  .NET's async ping, which works on both.
+- **LANTERN and LEYLINE could sweep the wrong network.** They took the address with the longest
+  prefix, which on many laptops is a VPN (/32) or a Hyper-V / WSL adapter. Both now take the
+  interface that carries the default route (the shared helper `Select-TKLanIPv4Address`), and
+  LANTERN says when the LAN is larger than the /24 it sweeps.
+- **ASTERISM's guest count was always 0** and disabled owners counted as enabled: Graph does not
+  return `userType` or `accountEnabled` unless asked for. A team whose owners could not be read
+  (throttling, permissions) is no longer reported as orphaned.
+- **ALMANAC and ECLIPSE flagged active users as inactive** when they sign in only
+  non-interactively (token refresh, mobile Outlook, service accounts). Inactivity now uses the
+  latest interactive, non-interactive or successful sign-in (shared helper `Get-TKLastSignIn`).
+- **ZENITH** stopped at 500 non-compliant policy states without saying so. The cap is now 5000,
+  with a warning when it is reached. **ORRERY's** send-as lookup now passes
+  `-ResultSize Unlimited` (it stopped at 1000).
+- **SCRYER** rounded uptime days up ("1d 18h" showed as "2d 18h"). Its admin flags could also
+  all read False when the Administrators group held an orphaned SID. The group is now read by its
+  well-known SID, so this also works on non-English Windows, with an ADSI fallback and a warning
+  if both fail.
+- **HEARTH** looked for the `Microsoft.Graph` and `Az` roll-up modules. ALMANAC and ZENITH load
+  submodules, so a technician with only those installed was told the tools could not run. HEARTH
+  now checks each tool's own module list and says which modules are missing. A Pester test keeps
+  the lists in step.
 
 ---
 

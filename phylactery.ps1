@@ -588,6 +588,23 @@ $script:KfmFolders = @(
     @{ Label = 'Pictures';  ShellName = 'My Pictures' }
 )
 
+function Test-PathUnderOneDrive {
+    # True when Path sits inside one of the OneDrive roots, or in a folder named
+    # OneDrive*. An unset root is skipped: "$env:OneDriveCommercial*" with the
+    # variable empty is just "*", which matched every path and reported every
+    # folder as redirected on machines without OneDrive for Business.
+    param([string]$Path, [string[]]$Roots = @())
+    if ([string]::IsNullOrWhiteSpace($Path)) { return $false }
+    $p = $Path.TrimEnd('\')
+    if ($p -match '(?i)\\OneDrive[^\\]*(\\|$)') { return $true }
+    foreach ($r in $Roots) {
+        if ([string]::IsNullOrWhiteSpace($r)) { continue }
+        $root = $r.TrimEnd('\')
+        if ($p -ieq $root -or $p.StartsWith("$root\", [StringComparison]::OrdinalIgnoreCase)) { return $true }
+    }
+    return $false
+}
+
 function Get-KfmStatus {
     $shellKey = 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders'
     $results = foreach ($folder in $script:KfmFolders) {
@@ -601,9 +618,7 @@ function Get-KfmStatus {
 
         $inOneDrive = $false
         if ($path) {
-            $inOneDrive = ($path -match '(?i)\\OneDrive') -or
-                          ($path -like "$env:OneDrive*") -or
-                          ($path -like "$env:OneDriveCommercial*")
+            $inOneDrive = Test-PathUnderOneDrive -Path $path -Roots @($env:OneDrive, $env:OneDriveCommercial)
         }
 
         [PSCustomObject]@{

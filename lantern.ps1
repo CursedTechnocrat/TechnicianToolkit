@@ -421,6 +421,40 @@ function Assert-AdminPrivilege {
         exit 1
     }
 }
+
+function Select-TKLanIPv4Address {
+    <#
+    Picks the IPv4 address of the LAN the machine sits on: the interface that
+    carries the default route (lowest route + interface metric first), skipping
+    loopback, APIPA and /32 host routes. The old pick - the address with the
+    longest prefix - chose a VPN (/32) or a Hyper-V / WSL vEthernet adapter on
+    many laptops and swept the wrong network.
+    #>
+    param([object[]]$Addresses, [int[]]$GatewayInterfaceOrder = @())
+    $candidates = @($Addresses | Where-Object {
+        $_.IPAddress -and
+        $_.IPAddress -notmatch '^127\.' -and
+        $_.IPAddress -notmatch '^169\.254\.' -and
+        "$($_.PrefixOrigin)" -ne 'WellKnown' -and
+        [int]$_.PrefixLength -lt 32
+    })
+    if ($candidates.Count -eq 0) { return $null }
+    foreach ($ifIndex in $GatewayInterfaceOrder) {
+        $hit = $candidates | Where-Object { [int]$_.InterfaceIndex -eq $ifIndex } | Select-Object -First 1
+        if ($hit) { return $hit }
+    }
+    # No default route at all: fall back to a private-range address, then any.
+    $private = $candidates | Where-Object { $_.IPAddress -match '^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)' } | Select-Object -First 1
+    if ($private) { return $private }
+    return $candidates | Select-Object -First 1
+}
+
+function Get-TKDefaultRouteInterfaceOrder {
+    $routes = @(Get-NetRoute -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue)
+    $metric = @{}
+    foreach ($i in @(Get-NetIPInterface -AddressFamily IPv4 -ErrorAction SilentlyContinue)) { $metric[[int]$i.InterfaceIndex] = [int]$i.InterfaceMetric }
+    return @($routes | Sort-Object { [int]$_.RouteMetric + [int]$metric[[int]$_.InterfaceIndex] } | ForEach-Object { [int]$_.InterfaceIndex } | Select-Object -Unique)
+}
 #endregion TK-SHARED
 Assert-AdminPrivilege
 
@@ -497,16 +531,10 @@ function Test-TCPPort {
 }
 
 function Get-LocalSubnetPrefix {
-    $ip = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
-          Where-Object {
-              $_.IPAddress -notmatch '^127\.' -and
-              $_.IPAddress -notmatch '^169\.254\.' -and
-              $_.PrefixOrigin -ne 'WellKnown'
-          } |
-          Sort-Object -Property PrefixLength -Descending |
-          Select-Object -First 1
-
+    $ip = Select-TKLanIPv4Address -Addresses @(Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue) `
+                                -GatewayInterfaceOrder (Get-TKDefaultRouteInterfaceOrder)
     if (-not $ip) { return $null }
+    $script:LanAddress = $ip
     $parts = $ip.IPAddress -split '\.'
     return ($parts[0..2] -join '.')
 }
@@ -525,7 +553,10 @@ function Invoke-SubnetSweep {
         return
     }
 
-    Write-Host ("  [*] Local subnet detected: {0}.0/24" -f $prefix) -ForegroundColor $C.Info
+    Write-Host ("  [*] Local subnet detected: {0}.0/24  (via {1}, {2}/{3})" -f $prefix, $script:LanAddress.InterfaceAlias, $script:LanAddress.IPAddress, $script:LanAddress.PrefixLength) -ForegroundColor $C.Info
+    if ([int]$script:LanAddress.PrefixLength -lt 24) {
+        Write-Host ("  [!] The network is a /{0}; only the /24 around this machine is swept." -f $script:LanAddress.PrefixLength) -ForegroundColor $C.Warning
+    }
     Write-Host ("  [*] Sweeping {0}.1 – {0}.254 using parallel ping jobs..." -f $prefix) -ForegroundColor $C.Progress
     Write-Host ""
 
