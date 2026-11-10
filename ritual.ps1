@@ -865,6 +865,9 @@ function Invoke-RecipeStep {
         # Use & with the script path so each step runs in its own variable scope.
         # The child script's -Unattended flag lives in $Step.Args; RITUAL itself is
         # always unattended toward children regardless of its own -Unattended state.
+        # Reset first: $LASTEXITCODE otherwise still holds the previous step's (or a
+        # native command's) value, so a clean step after a failed one read as Failed.
+        $global:LASTEXITCODE = 0
         & $toolPath @($Step.Args)
         if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) {
             $exitCode = $LASTEXITCODE

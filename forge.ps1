@@ -341,6 +341,12 @@ function Invoke-WindowsUpdateDrivers {
 
     try {
         if (-not (Get-Module -ListAvailable -Name PSWindowsUpdate -ErrorAction SilentlyContinue)) {
+            if ($WhatIf) {
+                # Installing the module is itself a change, so a dry run stops here.
+                Write-Host "  [~] WhatIf: PSWindowsUpdate would be installed from the PowerShell Gallery, then driver updates listed." -ForegroundColor Cyan
+                Write-Host "      It is not installed, so the available driver updates cannot be listed in a dry run." -ForegroundColor $C.Info
+                return
+            }
             Write-Host "  [*] Installing PSWindowsUpdate module..." -ForegroundColor $C.Progress
             Install-Module -Name PSWindowsUpdate -Force -Scope CurrentUser -ErrorAction Stop
         }
@@ -532,10 +538,17 @@ function Export-DriverReport {
     $logPath = Join-Path (Resolve-LogDirectory -FallbackPath $ScriptPath) ("FORGE_DriverReport_{0}.csv" -f (Get-Date -Format 'yyyyMMdd_HHmmss'))
 
     try {
+        # Device status by name, read once. The old per-row lookup compared each
+        # Win32_PnPEntity with itself ($_ was the inner object), so it returned
+        # the first device's status for every driver, and re-queried every row.
+        $statusByName = @{}
+        foreach ($e in @(Get-CimInstance -ClassName Win32_PnPEntity -ErrorAction SilentlyContinue)) {
+            if ($e.Name -and -not $statusByName.ContainsKey($e.Name)) { $statusByName[$e.Name] = $e.Status }
+        }
         $drivers = Get-CimInstance -ClassName Win32_PnPSignedDriver -ErrorAction SilentlyContinue |
                    Where-Object { $_.DeviceName } |
                    Select-Object DeviceName, DriverVersion, DriverDate, Manufacturer,
-                                 @{N='Status'; E={ (Get-CimInstance -ClassName Win32_PnPEntity | Where-Object { $_.Name -eq $_.DeviceName } | Select-Object -First 1).Status }} |
+                                 @{N='Status'; E={ $statusByName[$_.DeviceName] }} |
                    Sort-Object DeviceName
 
         $drivers | Export-Csv -Path $logPath -NoTypeInformation -Encoding UTF8
@@ -554,7 +567,7 @@ function Export-DriverReport {
 if ($Unattended) {
     Show-ForgeBanner
     switch ($Action) {
-        'Audit'         { Invoke-DeviceAudit }
+        'Audit'         { $null = Invoke-DeviceAudit }
         'WindowsUpdate' { Invoke-WindowsUpdateDrivers }
         'LocalInstall'  { Invoke-LocalDriverInstall }
         'Report'        { Export-DriverReport }
@@ -579,7 +592,7 @@ if ($Unattended) {
         $choice = (Read-Host).Trim().ToUpper()
 
         switch ($choice) {
-            '1' { Invoke-DeviceAudit }
+            '1' { $null = Invoke-DeviceAudit }
             '2' { Invoke-WindowsUpdateDrivers }
             '3' { Invoke-LocalDriverInstall }
             '4' { Export-DriverReport }

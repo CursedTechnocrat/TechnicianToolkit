@@ -1452,10 +1452,17 @@ function Invoke-ChaliceResetSignIn {
             continue
         }
         $backup = Export-RegistryBackup -Key $k.Key -Label $k.Label
+        if (-not $backup) {
+            # No backup, no delete: these keys hold the user's Office identities and
+            # licence state, and removing them with nothing to restore from is not undoable.
+            Write-Fail "Could not back up $($k.Key); leaving it in place. Check that the log directory is writable."
+            Add-ChaliceAction -Step "Clear $($k.Label) cache" -Status 'Skipped' -Detail 'Registry backup failed, so the key was not removed.'
+            continue
+        }
         try {
             Remove-Item -Path $k.Key -Recurse -Force -ErrorAction Stop
-            Write-Ok "Cleared $($k.Key)$(if ($backup) { " (backup: $backup)" })"
-            Add-ChaliceAction -Step "Clear $($k.Label) cache" -Status 'Done' -Detail $(if ($backup) { "Backup: $backup" } else { 'No backup written' })
+            Write-Ok "Cleared $($k.Key) (backup: $backup)"
+            Add-ChaliceAction -Step "Clear $($k.Label) cache" -Status 'Done' -Detail "Backup: $backup"
         } catch {
             Write-Fail "Could not clear $($k.Key): $($_.Exception.Message)"
             Add-ChaliceAction -Step "Clear $($k.Label) cache" -Status 'Failed' -Detail $_.Exception.Message

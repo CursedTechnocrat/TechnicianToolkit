@@ -26,6 +26,54 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   on a machine that had errors. Such events are now listed with a placeholder message.
 - AUSPEX's Hardware section now HTML-escapes the manufacturer, model, serial, CPU and volume
   label values, as the rest of the report already did.
+- **VIGIL restarted a service when told not to.** Answering **N** to *Restart <service>?* still
+  started it, because a `continue` inside a `switch` only leaves the switch. Only **Y** or **A**
+  now starts a service; any other answer skips it.
+- **BASILISK's audit policy never applied.** Every `auditpol` call was missing the `/set` verb, so
+  all five settings were logged as "Skipped – may be overridden by domain policy" and nothing was
+  configured. Subcategories are now given by GUID, which also works on non-English Windows and
+  no longer splits names such as "Account Lockout" into two arguments. A failure is now recorded
+  as Failed with auditpol's own message. `net accounts` failures are no longer recorded as Applied.
+- **BASILISK `-Unattended` no longer disables Remote Desktop.** The default unattended run used to
+  turn RDP off and close its firewall rules, which cuts off a technician working over RDP or an
+  RMM session. An unattended run now leaves RDP as it is. The interactive prompt gained a third
+  choice, *Leave as it is*, which is also what a blank or unrecognised answer now does (it used
+  to disable RDP). A firewall-rule failure is recorded as Skipped rather than Applied.
+- **WHETSTONE left laptops unable to sleep.** It set the sleep timeout to Never for the run but
+  restored only the monitor timeout, and a failed module install exited without restoring
+  either. Both timeouts are now saved and restored exactly, in seconds, on every path, including
+  the early exits. A setting that cannot be read is left unchanged rather than guessed. The
+  values are read by position, not by label, so this works on non-English Windows.
+- **WHETSTONE could hang an unattended run** at PSWindowsUpdate's *Reboot is required. Do it now?*
+  prompt. `Install-WindowsUpdate` now passes `-AcceptAll -IgnoreReboot`, as FORGE already did,
+  and the reboot is decided by WHETSTONE's own logic afterwards.
+- **CHALICE could delete Office sign-in state with no backup.** If the registry export failed (for
+  example, the log directory was not writable), *Reset sign-in* still removed the Identities and
+  Licensing keys. It now leaves a key in place when its backup was not written.
+- **GRIMOIRE looked for tools in the current directory** rather than beside itself. Started from
+  a prompt sitting in `System32`, it found no tools and downloaded every one into `System32`.
+- **RITUAL marked steps from a stale exit code.** `$LASTEXITCODE` was not reset before each step,
+  so a clean step after a failed one was recorded as Failed. COVENANT now exits 1 when any of its
+  steps failed, so the Onboard recipe's *stop on error* actually stops after a failed domain join.
+- **`-WhatIf` runs that still changed the machine:**
+  - **COVENANT:** the unattended local-admin step created or reset the account, and both
+    timezone paths set the timezone.
+  - **WHETSTONE:** changed the power plan and installed or updated NuGet and PSWindowsUpdate. A
+    dry run on a machine without PSWindowsUpdate now says what would be installed and stops,
+    since it cannot list updates without the module.
+  - **FORGE:** the Windows Update option installed PSWindowsUpdate before reaching its `-WhatIf`
+    check.
+  - **RUNEPRESS:** deleted and re-extracted driver ZIPs, and the unattended cleanup deleted the
+    extraction folder. A dry run now lists each archive's INF files without extracting it.
+  - **REVENANT:** extracted the whole archive to `%TEMP%` and created the destination folder. A
+    dry run now reads the archive's file list and reports what each item would copy.
+  - **EMBALM:** created the destination folder and wrote `MANIFEST.txt` into a staging folder that
+    a dry run never creates (a red error in an otherwise clean preview). Its size estimate now
+    comes from the source folders; it used to read 0 files.
+- **FORGE's driver report gave every driver the same status.** The per-row lookup compared each
+  device with itself. It also re-queried every device for every driver; the status is now read
+  once. The device audit no longer dumps raw `Win32_PnPEntity` objects after its formatted list,
+  and RUNEPRESS no longer prints a stray `True`.
 
 ---
 
