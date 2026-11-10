@@ -35,6 +35,7 @@
     PS C:\> .\leyline.ps1 -Unattended -Action FlushDNS             # Flush DNS cache
     PS C:\> .\leyline.ps1 -Unattended -Action Renew                # Release & renew IP
     PS C:\> .\leyline.ps1 -Unattended -Action PortTest -Target "8.8.8.8:53"
+    PS C:\> .\leyline.ps1 -Unattended -Action Trace -Target "contoso.com"
 
 .NOTES
     Version : 6.2
@@ -368,6 +369,12 @@ function Invoke-PortTest {
 
     Write-Section "TCP PORT TEST"
 
+    if (-not $TargetInput -and $Unattended) {
+        # Nobody is there to type a target, so stop rather than wait at the prompt.
+        Write-Host "  [-] -Action PortTest needs -Target host:port in an unattended run (e.g. -Target google.com:443)." -ForegroundColor $C.Error
+        return
+    }
+
     if (-not $TargetInput) {
         Write-Host "  Format: hostname:port  (e.g. 8.8.8.8:53  or  google.com:443)" -ForegroundColor $C.Info
         Write-Host ""
@@ -399,10 +406,14 @@ function Invoke-PortTest {
 # ─────────────────────────────────────────────────────────────────────────────
 
 function Invoke-Traceroute {
+    param([string]$TargetInput = '')
     Write-Section "TRACEROUTE"
 
-    Write-Host -NoNewline "  Target hostname or IP: " -ForegroundColor $C.Header
-    $dest = (Read-Host).Trim()
+    $dest = "$TargetInput".Trim()
+    if (-not $dest) {
+        Write-Host -NoNewline "  Target hostname or IP: " -ForegroundColor $C.Header
+        $dest = (Read-Host).Trim()
+    }
     if (-not $dest) { return }
 
     Write-Host ""
@@ -505,18 +516,32 @@ function Invoke-ResetStack {
         @{ Cmd = { ipconfig /flushdns };          Label = "Flushing DNS cache..."       }
     )
 
+    $failedSteps = 0
     foreach ($step in $steps) {
         Write-Host ("  [*] {0}" -f $step.Label) -ForegroundColor $C.Progress
         try {
-            & $step.Cmd 2>&1 | Out-Null
-            Write-Host "      Done." -ForegroundColor $C.Success
+            # A native command that fails does not throw; its exit code says so.
+            $global:LASTEXITCODE = 0
+            $out = & $step.Cmd 2>&1
+            if ($LASTEXITCODE -ne 0) {
+                $failedSteps++
+                $why = (@($out) | Where-Object { "$_".Trim() } | Select-Object -Last 1)
+                Write-Host ("      Failed (exit {0}): {1}" -f $LASTEXITCODE, $why) -ForegroundColor $C.Error
+            } else {
+                Write-Host "      Done." -ForegroundColor $C.Success
+            }
         } catch {
+            $failedSteps++
             Write-Host ("      Failed: {0}" -f $_) -ForegroundColor $C.Error
         }
     }
 
     Write-Host ""
-    Write-Host "  [+] Network stack reset complete. Reboot to apply changes." -ForegroundColor $C.Success
+    if ($failedSteps -gt 0) {
+        Write-Host "  [!] $failedSteps step(s) failed. Reboot to apply the ones that succeeded." -ForegroundColor $C.Warning
+    } else {
+        Write-Host "  [+] Network stack reset complete. Reboot to apply changes." -ForegroundColor $C.Success
+    }
     Write-Host ""
 }
 
@@ -612,7 +637,10 @@ if ($Unattended) {
         'Renew'      { Invoke-RenewIP }
         'ResetStack' { Write-Host "  [!!] ResetStack requires interactive confirmation — run without -Unattended." -ForegroundColor $C.Warning }
         'PortTest'   { Invoke-PortTest -TargetInput $Target }
-        'Trace'      { Write-Host "  [!!] Trace requires interactive input — run without -Unattended." -ForegroundColor $C.Warning }
+        'Trace'      {
+            if ($Target) { Invoke-Traceroute -TargetInput ($Target -replace ':\d+$', '') }
+            else { Write-Host "  [-] -Action Trace needs -Target <host> in an unattended run." -ForegroundColor $C.Error }
+        }
         'ARPScan'    { Show-NetworkNeighbors }
     }
 } else {
