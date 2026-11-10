@@ -30,6 +30,8 @@
     (SMBv1, LLMNR, NetBIOS), and credential protection (LSA PPL, NoLMHash,
     RDP Restricted Admin). Pairs naturally with C.O.V.E.N.A.N.T. as a
     post-onboarding hardening step. Changes are logged to a timestamped CSV.
+    An unattended run leaves Remote Desktop as it is; enabling or disabling
+    RDP is chosen at the interactive prompt.
 
 .USAGE
     PS C:\> .\basilisk.ps1                                    # Must be run as Administrator
@@ -580,9 +582,15 @@ function Apply-PasswordPolicy {
             Add-ActionRecord -Category "Password Policy" -Setting $policy.Label -Status "WhatIf" -Detail "net accounts $($policy.Args)"
         } else {
             try {
-                & net accounts $policy.Args.Split(' ') 2>&1 | Out-Null
-                Write-Host "    [+] $($policy.Label) — applied." -ForegroundColor $ColorSchema.Success
-                Add-ActionRecord -Category "Password Policy" -Setting $policy.Label -Status "Applied"
+                $netOut = & net accounts $policy.Args.Split(' ') 2>&1
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "    [+] $($policy.Label) — applied." -ForegroundColor $ColorSchema.Success
+                    Add-ActionRecord -Category "Password Policy" -Setting $policy.Label -Status "Applied"
+                } else {
+                    $detail = "net accounts exited $LASTEXITCODE`: $((@($netOut) -join ' ').Trim())"
+                    Write-Host "    [-] $($policy.Label) — failed ($detail)" -ForegroundColor $ColorSchema.Error
+                    Add-ActionRecord -Category "Password Policy" -Setting $policy.Label -Status "Failed" -Detail $detail
+                }
             }
             catch {
                 Write-Host "    [-] $($policy.Label) — failed: $_" -ForegroundColor $ColorSchema.Error
@@ -599,12 +607,24 @@ function Apply-RemoteDesktop {
     Write-Host ""
     Write-Host "  [1] Enable RDP (for remote tech access)" -ForegroundColor $ColorSchema.Info
     Write-Host "  [2] Disable RDP (recommended for end-user workstations)" -ForegroundColor $ColorSchema.Info
+    Write-Host "  [3] Leave Remote Desktop as it is" -ForegroundColor $ColorSchema.Info
     Write-Host ""
+    # An unattended run never changes RDP: run over RDP or an RMM session on a
+    # server, disabling it would cut the technician off. Turning RDP off is a
+    # deliberate choice made at the prompt. Any answer but 1 or 2 changes nothing.
     if (-not $Unattended) {
         Write-Host -NoNewline "  Enter selection: " -ForegroundColor $ColorSchema.Header
-        $rdpChoice = (Read-Host).Trim()
+        $rdpChoice = "$(Read-Host)".Trim()
     } else {
-        $rdpChoice = "2"
+        $rdpChoice = "3"
+    }
+
+    if ($rdpChoice -ne "1" -and $rdpChoice -ne "2") {
+        $why = if ($Unattended) { "Unattended run - Remote Desktop is only changed interactively" } else { "Left as it is" }
+        Write-Host "    [*] Remote Desktop not changed ($why)." -ForegroundColor $ColorSchema.Info
+        Add-ActionRecord -Category "Remote Desktop" -Setting "Remote Desktop" -Status "Skipped" -Detail $why
+        Write-Host ""
+        return
     }
 
     $rdpValue = if ($rdpChoice -eq "1") { 0 } else { 1 }
@@ -645,11 +665,14 @@ function Apply-RemoteDesktop {
             Add-ActionRecord -Category "Remote Desktop" -Setting "Disable RDP firewall rules" -Status "WhatIf"
         } else {
             try {
-                Disable-NetFirewallRule -DisplayGroup "Remote Desktop" -ErrorAction SilentlyContinue
+                Disable-NetFirewallRule -DisplayGroup "Remote Desktop" -ErrorAction Stop
+                Write-Host "    [+] Remote Desktop firewall rules disabled." -ForegroundColor $ColorSchema.Success
                 Add-ActionRecord -Category "Remote Desktop" -Setting "Disable RDP firewall rules" -Status "Applied"
             }
             catch {
-                # Group may not exist on Windows Home / Core editions — safe to swallow.
+                # The group may not exist on Windows Home / Core editions; record it rather than claim success.
+                Write-Host "    [!!] Could not update RDP firewall rules: $_" -ForegroundColor $ColorSchema.Warning
+                Add-ActionRecord -Category "Remote Desktop" -Setting "Disable RDP firewall rules" -Status "Skipped" -Detail "$_"
             }
         }
     }
@@ -660,27 +683,33 @@ function Apply-RemoteDesktop {
 function Apply-AuditPolicy {
     Write-Host "  [*] Applying audit policy..." -ForegroundColor $ColorSchema.Progress
 
+    # Subcategories by GUID, not name: the names are translated on non-English
+    # Windows, and a name with a space ("Account Lockout") split into two
+    # arguments. Each entry is the argument list after 'auditpol /set'.
     $auditSettings = @(
-        @{ Sub = "Logon";             Args = '/subcategory:"Logon" /success:enable /failure:enable';                     Label = "Logon events" },
-        @{ Sub = "Logoff";            Args = '/subcategory:"Logoff" /success:enable';                                    Label = "Logoff events" },
-        @{ Sub = "Account Lockout";   Args = '/subcategory:"Account Lockout" /failure:enable';                           Label = "Account lockout failures" },
-        @{ Sub = "Audit Policy Change"; Args = '/subcategory:"Audit Policy Change" /success:enable /failure:enable';     Label = "Audit policy changes" },
-        @{ Sub = "User Account Management"; Args = '/subcategory:"User Account Management" /success:enable /failure:enable'; Label = "User account management" }
+        @{ Sub = "Logon";                   Guid = '{0CCE9215-69AE-11D9-BED3-505054503030}'; Flags = @('/success:enable', '/failure:enable'); Label = "Logon events" },
+        @{ Sub = "Logoff";                  Guid = '{0CCE9216-69AE-11D9-BED3-505054503030}'; Flags = @('/success:enable');                    Label = "Logoff events" },
+        @{ Sub = "Account Lockout";         Guid = '{0CCE9217-69AE-11D9-BED3-505054503030}'; Flags = @('/failure:enable');                    Label = "Account lockout failures" },
+        @{ Sub = "Audit Policy Change";     Guid = '{0CCE922F-69AE-11D9-BED3-505054503030}'; Flags = @('/success:enable', '/failure:enable'); Label = "Audit policy changes" },
+        @{ Sub = "User Account Management"; Guid = '{0CCE9235-69AE-11D9-BED3-505054503030}'; Flags = @('/success:enable', '/failure:enable'); Label = "User account management" }
     )
 
     foreach ($audit in $auditSettings) {
+        $auditArgs = @('/set', "/subcategory:$($audit.Guid)") + $audit.Flags
+        $auditText = "auditpol /set /subcategory:`"$($audit.Sub)`" $($audit.Flags -join ' ')"
         if ($WhatIf) {
-            Write-Host "    [~] $($audit.Label) — would apply: auditpol $($audit.Args)" -ForegroundColor Cyan
-            Add-ActionRecord -Category "Audit Policy" -Setting $audit.Label -Status "WhatIf" -Detail "auditpol $($audit.Args)"
+            Write-Host "    [~] $($audit.Label) — would apply: $auditText" -ForegroundColor Cyan
+            Add-ActionRecord -Category "Audit Policy" -Setting $audit.Label -Status "WhatIf" -Detail $auditText
         } else {
             try {
-                $result = & auditpol $audit.Args.Split(' ') 2>&1
+                $result = & auditpol @auditArgs 2>&1
                 if ($LASTEXITCODE -eq 0) {
                     Write-Host "    [+] $($audit.Label) — enabled." -ForegroundColor $ColorSchema.Success
                     Add-ActionRecord -Category "Audit Policy" -Setting $audit.Label -Status "Applied"
                 } else {
-                    Write-Host "    [!!] $($audit.Label) — may require domain policy override." -ForegroundColor $ColorSchema.Warning
-                    Add-ActionRecord -Category "Audit Policy" -Setting $audit.Label -Status "Skipped" -Detail "May be overridden by domain policy"
+                    $detail = "auditpol exited $LASTEXITCODE`: $((@($result) -join ' ').Trim())"
+                    Write-Host "    [!!] $($audit.Label) — not applied ($detail)" -ForegroundColor $ColorSchema.Warning
+                    Add-ActionRecord -Category "Audit Policy" -Setting $audit.Label -Status "Failed" -Detail $detail
                 }
             }
             catch {

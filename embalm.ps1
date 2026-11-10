@@ -353,6 +353,9 @@ function Get-FolderSizeMB {
     catch { return 0 }
 }
 
+$script:WhatIfFiles = 0
+$script:WhatIfMB    = 0
+
 function Stage-Item {
     param(
         [string]$SourcePath,
@@ -369,8 +372,13 @@ function Stage-Item {
     Write-Host "    [*] Staging $Label..." -ForegroundColor $ColorSchema.Progress
 
     if ($WhatIf) {
-        Write-Host "    [~] Would stage $Label from $SourcePath" -ForegroundColor Cyan
-        Add-EmbalmRecord -Item $Label -Status "WhatIf" -Detail "Would stage from: $SourcePath"
+        # Sized from the source so the dry run's archive estimate is real; nothing is staged.
+        $files = @(Get-ChildItem -LiteralPath $SourcePath -Recurse -File -Force -ErrorAction SilentlyContinue)
+        $mb    = [math]::Round((($files | Measure-Object -Property Length -Sum).Sum + 0) / 1MB, 1)
+        $script:WhatIfFiles += $files.Count
+        $script:WhatIfMB    += $mb
+        Write-Host "    [~] Would stage $Label from $SourcePath ($($files.Count) files, $mb MB)" -ForegroundColor Cyan
+        Add-EmbalmRecord -Item $Label -Status "WhatIf" -Detail "Would stage from: $SourcePath ($($files.Count) files, $mb MB)"
         return
     }
 
@@ -553,7 +561,10 @@ if ($Unattended) {
         Write-Host "  [*] No -Destination provided — using script directory." -ForegroundColor $ColorSchema.Info
     } else {
         $DestRoot = $Destination.TrimEnd('\')
-        if (-not (Test-Path $DestRoot)) {
+        if (-not (Test-Path $DestRoot) -and $WhatIf) {
+            Write-Host "  [~] WhatIf: would create destination: $DestRoot" -ForegroundColor Cyan
+        }
+        elseif (-not (Test-Path $DestRoot)) {
             try {
                 $null = New-Item -ItemType Directory -Path $DestRoot -Force -ErrorAction Stop
                 Write-Host "  [+] Destination created: $DestRoot" -ForegroundColor $ColorSchema.Success
@@ -579,7 +590,10 @@ if ($Unattended) {
     }
     elseif ($destChoice -eq "3" -and -not [string]::IsNullOrWhiteSpace($_cfg.Archive.DefaultDestination)) {
         $DestRoot = $_cfg.Archive.DefaultDestination.TrimEnd('\')
-        if (-not (Test-Path $DestRoot)) {
+        if (-not (Test-Path $DestRoot) -and $WhatIf) {
+            Write-Host "  [~] WhatIf: would create destination: $DestRoot" -ForegroundColor Cyan
+        }
+        elseif (-not (Test-Path $DestRoot)) {
             try { $null = New-Item -ItemType Directory -Path $DestRoot -Force -ErrorAction Stop }
             catch { Write-Host "  [-] Could not create destination: $_" -ForegroundColor $ColorSchema.Error; exit 1 }
         }
@@ -595,7 +609,11 @@ if ($Unattended) {
             exit 1
         }
 
-        if (-not (Test-Path $DestRoot)) {
+        if (-not (Test-Path $DestRoot) -and $WhatIf) {
+            Write-Host ""
+            Write-Host "  [~] WhatIf: destination not found — it would be created: $DestRoot" -ForegroundColor Cyan
+        }
+        elseif (-not (Test-Path $DestRoot)) {
             Write-Host ""
             Write-Host "  [*] Destination not found — attempting to create it..." -ForegroundColor $ColorSchema.Progress
             try {
@@ -677,12 +695,17 @@ foreach ($record in $EmbalmLog) {
     $manifestLines += "{0,-30} [{1}]  {2}" -f $record.Item, $record.Status, $record.Detail
 }
 
-try {
-    $manifestLines | Set-Content -Path $manifestPath -Encoding UTF8
-    Write-Host "  [+] Manifest written." -ForegroundColor $ColorSchema.Success
+if ($WhatIf) {
+    Write-Host "  [~] WhatIf: MANIFEST.txt would be written into the archive." -ForegroundColor Cyan
 }
-catch {
-    Write-Host "  [-] Could not write manifest: $_" -ForegroundColor $ColorSchema.Error
+else {
+    try {
+        $manifestLines | Set-Content -Path $manifestPath -Encoding UTF8
+        Write-Host "  [+] Manifest written." -ForegroundColor $ColorSchema.Success
+    }
+    catch {
+        Write-Host "  [-] Could not write manifest: $_" -ForegroundColor $ColorSchema.Error
+    }
 }
 
 # ── COMPRESS ──────────────────────────────────────────────────────────────────
@@ -696,9 +719,14 @@ Write-Host ""
 $zipPath = Join-Path $DestRoot "$archiveName.zip"
 
 # Pre-flight: count staged files and total size so the technician knows what they're waiting for
-$stagedFiles   = Get-ChildItem -Recurse -File -Path $stagingDir -ErrorAction SilentlyContinue
-$stagedCount   = $stagedFiles.Count
-$stagedSizeMB  = [math]::Round(($stagedFiles | Measure-Object -Property Length -Sum).Sum / 1MB, 1)
+if ($WhatIf) {
+    $stagedCount  = $script:WhatIfFiles
+    $stagedSizeMB = [math]::Round($script:WhatIfMB, 1)
+} else {
+    $stagedFiles   = Get-ChildItem -Recurse -File -Path $stagingDir -ErrorAction SilentlyContinue
+    $stagedCount   = $stagedFiles.Count
+    $stagedSizeMB  = [math]::Round(($stagedFiles | Measure-Object -Property Length -Sum).Sum / 1MB, 1)
+}
 
 Write-Host "  [*] Creating ZIP: $zipPath" -ForegroundColor $ColorSchema.Progress
 Write-Host ("  [*] Compressing {0} files ({1} MB) — this may take several minutes..." -f $stagedCount, $stagedSizeMB) -ForegroundColor $ColorSchema.Info

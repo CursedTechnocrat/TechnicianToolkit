@@ -178,7 +178,10 @@ function Save-TKVerifiedScript {
 #endregion TK-SHARED
 Invoke-AdminElevation -ScriptFile $PSCommandPath
 
-$ScriptPath      = (Get-Location).Path
+# The tools live beside the hub, so look there, not in the current directory.
+# Started as C:\TK\grimoire.ps1 from a prompt sitting in System32, the old
+# Get-Location lookup found no tools and downloaded every one into System32.
+$ScriptPath      = if ($PSScriptRoot) { $PSScriptRoot } elseif ($PSCommandPath) { Split-Path -Parent $PSCommandPath } else { (Get-Location).Path }
 $DownloadedFiles = [System.Collections.Generic.List[string]]::new()
 
 # Counts non-CODEX tool runs in the current Grimoire session. Drives the

@@ -801,11 +801,19 @@ function Invoke-RestartService {
             Write-Host "  [*] Restarting: $label" -ForegroundColor $C.Progress
         } else {
             Write-Host -NoNewline "  Restart $label ? (Y/N/A=All/S=Skip all): " -ForegroundColor $C.Warning
-            $answer = (Read-Host).Trim().ToUpper()
-            switch ($answer) {
-                'A' { $restartAll = $true }
-                'S' { $skipAll    = $true; Write-Host "  [*] Skipping remaining." -ForegroundColor $C.Info; break }
-                'N' { Write-Host "  [*] Skipped." -ForegroundColor $C.Info; continue }
+            $answer = "$(Read-Host)".Trim().ToUpper()
+            # Decided with if/else, not switch: a 'continue' inside a switch only
+            # leaves the switch, so 'N' used to fall through and start the service.
+            # Only Y or A starts anything; any other answer is a skip.
+            if ($answer -eq 'A') {
+                $restartAll = $true
+            } elseif ($answer -eq 'S') {
+                $skipAll = $true
+                Write-Host "  [*] Skipping remaining." -ForegroundColor $C.Info
+                break
+            } elseif ($answer -ne 'Y') {
+                Write-Host "  [*] Skipped." -ForegroundColor $C.Info
+                continue
             }
         }
 

@@ -3419,6 +3419,71 @@ Describe 'AUSPEX memory module helpers' {
     }
 }
 
+Describe 'State-changing tools — regression guards' {
+    Context 'WHETSTONE power-setting parser' {
+        BeforeAll {
+            $ast = Get-ToolAst -FileName 'whetstone.ps1'
+            . ([scriptblock]::Create((Get-ToolFunctionText -Ast $ast -FuncName 'Get-WhetstonePowerIndex')))
+        }
+        It 'reads the AC and DC indexes from English output' {
+            $out = @(
+                'Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)',
+                '  Subgroup GUID: 238c9fa8-0aad-41ed-83f4-97be242c8f20  (Sleep)',
+                '    Power Setting GUID: 29f6c1db-86da-48c5-9fdb-f2b67b1f44da  (Sleep after)',
+                '      Minimum Possible Setting: 0x00000000',
+                '      Maximum Possible Setting: 0xffffffff',
+                '      Possible Settings increment: 0x00000001',
+                '      Possible Settings units: Seconds',
+                '    Current AC Power Setting Index: 0x00000708',
+                '    Current DC Power Setting Index: 0x0000012c'
+            )
+            $r = Get-WhetstonePowerIndex -QueryOutput $out
+            $r.AC | Should -Be 1800
+            $r.DC | Should -Be 300
+        }
+        It 'does not depend on the English labels' {
+            $out = @(
+                '      Valeur minimale possible : 0x00000000',
+                '      Valeur maximale possible : 0xffffffff',
+                "    Index des paramètres d'alimentation secteur actuels : 0x00000000",
+                "    Index des paramètres d'alimentation sur batterie actuels : 0x00000384"
+            )
+            $r = Get-WhetstonePowerIndex -QueryOutput $out
+            $r.AC | Should -Be 0
+            $r.DC | Should -Be 900
+        }
+        It 'returns nothing when the query failed, so nothing is changed' {
+            Get-WhetstonePowerIndex -QueryOutput @('Invalid Parameters -- try "/?" for help') | Should -BeNullOrEmpty
+        }
+        It 'never prompts for a reboot during the install' {
+            $src = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'whetstone.ps1') -Raw
+            $src | Should -Match 'Install-WindowsUpdate[^\r\n]*-IgnoreReboot'
+            $src | Should -Not -Match 'powercfg /change'
+        }
+    }
+
+    Context 'BASILISK audit policy' {
+        BeforeAll {
+            $ast = Get-ToolAst -FileName 'basilisk.ps1'
+            $auditSettings = Get-ToolAssignmentValue -Ast $ast -VarName 'auditSettings'
+            $basiliskSource = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'basilisk.ps1') -Raw
+        }
+        It 'names every subcategory by GUID, so translated names and spaces cannot break it' {
+            @($auditSettings).Count | Should -Be 5
+            foreach ($a in $auditSettings) {
+                $a.Guid | Should -Match '^\{[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}\}$'
+                foreach ($f in $a.Flags) { $f | Should -Match '^/(success|failure):enable$' }
+            }
+        }
+        It 'calls auditpol with the /set verb' {
+            $basiliskSource | Should -Match "@\('/set', ""/subcategory:"
+        }
+        It 'leaves Remote Desktop alone on an unattended run' {
+            $basiliskSource | Should -Match '\$rdpChoice = "3"'
+        }
+    }
+}
+
 Describe 'License header compliance — all source files' {
     $licenseCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Include '*.ps1', '*.psm1' -File -Recurse |
         Where-Object { $_.FullName -notmatch $NonSourceDir } |

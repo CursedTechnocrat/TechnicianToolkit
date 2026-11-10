@@ -696,6 +696,34 @@ function Install-ZipDriver {
     Write-Host "Processing ZIP: $($ZipFile.Name)" -ForegroundColor Cyan
     Write-Host "----------------------------------------------------------------" -ForegroundColor Cyan
 
+    if ($WhatIf) {
+        # A dry run reads the archive's listing instead of extracting it, so
+        # nothing is written to (or deleted from) the extraction folder.
+        $infNames = @()
+        try {
+            Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+            $zip = [System.IO.Compression.ZipFile]::OpenRead($ZipFile.FullName)
+            try { $infNames = @($zip.Entries | Where-Object { $_.FullName -match '(?i)\.inf$' } | ForEach-Object { $_.FullName }) }
+            finally { $zip.Dispose() }
+        }
+        catch {
+            Write-Host "WARNING: Could not read the archive: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+        if (Test-Path $ExtractPath) { Write-Host "[~] WhatIf: would remove the previous extraction at $ExtractPath" -ForegroundColor Cyan }
+        Write-Host "[~] WhatIf: would extract $($ZipFile.Name) to $ExtractPath" -ForegroundColor Cyan
+        if ($infNames.Count -eq 0) {
+            Write-Host "[~] WhatIf: the archive lists no INF file - installation would fail." -ForegroundColor Yellow
+        } else {
+            Write-Host "[~] WhatIf: would install from INF: $($infNames[0])$(if ($infNames.Count -gt 1) { " (first of $($infNames.Count); interactive runs ask which)" })" -ForegroundColor Cyan
+            Write-Host "[~] WhatIf: spooler model names are read from the INF once it is extracted." -ForegroundColor Cyan
+        }
+        $script:InstallationLog += [PSCustomObject]@{
+            File = $ZipFile.Name; Type = 'ZIP'; INF = $(if ($infNames.Count) { Split-Path $infNames[0] -Leaf } else { '' })
+            Status = "WhatIf (not installed)"; Time = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+        }
+        return $true
+    }
+
     # Clean previous extraction
     if (Test-Path $ExtractPath) {
         Write-Host "Removing previous extraction directory..." -ForegroundColor Yellow
@@ -1202,6 +1230,11 @@ function Show-InstallationSummary {
 
 function Invoke-CleanupPrompt {
     if (-not (Test-Path $ExtractRoot)) { return }
+    # A dry run extracted nothing, so whatever is there predates it; leave it.
+    if ($WhatIf) {
+        Write-Host "[~] WhatIf: extracted files in '$ExtractRoot' left as they are." -ForegroundColor Cyan
+        return
+    }
 
     if ($Unattended) {
         try {
@@ -1234,7 +1267,7 @@ function Invoke-CleanupPrompt {
 if (-not $Unattended) { Show-Banner }
 if (-not $Unattended) {
     Show-DriverPrepInstructions
-    Wait-ForDriverFile
+    $null = Wait-ForDriverFile
 }
 
 Write-Host "================================================================" -ForegroundColor Cyan

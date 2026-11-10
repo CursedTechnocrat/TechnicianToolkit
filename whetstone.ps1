@@ -271,33 +271,64 @@ Write-Host ""
 
 Write-Host "[1/4] Configuring Power Settings..." -ForegroundColor $ColorSchema.Progress
 
-# Initialize fallback values in case the query below fails
-$script:originalMonitorAC = 10
-$script:originalMonitorDC = 5
-
-try {
-    # Save current monitor timeout values before modifying
-    $monitorQuery = powercfg /query SCHEME_CURRENT SUB_VIDEO VIDEOIDLE 2>&1
-    $acLine = $monitorQuery | Where-Object { $_ -match "Current AC Power Setting Index" }
-    $dcLine = $monitorQuery | Where-Object { $_ -match "Current DC Power Setting Index" }
-    if ($acLine) {
-        $acHex = ($acLine -replace ".*:\s*0x", "").Trim()
-        $script:originalMonitorAC = [math]::Round([convert]::ToInt32($acHex, 16) / 60)
+# Power settings are read and written by index (seconds), so the restore puts
+# back exactly what was there. Only a setting that was read successfully is
+# changed, so a failed query never leaves a guessed value behind.
+function Get-WhetstonePowerIndex {
+    # powercfg's labels are translated on non-English Windows, so the AC and DC
+    # indexes are taken as the last two "...: 0x<hex>" lines of the query, which
+    # is the order powercfg prints them in every language.
+    param([string[]]$QueryOutput)
+    $hex = @($QueryOutput | ForEach-Object { if ("$_" -match ':\s*0x([0-9a-fA-F]+)\s*$') { $Matches[1] } })
+    if ($hex.Count -lt 2) { return $null }
+    return [PSCustomObject]@{
+        AC = [convert]::ToInt64($hex[$hex.Count - 2], 16)
+        DC = [convert]::ToInt64($hex[$hex.Count - 1], 16)
     }
-    if ($dcLine) {
-        $dcHex = ($dcLine -replace ".*:\s*0x", "").Trim()
-        $script:originalMonitorDC = [math]::Round([convert]::ToInt32($dcHex, 16) / 60)
-    }
-    Write-Host "    Monitor timeout saved (AC: $($script:originalMonitorAC)m, DC: $($script:originalMonitorDC)m)" -ForegroundColor $ColorSchema.Info
-
-    powercfg /change standby-timeout-ac 0
-    powercfg /change standby-timeout-dc 0
-    powercfg /change monitor-timeout-ac 0
-    powercfg /change monitor-timeout-dc 0
-    Write-Host "[+] Power settings configured successfully" -ForegroundColor $ColorSchema.Success
 }
-catch {
-    Write-Host "[-] Error configuring power settings: $_" -ForegroundColor $ColorSchema.Error
+
+function Restore-WhetstonePower {
+    if (-not $script:SavedPower -or $script:SavedPower.Count -eq 0) { return }
+    Write-Host "Restoring power settings..." -ForegroundColor $ColorSchema.Progress
+    foreach ($p in $script:SavedPower) {
+        powercfg /setacvalueindex SCHEME_CURRENT $p.Sub $p.Setting $p.AC | Out-Null
+        powercfg /setdcvalueindex SCHEME_CURRENT $p.Sub $p.Setting $p.DC | Out-Null
+        Write-Host ("    [+] {0} restored (AC: {1}s, DC: {2}s)" -f $p.Label, $p.AC, $p.DC) -ForegroundColor $ColorSchema.Success
+    }
+    powercfg /setactive SCHEME_CURRENT | Out-Null
+    $script:SavedPower = @()
+}
+
+$script:SavedPower = @()
+$powerTargets = @(
+    @{ Label = 'Sleep timeout';   Sub = 'SUB_SLEEP'; Setting = 'STANDBYIDLE' },
+    @{ Label = 'Monitor timeout'; Sub = 'SUB_VIDEO'; Setting = 'VIDEOIDLE' }
+)
+
+if ($WhatIf) {
+    Write-Host "[~] WhatIf: sleep and monitor timeouts would be set to Never for the run, then restored." -ForegroundColor Cyan
+}
+else {
+    foreach ($t in $powerTargets) {
+        try {
+            $idx = Get-WhetstonePowerIndex -QueryOutput (powercfg /query SCHEME_CURRENT $t.Sub $t.Setting 2>&1)
+            if (-not $idx) {
+                Write-Host "    [!] Could not read the current $($t.Label.ToLower()); leaving it unchanged." -ForegroundColor $ColorSchema.Warning
+                continue
+            }
+            $script:SavedPower += [PSCustomObject]@{ Label = $t.Label; Sub = $t.Sub; Setting = $t.Setting; AC = $idx.AC; DC = $idx.DC }
+            powercfg /setacvalueindex SCHEME_CURRENT $t.Sub $t.Setting 0 | Out-Null
+            powercfg /setdcvalueindex SCHEME_CURRENT $t.Sub $t.Setting 0 | Out-Null
+            Write-Host ("    {0} saved (AC: {1}s, DC: {2}s) and set to Never" -f $t.Label, $idx.AC, $idx.DC) -ForegroundColor $ColorSchema.Info
+        }
+        catch {
+            Write-Host "[-] Error configuring $($t.Label.ToLower()): $_" -ForegroundColor $ColorSchema.Error
+        }
+    }
+    if ($script:SavedPower.Count -gt 0) {
+        powercfg /setactive SCHEME_CURRENT | Out-Null
+        Write-Host "[+] Power settings configured successfully" -ForegroundColor $ColorSchema.Success
+    }
 }
 
 Write-Host ""
@@ -307,6 +338,16 @@ Write-Host ""
 # ─────────────────────────────────────────────────────────────────────────────
 
 Write-Host "[2/4] Installing PSWindowsUpdate Module..." -ForegroundColor $ColorSchema.Progress
+$script:ModuleMissing = $false
+if ($WhatIf) {
+    if (Get-Module -Name PSWindowsUpdate -ListAvailable) {
+        Write-Host "[~] WhatIf: PSWindowsUpdate is present; it would be checked for updates (not done in a dry run)." -ForegroundColor Cyan
+    } else {
+        $script:ModuleMissing = $true
+        Write-Host "[~] WhatIf: PSWindowsUpdate would be installed from the PowerShell Gallery (with the NuGet provider if missing)." -ForegroundColor Cyan
+    }
+}
+else {
 try {
     # Ensure NuGet package provider is present (required by Install-Module)
     Write-Host "    Checking NuGet package provider..." -ForegroundColor $ColorSchema.Info
@@ -333,7 +374,9 @@ try {
 }
 catch {
     Write-Host "[-] Error installing PSWindowsUpdate: $_" -ForegroundColor $ColorSchema.Error
+    Restore-WhetstonePower
     exit 1
+}
 }
 
 Write-Host ""
@@ -343,12 +386,20 @@ Write-Host ""
 # ─────────────────────────────────────────────────────────────────────────────
 
 Write-Host "[3/4] Importing PSWindowsUpdate Module..." -ForegroundColor $ColorSchema.Progress
+if ($script:ModuleMissing) {
+    Write-Host "[~] WhatIf: PSWindowsUpdate is not installed, so the pending updates cannot be listed in a dry run." -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "[~] WhatIf complete. No changes made." -ForegroundColor Cyan
+    if ($transcriptPath) { try { Stop-Transcript } catch {} }
+    exit 0
+}
 try {
-    Import-Module -Name PSWindowsUpdate -Force
+    Import-Module -Name PSWindowsUpdate -Force -ErrorAction Stop
     Write-Host "[+] PSWindowsUpdate imported successfully" -ForegroundColor $ColorSchema.Success
 }
 catch {
     Write-Host "[-] Error importing PSWindowsUpdate: $_" -ForegroundColor $ColorSchema.Error
+    Restore-WhetstonePower
     exit 1
 }
 
@@ -378,8 +429,10 @@ try {
             Write-Host "[~] WhatIf: the $($updates.Count) update(s) above would be installed. No changes made." -ForegroundColor Cyan
         }
         else {
-            # Install updates without reboot
-            Install-WindowsUpdate -NotCategory "Drivers" -AutoReboot:$false -Confirm:$false
+            # Install without rebooting or prompting. -IgnoreReboot stops PSWindowsUpdate
+            # asking "Reboot is required. Do it now?", which hung unattended runs; the
+            # reboot is decided below. -AcceptAll skips the per-update confirmation.
+            Install-WindowsUpdate -NotCategory "Drivers" -AcceptAll -IgnoreReboot -Confirm:$false
 
             Write-Host "[+] Windows Updates installed successfully" -ForegroundColor $ColorSchema.Success
         }
@@ -444,9 +497,7 @@ elseif ($rebootRequired) {
             Write-Host "  [*] Unattended mode: AutoReboot enabled — rebooting in 10 seconds..." -ForegroundColor $ColorSchema.Warning
             Write-Host ""
             Start-Sleep -Seconds 10
-            Write-Host "Restoring monitor timeout before reboot..." -ForegroundColor $ColorSchema.Info
-            powercfg /change monitor-timeout-ac $script:originalMonitorAC
-            powercfg /change monitor-timeout-dc $script:originalMonitorDC
+            Restore-WhetstonePower
             if ($transcriptPath) { try { Stop-Transcript } catch {} }
             Restart-Computer -Force
         } else {
@@ -514,9 +565,7 @@ elseif ($rebootRequired) {
                 Write-Host ""
             }
             else {
-                Write-Host "Restoring monitor timeout before reboot..." -ForegroundColor $ColorSchema.Info
-                powercfg /change monitor-timeout-ac $script:originalMonitorAC
-                powercfg /change monitor-timeout-dc $script:originalMonitorDC
+                Restore-WhetstonePower
                 Write-Host "Rebooting now..." -ForegroundColor $ColorSchema.Warning
                 Write-Host ""
                 if ($transcriptPath) { try { Stop-Transcript } catch {} }
@@ -541,17 +590,14 @@ elseif ($rebootRequired) {
 # so the reboot-decision block intentionally has no else branch here.
 
 # ─────────────────────────────────────────────────────────────────────────────
-# RESTORE MONITOR TIMEOUT
+# RESTORE POWER SETTINGS
 # ─────────────────────────────────────────────────────────────────────────────
 
-Write-Host "Restoring monitor timeout settings..." -ForegroundColor $ColorSchema.Progress
 try {
-    powercfg /change monitor-timeout-ac $script:originalMonitorAC
-    powercfg /change monitor-timeout-dc $script:originalMonitorDC
-    Write-Host "[+] Monitor timeout restored (AC: $($script:originalMonitorAC)m, DC: $($script:originalMonitorDC)m)" -ForegroundColor $ColorSchema.Success
+    Restore-WhetstonePower
 }
 catch {
-    Write-Host "[-] Could not restore monitor timeout: $_" -ForegroundColor $ColorSchema.Warning
+    Write-Host "[-] Could not restore power settings: $_" -ForegroundColor $ColorSchema.Warning
 }
 
 Write-Host ""

@@ -247,7 +247,8 @@ This is the one decision in the port that a domain is required to validate.
 `forge.ps1:383` reads `Where-Object { $_.Name -eq $_.DeviceName }` — inside that
 block `$_` is the inner `Win32_PnPEntity`, so it compares an object to itself
 instead of to the outer driver. It is a pre-existing bug unrelated to this port,
-and worth a separate fix so the two changes stay reviewable apart.
+and worth a separate fix so the two changes stay reviewable apart. **Fixed in 6.3:**
+FORGE now reads every device's status once into a lookup keyed by name.
 
 ---
 

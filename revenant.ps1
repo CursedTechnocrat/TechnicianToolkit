@@ -316,6 +316,19 @@ function Get-LocalProfiles {
         Sort-Object LastUse -Descending
 }
 
+function Get-RevenantArchiveListing {
+    # Reads a ZIP's file entries without extracting it, for a -WhatIf run.
+    # Paths come back with backslashes so they compare with the item map's.
+    param([string]$ZipPath)
+    Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+    $zip = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
+    try {
+        return @($zip.Entries | Where-Object { $_.Name } | ForEach-Object {
+            [PSCustomObject]@{ Path = ($_.FullName -replace '/', '\'); Length = [int64]$_.Length }
+        })
+    } finally { $zip.Dispose() }
+}
+
 function Copy-ProfileFolder {
     param(
         [string]$SourcePath,
@@ -462,6 +475,7 @@ Write-Host ""
 $SourceRoot      = ""
 $IsArchiveZip    = $false
 $TempExtractDir  = ""
+$script:ArchiveEntries = $null
 
 if ($Unattended) {
     if (-not [string]::IsNullOrWhiteSpace($ArchiveZip)) {
@@ -477,17 +491,34 @@ if ($Unattended) {
             exit 1
         }
         $TempExtractDir = Join-Path $env:TEMP "REVENANT_Extract_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
-        try {
-            Write-Host "  [*] Extracting archive — this may take a moment..." -ForegroundColor $ColorSchema.Progress
-            Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
-            [System.IO.Compression.ZipFile]::ExtractToDirectory($ArchiveZip, $TempExtractDir)
-            $SourceRoot   = $TempExtractDir
-            $IsArchiveZip = $true
-            Write-Host "  [+] Archive extracted." -ForegroundColor $ColorSchema.Success
+        if ($WhatIf) {
+            # A dry run reads the archive's listing instead of extracting it to %TEMP%.
+            try {
+                $script:ArchiveEntries = Get-RevenantArchiveListing -ZipPath $ArchiveZip
+            }
+            catch {
+                Write-Host "  [-] Could not read archive: $_" -ForegroundColor $ColorSchema.Error
+                exit 1
+            }
+            $archMB = [math]::Round((($script:ArchiveEntries | Measure-Object -Property Length -Sum).Sum + 0) / 1MB, 1)
+            Write-Host "  [~] WhatIf: would extract the archive ($($script:ArchiveEntries.Count) files, $archMB MB) to $TempExtractDir" -ForegroundColor Cyan
+            $SourceRoot     = $TempExtractDir
+            $IsArchiveZip   = $true
+            $TempExtractDir = ''
         }
-        catch {
-            Write-Host "  [-] Failed to extract archive: $_" -ForegroundColor $ColorSchema.Error
-            exit 1
+        else {
+            try {
+                Write-Host "  [*] Extracting archive — this may take a moment..." -ForegroundColor $ColorSchema.Progress
+                Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+                [System.IO.Compression.ZipFile]::ExtractToDirectory($ArchiveZip, $TempExtractDir)
+                $SourceRoot   = $TempExtractDir
+                $IsArchiveZip = $true
+                Write-Host "  [+] Archive extracted." -ForegroundColor $ColorSchema.Success
+            }
+            catch {
+                Write-Host "  [-] Failed to extract archive: $_" -ForegroundColor $ColorSchema.Error
+                exit 1
+            }
         }
     } elseif (-not [string]::IsNullOrWhiteSpace($SourcePath)) {
         $SourceRoot   = $SourcePath.TrimEnd('\')
@@ -568,18 +599,35 @@ if ($Unattended) {
 
         $TempExtractDir = Join-Path $env:TEMP "REVENANT_Extract_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
 
-        try {
-            Write-Host ""
-            Write-Host "  [*] Extracting archive — this may take a moment..." -ForegroundColor $ColorSchema.Progress
-            Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
-            [System.IO.Compression.ZipFile]::ExtractToDirectory($zipSource, $TempExtractDir)
-            $SourceRoot   = $TempExtractDir
-            $IsArchiveZip = $true
-            Write-Host "  [+] Archive extracted." -ForegroundColor $ColorSchema.Success
+        if ($WhatIf) {
+            # A dry run reads the archive's listing instead of extracting it to %TEMP%.
+            try {
+                $script:ArchiveEntries = Get-RevenantArchiveListing -ZipPath $zipSource
+            }
+            catch {
+                Write-Host "  [-] Could not read archive: $_" -ForegroundColor $ColorSchema.Error
+                exit 1
+            }
+            $archMB = [math]::Round((($script:ArchiveEntries | Measure-Object -Property Length -Sum).Sum + 0) / 1MB, 1)
+            Write-Host "  [~] WhatIf: would extract the archive ($($script:ArchiveEntries.Count) files, $archMB MB) to $TempExtractDir" -ForegroundColor Cyan
+            $SourceRoot     = $TempExtractDir
+            $IsArchiveZip   = $true
+            $TempExtractDir = ''
         }
-        catch {
-            Write-Host "  [-] Failed to extract archive: $_" -ForegroundColor $ColorSchema.Error
-            exit 1
+        else {
+            try {
+                Write-Host ""
+                Write-Host "  [*] Extracting archive — this may take a moment..." -ForegroundColor $ColorSchema.Progress
+                Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction Stop
+                [System.IO.Compression.ZipFile]::ExtractToDirectory($zipSource, $TempExtractDir)
+                $SourceRoot   = $TempExtractDir
+                $IsArchiveZip = $true
+                Write-Host "  [+] Archive extracted." -ForegroundColor $ColorSchema.Success
+            }
+            catch {
+                Write-Host "  [-] Failed to extract archive: $_" -ForegroundColor $ColorSchema.Error
+                exit 1
+            }
         }
     }
     else {
@@ -627,7 +675,10 @@ if ($Unattended) {
         exit 1
     }
     $DestRoot = $DestPath.TrimEnd('\')
-    if (-not (Test-Path $DestRoot)) {
+    if (-not (Test-Path $DestRoot) -and $WhatIf) {
+        Write-Host "  [~] WhatIf: would create destination: $DestRoot" -ForegroundColor Cyan
+    }
+    elseif (-not (Test-Path $DestRoot)) {
         try {
             $null = New-Item -ItemType Directory -Path $DestRoot -Force -ErrorAction Stop
             Write-Host "  [+] Destination created: $DestRoot" -ForegroundColor $ColorSchema.Success
@@ -658,7 +709,11 @@ if ($Unattended) {
             Write-Host "  [-] No path entered." -ForegroundColor $ColorSchema.Error
             exit 1
         }
-        if (-not (Test-Path $DestRoot)) {
+        if (-not (Test-Path $DestRoot) -and $WhatIf) {
+            Write-Host ""
+            Write-Host "  [~] WhatIf: destination not found — it would be created: $DestRoot" -ForegroundColor Cyan
+        }
+        elseif (-not (Test-Path $DestRoot)) {
             Write-Host ""
             Write-Host "  [*] Destination not found — attempting to create it..." -ForegroundColor $ColorSchema.Progress
             try {
@@ -783,6 +838,21 @@ if ($IsArchiveZip) {
 foreach ($num in $selectedItems) {
     if (-not $itemMap.Contains($num)) { continue }
     $item = $itemMap[$num]
+
+    if ($script:ArchiveEntries) {
+        # -WhatIf on an archive: count what the item would copy from the listing.
+        $rel  = $item.Src.Substring($SourceRoot.Length).TrimStart('\')
+        $hits = @($script:ArchiveEntries | Where-Object { $_.Path -eq $rel -or $_.Path -like "$rel\*" })
+        if ($hits.Count -eq 0) {
+            Write-Host "    [!!] $($item.Label) — not in the archive, skipping." -ForegroundColor $ColorSchema.Warning
+            Add-MigrationRecord -Item $item.Label -Status "Skipped" -Detail "Not in the archive"
+        } else {
+            $mb = [math]::Round((($hits | Measure-Object -Property Length -Sum).Sum + 0) / 1MB, 1)
+            Write-Host "    [~] WhatIf: Would copy $($item.Label)  ($($hits.Count) files, $mb MB) => $($item.Dst)" -ForegroundColor $ColorSchema.Warning
+            Add-MigrationRecord -Item $item.Label -Status "WhatIf" -Detail "$($hits.Count) files, $mb MB"
+        }
+        continue
+    }
 
     if ($item.Type -eq "Folder") {
         Copy-ProfileFolder -SourcePath $item.Src -DestPath $item.Dst -Label $item.Label

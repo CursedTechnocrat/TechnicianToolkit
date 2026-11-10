@@ -837,7 +837,13 @@ Write-Host "[5/7] Local Administrator Account..." -ForegroundColor $ColorSchema.
 Write-Host ""
 
 if ($Unattended) {
-    if (-not [string]::IsNullOrWhiteSpace($LocalAdminUser) -and $LocalAdminPassword -ne $null) {
+    if ($WhatIf -and -not [string]::IsNullOrWhiteSpace($LocalAdminUser) -and $null -ne $LocalAdminPassword) {
+        $exists = [bool](Get-LocalUser -Name $LocalAdminUser -ErrorAction SilentlyContinue)
+        $verb   = if ($exists) { 'reset the password of' } else { 'create, and add to Administrators,' }
+        Write-Host "    [~] Would $verb local account '$LocalAdminUser'" -ForegroundColor Cyan
+        Add-ActionRecord -Step "Local Admin" -Status "WhatIf" -Detail "Would $verb`: $LocalAdminUser"
+    }
+    elseif (-not [string]::IsNullOrWhiteSpace($LocalAdminUser) -and $null -ne $LocalAdminPassword) {
         Write-Host "    [*] Creating local admin account '$LocalAdminUser'..." -ForegroundColor $ColorSchema.Progress
         try {
             $existing = Get-LocalUser -Name $LocalAdminUser -ErrorAction SilentlyContinue
@@ -950,7 +956,11 @@ Write-Host "    Current timezone: $((Get-TimeZone).DisplayName)" -ForegroundColo
 Write-Host ""
 
 if ($Unattended) {
-    if (-not [string]::IsNullOrWhiteSpace($Timezone)) {
+    if ($WhatIf -and -not [string]::IsNullOrWhiteSpace($Timezone)) {
+        Write-Host "    [~] Would set timezone to: $Timezone" -ForegroundColor Cyan
+        Add-ActionRecord -Step "Timezone" -Status "WhatIf" -Detail "Would set: $Timezone"
+    }
+    elseif (-not [string]::IsNullOrWhiteSpace($Timezone)) {
         try {
             Set-TimeZone -Id $Timezone -ErrorAction Stop
             Write-Host "    [+] Timezone set to: $((Get-TimeZone).DisplayName)" -ForegroundColor $ColorSchema.Success
@@ -997,7 +1007,11 @@ if ($Unattended) {
             $selectedTzId = (Read-Host "  Enter timezone ID exactly").Trim()
         }
 
-        if (-not [string]::IsNullOrWhiteSpace($selectedTzId)) {
+        if ($WhatIf -and -not [string]::IsNullOrWhiteSpace($selectedTzId)) {
+            Write-Host "    [~] Would set timezone to: $selectedTzId" -ForegroundColor Cyan
+            Add-ActionRecord -Step "Timezone" -Status "WhatIf" -Detail "Would set: $selectedTzId"
+        }
+        elseif (-not [string]::IsNullOrWhiteSpace($selectedTzId)) {
             try {
                 Set-TimeZone -Id $selectedTzId -ErrorAction Stop
                 Write-Host "    [+] Timezone set to: $((Get-TimeZone).DisplayName)" -ForegroundColor $ColorSchema.Success
@@ -1173,4 +1187,12 @@ Write-Host "══════════════════════�
 Write-Host "  SCRIPT EXECUTION COMPLETED" -ForegroundColor $ColorSchema.Header
 Write-Host "════════════════════════════════════════════════" -ForegroundColor $ColorSchema.Header
 Write-Host ""
+# Report failure to the caller. RITUAL's Onboard recipe stops on a failed
+# COVENANT step, which it can only see through the exit code.
+$failedSteps = @($ActionLog | Where-Object { $_.Status -eq 'Failed' })
+if ($failedSteps.Count -gt 0) {
+    Write-Host ("  [-] {0} step(s) failed: {1}" -f $failedSteps.Count, (($failedSteps | ForEach-Object { $_.Step }) -join ', ')) -ForegroundColor $ColorSchema.Error
+    Write-Host ""
+}
 if ($Transcript) { Stop-TKTranscript }
+if ($failedSteps.Count -gt 0) { exit 1 }
