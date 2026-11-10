@@ -550,8 +550,10 @@ try {
     try {
         $smartRaw = Get-CimInstance -Namespace root\wmi -ClassName MSStorageDriver_FailurePredictStatus -ErrorAction SilentlyContinue
         foreach ($s in $smartRaw) {
-            # InstanceName typically ends in _0, _1, etc. — use it as a loose key
-            $key = ($s.InstanceName -split '\\' | Select-Object -Last 1) -replace '_\d+$',''
+            # InstanceName is the disk's PNPDeviceID plus an "_0" suffix, so with the
+            # suffix removed it keys straight onto Win32_DiskDrive.PNPDeviceID. The
+            # old key (the last path segment) could collapse two disks into one.
+            $key = ("$($s.InstanceName)" -replace '_\d+$', '').ToUpperInvariant()
             $smartData[$key] = $s
         }
     } catch {}
@@ -560,19 +562,24 @@ try {
     $wmiDisks = @{}
     try {
         Get-CimInstance -ClassName Win32_DiskDrive -ErrorAction SilentlyContinue | ForEach-Object {
-            $wmiDisks[$_.Index] = $_
+            # Keyed as a string: Get-PhysicalDisk's DeviceId is a string ("0") and
+            # Index a UInt32, and hashtable keys are type-sensitive, so the old
+            # lookup never matched and every disk showed Serial / Firmware N/A.
+            $wmiDisks["$($_.Index)"] = $_
         }
     } catch {}
 
     foreach ($pd in $physDisks) {
         $sizeGB = if ($pd.Size -gt 0) { [math]::Round($pd.Size / 1GB, 1) } else { 0 }
 
-        # Match SMART entry by device index or friendly name fragment
-        $smartEntry  = $smartData.Values | Where-Object { $_.InstanceName -match [regex]::Escape($pd.DeviceId) } | Select-Object -First 1
+        $wmiDisk   = $wmiDisks["$($pd.DeviceId)"]
+
+        # SMART entry for this disk by its PNP device ID. Matching on DeviceId
+        # ("0", "1") as a regex hit any InstanceName containing that digit.
+        $smartEntry  = if ($wmiDisk -and $wmiDisk.PNPDeviceID) { $smartData["$($wmiDisk.PNPDeviceID)".ToUpperInvariant()] } else { $null }
         $smartFail   = if ($smartEntry) { $smartEntry.PredictFailure } else { $null }
         $smartReason = if ($smartEntry -and $smartEntry.Reason) { "0x{0:X8}" -f $smartEntry.Reason } else { 'N/A' }
 
-        $wmiDisk   = $wmiDisks[$pd.DeviceId]
         $serial    = if ($wmiDisk -and $wmiDisk.SerialNumber) { $wmiDisk.SerialNumber.Trim() } else { 'N/A' }
         $firmware  = if ($wmiDisk -and $wmiDisk.FirmwareRevision) { $wmiDisk.FirmwareRevision.Trim() } else { 'N/A' }
 
@@ -589,12 +596,14 @@ try {
         $displayLine = "  [{0}] {1} | {2} {3} | {4} GB | Health: {5} | SMART: {6}" -f `
             $pd.DeviceId, $pd.FriendlyName, $pd.MediaType, $pd.BusType, $sizeGB, $pd.HealthStatus, $smartLabel
 
-        $lineColor = if ($smartFail -eq $true -or $pd.HealthStatus -ne 'Healthy') {
+        $lineColor = if ($smartFail -eq $true) {
             $ColorSchema.Error
-        } elseif ($pd.HealthStatus -eq 'Warning') {
+        } elseif ("$($pd.HealthStatus)" -eq 'Healthy') {
+            $ColorSchema.Success
+        } elseif ("$($pd.HealthStatus)" -eq 'Warning') {
             $ColorSchema.Warning
         } else {
-            $ColorSchema.Success
+            $ColorSchema.Error
         }
 
         Write-Host $displayLine -ForegroundColor $lineColor

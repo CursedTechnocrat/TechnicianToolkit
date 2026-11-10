@@ -803,6 +803,72 @@ function Save-TKNoteReport {
 
 #endregion
 
+#region -- Network -----------------------------------------------------------
+
+function Select-TKLanIPv4Address {
+    <#
+    Picks the IPv4 address of the LAN the machine sits on: the interface that
+    carries the default route (lowest route + interface metric first), skipping
+    loopback, APIPA and /32 host routes. The old pick - the address with the
+    longest prefix - chose a VPN (/32) or a Hyper-V / WSL vEthernet adapter on
+    many laptops and swept the wrong network.
+    #>
+    param([object[]]$Addresses, [int[]]$GatewayInterfaceOrder = @())
+    $candidates = @($Addresses | Where-Object {
+        $_.IPAddress -and
+        $_.IPAddress -notmatch '^127\.' -and
+        $_.IPAddress -notmatch '^169\.254\.' -and
+        "$($_.PrefixOrigin)" -ne 'WellKnown' -and
+        [int]$_.PrefixLength -lt 32
+    })
+    if ($candidates.Count -eq 0) { return $null }
+    foreach ($ifIndex in $GatewayInterfaceOrder) {
+        $hit = $candidates | Where-Object { [int]$_.InterfaceIndex -eq $ifIndex } | Select-Object -First 1
+        if ($hit) { return $hit }
+    }
+    # No default route at all: fall back to a private-range address, then any.
+    $private = $candidates | Where-Object { $_.IPAddress -match '^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)' } | Select-Object -First 1
+    if ($private) { return $private }
+    return $candidates | Select-Object -First 1
+}
+
+function Get-TKDefaultRouteInterfaceOrder {
+    $routes = @(Get-NetRoute -AddressFamily IPv4 -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue)
+    $metric = @{}
+    foreach ($i in @(Get-NetIPInterface -AddressFamily IPv4 -ErrorAction SilentlyContinue)) { $metric[[int]$i.InterfaceIndex] = [int]$i.InterfaceMetric }
+    return @($routes | Sort-Object { [int]$_.RouteMetric + [int]$metric[[int]$_.InterfaceIndex] } | ForEach-Object { [int]$_.InterfaceIndex } | Select-Object -Unique)
+}
+
+#endregion
+
+#region -- Microsoft Graph -----------------------------------------------------
+
+function Get-TKLastSignIn {
+    <#
+    .SYNOPSIS
+        The latest sign-in of any kind from a Graph signInActivity, or $null.
+    .DESCRIPTION
+        lastSignInDateTime counts interactive sign-ins only. An account that only
+        refreshes tokens (mobile Outlook, Teams on a phone, a service account) can
+        go months without one while in daily use, so it read as inactive. This
+        takes the latest of the interactive, non-interactive and last-successful
+        timestamps.
+    #>
+    param($Activity)
+    if ($null -eq $Activity) { return $null }
+    $latest = $null
+    foreach ($name in 'LastSignInDateTime', 'LastNonInteractiveSignInDateTime', 'LastSuccessfulSignInDateTime') {
+        $raw = $Activity.$name
+        if ($null -eq $raw -or "$raw" -eq '') { continue }
+        try { $t = [datetime]$raw } catch { continue }
+        if ($t -eq [datetime]::MinValue -or $t.Year -lt 2000) { continue }
+        if ($null -eq $latest -or $t -gt $latest) { $latest = $t }
+    }
+    return $latest
+}
+
+#endregion
+
 #region -- Verified Downloads ------------------------------------------------
 
 # The one place the toolkit fetches its own code. GRIMOIRE and RITUAL call

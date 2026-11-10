@@ -679,11 +679,17 @@ function Get-TeamsInventory {
 
         $ownerList  = @()
         $memberList = @()
-        try { $ownerList  = @(Get-MgGroupOwner  -GroupId $g.Id -All -ErrorAction SilentlyContinue) } catch {
-            # Owner read failures on a single team don't justify aborting the audit.
+        $lookupError = ''
+        # userType and accountEnabled are not in Graph's default projection for
+        # directory objects, so they are asked for by name; without them every
+        # guest count was 0 and every owner counted as enabled. A failed read
+        # (throttling, permissions) is recorded rather than read as "no owners",
+        # which used to report the team as orphaned.
+        try { $ownerList  = @(Get-MgGroupOwner  -GroupId $g.Id -All -Property 'id,displayName,userType,accountEnabled' -ErrorAction Stop) } catch {
+            $lookupError = "owners: $($_.Exception.Message)"
         }
-        try { $memberList = @(Get-MgGroupMember -GroupId $g.Id -All -ErrorAction SilentlyContinue) } catch {
-            # Same for member read failures.
+        try { $memberList = @(Get-MgGroupMember -GroupId $g.Id -All -Property 'id,displayName,userType,accountEnabled' -ErrorAction Stop) } catch {
+            $lookupError = (@($lookupError, "members: $($_.Exception.Message)") | Where-Object { $_ }) -join '; '
         }
 
         $guestCount = 0
@@ -710,12 +716,17 @@ function Get-TeamsInventory {
             EnabledOwners  = $enabledOwners
             MemberCount    = $memberList.Count
             GuestCount     = $guestCount
+            LookupError    = $lookupError
             Labels         = if ($g.AssignedLabels) { ($g.AssignedLabels | ForEach-Object { $_.DisplayName }) -join '; ' } else { '' }
         }
     }
 
     Write-Host ""  # close the progress line
     Write-Ok "Collected $($records.Count) team record(s)."
+    $failedLookups = @($records | Where-Object { $_.LookupError })
+    if ($failedLookups.Count -gt 0) {
+        Write-Warn "$($failedLookups.Count) team(s) could not have their owners or members read; they are left out of the orphan count. First: $($failedLookups[0].DisplayName) - $($failedLookups[0].LookupError)"
+    }
     Write-Host ""
     return @($records)
 }
@@ -732,8 +743,10 @@ $script:StaleRenewalDays   = 365
 function Get-OrphanTeams {
     param([array]$Teams)
     # Orphan = zero owners at all, OR every owner is disabled.
+    # A team whose owner list could not be read is not counted as orphaned.
     @($Teams | Where-Object {
-        $_.OwnerCount -eq 0 -or ($_.OwnerCount -gt 0 -and $_.EnabledOwners -eq 0)
+        -not $_.LookupError -and
+        ($_.OwnerCount -eq 0 -or ($_.OwnerCount -gt 0 -and $_.EnabledOwners -eq 0))
     })
 }
 

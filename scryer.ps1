@@ -548,7 +548,8 @@ $totalRAM_GB  = if ($sysCS)  { [math]::Round($sysCS.TotalPhysicalMemory / 1GB, 1
 $freeRAM_GB   = if ($sysOS)  { [math]::Round($sysOS.FreePhysicalMemory / 1MB, 1) }  else { 0 }
 $lastBoot     = if ($sysOS)  { $sysOS.LastBootUpTime.ToString("yyyy-MM-dd HH:mm") }  else { "" }
 $uptimeSpan   = if ($sysOS)  { (Get-Date) - $sysOS.LastBootUpTime } else { $null }
-$uptimeStr    = if ($uptimeSpan) { "$([int]$uptimeSpan.TotalDays)d $($uptimeSpan.Hours)h" } else { "" }
+# Days are truncated, not rounded: [int] rounded 1 day 18 h up to "2d 18h".
+$uptimeStr    = if ($uptimeSpan) { "$($uptimeSpan.Days)d $($uptimeSpan.Hours)h" } else { "" }
 $psVersion    = $PSVersionTable.PSVersion.ToString()
 
 Write-Host "  [+] System info collected." -ForegroundColor $ColorSchema.Success
@@ -560,9 +561,21 @@ Write-Host "  [+] System info collected." -ForegroundColor $ColorSchema.Success
 Write-Host "  [2/5] Auditing local user accounts..." -ForegroundColor $ColorSchema.Progress
 
 $localUsers   = Get-LocalUser -ErrorAction SilentlyContinue
+# Administrators by its well-known SID, so the lookup works on non-English
+# Windows. Get-LocalGroupMember throws on a group holding an orphaned SID, which
+# left every account flagged non-admin with no warning; ADSI is the fallback.
 $adminMembers = @()
-try { $adminMembers = (Get-LocalGroupMember -Group "Administrators" -ErrorAction SilentlyContinue).Name }
-catch {}
+try {
+    $adminMembers  = @((Get-LocalGroupMember -SID 'S-1-5-32-544' -ErrorAction Stop).Name)
+} catch {
+    try {
+        $adminGroupName = (Get-LocalGroup -SID 'S-1-5-32-544' -ErrorAction Stop).Name
+        $adsiGroup      = [ADSI]"WinNT://$env:COMPUTERNAME/$adminGroupName,group"
+        $adminMembers   = @($adsiGroup.psbase.Invoke('Members') | ForEach-Object { $_.GetType().InvokeMember('Name', 'GetProperty', $null, $_, $null) })
+    } catch {
+        Write-Host "  [!] Could not read the Administrators group; the IsAdmin column is unreliable." -ForegroundColor $ColorSchema.Warning
+    }
+}
 
 $userRows = foreach ($u in ($localUsers | Sort-Object { -not ($adminMembers -contains "$env:COMPUTERNAME\$($u.Name)") }, { $_.LastLogon } -Descending)) {
     $isAdmin = ($adminMembers -contains "$env:COMPUTERNAME\$($u.Name)") -or ($adminMembers -contains $u.Name)

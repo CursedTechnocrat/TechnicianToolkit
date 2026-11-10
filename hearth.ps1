@@ -615,20 +615,42 @@ function Invoke-EnvironmentCheck {
         Write-Host "  [!] RSAT: ActiveDirectory       -  Not found (required for SPHINX)" -ForegroundColor $C.Warning
     }
 
-    # 8. Microsoft.Graph module (for ALMANAC)
-    $graphModule = Get-Module -ListAvailable -Name Microsoft.Graph -ErrorAction SilentlyContinue
-    if ($graphModule) {
-        Write-Host "  [+] Microsoft.Graph module      -  Available ($($graphModule[0].Version))" -ForegroundColor $C.Success
-    } else {
-        Write-Host "  [!] Microsoft.Graph module      -  Not found (required for ALMANAC)" -ForegroundColor $C.Warning
-    }
-
-    # 10. Az module (for ZENITH)
-    $azModule = Get-Module -ListAvailable -Name Az -ErrorAction SilentlyContinue
-    if ($azModule) {
-        Write-Host "  [+] Az module                   -  Available ($($azModule[0].Version))" -ForegroundColor $C.Success
-    } else {
-        Write-Host "  [!] Az module                   -  Not found (required for ZENITH)" -ForegroundColor $C.Warning
+    # 8-10. Cloud modules. The tools load submodules, not the Microsoft.Graph and
+    # Az roll-ups, so a technician with only the submodules installed was told
+    # ALMANAC and ZENITH could not run. These lists mirror each tool's own
+    # $requiredModules; the Pester suite fails if they drift apart.
+    $hearthGraphModules = @(
+        'Microsoft.Graph.Authentication',
+        'Microsoft.Graph.Users',
+        'Microsoft.Graph.Identity.DirectoryManagement',
+        'Microsoft.Graph.Reports'
+    )
+    $hearthAzModules = @(
+        'Az.Accounts',
+        'Az.Compute',
+        'Az.Websites',
+        'Az.Sql',
+        'Az.Storage',
+        'Az.RecoveryServices',
+        'Az.Network',
+        'Az.Resources',
+        'Az.Advisor',
+        'Az.Security',
+        'Az.PolicyInsights'
+    )
+    foreach ($set in @(
+        @{ Label = 'Microsoft Graph modules'; Tool = 'ALMANAC'; Names = $hearthGraphModules },
+        @{ Label = 'Az modules';              Tool = 'ZENITH';  Names = $hearthAzModules }
+    )) {
+        $missing = @($set.Names | Where-Object { -not (Get-Module -ListAvailable -Name $_ -ErrorAction SilentlyContinue) })
+        $label   = "{0,-30}" -f $set.Label
+        if ($missing.Count -eq 0) {
+            Write-Host "  [+] $label-  Available ($($set.Names.Count) of $($set.Names.Count))" -ForegroundColor $C.Success
+        } elseif ($missing.Count -eq $set.Names.Count) {
+            Write-Host "  [!] $label-  Not found (required for $($set.Tool); it offers to install them)" -ForegroundColor $C.Warning
+        } else {
+            Write-Host "  [!] $label-  $($set.Names.Count - $missing.Count) of $($set.Names.Count); missing $($missing -join ', ')" -ForegroundColor $C.Warning
+        }
     }
 
     Write-Host ""

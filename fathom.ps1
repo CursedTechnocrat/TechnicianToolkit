@@ -725,8 +725,9 @@ function Invoke-TempCleanup {
         $bytesFreed = 0L
         foreach ($f in $files) {
             try {
-                $bytesFreed += $f.Length
                 Remove-Item -Path $f.FullName -Force -ErrorAction Stop
+                # Counted after the delete succeeds, so a locked file is not "freed".
+                $bytesFreed += $f.Length
                 $deleted++
             } catch {
                 # Skip locked/protected files
@@ -766,6 +767,11 @@ function Invoke-WUCacheCleanup {
 
     Stop-Service -Name wuauserv -Force -ErrorAction SilentlyContinue
     Start-Sleep -Seconds 2
+    if ((Get-Service -Name wuauserv -ErrorAction SilentlyContinue).Status -eq 'Running') {
+        # Deleting the download cache under a running service corrupts in-flight downloads.
+        Write-Host "  Windows Update service would not stop; cache left alone." -ForegroundColor $C.Yellow
+        return
+    }
 
     Write-Host "  Removing cached downloads..." -ForegroundColor $C.Magenta
     Get-ChildItem -Path $wuPath -Force -ErrorAction SilentlyContinue |
@@ -862,16 +868,38 @@ function Show-OldProfiles {
         return
     }
 
+    # A profile folder's own timestamp rarely changes while it is in use, so it
+    # listed active profiles as stale. Last use is the later of Windows' record
+    # (Win32_UserProfile.LastUseTime) and NTUSER.DAT, which is written at logoff.
+    # A profile that is loaded right now is never listed.
+    $wmiProfiles = @{}
+    foreach ($wp in @(Get-CimInstance -ClassName Win32_UserProfile -ErrorAction SilentlyContinue)) {
+        if ($wp.LocalPath) { $wmiProfiles[$wp.LocalPath.TrimEnd('\').ToLowerInvariant()] = $wp }
+    }
+
     $excluded = @('Public', 'Default', 'Default User', 'All Users', 'defaultuser0')
-    $profiles = Get-ChildItem -Path $usersRoot -Directory -ErrorAction SilentlyContinue |
-                Where-Object { $_.Name -notin $excluded -and $_.LastWriteTime -lt $cutoff }
+    $profiles = foreach ($dir in @(Get-ChildItem -Path $usersRoot -Directory -ErrorAction SilentlyContinue |
+                                   Where-Object { $_.Name -notin $excluded })) {
+        $wp = $wmiProfiles[$dir.FullName.TrimEnd('\').ToLowerInvariant()]
+        if ($wp -and ($wp.Loaded -or $wp.Special)) { continue }
+        $times = @($dir.LastWriteTime)
+        if ($wp -and $wp.LastUseTime) { $times += [datetime]$wp.LastUseTime }
+        $hive = Join-Path $dir.FullName 'NTUSER.DAT'
+        $hiveItem = Get-Item -LiteralPath $hive -Force -ErrorAction SilentlyContinue
+        if ($hiveItem) { $times += $hiveItem.LastWriteTime }
+        $lastUse = $times | Sort-Object -Descending | Select-Object -First 1
+        if ($lastUse -lt $cutoff) {
+            $dir | Add-Member -NotePropertyName LastUse -NotePropertyValue $lastUse -PassThru
+        }
+    }
+    $profiles = @($profiles)
 
     if (-not $profiles -or $profiles.Count -eq 0) {
         Write-Host "  No user profiles older than 90 days found." -ForegroundColor $C.Green
         return
     }
 
-    Write-Host ("  {0,-20} {1,-22} {2,-12} {3}" -f "Profile", "Last Modified", "Est. Size", "Path") -ForegroundColor $C.Gray
+    Write-Host ("  {0,-20} {1,-22} {2,-12} {3}" -f "Profile", "Last Used", "Est. Size", "Path") -ForegroundColor $C.Gray
     Write-Host ("  " + ("-" * 75)) -ForegroundColor $C.Gray
 
     foreach ($prof in $profiles) {
@@ -884,12 +912,12 @@ function Show-OldProfiles {
             $sizeStr = "Access Denied"
         }
 
-        $age = [Math]::Round(((Get-Date) - $prof.LastWriteTime).TotalDays)
+        $age = [Math]::Round(((Get-Date) - $prof.LastUse).TotalDays)
         $nameStr = $prof.Name.Substring(0, [Math]::Min(19, $prof.Name.Length))
 
         Write-Host ("  {0,-20} {1,-22} {2,-12} {3}" -f `
             $nameStr,
-            ($prof.LastWriteTime.ToString("yyyy-MM-dd") + " ($age days ago)"),
+            ($prof.LastUse.ToString("yyyy-MM-dd") + " ($age days ago)"),
             $sizeStr,
             $prof.FullName) -ForegroundColor $C.Yellow
     }

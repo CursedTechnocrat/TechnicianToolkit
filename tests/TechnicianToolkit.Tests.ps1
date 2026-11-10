@@ -342,6 +342,9 @@ Describe 'Shared helper source' {
         @{ fn = 'Clear-TKNote' }
         @{ fn = 'Export-TKNoteReport' }
         @{ fn = 'Save-TKNoteReport' }
+        @{ fn = 'Select-TKLanIPv4Address' }
+        @{ fn = 'Get-TKDefaultRouteInterfaceOrder' }
+        @{ fn = 'Get-TKLastSignIn' }
     ) {
         Get-Command $fn -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
     }
@@ -3480,6 +3483,141 @@ Describe 'State-changing tools — regression guards' {
         }
         It 'leaves Remote Desktop alone on an unattended run' {
             $basiliskSource | Should -Match '\$rdpChoice = "3"'
+        }
+    }
+}
+
+Describe 'Report accuracy — regression guards' {
+    Context 'Select-TKLanIPv4Address (LANTERN, LEYLINE)' {
+        BeforeAll {
+            function New-Addr { param($Ip, $Len, $If, $Alias = 'x', $Origin = 'Dhcp')
+                [PSCustomObject]@{ IPAddress = $Ip; PrefixLength = $Len; InterfaceIndex = $If; InterfaceAlias = $Alias; PrefixOrigin = $Origin } }
+            $addrs = @(
+                (New-Addr '10.8.0.6'      32 30 'VPN'),
+                (New-Addr '172.27.80.1'   20 40 'vEthernet (WSL)' 'Manual'),
+                (New-Addr '192.168.1.42'  24 12 'Wi-Fi'),
+                (New-Addr '127.0.0.1'      8  1 'Loopback' 'WellKnown'),
+                (New-Addr '169.254.10.2'  16 50 'Ethernet 2' 'WellKnown')
+            )
+        }
+        It 'picks the interface that carries the default route, not the longest prefix' {
+            (Select-TKLanIPv4Address -Addresses $addrs -GatewayInterfaceOrder @(12)).IPAddress | Should -Be '192.168.1.42'
+        }
+        It 'honours the route order when several interfaces have a gateway' {
+            (Select-TKLanIPv4Address -Addresses $addrs -GatewayInterfaceOrder @(40, 12)).IPAddress | Should -Be '172.27.80.1'
+        }
+        It 'never returns a /32, loopback or APIPA address' {
+            (Select-TKLanIPv4Address -Addresses $addrs -GatewayInterfaceOrder @(30)).IPAddress | Should -Not -Be '10.8.0.6'
+        }
+        It 'falls back to a private address when there is no default route' {
+            (Select-TKLanIPv4Address -Addresses $addrs).IPAddress | Should -Match '^(172\.27|192\.168)\.'
+        }
+        It 'returns nothing when there is no usable address' {
+            Select-TKLanIPv4Address -Addresses @((New-Addr '127.0.0.1' 8 1 'lo' 'WellKnown')) | Should -BeNullOrEmpty
+        }
+    }
+
+    Context 'Get-TKLastSignIn (ALMANAC, ECLIPSE)' {
+        It 'takes the latest of interactive, non-interactive and successful sign-ins' {
+            $a = [PSCustomObject]@{
+                LastSignInDateTime               = [datetime]'2026-01-05'
+                LastNonInteractiveSignInDateTime = [datetime]'2026-11-01'
+                LastSuccessfulSignInDateTime     = [datetime]'2026-10-30'
+            }
+            Get-TKLastSignIn -Activity $a | Should -Be ([datetime]'2026-11-01')
+        }
+        It 'copes with missing fields, strings and the 0001-01-01 placeholder' {
+            $a = [PSCustomObject]@{ LastSignInDateTime = [datetime]::MinValue; LastNonInteractiveSignInDateTime = '2026-03-04T10:00:00Z' }
+            (Get-TKLastSignIn -Activity $a).Year | Should -Be 2026
+            Get-TKLastSignIn -Activity ([PSCustomObject]@{ LastSignInDateTime = $null }) | Should -BeNullOrEmpty
+            Get-TKLastSignIn -Activity $null | Should -BeNullOrEmpty
+        }
+    }
+
+    Context 'PHYLACTERY folder-redirect check' {
+        BeforeAll {
+            $ast = Get-ToolAst -FileName 'phylactery.ps1'
+            . ([scriptblock]::Create((Get-ToolFunctionText -Ast $ast -FuncName 'Test-PathUnderOneDrive')))
+        }
+        It 'does not treat an empty OneDrive variable as matching every path' {
+            Test-PathUnderOneDrive -Path 'C:\Users\amy\Desktop' -Roots @('', $null) | Should -BeFalse
+        }
+        It 'matches a folder inside a configured root, and a OneDrive* path segment' {
+            Test-PathUnderOneDrive -Path 'C:\Users\amy\Contoso Files\Desktop' -Roots @('C:\Users\amy\Contoso Files') | Should -BeTrue
+            Test-PathUnderOneDrive -Path 'C:\Users\amy\OneDrive - Contoso\Documents' -Roots @() | Should -BeTrue
+        }
+        It 'does not match a sibling folder that merely shares a prefix' {
+            Test-PathUnderOneDrive -Path 'C:\Users\amy\Contoso Files Old\Desktop' -Roots @('C:\Users\amy\Contoso Files') | Should -BeFalse
+        }
+    }
+
+    Context 'EMBALM / REVENANT OneDrive detection' {
+        It '<File> finds the OneDrive folder by scan (the return-if bug made this throw)' -ForEach @(
+            @{ File = 'embalm.ps1' }, @{ File = 'revenant.ps1' }
+        ) {
+            $ast = Get-ToolAst -FileName $File
+            . ([scriptblock]::Create((Get-ToolFunctionText -Ast $ast -FuncName 'Get-OneDriveBusinessPath')))
+            $root = Join-Path $TestDrive ([guid]::NewGuid().ToString('N'))
+            New-Item -ItemType Directory -Path (Join-Path $root 'OneDrive - Contoso') -Force | Out-Null
+            Get-OneDriveBusinessPath -ProfileRoot $root | Should -Be (Join-Path $root 'OneDrive - Contoso')
+            Get-OneDriveBusinessPath -ProfileRoot (Join-Path $TestDrive 'nothing-here') | Should -BeNullOrEmpty
+        }
+    }
+
+    Context 'ANVIL BIOS release date' {
+        BeforeAll {
+            $ast = Get-ToolAst -FileName 'anvil.ps1'
+            . ([scriptblock]::Create((Get-ToolFunctionText -Ast $ast -FuncName 'ConvertTo-AnvilBiosDate')))
+        }
+        It 'passes through the [datetime] that Get-CimInstance returns' {
+            ConvertTo-AnvilBiosDate -Value ([datetime]'2017-11-15') | Should -Be ([datetime]'2017-11-15')
+        }
+        It 'still reads a DMTF string' {
+            (ConvertTo-AnvilBiosDate -Value '20171115000000.000000+000').ToString('yyyy-MM-dd') | Should -Be '2017-11-15'
+        }
+        It 'returns nothing for empty input' {
+            ConvertTo-AnvilBiosDate -Value $null | Should -BeNullOrEmpty
+            ConvertTo-AnvilBiosDate -Value '' | Should -BeNullOrEmpty
+        }
+    }
+
+    Context 'GRIFFIN never-run sentinel' {
+        BeforeAll {
+            $ast = Get-ToolAst -FileName 'griffin.ps1'
+            . ([scriptblock]::Create((Get-ToolFunctionText -Ast $ast -FuncName 'ConvertTo-GriffinAge')))
+        }
+        It 'turns UInt32.MaxValue into "never" ($null)' {
+            ConvertTo-GriffinAge ([uint32]::MaxValue) | Should -BeNullOrEmpty
+        }
+        It 'keeps a real age' {
+            ConvertTo-GriffinAge ([uint32]3) | Should -Be 3
+            ConvertTo-GriffinAge 0 | Should -Be 0
+        }
+    }
+
+    Context 'HEARTH module lists' {
+        It 'checks exactly the modules <Tool> loads' -ForEach @(
+            @{ Tool = 'almanac.ps1'; Var = 'hearthGraphModules' },
+            @{ Tool = 'zenith.ps1';  Var = 'hearthAzModules' }
+        ) {
+            $hearth = Get-ToolAssignmentValue -Ast (Get-ToolAst -FileName 'hearth.ps1') -VarName $Var
+            $tool   = Get-ToolAssignmentValue -Ast (Get-ToolAst -FileName $Tool) -VarName 'requiredModules'
+            @($hearth) | Should -Be @($tool)
+        }
+    }
+
+    Context 'CLEANSE total' {
+        It 'adds each category to the script-scope total' {
+            $src = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'cleanse.ps1') -Raw
+            $src | Should -Match '\$script:totalFreed \+= '
+        }
+    }
+
+    Context 'AUGUR disk matching' {
+        It 'keys Win32_DiskDrive by string so it matches Get-PhysicalDisk.DeviceId' {
+            $src = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'augur.ps1') -Raw
+            $src | Should -Match '\$wmiDisks\["\$\(\$_\.Index\)"\]'
+            $src | Should -Not -Match '\[regex\]::Escape\(\$pd\.DeviceId\)'
         }
     }
 }

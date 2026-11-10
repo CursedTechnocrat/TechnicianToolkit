@@ -378,13 +378,19 @@ function Copy-ProfileFolder {
         Write-Progress -Activity "Copying $Label" -Completed
         $elapsed = [math]::Round(((Get-Date) - $startTime).TotalSeconds, 1)
 
-        if ($LASTEXITCODE -le 7) {
+        # Robocopy's exit code is a bitmask: 0-7 is success, 8 means some files
+        # could not be copied, 16 is a fatal error with nothing copied.
+        $rc = $LASTEXITCODE
+        if ($rc -le 7) {
             Write-Host "    [+] $Label — done  ($copied files copied, $totalSizeMB MB, ${elapsed}s)." -ForegroundColor $ColorSchema.Success
             Add-MigrationRecord -Item $Label -Status "Copied" -Detail "$totalFiles files, $totalSizeMB MB"
+        } elseif ($rc -ge 16) {
+            Write-Host "    [-] $Label — failed: robocopy reported a fatal error (exit $rc); nothing was copied." -ForegroundColor $ColorSchema.Error
+            Add-MigrationRecord -Item $Label -Status "Failed" -Detail "Robocopy fatal error (exit $rc)"
+            Write-TKError -ScriptName 'revenant' -Message "Folder migration '$Label' failed: robocopy exit $rc ('$SourcePath' -> '$DestPath')" -Category 'Migration'
         } else {
-            Write-Progress -Activity "Copying $Label" -Completed
-            Write-Host "    [!!] $Label — completed with warnings (exit $LASTEXITCODE)." -ForegroundColor $ColorSchema.Warning
-            Add-MigrationRecord -Item $Label -Status "Partial" -Detail "Robocopy exit $LASTEXITCODE, $totalFiles files, $totalSizeMB MB"
+            Write-Host "    [!!] $Label — some files could not be copied (robocopy exit $rc); $copied of $totalFiles copied." -ForegroundColor $ColorSchema.Warning
+            Add-MigrationRecord -Item $Label -Status "Partial" -Detail "Robocopy exit $rc, $copied of $totalFiles files copied"
         }
     }
     catch {
@@ -446,17 +452,46 @@ function Get-OneDriveBusinessPath {
         Where-Object { $_.Name -like 'OneDrive*' } |
         Select-Object -First 1
 
-    return if ($match) { $match.FullName } else { $null }
+    if ($match) { return $match.FullName }
+    return $null
 }
 
 function Test-KnownFolderMove {
+    <#
+    Known Folder Move redirects Desktop / Documents into the OneDrive folder.
+    The old check compared <Profile>\Desktop with the OneDrive path, which can
+    never match, so the duplicate warning never fired. For the signed-in user
+    the redirected location is read from User Shell Folders; for any other
+    profile (whose registry hive is not loaded) KFM is inferred when OneDrive
+    holds a Desktop or Documents folder and the profile's own copy has no files.
+    #>
     param([string]$ProfileRoot)
-    # KFM redirects Desktop/Documents into the OneDrive folder — detect by comparing paths
-    $desktop   = Join-Path $ProfileRoot 'Desktop'
-    $documents = Join-Path $ProfileRoot 'Documents'
-    $oneDrive  = Get-OneDriveBusinessPath -ProfileRoot $ProfileRoot
+    $oneDrive = Get-OneDriveBusinessPath -ProfileRoot $ProfileRoot
     if (-not $oneDrive) { return $false }
-    return ($desktop -like "$oneDrive*") -or ($documents -like "$oneDrive*")
+    $oneDrive = $oneDrive.TrimEnd('\')
+
+    if ($ProfileRoot -ieq $env:USERPROFILE) {
+        $usf = Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders' -ErrorAction SilentlyContinue
+        if ($usf) {
+            foreach ($name in 'Desktop', 'Personal') {
+                $raw = "$($usf.$name)"
+                if (-not $raw) { continue }
+                $path = [Environment]::ExpandEnvironmentVariables($raw).TrimEnd('\')
+                if ($path -like "$oneDrive\*" -or $path -ieq $oneDrive) { return $true }
+            }
+            return $false
+        }
+    }
+
+    foreach ($name in 'Desktop', 'Documents') {
+        $inOneDrive = Join-Path $oneDrive $name
+        if (-not (Test-Path -LiteralPath $inOneDrive -PathType Container)) { continue }
+        $local = Join-Path $ProfileRoot $name
+        $localFiles = @(Get-ChildItem -LiteralPath $local -File -Recurse -Force -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -ne 'desktop.ini' } | Select-Object -First 1)
+        if ($localFiles.Count -eq 0) { return $true }
+    }
+    return $false
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -831,7 +866,7 @@ if ($IsArchiveZip) {
         9  = @{ Label = "Chrome Bookmarks";        Type = "File";   Src = (Join-Path $sourceLocal   "Google\Chrome\User Data\Default\Bookmarks");       Dst = (Join-Path $destMigration "Chrome") }
         10 = @{ Label = "Edge Bookmarks";          Type = "File";   Src = (Join-Path $sourceLocal   "Microsoft\Edge\User Data\Default\Bookmarks");      Dst = (Join-Path $destMigration "Edge") }
         11 = @{ Label = "Firefox Profiles";        Type = "Folder"; Src = (Join-Path $sourceAppData "Mozilla\Firefox\Profiles");                        Dst = (Join-Path $destMigration "Firefox") }
-        12 = @{ Label = "OneDrive for Business";   Type = "Folder"; Src = $(if ($oneDrivePath) { $oneDrivePath } else { Join-Path $SourceRoot "OneDrive - *" }); Dst = (Join-Path $destMigration "OneDrive") }
+        12 = @{ Label = "OneDrive for Business";   Type = "Folder"; Src = $(if ($oneDrivePath) { $oneDrivePath } else { Join-Path $SourceRoot "OneDrive" }); Dst = (Join-Path $destMigration "OneDrive") }
     }
 }
 

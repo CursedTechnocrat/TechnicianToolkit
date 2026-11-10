@@ -1264,7 +1264,10 @@ try {
 
         $avProducts.Add([PSCustomObject]@{
             Product            = 'Windows Defender'
-            RealTimeProtection = if ($defender.RealTimeProtectionEnabled) { 'On' } else { 'Off' }
+            # With another AV registered, Defender runs in passive mode and reports
+            # real-time protection off; that is not an unprotected machine.
+            RealTimeProtection = if ("$($defender.AMRunningMode)" -match 'Passive') { 'Passive' }
+                                 elseif ($defender.RealTimeProtectionEnabled) { 'On' } else { 'Off' }
             DefinitionAge      = if ($null -ne $defAgeDays) { "$defAgeDays day(s)" } else { 'Unknown' }
             LastQuickScan      = $lastScan
             ServiceEnabled     = if ($defender.AMServiceEnabled) { 'Yes' } else { 'No' }
@@ -1280,9 +1283,11 @@ try {
     $thirdParty = Get-CimInstance -Namespace 'root\SecurityCenter2' -ClassName AntiVirusProduct -ErrorAction SilentlyContinue |
                   Where-Object { $_.displayName -notmatch 'Windows Defender|Microsoft Defender' }
     foreach ($av in $thirdParty) {
+        # productState's 0x1000 bit is the product's real-time scanner being on.
+        $rtp = if ($null -eq $av.productState) { 'N/A' } elseif (([int64]$av.productState -band 0x1000) -ne 0) { 'On' } else { 'Off' }
         $avProducts.Add([PSCustomObject]@{
             Product            = $av.displayName
-            RealTimeProtection = 'N/A'
+            RealTimeProtection = $rtp
             DefinitionAge      = 'N/A'
             LastQuickScan      = 'N/A'
             ServiceEnabled     = 'Registered'
@@ -1466,11 +1471,17 @@ $taskBadge = if ($taskCount -eq 0) {
 }
 
 # AV / Security badge
-$avUnprotected = ($reportData['Security'] | Where-Object { $_.RealTimeProtection -eq 'Off' }).Count
+$avUnprotected = @($reportData['Security'] | Where-Object { $_.RealTimeProtection -eq 'Off' }).Count
+$avActive      = @($reportData['Security'] | Where-Object { $_.RealTimeProtection -eq 'On' }).Count
 $avBadge = if ($reportData['Security'].Count -eq 0) {
     "<span class='tk-badge-warn'>No AV detected</span>"
+} elseif ($avActive -eq 0 -and @($reportData['Security'] | Where-Object { $_.RealTimeProtection -eq 'Passive' }).Count -gt 0) {
+    # Passive Defender means Windows sees another AV, which Server SKUs cannot list.
+    "<span class='tk-badge-warn'>Defender passive - confirm the third-party AV</span>"
+} elseif ($avActive -eq 0) {
+    "<span class='tk-badge-err'>No active real-time protection</span>"
 } elseif ($avUnprotected -gt 0) {
-    "<span class='tk-badge-err'>$avUnprotected unprotected</span>"
+    "<span class='tk-badge-warn'>$avUnprotected product(s) off</span>"
 } else {
     "<span class='tk-badge-ok'>Protected</span>"
 }
