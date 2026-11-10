@@ -613,6 +613,15 @@ function Assert-ADModule {
     Write-Host ""
     Write-Host "  RSAT is supported on Windows 10 (1809+) and Windows 11." -ForegroundColor $C.Info
     Write-Host ""
+
+    # An unattended run has no one to answer the menu below, so it stops with the
+    # install command instead of waiting forever (ARGUS and GARM do the same).
+    if ($Unattended) {
+        Write-Host "  [-] RSAT ActiveDirectory tools are not installed. Install them and re-run:" -ForegroundColor $C.Error
+        Write-Host "      Add-WindowsCapability -Online -Name RSAT.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0" -ForegroundColor $C.Info
+        return $false
+    }
+
     Write-Host "  [1] Install RSAT ActiveDirectory tools automatically (recommended)" -ForegroundColor $C.Info
     Write-Host "  [2] Show manual installation instructions" -ForegroundColor $C.Info
     Write-Host "  [Q] Cancel and quit" -ForegroundColor $C.Info

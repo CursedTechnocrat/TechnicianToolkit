@@ -133,6 +133,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   submodules, so a technician with only those installed was told the tools could not run. HEARTH
   now checks each tool's own module list and says which modules are missing. A Pester test keeps
   the lists in step.
+- **Unattended runs that waited forever at a prompt:**
+  - **SPHINX** on a machine without RSAT showed its install menu even with `-Unattended`, so
+    `-Action StaleReport` and the other unattended reports hung. It now stops with the
+    `Add-WindowsCapability` command, as ARGUS and GARM already did.
+  - **ZENITH** asked which subscription to audit when the account could see more than one. It
+    also opened an interactive Azure sign-in when there was no Az context, or whenever
+    `-TenantId` was passed. An unattended run now uses the existing context (sign in first with
+    `Connect-AzAccount -Identity` or a service principal) and audits its current subscription.
+    It stops with instructions when there is no context or `-TenantId` names another tenant
+    (checked by GUID or verified domain). Interactively, a blank or invalid subscription choice
+    now says it is keeping the current one; it used to become index -1 silently.
+  - **LEYLINE** `-Unattended -Action PortTest` without `-Target` prompted for one; it now stops
+    with an error. `-Action Trace` now runs unattended when `-Target` is given (it was refused
+    outright).
+- **LEYLINE's Reset Stack always printed "Done."** A failing `netsh` does not throw, so the
+  `try`/`catch` never saw it. Each step now checks its exit code, and the summary says how
+  many failed.
 
 ---
 

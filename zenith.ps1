@@ -555,28 +555,36 @@ Write-Section "AUTHENTICATION"
 $ctx = Get-AzContext -ErrorAction SilentlyContinue
 
 if ($Unattended) {
-    if (-not [string]::IsNullOrWhiteSpace($TenantId)) {
-        Write-Step "Connecting to tenant: $TenantId"
-        try {
-            Disconnect-AzAccount -ErrorAction SilentlyContinue | Out-Null
-            Connect-AzAccount -TenantId $TenantId -ErrorAction Stop | Out-Null
-            $ctx = Get-AzContext -ErrorAction Stop
-        } catch {
-            Write-Fail "Authentication failed: $_"
-            exit 1
-        }
-    } elseif ($ctx) {
-        Write-Step "Unattended  -  using existing session (pass -TenantId to force a specific tenant)"
-    } else {
-        Write-Step "No active session  -  launching sign-in..."
-        try {
-            Connect-AzAccount -ErrorAction Stop | Out-Null
-            $ctx = Get-AzContext -ErrorAction Stop
-        } catch {
-            Write-Fail "Authentication failed: $_"
-            exit 1
+    # An unattended run cannot answer a browser or device-code sign-in, which
+    # used to open and wait forever. It uses the Az context already present (a
+    # managed identity or service principal signed in with Connect-AzAccount
+    # before the run) and stops with instructions when there is none, or when
+    # -TenantId names a different tenant.
+    $wrongTenant = $false
+    if ($ctx -and -not [string]::IsNullOrWhiteSpace($TenantId) -and "$($ctx.Tenant.Id)" -ne $TenantId) {
+        $guid = [guid]::Empty
+        if ([guid]::TryParse($TenantId, [ref]$guid)) {
+            $wrongTenant = $true
+        } else {
+            # A domain name: compare it with the signed-in tenant's verified domains.
+            $domains = @((Get-AzTenant -TenantId $ctx.Tenant.Id -ErrorAction SilentlyContinue).Domains)
+            if ($domains.Count -gt 0) { $wrongTenant = -not ($domains -contains $TenantId) }
+            else { Write-Warn "Could not confirm that the signed-in tenant is $TenantId; continuing with it." }
         }
     }
+    if (-not $ctx -or $wrongTenant) {
+        if ($wrongTenant) {
+            Write-Fail "The signed-in Az context is for tenant $($ctx.Tenant.Id), not $TenantId."
+        } else {
+            Write-Fail "No Azure sign-in found, and an unattended run cannot sign in interactively."
+        }
+        Write-Info "Sign in first, then re-run with -Unattended. For example:"
+        Write-Info "  Connect-AzAccount -Identity                                        # managed identity"
+        Write-Info "  Connect-AzAccount -ServicePrincipal -Tenant <id> -Credential <cred>  # service principal"
+        Write-Info "  Connect-AzAccount -Tenant <id>                                       # interactively, once"
+        exit 1
+    }
+    Write-Step "Unattended  -  using the existing Az session ($($ctx.Account.Id))"
 } else {
     # Interactive: always show who is currently signed in and ask before proceeding
     if ($ctx) {
@@ -623,7 +631,12 @@ if ($SubscriptionId) {
     }
 } else {
     $subs = @(Get-AzSubscription -ErrorAction SilentlyContinue)
-    if ($subs.Count -gt 1) {
+    if ($subs.Count -gt 1 -and $Unattended) {
+        # No prompt in an unattended run: audit the context's current subscription
+        # and say how to choose another.
+        Write-Warn "$($subs.Count) subscriptions are available; auditing the current one. Pass -SubscriptionId to choose."
+    }
+    elseif ($subs.Count -gt 1) {
         Write-Host ""
         Write-Host "  Available Subscriptions:" -ForegroundColor $C.Header
         for ($i = 0; $i -lt $subs.Count; $i++) {
@@ -631,9 +644,14 @@ if ($SubscriptionId) {
         }
         Write-Host ""
         Write-Host -NoNewline "  Select subscription [1-$($subs.Count)]: " -ForegroundColor $C.Header
-        $sel = [int](Read-Host).Trim() - 1
-        if ($sel -ge 0 -and $sel -lt $subs.Count) {
-            Set-AzContext -SubscriptionId $subs[$sel].Id -ErrorAction Stop | Out-Null
+        $raw = "$(Read-Host)".Trim()
+        $sel = 0
+        # Blank or non-numeric input used to become [int]'' - 1 = -1 and silently
+        # keep the default; now it is said out loud.
+        if ([int]::TryParse($raw, [ref]$sel) -and $sel -ge 1 -and $sel -le $subs.Count) {
+            Set-AzContext -SubscriptionId $subs[$sel - 1].Id -ErrorAction Stop | Out-Null
+        } else {
+            Write-Warn "No valid selection; keeping the current subscription."
         }
     }
 }

@@ -3622,6 +3622,36 @@ Describe 'Report accuracy — regression guards' {
     }
 }
 
+Describe 'Unattended runs never wait at a prompt' {
+    BeforeAll {
+        function Get-FunctionBody { param($File, $Name)
+            Get-ToolFunctionText -Ast (Get-ToolAst -FileName $File) -FuncName $Name }
+    }
+    It 'SPHINX returns from Assert-ADModule before its menu when unattended' {
+        $body = Get-FunctionBody 'sphinx.ps1' 'Assert-ADModule'
+        $guard = $body.IndexOf('if ($Unattended)')
+        $guard | Should -BeGreaterThan 0
+        $guard | Should -BeLessThan $body.IndexOf('Read-Host')
+    }
+    It 'LEYLINE checks -Unattended before prompting for a port-test target' {
+        $body = Get-FunctionBody 'leyline.ps1' 'Invoke-PortTest'
+        $body.IndexOf('$Unattended') | Should -BeLessThan $body.IndexOf('Read-Host')
+        $body.IndexOf('$Unattended') | Should -BeGreaterThan 0
+    }
+    It 'ZENITH never calls Connect-AzAccount or Read-Host on the unattended path' {
+        $src   = Get-Content (Join-Path (Join-Path $PSScriptRoot '..') 'zenith.ps1') -Raw
+        $start = $src.IndexOf("if (`$Unattended) {`n    # An unattended run cannot answer")
+        if ($start -lt 0) { $start = $src.IndexOf("if (`$Unattended) {`r`n    # An unattended run cannot answer") }
+        $start | Should -BeGreaterThan 0
+        $end   = $src.IndexOf('# Interactive: always show who is currently signed in', $start)
+        $unattendedAuth = $src.Substring($start, $end - $start)
+        # Only a call counts; the sign-in commands it prints as advice are quoted.
+        $unattendedAuth | Should -Not -Match '(?m)^\s*Connect-AzAccount\b'
+        $unattendedAuth | Should -Not -Match '(?m)^[^"]*Read-Host'
+        $src | Should -Match '\$subs\.Count -gt 1 -and \$Unattended'
+    }
+}
+
 Describe 'License header compliance — all source files' {
     $licenseCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Include '*.ps1', '*.psm1' -File -Recurse |
         Where-Object { $_.FullName -notmatch $NonSourceDir } |
