@@ -3306,6 +3306,119 @@ Describe 'ConvertTo-ArgusArray' {
 # it is or what rights they have, so every source file carries the notice in
 # its own header. This test stops a new tool from being added without one.
 # ─────────────────────────────────────────────────────────────────────────────
+Describe 'AUSPEX memory module helpers' {
+    BeforeAll {
+        $ast = Get-ToolAst -FileName 'auspex.ps1'
+        foreach ($name in 'ConvertTo-AuspexMemoryType', 'ConvertTo-AuspexMemoryFormFactor',
+                          'ConvertTo-AuspexMemoryVendor', 'Get-AuspexMemorySummary', 'Get-AuspexEventFirstLine') {
+            . ([scriptblock]::Create((Get-ToolFunctionText -Ast $ast -FuncName $name)))
+        }
+
+        function New-Dimm {
+            param([string]$Slot, [double]$GB, $Smbios = 26, $Wmi = 0, $Form = 8,
+                  $Speed = 3200, $Configured = 3200, [string]$Maker = 'Samsung', [string]$Part = 'M378A1K43EB2-CWE  ')
+            [PSCustomObject]@{
+                DeviceLocator = $Slot; BankLabel = ''; Capacity = [uint64]($GB * 1GB)
+                SMBIOSMemoryType = $Smbios; MemoryType = $Wmi; FormFactor = $Form
+                Speed = $Speed; ConfiguredClockSpeed = $Configured
+                Manufacturer = $Maker; PartNumber = $Part
+            }
+        }
+    }
+
+    Context 'memory type' {
+        It 'reads the SMBIOS type for <Expected>' -ForEach @(
+            @{ Smbios = 24; Expected = 'DDR3' }, @{ Smbios = 26; Expected = 'DDR4' },
+            @{ Smbios = 34; Expected = 'DDR5' }, @{ Smbios = 30; Expected = 'LPDDR4' },
+            @{ Smbios = 35; Expected = 'LPDDR5' }
+        ) {
+            ConvertTo-AuspexMemoryType -SmbiosMemoryType $Smbios -MemoryType 0 | Should -Be $Expected
+        }
+        It 'falls back to the WMI MemoryType, in its own numbering, when SMBIOS says nothing' {
+            ConvertTo-AuspexMemoryType -SmbiosMemoryType 0 -MemoryType 21 | Should -Be 'DDR2'
+            ConvertTo-AuspexMemoryType -SmbiosMemoryType 2 -MemoryType 24 | Should -Be 'DDR3'
+        }
+        It 'does not read 20 the same way in both tables' {
+            ConvertTo-AuspexMemoryType -SmbiosMemoryType 20 -MemoryType 0 | Should -Be 'DDR2 FB-DIMM'
+            ConvertTo-AuspexMemoryType -SmbiosMemoryType 0  -MemoryType 20 | Should -Be 'DDR'
+        }
+        It 'says Unknown for Other (hypervisors) and for null' {
+            ConvertTo-AuspexMemoryType -SmbiosMemoryType 1 -MemoryType 0 | Should -Be 'Unknown'
+            ConvertTo-AuspexMemoryType -SmbiosMemoryType $null -MemoryType $null | Should -Be 'Unknown'
+        }
+    }
+
+    Context 'form factor and vendor' {
+        It 'names DIMM, SODIMM and soldered memory' {
+            ConvertTo-AuspexMemoryFormFactor -FormFactor 8  | Should -Be 'DIMM'
+            ConvertTo-AuspexMemoryFormFactor -FormFactor 12 | Should -Be 'SODIMM'
+            ConvertTo-AuspexMemoryFormFactor -FormFactor 21 | Should -Match 'soldered'
+            ConvertTo-AuspexMemoryFormFactor -FormFactor 0  | Should -Be 'Unknown'
+        }
+        It 'decodes JEDEC IDs in the shapes BIOSes report them' {
+            ConvertTo-AuspexMemoryVendor -Manufacturer '80CE' | Should -Be 'Samsung'
+            ConvertTo-AuspexMemoryVendor -Manufacturer '00AD' | Should -Be 'SK Hynix'
+            ConvertTo-AuspexMemoryVendor -Manufacturer '802C' | Should -Be 'Micron'
+            ConvertTo-AuspexMemoryVendor -Manufacturer '0198' | Should -Be 'Kingston'
+            ConvertTo-AuspexMemoryVendor -Manufacturer 'CE00000000000000' | Should -Be 'Samsung'
+        }
+        It 'passes names and unknown codes through unchanged' {
+            ConvertTo-AuspexMemoryVendor -Manufacturer ' G.Skill ' | Should -Be 'G.Skill'
+            ConvertTo-AuspexMemoryVendor -Manufacturer '8551' | Should -Be '8551'
+            ConvertTo-AuspexMemoryVendor -Manufacturer '' | Should -Be ''
+        }
+    }
+
+    Context 'summary' {
+        It 'summarises a matched pair with free slots and the board maximum' {
+            $arr = [PSCustomObject]@{ Use = 3; MemoryDevices = 4; MaxCapacity = 0; MaxCapacityEx = [uint64](64MB) }
+            $r = Get-AuspexMemorySummary -Modules @((New-Dimm 'DIMM1' 8), (New-Dimm 'DIMM2' 8)) -Arrays @($arr)
+            $r.Summary    | Should -Be '16 GB DDR4 @ 3200 MT/s (2 × 8 GB)'
+            $r.Upgrade    | Should -Be '2 of 4 slot(s) used, board maximum 64 GB'
+            $r.Modules[0].PartNumber | Should -Be 'M378A1K43EB2-CWE'
+            @($r.Notes).Count | Should -Be 0
+        }
+        It 'flags modules running below their rated speed' {
+            $r = Get-AuspexMemorySummary -Modules @((New-Dimm 'A' 16 -Smbios 34 -Speed 5600 -Configured 4800))
+            $r.SpeedMTs | Should -Be 4800
+            ($r.Notes -join ' ') | Should -Match 'below rated speed'
+        }
+        It 'flags mixed sizes and mixed types' {
+            $r = Get-AuspexMemorySummary -Modules @((New-Dimm 'A' 8), (New-Dimm 'B' 16 -Smbios 24))
+            $r.Type | Should -Be 'DDR4 + DDR3'
+            ($r.Notes -join ' ') | Should -Match 'Mixed memory types'
+            ($r.Notes -join ' ') | Should -Match 'different sizes'
+            $r.Summary | Should -Match '1 × 16 GB, 1 × 8 GB'
+        }
+        It 'ignores arrays that are not system memory and uses MaxCapacity when Ex is absent' {
+            $sys   = [PSCustomObject]@{ Use = 3; MemoryDevices = 2; MaxCapacity = [uint32](32MB) }
+            $flash = [PSCustomObject]@{ Use = 4; MemoryDevices = 1; MaxCapacity = [uint32](1MB) }
+            $r = Get-AuspexMemorySummary -Modules @((New-Dimm 'A' 8)) -Arrays @($sys, $flash)
+            $r.SlotsTotal | Should -Be 2
+            $r.MaxGB      | Should -Be 32
+        }
+        It 'returns an empty summary, not an error, when there are no module rows' {
+            $r = Get-AuspexMemorySummary -Modules @() -Arrays @()
+            $r.Summary | Should -Be ''
+            $r.SlotsUsed | Should -Be 0
+            $r.Upgrade | Should -Be ''
+        }
+        It 'falls back to BankLabel when DeviceLocator is blank' {
+            $m = New-Dimm '' 4; $m.BankLabel = 'BANK 0'
+            (Get-AuspexMemorySummary -Modules @($m)).Modules[0].Slot | Should -Be 'BANK 0'
+        }
+    }
+
+    Context 'event message' {
+        It 'survives a null message from a provider with no resource DLL' {
+            Get-AuspexEventFirstLine $null | Should -Match 'no message text'
+        }
+        It 'keeps only the first line' {
+            Get-AuspexEventFirstLine "First line`r`nSecond line" | Should -Be 'First line'
+        }
+    }
+}
+
 Describe 'License header compliance — all source files' {
     $licenseCases = Get-ChildItem -Path (Join-Path $PSScriptRoot '..') -Include '*.ps1', '*.psm1' -File -Recurse |
         Where-Object { $_.FullName -notmatch $NonSourceDir } |

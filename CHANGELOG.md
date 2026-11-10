@@ -5,6 +5,30 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Added
+- **AUSPEX lists the installed memory modules.** The hardware step reads `Win32_PhysicalMemory`
+  and `Win32_PhysicalMemoryArray`. For each module it shows the slot, size, type (DDR3, DDR4,
+  DDR5, LPDDR5 and so on, from `SMBIOSMemoryType`, with the older `MemoryType` as a fallback),
+  form factor, rated and running speed, manufacturer (common JEDEC codes such as `80CE` decoded
+  to a name) and part number. A summary line such as *32 GB DDR5 @ 4800 MT/s (2 × 16 GB)* gives
+  the slots used and the board maximum. The report notes mixed memory types, mixed sizes and
+  modules running below their rated speed. The console, the HTML Hardware section and the RAM
+  line in the summary all carry it. If a firmware hides the memory tables, as some VMs do, only
+  the module table is lost, not the rest of the hardware step.
+
+### Fixed
+- **AUSPEX on multi-socket servers** joined the CPU names and showed the core and thread counts
+  as two numbers side by side ("16 16"). It now gives "2 × <name>" and adds up the counts.
+- **AUSPEX's event section could vanish.** One event with no message text (its provider's
+  resource DLL is missing, which is common) threw inside the step, so the report showed "Clean"
+  on a machine that had errors. Such events are now listed with a placeholder message.
+- AUSPEX's Hardware section now HTML-escapes the manufacturer, model, serial, CPU and volume
+  label values, as the rest of the report already did.
+
+---
+
 ## [6.2.0] - 2026-10-19
 
 A runtime release for the desktop application. .NET 8 reaches end of support in November 2026, so
