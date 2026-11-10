@@ -5,7 +5,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
-## [Unreleased]
+## [6.3.0] - 2026-11-10
+
+A correctness release. A review of the whole suite found tools that changed the machine when they
+should not have, dry runs that were not dry, reports that gave wrong answers, and unattended runs
+that waited forever at a prompt; this release fixes them. AUSPEX also lists the installed memory
+modules. One behaviour changes on purpose: an unattended BASILISK run no longer turns Remote
+Desktop off.
+
+### Changed
+- **BASILISK `-Unattended` no longer disables Remote Desktop.** The default unattended run used to
+  turn RDP off and close its firewall rules, which cuts off a technician working over RDP or an
+  RMM session. An unattended run now leaves RDP as it is. The interactive prompt gained a third
+  choice, *Leave as it is*, which is also what a blank or unrecognised answer now does (it used
+  to disable RDP). A firewall-rule failure is recorded as Skipped rather than Applied.
 
 ### Added
 - **AUSPEX lists the installed memory modules.** The hardware step reads `Win32_PhysicalMemory`
@@ -34,11 +47,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   configured. Subcategories are now given by GUID, which also works on non-English Windows and
   no longer splits names such as "Account Lockout" into two arguments. A failure is now recorded
   as Failed with auditpol's own message. `net accounts` failures are no longer recorded as Applied.
-- **BASILISK `-Unattended` no longer disables Remote Desktop.** The default unattended run used to
-  turn RDP off and close its firewall rules, which cuts off a technician working over RDP or an
-  RMM session. An unattended run now leaves RDP as it is. The interactive prompt gained a third
-  choice, *Leave as it is*, which is also what a blank or unrecognised answer now does (it used
-  to disable RDP). A firewall-rule failure is recorded as Skipped rather than Applied.
 - **WHETSTONE left laptops unable to sleep.** It set the sleep timeout to Never for the run but
   restored only the monitor timeout, and a failed module install exited without restoring
   either. Both timeouts are now saved and restored exactly, in seconds, on every path, including

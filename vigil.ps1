@@ -35,7 +35,7 @@
     PS C:\> .\vigil.ps1 -Unattended -Target HOSTNAME  # Remote machine report
 
 .NOTES
-    Version : 6.2
+    Version : 6.3
 
 #>
 
@@ -1226,7 +1226,7 @@ function Build-HtmlReport {
 
 "@
 
-    $html += Get-TKHtmlFoot -ScriptName 'V.I.G.I.L. v6.2'
+    $html += Get-TKHtmlFoot -ScriptName 'V.I.G.I.L. v6.3'
     return $html
 }
 

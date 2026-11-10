@@ -35,7 +35,7 @@
     PS C:\> .\almanac.ps1 -Unattended        # Auto-connect and export full audit report
 
 .NOTES
-    Version : 6.2
+    Version : 6.3
 
 #>
 
@@ -579,7 +579,7 @@ function Show-AlmanacBanner {
 
 "@ -ForegroundColor Cyan
     Write-Host "  A.L.M.A.N.A.C. — Assigned Licenses, Mailboxes, Authentication & Notable Account Counts" -ForegroundColor Cyan
-    Write-Host "  Microsoft 365 License & Mailbox Audit Tool  v6.2" -ForegroundColor Cyan
+    Write-Host "  Microsoft 365 License & Mailbox Audit Tool  v6.3" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -1102,7 +1102,7 @@ function Build-HtmlReport {
             'Shared Mailbox'
         )
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'A.L.M.A.N.A.C. v6.2'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'A.L.M.A.N.A.C. v6.3'
 
     $html = $htmlHead + @"
 

@@ -55,7 +55,7 @@
     PS C:\> .\argus.ps1 -Server dc01.contoso.com -StaleDays 60
 
 .NOTES
-    Version : 6.2
+    Version : 6.3
 
 #>
 
@@ -1716,7 +1716,7 @@ function Build-ArgusReport {
   </div>
 </div>
 
-"@ + (Get-TKHtmlFoot -ScriptName 'A.R.G.U.S. v6.2')
+"@ + (Get-TKHtmlFoot -ScriptName 'A.R.G.U.S. v6.3')
 
     return $html
 }

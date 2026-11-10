@@ -35,7 +35,7 @@
     PS C:\> .\whetstone.ps1 -Unattended -AutoReboot  # Silent mode — reboot automatically if needed
 
 .NOTES
-    Version : 6.2
+    Version : 6.3
 
 #>
 

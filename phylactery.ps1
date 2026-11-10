@@ -36,7 +36,7 @@
     PS C:\> .\phylactery.ps1 -Unattended        # Silent mode, export HTML and exit
 
 .NOTES
-    Version : 6.2
+    Version : 6.3
 
 #>
 
@@ -496,7 +496,7 @@ function Show-PhylacteryBanner {
     if (-not $Unattended) { Clear-Host }
     Write-Host ""
     Write-Host "  P.H.Y.L.A.C.T.E.R.Y. — Pre-migration Health of Your Libraries: Accounts, Client, Tethering, Errors, Readiness & Yield" -ForegroundColor Cyan
-    Write-Host "  OneDrive Known-Folder-Move Pre-Migration Validator  v6.2" -ForegroundColor Cyan
+    Write-Host "  OneDrive Known-Folder-Move Pre-Migration Validator  v6.3" -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -839,7 +839,7 @@ function Build-HtmlReport {
         }) `
         -NavItems   @('Verdict', 'Client', 'Accounts', 'Known Folders', 'Content Volume', 'Sync Errors')
 
-    $htmlFoot = Get-TKHtmlFoot -ScriptName 'P.H.Y.L.A.C.T.E.R.Y. v6.2'
+    $htmlFoot = Get-TKHtmlFoot -ScriptName 'P.H.Y.L.A.C.T.E.R.Y. v6.3'
 
     $html = $htmlHead + @"
 

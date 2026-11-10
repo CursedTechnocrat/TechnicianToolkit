@@ -38,7 +38,7 @@
     PS C:\> .\leyline.ps1 -Unattended -Action Trace -Target "contoso.com"
 
 .NOTES
-    Version : 6.2
+    Version : 6.3
 
 #>
 
